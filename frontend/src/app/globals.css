@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Design tokens (Tailwind v4: utilities are generated from @theme)
+ *   bg-canvas / bg-surface / text-ink / text-muted / text-gold / border-quant
+ * Gold is reserved for revenue actions (book, enrol). Cyan marks quant/technical.
+ * ------------------------------------------------------------------------- */
+@theme {
+  --color-canvas: #0b1120;
+  --color-surface: #151e32;
+  --color-surface-raised: #1c2740;
+  --color-line: #24304a;
+  --color-gold: #d4af37;
+  --color-gold-bright: #e6c65a;
+  --color-quant: #22d3ee;
+  --color-ink: #f8fafc;
+  --color-muted: #94a3b8;
+
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+}
+
+/* Font families come from next/font CSS variables set on <html>. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-merriweather), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Tabular figures for numeric readouts only (metrics, credentials, order
+ * book), so digits align in columns while prose keeps proportional numerals. */
+@utility tabular-data {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+
+    /* Mathematical grid: 8px minor / 40px major lines plus a soft cyan glow up top. */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 70% -10%, rgb(34 211 238 / 0.10), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 .5H40M.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.09'/%3E%3Cpath d='M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.035'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-ink;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-quant;
+  }
+
+  ::selection {
+    background: rgb(34 211 238 / 0.3);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Animation pre-paint state.
+ * A tiny inline script adds .anim-ready to <html> before paint (unless the
+ * user prefers reduced motion), so animated elements never flash visible.
+ * If the JS bundle never boots, the keyframe below reveals content after
+ * 2.5s anyway; LandingAnimationController adds .anim-booted to cancel it.
+ * ------------------------------------------------------------------------- */
+.anim-ready [data-anim] {
+  opacity: 0;
+}
+
+.anim-ready:not(.anim-booted) [data-anim] {
+  animation: anim-safety-reveal 0.4s ease-out 2.5s forwards;
+}
+
+@keyframes anim-safety-reveal {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 3D tilt reveals need perspective on the parent of the tilting cards. */
+.perspective-stage {
+  perspective: 1200px;
+}
+
+.perspective-stage > * {
+  transform-origin: 50% 100%;
+  backface-visibility: hidden;
+}

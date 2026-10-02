@@ -1,0 +1,1760 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Finance in Practice - Quant API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/black-scholes": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Black Scholes",
+        "operationId": "black_scholes_api_v1_pricing_black_scholes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlackScholesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlackScholesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/implied-volatility": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Implied Volatility",
+        "operationId": "implied_volatility_api_v1_pricing_implied_volatility_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpliedVolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpliedVolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/bond": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Bond",
+        "operationId": "bond_api_v1_pricing_bond_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BondResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/yield-curve/bootstrap": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Bootstrap",
+        "operationId": "bootstrap_api_v1_pricing_yield_curve_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk/var/parametric": {
+      "post": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Parametric Var",
+        "operationId": "parametric_var_api_v1_risk_var_parametric_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParametricVaRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaRResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk/var/historical": {
+      "post": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Historical Var",
+        "operationId": "historical_var_api_v1_risk_var_historical_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoricalVaRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaRResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk/var/monte-carlo": {
+      "post": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Monte Carlo Var",
+        "operationId": "monte_carlo_var_api_v1_risk_var_monte_carlo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonteCarloVaRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VaRResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stress-test/scenarios": {
+      "get": {
+        "tags": [
+          "stress-test"
+        ],
+        "summary": "List Scenarios",
+        "operationId": "list_scenarios_api_v1_stress_test_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Scenarios Api V1 Stress Test Scenarios Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stress-test": {
+      "post": {
+        "tags": [
+          "stress-test"
+        ],
+        "summary": "Run Stress Test",
+        "operationId": "run_stress_test_api_v1_stress_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StressTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StressTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolio/optimize": {
+      "post": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Optimize",
+        "operationId": "optimize_api_v1_portfolio_optimize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolio/frontier": {
+      "post": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Frontier",
+        "operationId": "frontier_api_v1_portfolio_frontier_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrontierResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AssetClass": {
+        "type": "string",
+        "enum": [
+          "equity",
+          "fixed_income",
+          "credit",
+          "commodity",
+          "real_estate",
+          "fx",
+          "cash"
+        ],
+        "title": "AssetClass"
+      },
+      "BlackScholesRequest": {
+        "properties": {
+          "spot": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Spot"
+          },
+          "strike": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Strike"
+          },
+          "time_to_expiry": {
+            "type": "number",
+            "maximum": 50.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Time To Expiry",
+            "description": "Years"
+          },
+          "rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -0.1,
+            "title": "Rate",
+            "description": "Continuously compounded risk-free rate"
+          },
+          "dividend_yield": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Dividend Yield",
+            "default": 0.0
+          },
+          "option_type": {
+            "$ref": "#/components/schemas/OptionType",
+            "default": "call"
+          },
+          "volatility": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Volatility",
+            "description": "Annualised, 0.2 = 20%"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spot",
+          "strike",
+          "time_to_expiry",
+          "rate",
+          "volatility"
+        ],
+        "title": "BlackScholesRequest"
+      },
+      "BlackScholesResponse": {
+        "properties": {
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "d1": {
+            "type": "number",
+            "title": "D1"
+          },
+          "d2": {
+            "type": "number",
+            "title": "D2"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta"
+          },
+          "gamma": {
+            "type": "number",
+            "title": "Gamma"
+          },
+          "vega": {
+            "type": "number",
+            "title": "Vega",
+            "description": "Per 1.00 change in volatility"
+          },
+          "theta": {
+            "type": "number",
+            "title": "Theta",
+            "description": "Per year"
+          },
+          "rho": {
+            "type": "number",
+            "title": "Rho",
+            "description": "Per 1.00 change in rate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "price",
+          "d1",
+          "d2",
+          "delta",
+          "gamma",
+          "vega",
+          "theta",
+          "rho"
+        ],
+        "title": "BlackScholesResponse"
+      },
+      "BondRequest": {
+        "properties": {
+          "face": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Face",
+            "default": 100.0
+          },
+          "coupon_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coupon Rate",
+            "description": "Annual, 0.05 = 5%"
+          },
+          "maturity_years": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Maturity Years"
+          },
+          "frequency": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              4,
+              12
+            ],
+            "title": "Frequency",
+            "default": 2
+          },
+          "compounding": {
+            "$ref": "#/components/schemas/Compounding",
+            "default": "periodic"
+          },
+          "ytm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "minimum": -0.5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ytm"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "coupon_rate",
+          "maturity_years"
+        ],
+        "title": "BondRequest"
+      },
+      "BondResponse": {
+        "properties": {
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "ytm": {
+            "type": "number",
+            "title": "Ytm"
+          },
+          "macaulay_duration": {
+            "type": "number",
+            "title": "Macaulay Duration"
+          },
+          "modified_duration": {
+            "type": "number",
+            "title": "Modified Duration"
+          },
+          "convexity": {
+            "type": "number",
+            "title": "Convexity"
+          },
+          "cash_flows": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowOut"
+            },
+            "type": "array",
+            "title": "Cash Flows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "price",
+          "ytm",
+          "macaulay_duration",
+          "modified_duration",
+          "convexity",
+          "cash_flows"
+        ],
+        "title": "BondResponse"
+      },
+      "BootstrapRequest": {
+        "properties": {
+          "instruments": {
+            "items": {
+              "$ref": "#/components/schemas/CurveInstrumentIn"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Instruments"
+          },
+          "frequency": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              4,
+              12
+            ],
+            "title": "Frequency",
+            "default": 2
+          },
+          "face": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Face",
+            "default": 100.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instruments"
+        ],
+        "title": "BootstrapRequest"
+      },
+      "BootstrapResponse": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ZeroPointOut"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "points"
+        ],
+        "title": "BootstrapResponse"
+      },
+      "CashFlowOut": {
+        "properties": {
+          "time": {
+            "type": "number",
+            "title": "Time"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "present_value": {
+            "type": "number",
+            "title": "Present Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time",
+          "amount",
+          "present_value"
+        ],
+        "title": "CashFlowOut"
+      },
+      "Compounding": {
+        "type": "string",
+        "enum": [
+          "periodic",
+          "continuous"
+        ],
+        "title": "Compounding"
+      },
+      "CurveInstrumentIn": {
+        "properties": {
+          "maturity": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Maturity"
+          },
+          "coupon_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coupon Rate",
+            "default": 0.0
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maturity",
+          "price"
+        ],
+        "title": "CurveInstrumentIn"
+      },
+      "Distribution": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "student_t"
+        ],
+        "title": "Distribution"
+      },
+      "FrontierRequest": {
+        "properties": {
+          "assets": {
+            "items": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 2,
+            "title": "Assets"
+          },
+          "expected_returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Returns",
+            "description": "Annualised"
+          },
+          "covariance": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covariance",
+            "description": "Annualised"
+          },
+          "returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array",
+                "maxItems": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returns",
+            "description": "Periodic returns, T rows x N columns; annualised internally"
+          },
+          "periods_per_year": {
+            "type": "integer",
+            "enum": [
+              12,
+              52,
+              252
+            ],
+            "title": "Periods Per Year",
+            "default": 252
+          },
+          "risk_free_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -0.1,
+            "title": "Risk Free Rate",
+            "default": 0.0
+          },
+          "long_only": {
+            "type": "boolean",
+            "title": "Long Only",
+            "default": true
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
+          },
+          "n_points": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "N Points",
+            "default": 50
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assets"
+        ],
+        "title": "FrontierRequest"
+      },
+      "FrontierResponse": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioOut"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "min_variance": {
+            "$ref": "#/components/schemas/PortfolioOut"
+          },
+          "tangency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortfolioOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "points",
+          "min_variance",
+          "tangency"
+        ],
+        "title": "FrontierResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoricalVaRRequest": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Positions"
+          },
+          "returns": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "minItems": 1,
+            "title": "Returns",
+            "description": "Daily returns, T rows x N columns in the same order as positions"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 0.999,
+            "minimum": 0.9,
+            "title": "Confidence",
+            "description": "VaR confidence level, e.g. 0.99",
+            "default": 0.99
+          },
+          "horizon_days": {
+            "type": "integer",
+            "maximum": 250.0,
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "positions",
+          "returns"
+        ],
+        "title": "HistoricalVaRRequest"
+      },
+      "ImpliedVolRequest": {
+        "properties": {
+          "spot": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Spot"
+          },
+          "strike": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Strike"
+          },
+          "time_to_expiry": {
+            "type": "number",
+            "maximum": 50.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Time To Expiry",
+            "description": "Years"
+          },
+          "rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -0.1,
+            "title": "Rate",
+            "description": "Continuously compounded risk-free rate"
+          },
+          "dividend_yield": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Dividend Yield",
+            "default": 0.0
+          },
+          "option_type": {
+            "$ref": "#/components/schemas/OptionType",
+            "default": "call"
+          },
+          "market_price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Market Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spot",
+          "strike",
+          "time_to_expiry",
+          "rate",
+          "market_price"
+        ],
+        "title": "ImpliedVolRequest"
+      },
+      "ImpliedVolResponse": {
+        "properties": {
+          "implied_volatility": {
+            "type": "number",
+            "title": "Implied Volatility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "implied_volatility"
+        ],
+        "title": "ImpliedVolResponse"
+      },
+      "MonteCarloVaRRequest": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Positions"
+          },
+          "covariance": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Covariance",
+            "description": "Daily return covariance matrix (N x N)"
+          },
+          "mean_returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Returns",
+            "description": "Daily mean returns; omitted means zero drift"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 0.999,
+            "minimum": 0.9,
+            "title": "Confidence",
+            "description": "VaR confidence level, e.g. 0.99",
+            "default": 0.99
+          },
+          "horizon_days": {
+            "type": "integer",
+            "maximum": 250.0,
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "default": 1
+          },
+          "n_sims": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1000.0,
+            "title": "N Sims",
+            "default": 10000
+          },
+          "distribution": {
+            "$ref": "#/components/schemas/Distribution",
+            "default": "normal"
+          },
+          "degrees_of_freedom": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 3.0,
+            "title": "Degrees Of Freedom",
+            "default": 5.0
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4294967295.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "positions",
+          "covariance"
+        ],
+        "title": "MonteCarloVaRRequest"
+      },
+      "OptimizeRequest": {
+        "properties": {
+          "assets": {
+            "items": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 2,
+            "title": "Assets"
+          },
+          "expected_returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Returns",
+            "description": "Annualised"
+          },
+          "covariance": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covariance",
+            "description": "Annualised"
+          },
+          "returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array",
+                "maxItems": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returns",
+            "description": "Periodic returns, T rows x N columns; annualised internally"
+          },
+          "periods_per_year": {
+            "type": "integer",
+            "enum": [
+              12,
+              52,
+              252
+            ],
+            "title": "Periods Per Year",
+            "default": 252
+          },
+          "risk_free_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -0.1,
+            "title": "Risk Free Rate",
+            "default": 0.0
+          },
+          "long_only": {
+            "type": "boolean",
+            "title": "Long Only",
+            "default": true
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "min_variance",
+              "max_sharpe",
+              "target_return"
+            ],
+            "title": "Objective",
+            "default": "max_sharpe"
+          },
+          "target_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Return"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assets"
+        ],
+        "title": "OptimizeRequest"
+      },
+      "OptionType": {
+        "type": "string",
+        "enum": [
+          "call",
+          "put"
+        ],
+        "title": "OptionType"
+      },
+      "ParametricVaRRequest": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Positions"
+          },
+          "covariance": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Covariance",
+            "description": "Daily return covariance matrix (N x N)"
+          },
+          "mean_returns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Returns",
+            "description": "Daily mean returns; omitted means zero drift"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 0.999,
+            "minimum": 0.9,
+            "title": "Confidence",
+            "description": "VaR confidence level, e.g. 0.99",
+            "default": 0.99
+          },
+          "horizon_days": {
+            "type": "integer",
+            "maximum": 250.0,
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "positions",
+          "covariance"
+        ],
+        "title": "ParametricVaRRequest"
+      },
+      "PortfolioOut": {
+        "properties": {
+          "weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Weights"
+          },
+          "expected_return": {
+            "type": "number",
+            "title": "Expected Return"
+          },
+          "volatility": {
+            "type": "number",
+            "title": "Volatility"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weights",
+          "expected_return",
+          "volatility",
+          "sharpe"
+        ],
+        "title": "PortfolioOut"
+      },
+      "Position": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Signed currency exposure; negative for shorts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "Position"
+      },
+      "ScenarioOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "shocks": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/AssetClass"
+            },
+            "type": "object",
+            "title": "Shocks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "description",
+          "shocks"
+        ],
+        "title": "ScenarioOut"
+      },
+      "StressLineOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "asset_class": {
+            "$ref": "#/components/schemas/AssetClass"
+          },
+          "value_before": {
+            "type": "number",
+            "title": "Value Before"
+          },
+          "shock": {
+            "type": "number",
+            "title": "Shock"
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl"
+          },
+          "value_after": {
+            "type": "number",
+            "title": "Value After"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "asset_class",
+          "value_before",
+          "shock",
+          "pnl",
+          "value_after"
+        ],
+        "title": "StressLineOut"
+      },
+      "StressPositionIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "asset_class": {
+            "$ref": "#/components/schemas/AssetClass"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "asset_class",
+          "value"
+        ],
+        "title": "StressPositionIn"
+      },
+      "StressTestRequest": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/StressPositionIn"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Positions"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario",
+            "description": "Preset scenario key"
+          },
+          "custom_shocks": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number",
+                  "maximum": 10.0,
+                  "minimum": -1.0
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/AssetClass"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Shocks",
+            "description": "Asset-class returns, e.g. {'equity': -0.3}"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "positions"
+        ],
+        "title": "StressTestRequest"
+      },
+      "StressTestResponse": {
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "title": "Scenario"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StressLineOut"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "value_before": {
+            "type": "number",
+            "title": "Value Before"
+          },
+          "value_after": {
+            "type": "number",
+            "title": "Value After"
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl"
+          },
+          "pnl_pct": {
+            "type": "number",
+            "title": "Pnl Pct"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario",
+          "lines",
+          "value_before",
+          "value_after",
+          "pnl",
+          "pnl_pct"
+        ],
+        "title": "StressTestResponse"
+      },
+      "VaRResponse": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days"
+          },
+          "var": {
+            "type": "number",
+            "title": "Var",
+            "description": "Loss threshold, reported as a positive number"
+          },
+          "expected_shortfall": {
+            "type": "number",
+            "title": "Expected Shortfall",
+            "description": "Mean loss beyond VaR, positive number"
+          },
+          "portfolio_value": {
+            "type": "number",
+            "title": "Portfolio Value"
+          },
+          "var_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Var Pct",
+            "description": "VaR as a fraction of net portfolio value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "confidence",
+          "horizon_days",
+          "var",
+          "expected_shortfall",
+          "portfolio_value",
+          "var_pct"
+        ],
+        "title": "VaRResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZeroPointOut": {
+        "properties": {
+          "maturity": {
+            "type": "number",
+            "title": "Maturity"
+          },
+          "zero_rate": {
+            "type": "number",
+            "title": "Zero Rate",
+            "description": "Continuously compounded"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maturity",
+          "zero_rate"
+        ],
+        "title": "ZeroPointOut"
+      }
+    }
+  }
+}
