@@ -13,6 +13,7 @@ const FINE_POINTER = "(pointer: fine)";
  */
 export function CustomCursor() {
   const ref = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
@@ -24,8 +25,8 @@ export function CustomCursor() {
   }, []);
 
   useEffect(() => {
-    if (!enabled || !ref.current) return;
-    const controller = new CustomCursorController(ref.current);
+    if (!enabled || !ref.current || !dotRef.current) return;
+    const controller = new CustomCursorController(ref.current, dotRef.current);
     controller.attach();
     return () => controller.detach();
   }, [enabled]);
@@ -33,10 +34,18 @@ export function CustomCursor() {
   if (!enabled) return null;
 
   return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none fixed top-0 left-0 z-[9999] h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#F8FAFC]/50 mix-blend-difference"
-    />
+    <>
+      {/* Ring colours are set inline by the controller (see CustomCursorController). */}
+      <div
+        ref={ref}
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-0 z-[9999] h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-solid mix-blend-difference"
+      />
+      <div
+        ref={dotRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-0 z-[9999] h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F8FAFC] mix-blend-difference"
+      />
+    </>
   );
 }
