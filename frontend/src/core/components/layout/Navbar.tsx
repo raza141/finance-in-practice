@@ -38,7 +38,7 @@ export function Navbar() {
           aria-label="Finance in Practice home"
           className="pointer-events-auto flex shrink-0 items-center"
         >
-          <Logo height={26} />
+          <Logo height={34} priority />
         </Link>
 
         <div className="pointer-events-auto absolute top-0 left-1/2 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-3 py-2 shadow-lg backdrop-blur-md lg:flex">

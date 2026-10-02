@@ -24,7 +24,7 @@ export function InstructorProfile({ instructor, index, total }: InstructorProfil
 
   return (
     <section
-      data-instructor
+      data-cosmic-section
       aria-labelledby={headingId}
       className="page-container flex min-h-screen items-center py-24"
     >

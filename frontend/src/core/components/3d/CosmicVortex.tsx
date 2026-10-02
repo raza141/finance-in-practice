@@ -190,7 +190,7 @@ function Vortex({ state, animate }: { state: CosmicState; animate: boolean }) {
 }
 
 /** Spiral-galaxy particle vortex. Camera and spin follow the shared CosmicState. */
-export default function CosmicVortex({ state }: { state: CosmicState }) {
+export default function CosmicVortex({ state, active = true }: { state: CosmicState; active?: boolean }) {
   const [reducedMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -201,7 +201,7 @@ export default function CosmicVortex({ state }: { state: CosmicState }) {
       camera={{ position: [0, 0, state.zoom], fov: 45 }}
       dpr={dpr}
       gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}
-      frameloop="always"
+      frameloop={active ? "always" : "never"}
       aria-hidden
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(1.5)} />

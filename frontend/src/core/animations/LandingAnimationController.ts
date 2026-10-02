@@ -12,7 +12,6 @@ export const AnimHook = {
   heroSubtitle: "hero-subtitle",
   heroCta: "hero-cta",
   heroCanvas: "hero-canvas",
-  credential: "credential",
   bento: "bento",
   reveal: "reveal",
 } as const;
@@ -71,19 +70,6 @@ export class LandingAnimationController {
         "-=800",
       );
     this.animations.push(timeline);
-  }
-
-  /** Credentials cascade in left-to-right once the bar is visible. */
-  registerCredentials(container: Element): void {
-    this.onEnter(container, () =>
-      animate(this.hooks(AnimHook.credential, container), {
-        opacity: [0, 1],
-        translateY: [12, 0],
-        delay: stagger(120),
-        duration: 700,
-        ease: "outExpo",
-      }),
-    );
   }
 
   /** Bento cards slide up 40px and fade in, cascading as the grid enters view. */

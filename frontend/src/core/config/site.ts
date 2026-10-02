@@ -23,6 +23,9 @@ export const siteConfig = {
         { label: "Stress Testing", href: "/#stress-testing" },
         { label: "Financial Modeling", href: "/#financial-modeling" },
         { label: "Automation", href: "/#automation" },
+        { label: "Portfolio Optimization (ML)", href: "/#portfolio-ml" },
+        { label: "IPS & CME", href: "/#ips-cme" },
+        { label: "Goal-Based Wealth (UHNI)", href: "/#goal-based-wealth" },
       ],
     },
     { label: "Journal", href: "/journal" },
@@ -48,8 +51,6 @@ export const siteConfig = {
   },
 
   bookingHref: "/#book",
-
-  credentials: ["CFA Level III Candidate", "FRM Part I Passed", "MSc Data Science"],
 
   /**
    * Authority metrics. Every figure must be verifiable: these describe the

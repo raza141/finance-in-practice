@@ -6,7 +6,7 @@ import { LandingAnimationController } from "./LandingAnimationController";
 
 /**
  * React adapter for `LandingAnimationController`. Sections opt in with
- * `data-sequence="credentials" | "bento" | "counters" | "reveal"`; every
+ * `data-sequence="bento" | "counters" | "reveal"`; every
  * sequence also reveals its `[data-anim="reveal"]` children.
  *
  * The controller is created inside the effect (not during render) so the
@@ -28,9 +28,6 @@ export function LandingAnimator({ children }: { children: ReactNode }) {
       // (section headings, copy), so nothing marked for animation stays hidden.
       controller.registerReveal(section);
       switch (section.dataset.sequence) {
-        case "credentials":
-          controller.registerCredentials(section);
-          break;
         case "bento":
           controller.revealBento(section);
           break;

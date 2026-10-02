@@ -3,13 +3,15 @@ import { animate, stagger, utils } from "animejs";
 import type { CosmicState } from "@/core/components/3d/CosmicState";
 
 /**
- * Scroll choreography for /about. Each `[data-instructor]` section owns one
- * camera pose; when a section takes over the viewport its `[data-reveal]`
- * children stream in and the vortex fires a warp pulse, so scrolling reads
- * as travelling from one instructor to the next.
+ * Scroll choreography for a cosmic stage (/about instructors, landing
+ * testimonials). Each `[data-cosmic-section]` owns one camera pose; when a
+ * section takes over the viewport its `[data-reveal]` children stream in and
+ * the vortex fires a warp pulse, so scrolling reads as travelling from one
+ * stop to the next. `[data-cosmic-dot]` i tracks section i + 1 (the intro has
+ * no dot).
  */
-export class InstructorScrollController {
-  /** Camera poses per section: intro first, then one per instructor. */
+export class CosmicScrollController {
+  /** Camera poses per section: intro first, then one per stop. */
   private static readonly POSES = [
     { tilt: 1.05, zoom: 9 },
     { tilt: 0.45, zoom: 7.2 },
@@ -28,7 +30,7 @@ export class InstructorScrollController {
     private readonly root: HTMLElement,
     private readonly state: CosmicState,
   ) {
-    this.sections = Array.from(root.querySelectorAll<HTMLElement>("[data-instructor]"));
+    this.sections = Array.from(root.querySelectorAll<HTMLElement>("[data-cosmic-section]"));
     this.observer = new IntersectionObserver(this.onIntersect, { threshold: 0.5 });
   }
 
@@ -56,7 +58,7 @@ export class InstructorScrollController {
     this.frame = requestAnimationFrame(() => {
       // Continuous spin tied to scroll distance: the galaxy turns as you travel.
       const scrolled = Math.max(0, -this.root.getBoundingClientRect().top);
-      this.state.spin = (scrolled / window.innerHeight) * InstructorScrollController.SPIN_PER_PAGE;
+      this.state.spin = (scrolled / window.innerHeight) * CosmicScrollController.SPIN_PER_PAGE;
     });
   };
 
@@ -73,12 +75,12 @@ export class InstructorScrollController {
     const first = this.active === -1;
     this.active = index;
 
-    const poses = InstructorScrollController.POSES;
+    const poses = CosmicScrollController.POSES;
     const pose = poses[index % poses.length];
     this.state.tilt = pose.tilt;
     this.state.zoom = pose.zoom;
 
-    this.root.querySelectorAll<HTMLElement>("[data-instructor-dot]").forEach((dot, i) => {
+    this.root.querySelectorAll<HTMLElement>("[data-cosmic-dot]").forEach((dot, i) => {
       dot.dataset.active = String(i === index - 1);
     });
 

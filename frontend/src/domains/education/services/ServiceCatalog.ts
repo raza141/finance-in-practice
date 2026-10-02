@@ -85,6 +85,36 @@ export class ServiceCatalog {
       visual: "none",
       waitlist: true,
     },
+    {
+      id: "portfolio-ml",
+      kicker: "07 · Portfolio",
+      title: "Portfolio construction & optimization with ML",
+      summary:
+        "From mean-variance to machine-learning signals: covariance shrinkage, hierarchical risk parity and return forecasting, backtested in Python.",
+      tags: ["Mean-variance", "HRP", "Machine learning"],
+      span: 4,
+      visual: "none",
+    },
+    {
+      id: "ips-cme",
+      kicker: "08 · Planning",
+      title: "IPS & capital market expectations",
+      summary:
+        "Draft an Investment Policy Statement and build the capital market expectations behind it, from return objectives and constraints to asset-class forecasts.",
+      tags: ["IPS", "CME", "Asset allocation"],
+      span: 4,
+      visual: "none",
+    },
+    {
+      id: "goal-based-wealth",
+      kicker: "09 · Wealth",
+      title: "Goal-based wealth management (UHNI)",
+      summary:
+        "Structure ultra-high-net-worth portfolios around client goals: liability mapping, goal-based buckets and multi-generational planning.",
+      tags: ["UHNI", "Goals-based", "Private wealth"],
+      span: 4,
+      visual: "none",
+    },
   ];
 
   all(): readonly BentoService[] {

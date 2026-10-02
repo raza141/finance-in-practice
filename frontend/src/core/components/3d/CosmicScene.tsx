@@ -7,10 +7,17 @@ import type { CosmicState } from "./CosmicState";
 /** Client-only loader for the WebGL vortex (see HeroScene for why this wrapper exists). */
 const CosmicVortex = dynamic(() => import("./CosmicVortex"), { ssr: false });
 
-export function CosmicScene({ state, className = "" }: { state: CosmicState; className?: string }) {
+interface CosmicSceneProps {
+  state: CosmicState;
+  /** False pauses the render loop (e.g. while scrolled out of view). */
+  active?: boolean;
+  className?: string;
+}
+
+export function CosmicScene({ state, active = true, className = "" }: CosmicSceneProps) {
   return (
     <div aria-hidden className={`pointer-events-none ${className}`}>
-      <CosmicVortex state={state} />
+      <CosmicVortex state={state} active={active} />
       {/* Vignette keeps foreground copy readable over the brightest arms. */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgb(11_17_32/0.55)_65%,#0b1120_100%)]" />
       {/* Dark pool under the centre of the viewport, where headings and body copy sit. */}

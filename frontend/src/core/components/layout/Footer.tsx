@@ -11,7 +11,7 @@ export function Footer() {
       <div className="page-container py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <Logo height={28} withWordmark />
+            <Logo height={40} />
             <p className="mt-4 text-sm leading-relaxed text-muted">
               Financial theory taught by a practitioner who builds the models.
             </p>

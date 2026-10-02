@@ -16,7 +16,7 @@ export default function AboutPage() {
   return (
     <InstructorShowcase count={instructors.length}>
       <section
-        data-instructor
+        data-cosmic-section
         aria-labelledby="about-heading"
         className="page-container flex min-h-screen flex-col items-center justify-center py-32 text-center"
       >
