@@ -4,6 +4,7 @@ import Script from "next/script";
 
 import { Footer } from "@/core/components/layout/Footer";
 import { Navbar } from "@/core/components/layout/Navbar";
+import { CustomCursor } from "@/core/components/ui/CustomCursor";
 import { siteConfig } from "@/core/config/site";
 
 import "./globals.css";
@@ -72,7 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col pointer-fine:cursor-none">
         <Script id="animation-prepaint" strategy="beforeInteractive">
           {ANIMATION_PREPAINT}
         </Script>
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        <CustomCursor />
       </body>
     </html>
   );
