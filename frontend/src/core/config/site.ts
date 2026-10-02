@@ -39,7 +39,10 @@ export const siteConfig = {
     calUrl: "https://cal.com/raza141/30min",
     /** Click-to-chat number in international format, digits only (wa.me). */
     whatsapp: {
-      number: "971581633864",
+      number: "971588070565",
+      display: "+971 58 807 0565",
+      /** Person who answers this number, shown on /contact. */
+      owner: "Muhammad Ahmed Raza",
       greeting: "Hi Finance in Practice! I'd like to know more about your courses.",
     },
   },

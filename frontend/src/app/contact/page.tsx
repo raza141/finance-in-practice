@@ -18,9 +18,16 @@ const STEPS = [
 ] as const;
 
 export default function ContactPage() {
-  const { email, calUrl } = siteConfig.contact;
+  const { email, calUrl, whatsapp } = siteConfig.contact;
 
-  const channels = [
+  const channels: { label: string; value: string; note?: string; href: string; external: boolean }[] = [
+    {
+      label: "WhatsApp",
+      value: whatsapp.display,
+      note: whatsapp.owner,
+      href: `https://wa.me/${whatsapp.number}?text=${encodeURIComponent(whatsapp.greeting)}`,
+      external: true,
+    },
     { label: "Free demo", value: "Book on the site", href: siteConfig.navCta.href, external: false },
     { label: "Calendar", value: "cal.com/raza141", href: calUrl, external: true },
     ...(email ? [{ label: "Email", value: email, href: `mailto:${email}`, external: true }] : []),
@@ -53,6 +60,7 @@ export default function ContactPage() {
               >
                 <span className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">{channel.label}</span>
                 <span className="mt-2 block text-base text-ink">{channel.value} ↗</span>
+                {channel.note && <span className="mt-1 block text-sm text-muted">{channel.note}</span>}
               </Link>
             </li>
           ))}
