@@ -13,7 +13,7 @@ export const AnimHook = {
   heroCta: "hero-cta",
   heroCanvas: "hero-canvas",
   credential: "credential",
-  pillar: "pillar",
+  bento: "bento",
   reveal: "reveal",
 } as const;
 
@@ -86,20 +86,19 @@ export class LandingAnimationController {
     );
   }
 
-  /** Service cards tilt up from 90deg back, 120ms apart (parent provides perspective). */
-  revealServices(container: Element): void {
+  /** Bento cards slide up 40px and fade in, cascading as the grid enters view. */
+  revealBento(container: Element): void {
     this.onEnter(
       container,
       () =>
-        animate(this.hooks(AnimHook.pillar, container), {
+        animate(this.hooks(AnimHook.bento, container), {
           opacity: [0, 1],
-          rotateX: [90, 0],
           translateY: [40, 0],
-          delay: stagger(120),
-          duration: 1100,
+          delay: stagger(90),
+          duration: 900,
           ease: "outExpo",
         }),
-      { threshold: 0.15 },
+      { threshold: 0.1 },
     );
   }
 

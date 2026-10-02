@@ -27,8 +27,8 @@ export function OrderBook({ day, selected, zoneLabel, onSelect }: OrderBookProps
   };
 
   return (
-    <div className="tabular-data mt-5 rounded-lg border border-line bg-canvas/70 font-mono text-xs">
-        <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-[11px] tracking-wider">
+    <div className="tabular-data mt-5 rounded-lg border border-line bg-canvas/70 font-mono text-sm">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-xs tracking-wider">
           <span className="text-ink">
             L2 ORDER BOOK <span className="text-muted">· {TerminalFormat.weekday(day.date)}{" "}
             {TerminalFormat.date(day.date)}</span>
@@ -36,7 +36,7 @@ export function OrderBook({ day, selected, zoneLabel, onSelect }: OrderBookProps
           <span className="text-muted">{TerminalFormat.slots(day.slots.length)}</span>
         </div>
 
-        <div className="grid grid-cols-[3.5rem_1fr_4rem_5.5rem] gap-2 px-4 py-2 text-[10px] tracking-wider text-muted">
+        <div className="grid grid-cols-[3.5rem_1fr_4rem_5.5rem] gap-2 px-4 py-2 text-xs tracking-wider text-muted">
           <span>SIDE</span>
           <span>TIME ({zoneLabel})</span>
           <span>SIZE</span>

@@ -63,7 +63,7 @@ export function TrackTabs({ tracks, locked, disabled = false, animator, onLock }
               onMouseEnter={() => glideTo(track.id)}
               onFocus={() => glideTo(track.id)}
               onClick={() => onLock(track.id)}
-              className={`px-3 py-2.5 font-mono text-[11px] tracking-wider whitespace-nowrap transition-colors sm:text-xs ${
+              className={`px-3 py-2.5 font-mono text-xs tracking-wider whitespace-nowrap transition-colors sm:text-sm ${
                 active ? "text-quant" : "text-muted hover:text-ink"
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >

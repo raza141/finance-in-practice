@@ -2,22 +2,27 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import { siteConfig } from "@/core/config/site";
 
-/** Below `md` the primary nav collapses into this disclosure menu. */
+/**
+ * Below `lg` the pill navbar collapses its links into this disclosure menu.
+ * The panel is portalled to <body>: the pill's backdrop-filter (and animated
+ * transform) would otherwise become the containing block for `position: fixed`.
+ */
 export function MobileNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         type="button"
         aria-expanded={open}
         aria-controls="mobile-nav"
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid h-10 w-10 place-items-center rounded-md border border-line text-ink"
+        className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-ink"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           {open ? (
@@ -28,11 +33,12 @@ export function MobileNav() {
         </svg>
       </button>
 
-      {open && (
+      {open &&
+        createPortal(
         <nav
           id="mobile-nav"
           aria-label="Mobile"
-          className="absolute inset-x-0 top-16 border-b border-line bg-canvas/95 px-4 py-4 backdrop-blur-md"
+          className="fixed inset-x-4 top-20 z-50 rounded-2xl border border-white/10 bg-[#151E32]/95 px-3 py-3 shadow-lg backdrop-blur-md"
         >
           <ul className="flex flex-col">
             {siteConfig.nav.map((item) => (
@@ -47,8 +53,9 @@ export function MobileNav() {
               </li>
             ))}
           </ul>
-        </nav>
-      )}
+        </nav>,
+          document.body,
+        )}
     </div>
   );
 }

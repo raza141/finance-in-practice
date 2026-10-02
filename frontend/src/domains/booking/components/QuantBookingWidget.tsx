@@ -221,7 +221,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
 
       <div className="relative">
         {/* title bar */}
-        <div className="flex items-center justify-between gap-3 border-b border-line bg-canvas/60 px-4 py-2.5 text-[11px] tracking-wider">
+        <div className="flex items-center justify-between gap-3 border-b border-line bg-canvas/60 px-4 py-2.5 text-xs tracking-wider">
           <span className="text-muted">
             <span className="text-ink">FIP/BOOK</span> ▸ DEMO SESSION TERMINAL
           </span>
@@ -232,7 +232,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
         </div>
 
         {/* stage rail */}
-        <ol className="flex items-center gap-2 overflow-x-auto px-4 pt-3 text-[10px] tracking-widest whitespace-nowrap">
+        <ol className="flex items-center gap-2 overflow-x-auto px-4 pt-3 text-xs tracking-widest whitespace-nowrap">
           {STAGES.map((label, i) => (
             <li key={label} className="flex items-center gap-2">
               <span
@@ -293,12 +293,12 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
 
           {/* Stage 3 */}
           {date && book.status === "loading" && (
-            <p className="mt-5 text-center text-[11px] tracking-wider text-quant">
+            <p className="mt-5 text-center text-xs tracking-wider text-quant">
               <span className="animate-pulse-soft">FETCHING ORDER BOOK…</span>
             </p>
           )}
           {date && book.status === "error" && (
-            <p className="mt-5 text-center text-[11px] tracking-wider text-muted">
+            <p className="mt-5 text-center text-xs tracking-wider text-muted">
               ORDER BOOK UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
               <button
                 type="button"
@@ -313,7 +313,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
           {day && execution !== "done" && (
             <div ref={bookRef} className="overflow-hidden">
               {day.slots.length === 0 ? (
-                <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-[11px] tracking-wider text-muted">
+                <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-xs tracking-wider text-muted">
                   NO LIQUIDITY LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
                 </p>
               ) : (
@@ -327,7 +327,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                   }}
                 />
               )}
-              <p className="mt-2 text-[10px] tracking-wider text-muted">
+              <p className="mt-2 text-xs tracking-wider text-muted">
                 Converted to your local time: <span className="text-ink/80">{timeZone}</span>
               </p>
 
@@ -363,13 +363,13 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                 />
 
                 {orderError && (
-                  <p role="alert" className="text-[11px] tracking-wider text-gold">
+                  <p role="alert" className="text-xs tracking-wider text-gold">
                     ORDER REJECTED · {orderError}
                   </p>
                 )}
 
                 <div className="tabular-data flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[11px] tracking-wider text-muted">
+                  <p className="text-xs tracking-wider text-muted">
                     {ticket ? (
                       <>
                         ORDER <span className="text-ink">{ticket.track.ticker}</span> ·{" "}
@@ -383,7 +383,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                   <button
                     type="submit"
                     disabled={!slot || execution !== "idle"}
-                    className="h-11 rounded-md bg-gold px-5 text-xs font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
+                    className="h-11 rounded-md bg-gold px-5 text-sm font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
                   >
                     {execution === "submitting" ? "ROUTING ORDER…" : "EXECUTE DEMO TRADE"}
                   </button>
@@ -401,7 +401,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                 className="tabular-data min-h-[1.5em] text-center text-sm font-semibold tracking-wider text-gold sm:text-base"
               />
               {execution === "done" && ticket && (
-                <div role="status" className="mt-5 rounded-lg border border-line bg-canvas/70 p-4 text-xs">
+                <div role="status" className="mt-5 rounded-lg border border-line bg-canvas/70 p-4 text-sm">
                   <span className="sr-only">{finalText}</span>
                   <dl className="tabular-data grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                     {[
@@ -411,7 +411,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                       ["REF", booking?.uid.slice(0, 8).toUpperCase() ?? "—"],
                     ].map(([label, value]) => (
                       <div key={label}>
-                        <dt className="text-[10px] tracking-widest text-muted">{label}</dt>
+                        <dt className="text-xs tracking-widest text-muted">{label}</dt>
                         <dd className="mt-0.5 text-ink">{value}</dd>
                       </div>
                     ))}
@@ -423,7 +423,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                   <button
                     type="button"
                     onClick={reset}
-                    className="mt-4 text-[11px] tracking-widest text-muted hover:text-quant"
+                    className="mt-4 text-xs tracking-widest text-muted hover:text-quant"
                   >
                     ↺ NEW ORDER
                   </button>
@@ -440,7 +440,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
 function Placeholder({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "quant" }) {
   return (
     <div
-      className={`grid aspect-[640/280] place-items-center rounded-lg border border-dashed border-line px-4 text-center text-[11px] tracking-wider ${
+      className={`grid aspect-[720/330] place-items-center rounded-lg border border-dashed border-line px-4 text-center text-xs tracking-wider ${
         tone === "quant" ? "text-quant" : "text-muted"
       }`}
     >
@@ -461,7 +461,7 @@ interface TerminalInputProps {
 function TerminalInput({ label, value, onChange, type = "text", autoComplete, disabled }: TerminalInputProps) {
   return (
     <label className="flex items-center gap-3 rounded-md border border-line bg-canvas/70 px-3 focus-within:border-quant/70">
-      <span className="text-[10px] tracking-widest text-muted">{label}</span>
+      <span className="text-xs tracking-widest text-muted">{label}</span>
       <input
         type={type}
         value={value}

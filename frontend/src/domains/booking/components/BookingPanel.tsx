@@ -1,4 +1,5 @@
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { TiltSurface } from "@/core/components/ui/TiltSurface";
 
 import { QuantBookingWidget } from "./QuantBookingWidget";
 
@@ -11,8 +12,8 @@ const WHAT_YOU_GET = [
 
 export function BookingPanel({ headingId = "book-heading" }: { headingId?: string }) {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
-      <div>
+    <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+      <div className="lg:col-span-4">
         <SectionHeading
           id={headingId}
           eyebrow="Free demo session"
@@ -34,8 +35,10 @@ export function BookingPanel({ headingId = "book-heading" }: { headingId?: strin
         </ul>
       </div>
 
-      <div data-anim="reveal">
-        <QuantBookingWidget />
+      <div data-anim="reveal" className="lg:col-span-8">
+        <TiltSurface maxTilt={2.5}>
+          <QuantBookingWidget />
+        </TiltSurface>
       </div>
     </div>
   );

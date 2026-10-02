@@ -47,7 +47,7 @@
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 6.5rem; /* clears the floating pill navbar */
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -103,12 +103,3 @@
   }
 }
 
-/* 3D tilt reveals need perspective on the parent of the tilting cards. */
-.perspective-stage {
-  perspective: 1200px;
-}
-
-.perspective-stage > * {
-  transform-origin: 50% 100%;
-  backface-visibility: hidden;
-}

@@ -3,7 +3,8 @@ import { siteConfig } from "@/core/config/site";
 export function CredentialsBar() {
   return (
     <section
-      aria-label="Tutor credentials"
+      id="about"
+      aria-label="About your tutor: credentials"
       data-sequence="credentials"
       className="border-y border-line bg-surface/60"
     >

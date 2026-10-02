@@ -8,9 +8,13 @@ export const siteConfig = {
     "CFA®, FRM® and university finance tutoring from a practitioner who builds the models in Python. Book a free 1-on-1 demo.",
 
   nav: [
-    { label: "Curriculum", href: "/#curriculum" },
-    { label: "Quant Lab", href: "/#quant-lab" },
-    { label: "Consulting", href: "/consulting" },
+    { label: "About Us", href: "/#about" },
+    { label: "Courses", href: "/#curriculum" },
+    { label: "Demo", href: "/#book" },
+    { label: "Automation", href: "/#automation" },
+    { label: "Stress Testing", href: "/#stress-testing" },
+    { label: "Financial Modeling", href: "/#financial-modeling" },
+    { label: "Contact Us", href: "/consulting#book" },
   ],
 
   bookingHref: "/#book",

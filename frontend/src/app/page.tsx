@@ -1,9 +1,9 @@
 import { LandingAnimator } from "@/core/animations/LandingAnimator";
 
+import { BentoSection } from "./_sections/BentoSection";
 import { BookingSection } from "./_sections/BookingSection";
 import { CredentialsBar } from "./_sections/CredentialsBar";
 import { HeroSection } from "./_sections/HeroSection";
-import { PillarsSection } from "./_sections/PillarsSection";
 import { QuantLabMetrics } from "./_sections/QuantLabMetrics";
 
 export default function HomePage() {
@@ -11,7 +11,7 @@ export default function HomePage() {
     <LandingAnimator>
       <HeroSection />
       <CredentialsBar />
-      <PillarsSection />
+      <BentoSection />
       <QuantLabMetrics />
       <BookingSection />
     </LandingAnimator>

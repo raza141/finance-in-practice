@@ -3,7 +3,7 @@ import { Inter, JetBrains_Mono, Merriweather } from "next/font/google";
 import Script from "next/script";
 
 import { Footer } from "@/core/components/layout/Footer";
-import { Header } from "@/core/components/layout/Header";
+import { Navbar } from "@/core/components/layout/Navbar";
 import { siteConfig } from "@/core/config/site";
 
 import "./globals.css";
@@ -82,8 +82,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <Header />
-        <main id="main" className="flex-1">
+        <Navbar />
+        {/* pt clears the fixed floating navbar */}
+        <main id="main" className="flex-1 pt-20">
           {children}
         </main>
         <Footer />

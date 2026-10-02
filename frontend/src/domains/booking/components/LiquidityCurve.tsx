@@ -8,9 +8,9 @@ import { TerminalFormat } from "../services/TerminalFormat";
 import type { DayLiquidity } from "../types";
 
 const BOX: ChartBox = {
-  width: 640,
-  height: 250,
-  padding: { top: 18, right: 18, bottom: 34, left: 34 },
+  width: 720,
+  height: 300,
+  padding: { top: 20, right: 20, bottom: 38, left: 38 },
 };
 
 interface LiquidityCurveProps {
@@ -81,7 +81,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
 
   return (
     <div>
-      <div className="tabular-data flex items-center justify-between gap-3 border-b border-line/70 px-1 pb-2 font-mono text-[11px] tracking-wider">
+      <div className="tabular-data flex items-center justify-between gap-3 border-b border-line/70 px-1 pb-2 font-mono text-xs tracking-wider">
         <span className="text-muted">
           LIQUIDITY CURVE <span className="text-muted/60">· 14D PROJECTION</span>
         </span>
@@ -93,7 +93,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
       <svg
         ref={svgRef}
         viewBox={`0 0 ${BOX.width} ${BOX.height}`}
-        className="mt-2 h-auto w-full touch-none select-none"
+        className="mt-2 h-auto min-h-64 w-full touch-none select-none"
         role="group"
         aria-label="Available demo slots over the next 14 days"
         onPointerMove={onPointerMove}
@@ -129,7 +129,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
               x={geometry.left - 10}
               y={geometry.yFor(v) + 3.5}
               textAnchor="end"
-              className="fill-muted font-mono text-[10px]"
+              className="fill-muted font-mono text-xs"
             >
               {v}
             </text>
@@ -144,7 +144,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
               x={geometry.xAt(i)}
               y={BOX.height - 10}
               textAnchor="middle"
-              className="fill-muted font-mono text-[10px]"
+              className="fill-muted font-mono text-xs"
             >
               {TerminalFormat.date(d.date)}
             </text>
@@ -205,7 +205,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
               x={geometry.right - 4}
               y={geometry.points[selectedIndex].y - 6}
               textAnchor="end"
-              className="fill-gold font-mono text-[10px] font-semibold"
+              className="fill-gold font-mono text-xs font-semibold"
             >
               LMT {TerminalFormat.date(days[selectedIndex].date)}
             </text>
