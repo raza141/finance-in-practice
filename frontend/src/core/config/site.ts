@@ -37,6 +37,11 @@ export const siteConfig = {
   contact: {
     email: null as string | null,
     calUrl: "https://cal.com/raza141/30min",
+    /** Click-to-chat number in international format, digits only (wa.me). */
+    whatsapp: {
+      number: "971581633864",
+      greeting: "Hi Finance in Practice! I'd like to know more about your courses.",
+    },
   },
 
   bookingHref: "/#book",

@@ -5,6 +5,7 @@ import Script from "next/script";
 import { Footer } from "@/core/components/layout/Footer";
 import { Navbar } from "@/core/components/layout/Navbar";
 import { CustomCursor } from "@/core/components/ui/CustomCursor";
+import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
 import { siteConfig } from "@/core/config/site";
 
 import "./globals.css";
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        <WhatsAppButton />
         <CustomCursor />
       </body>
     </html>

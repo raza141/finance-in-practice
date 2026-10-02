@@ -23,7 +23,7 @@ export function MobileNav() {
         aria-controls="mobile-nav"
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-ink"
+        className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#151E32]/80 text-ink shadow-lg backdrop-blur-md"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           {open ? (
