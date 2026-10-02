@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
+import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
 
 /**
@@ -50,9 +51,31 @@ export function MobileNav() {
                 >
                   {item.label}
                 </Link>
+                {item.children && (
+                  <ul className="mb-1 ml-3 border-l border-line pl-2">
+                    {item.children.map((child) => (
+                      <li key={child.href}>
+                        <Link
+                          href={child.href}
+                          onClick={() => setOpen(false)}
+                          className="block rounded-md px-2 py-2 text-sm text-muted hover:bg-surface hover:text-ink"
+                        >
+                          {child.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
+          <ButtonLink
+            href={siteConfig.navCta.href}
+            onClick={() => setOpen(false)}
+            className="mt-2 w-full"
+          >
+            {siteConfig.navCta.label}
+          </ButtonLink>
         </nav>,
           document.body,
         )}

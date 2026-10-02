@@ -1,3 +1,9 @@
+export interface NavItem {
+  label: string;
+  href: string;
+  children?: readonly NavItem[];
+}
+
 /** Site-wide brand facts. Edit here; components read from this single source. */
 export const siteConfig = {
   name: "Finance in Practice",
@@ -7,15 +13,31 @@ export const siteConfig = {
   description:
     "CFA®, FRM® and university finance tutoring from a practitioner who builds the models in Python. Book a free 1-on-1 demo.",
 
+  /** Primary navigation. `children` render as a dropdown on desktop. */
   nav: [
-    { label: "About Us", href: "/#about" },
-    { label: "Courses", href: "/#curriculum" },
-    { label: "Demo", href: "/#book" },
-    { label: "Automation", href: "/#automation" },
-    { label: "Stress Testing", href: "/#stress-testing" },
-    { label: "Financial Modeling", href: "/#financial-modeling" },
-    { label: "Contact Us", href: "/consulting#book" },
-  ],
+    { label: "About", href: "/about" },
+    {
+      label: "Courses",
+      href: "/#curriculum",
+      children: [
+        { label: "Stress Testing", href: "/#stress-testing" },
+        { label: "Financial Modeling", href: "/#financial-modeling" },
+        { label: "Automation", href: "/#automation" },
+      ],
+    },
+    { label: "Journal", href: "/journal" },
+    { label: "Free Cohort", href: "/cohort" },
+    { label: "Contact", href: "/contact" },
+  ] satisfies readonly NavItem[],
+
+  /** Gold conversion button at the end of the navbar. */
+  navCta: { label: "Book free demo", href: "/consulting#book" },
+
+  /** Public contact channels. Leave `email` null to hide it on /contact. */
+  contact: {
+    email: null as string | null,
+    calUrl: "https://cal.com/raza141/30min",
+  },
 
   bookingHref: "/#book",
 
