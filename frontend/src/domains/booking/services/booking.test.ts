@@ -13,20 +13,20 @@ describe("MockAvailabilityProvider", () => {
   const provider = new MockAvailabilityProvider(0, FIXED_NOW);
 
   it("projects N consecutive days starting tomorrow in GST", async () => {
-    const days = await provider.getProjection({ track: "cfa", days: 14 });
+    const days = await provider.getProjection({ track: "cfa", days: 14, timeZone: "Asia/Dubai" });
     expect(days).toHaveLength(14);
     expect(days[0].date).toBe("2026-10-03");
     expect(days[13].date).toBe("2026-10-16");
   });
 
   it("is deterministic per date and track", async () => {
-    const a = await provider.getProjection({ track: "frm", days: 14 });
-    const b = await provider.getProjection({ track: "frm", days: 14 });
+    const a = await provider.getProjection({ track: "frm", days: 14, timeZone: "Asia/Dubai" });
+    const b = await provider.getProjection({ track: "frm", days: 14, timeZone: "Asia/Dubai" });
     expect(a).toEqual(b);
   });
 
   it("produces sorted, well-formed slots with correct UTC instants and sides", async () => {
-    const days = await provider.getProjection({ track: "systems", days: 14 });
+    const days = await provider.getProjection({ track: "systems", days: 14, timeZone: "Asia/Dubai" });
     for (const day of days) {
       const labels = day.slots.map((s) => s.label);
       expect(labels).toEqual([...labels].sort());
@@ -35,13 +35,14 @@ describe("MockAvailabilityProvider", () => {
         const utc = new Date(slot.start);
         expect(utc.getUTCHours()).toBe((h - 4 + 24) % 24); // GST = UTC+4
         expect(utc.getUTCMinutes()).toBe(m);
-        expect(slot.side).toBe(slot.label >= "17:00" ? "ASK" : "BID");
       }
+      const bids = day.slots.filter((s) => s.side === "BID").length;
+      expect(bids).toBe(Math.ceil(day.slots.length / 2)); // earlier half of the book
     }
   });
 
   it("keeps weekends thinner than weekdays", async () => {
-    const days = await provider.getProjection({ track: "uni", days: 14 });
+    const days = await provider.getProjection({ track: "uni", days: 14, timeZone: "Asia/Dubai" });
     for (const day of days) {
       const weekday = new Date(`${day.date}T00:00:00Z`).getUTCDay();
       const cap = weekday === 0 || weekday === 6 ? 2 : 5;
@@ -52,7 +53,7 @@ describe("MockAvailabilityProvider", () => {
   it("supports cancellation", async () => {
     const slow = new MockAvailabilityProvider(10_000, FIXED_NOW);
     const controller = new AbortController();
-    const pending = slow.getProjection({ track: "cfa", days: 3 }, controller.signal);
+    const pending = slow.getProjection({ track: "cfa", days: 3, timeZone: "Asia/Dubai" }, controller.signal);
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
   });
@@ -66,9 +67,10 @@ describe("LiquidityCurveGeometry", () => {
     expect(geometry.points[4].x).toBe(BOX.width - BOX.padding.right);
   });
 
-  it("maps 0 to the baseline and yMax to the top", () => {
+  it("maps 0 to the baseline and the rounded-up yMax to the top", () => {
+    expect(geometry.yMax).toBe(6); // max 5 rounded up to the 2-slot grid step
     expect(geometry.points[0].y).toBe(BOX.height - BOX.padding.bottom);
-    expect(geometry.points[2].y).toBe(BOX.padding.top);
+    expect(geometry.yFor(geometry.yMax)).toBe(BOX.padding.top);
   });
 
   it("finds the nearest node for a pointer x", () => {
@@ -101,8 +103,16 @@ describe("LiquidityCurveGeometry", () => {
   });
 
   it("uses a minimum y-scale so sparse curves are not exaggerated", () => {
-    expect(new LiquidityCurveGeometry([1, 1, 2], BOX).yMax).toBe(5);
+    expect(new LiquidityCurveGeometry([1, 1, 2], BOX).yMax).toBe(6);
     expect(new LiquidityCurveGeometry([1, 8, 2], BOX).yMax).toBe(8);
+  });
+
+  it("chooses readable gridlines for busy days (16 live slots -> 0,5,10,15,20)", () => {
+    const busy = new LiquidityCurveGeometry([0, 16, 16, 16, 16, 16, 0], BOX);
+    expect(busy.gridValues()).toEqual([0, 5, 10, 15, 20]);
+    expect(LiquidityCurveGeometry.niceStep(0.5)).toBe(1);
+    expect(LiquidityCurveGeometry.niceStep(3)).toBe(5);
+    expect(LiquidityCurveGeometry.niceStep(12)).toBe(20);
   });
 });
 
@@ -129,20 +139,6 @@ describe("TerminalAnimator.scrambled", () => {
 });
 
 describe("BookingCatalog", () => {
-  it("builds a Cal.com hand-off URL with the chosen date preselected", () => {
-    const previous = process.env.NEXT_PUBLIC_CAL_LINK;
-    process.env.NEXT_PUBLIC_CAL_LINK = "someone/30min";
-    try {
-      expect(new BookingCatalog().confirmationUrl("2026-10-14")).toBe(
-        "https://cal.com/someone/30min?date=2026-10-14&month=2026-10",
-      );
-      process.env.NEXT_PUBLIC_CAL_LINK = "";
-      expect(new BookingCatalog().confirmationUrl("2026-10-14")).toBeNull();
-    } finally {
-      process.env.NEXT_PUBLIC_CAL_LINK = previous;
-    }
-  });
-
   it("exposes the four terminal tracks", () => {
     expect(new BookingCatalog().tracks().map((t) => t.ticker)).toEqual([
       "CFA L1/L2",

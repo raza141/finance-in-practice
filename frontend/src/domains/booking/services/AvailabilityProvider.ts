@@ -1,21 +1,66 @@
 import type { AvailabilityQuery, DayLiquidity, TimeSlot } from "../types";
+import { BookingApiClient } from "./BookingApiClient";
+import type { SlotWire } from "./BookingContract";
+import { ZonedCalendar } from "./ZonedCalendar";
 
 /**
- * Source of bookable demo slots. The widget depends only on this contract;
- * Phase 3 adds a Cal.com `/v2/slots` implementation alongside the mock.
+ * Source of bookable demo slots. The widget depends only on this contract.
+ * Dates are calendar days and labels are wall-clock times in `timeZone`.
  */
 export interface AvailabilityProvider {
   /** True while slots are simulated and nothing is actually reserved. */
   readonly isSimulated: boolean;
   getProjection(query: AvailabilityQuery, signal?: AbortSignal): Promise<DayLiquidity[]>;
+  getDay(date: string, timeZone: string, signal?: AbortSignal): Promise<DayLiquidity>;
 }
 
-/** Tutor's timezone. Gulf Standard Time has no DST, so a fixed offset is exact. */
+/** Shared mapping from UTC wire slots to display slots in a timezone. */
+export class SlotMapper {
+  /** Earlier half of a day's book is the BID side, the later half the ASK side. */
+  static toSlots(wire: SlotWire[], calendar: ZonedCalendar): TimeSlot[] {
+    const sorted = [...wire].sort((a, b) => a.start.localeCompare(b.start));
+    const bidCount = Math.ceil(sorted.length / 2);
+    return sorted.map((slot, i) => ({
+      start: slot.start,
+      label: calendar.timeOf(new Date(slot.start)),
+      durationMinutes: Math.round((Date.parse(slot.end) - Date.parse(slot.start)) / 60_000),
+      side: i < bidCount ? "BID" : "ASK",
+    }));
+  }
+}
+
+/** Live availability from Cal.com via our server routes (API key stays server-side). */
+export class CalAvailabilityProvider implements AvailabilityProvider {
+  readonly isSimulated = false;
+
+  constructor(private readonly api: BookingApiClient = new BookingApiClient()) {}
+
+  async getProjection(
+    { days, timeZone }: AvailabilityQuery,
+    signal?: AbortSignal,
+  ): Promise<DayLiquidity[]> {
+    const calendar = new ZonedCalendar(timeZone);
+    const start = calendar.today();
+    const end = ZonedCalendar.addDays(start, days - 1);
+    const response = await this.api.range(start, end, timeZone, { signal });
+    return response.days.map((day) => ({
+      date: day.date,
+      slots: SlotMapper.toSlots(day.slots, calendar),
+    }));
+  }
+
+  async getDay(date: string, timeZone: string, signal?: AbortSignal): Promise<DayLiquidity> {
+    const response = await this.api.day(date, timeZone, { signal });
+    return { date, slots: SlotMapper.toSlots(response.slots, new ZonedCalendar(timeZone)) };
+  }
+}
+
+/** Tutor's timezone, used by the simulated provider. */
 export const TUTOR_TIMEZONE = { label: "GST", iana: "Asia/Dubai", utcOffsetHours: 4 } as const;
 
 /**
- * Deterministic simulated availability: the same date always yields the same
- * slots (seeded by the date), so the curve is stable across renders and tests.
+ * Deterministic simulated availability for tests and offline development:
+ * the same date always yields the same slots (seeded by the date).
  */
 export class MockAvailabilityProvider implements AvailabilityProvider {
   readonly isSimulated = true;
@@ -23,7 +68,6 @@ export class MockAvailabilityProvider implements AvailabilityProvider {
   private static readonly SESSION_TIMES = [
     "09:00", "10:30", "12:00", "14:00", "15:30", "17:00", "18:45", "20:15",
   ] as const;
-  private static readonly ASK_FROM = "17:00";
 
   constructor(
     private readonly latencyMs = 650,
@@ -31,8 +75,22 @@ export class MockAvailabilityProvider implements AvailabilityProvider {
   ) {}
 
   getProjection({ track, days }: AvailabilityQuery, signal?: AbortSignal): Promise<DayLiquidity[]> {
+    return this.delay(signal, () => {
+      const today = MockAvailabilityProvider.tutorDate(this.now());
+      return Array.from({ length: days }, (_, i) => {
+        const date = ZonedCalendar.addDays(today, i + 1); // from tomorrow
+        return { date, slots: this.slotsFor(date, track) };
+      });
+    });
+  }
+
+  getDay(date: string, _timeZone: string, signal?: AbortSignal): Promise<DayLiquidity> {
+    return this.delay(signal, () => ({ date, slots: this.slotsFor(date, "any") }));
+  }
+
+  private delay<T>(signal: AbortSignal | undefined, build: () => T): Promise<T> {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => resolve(this.build(track, days)), this.latencyMs);
+      const timer = setTimeout(() => resolve(build()), this.latencyMs);
       signal?.addEventListener("abort", () => {
         clearTimeout(timer);
         reject(new DOMException("Availability request cancelled", "AbortError"));
@@ -40,19 +98,10 @@ export class MockAvailabilityProvider implements AvailabilityProvider {
     });
   }
 
-  private build(track: string, days: number): DayLiquidity[] {
-    const todayInTutorTz = MockAvailabilityProvider.tutorDate(this.now());
-    return Array.from({ length: days }, (_, i) => {
-      const date = MockAvailabilityProvider.addDays(todayInTutorTz, i + 1); // from tomorrow
-      return { date, slots: this.slotsFor(date, track) };
-    });
-  }
-
   private slotsFor(date: string, track: string): TimeSlot[] {
     const random = MockAvailabilityProvider.seededRandom(`${date}:${track}`);
     const weekday = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0 Sun ... 6 Sat
-    const weekend = weekday === 0 || weekday === 6;
-    const maxSlots = weekend ? 2 : 5;
+    const maxSlots = weekday === 0 || weekday === 6 ? 2 : 5;
     const count = Math.floor(random() * (maxSlots + 1));
 
     const pool = [...MockAvailabilityProvider.SESSION_TIMES];
@@ -61,25 +110,16 @@ export class MockAvailabilityProvider implements AvailabilityProvider {
       picked.push(pool.splice(Math.floor(random() * pool.length), 1)[0]);
     }
 
-    return picked.sort().map((label) => ({
-      label,
-      start: MockAvailabilityProvider.toUtcIso(date, label),
-      durationMinutes: 30,
-      side: label >= MockAvailabilityProvider.ASK_FROM ? "ASK" : "BID",
-    }));
+    const wire = picked.map((label) => {
+      const start = MockAvailabilityProvider.toUtcIso(date, label);
+      return { start, end: new Date(Date.parse(start) + 30 * 60_000).toISOString() };
+    });
+    return SlotMapper.toSlots(wire, new ZonedCalendar(TUTOR_TIMEZONE.iana));
   }
-
-  // --- date helpers (fixed-offset arithmetic, no locale dependence) --------
 
   private static tutorDate(instant: Date): string {
     const shifted = new Date(instant.getTime() + TUTOR_TIMEZONE.utcOffsetHours * 3_600_000);
     return shifted.toISOString().slice(0, 10);
-  }
-
-  private static addDays(date: string, days: number): string {
-    const d = new Date(`${date}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + days);
-    return d.toISOString().slice(0, 10);
   }
 
   private static toUtcIso(date: string, time: string): string {

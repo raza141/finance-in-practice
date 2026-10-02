@@ -16,6 +16,8 @@ export interface ChartBox {
 export class LiquidityCurveGeometry {
   readonly points: Point[];
   readonly yMax: number;
+  /** Gridline spacing: a 1/2/5 x 10^k step giving roughly four intervals. */
+  readonly yStep: number;
 
   constructor(
     private readonly values: readonly number[],
@@ -23,7 +25,9 @@ export class LiquidityCurveGeometry {
     minYMax = 5,
   ) {
     if (values.length < 2) throw new Error("a curve needs at least two points");
-    this.yMax = Math.max(minYMax, ...values);
+    const rawMax = Math.max(minYMax, ...values);
+    this.yStep = LiquidityCurveGeometry.niceStep(rawMax / 4);
+    this.yMax = Math.ceil(rawMax / this.yStep) * this.yStep;
     this.points = values.map((value, i) => ({ x: this.xAt(i), y: this.yFor(value) }));
   }
 
@@ -79,9 +83,17 @@ export class LiquidityCurveGeometry {
     return `${LiquidityCurveGeometry.smooth(upper)} L${back.slice(1)} Z`;
   }
 
-  /** Horizontal gridline values (integers from 0 to yMax). */
+  /** Horizontal gridline values from 0 to yMax in `yStep` increments. */
   gridValues(): number[] {
-    return Array.from({ length: this.yMax + 1 }, (_, i) => i);
+    return Array.from({ length: this.yMax / this.yStep + 1 }, (_, i) => i * this.yStep);
+  }
+
+  /** Smallest integer step of the form {1, 2, 5} x 10^k that is >= `raw`. */
+  static niceStep(raw: number): number {
+    if (raw <= 1) return 1;
+    const magnitude = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= raw);
+    return step ?? 10 * magnitude;
   }
 
   /**

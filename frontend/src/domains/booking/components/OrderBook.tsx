@@ -2,18 +2,19 @@
 
 import { useRef, type KeyboardEvent } from "react";
 
-import { TUTOR_TIMEZONE } from "../services/AvailabilityProvider";
 import { TerminalFormat } from "../services/TerminalFormat";
 import type { DayLiquidity, TimeSlot } from "../types";
 
 interface OrderBookProps {
   day: DayLiquidity;
   selected: TimeSlot | null;
+  /** Short label of the viewer's timezone, e.g. "GMT+4". */
+  zoneLabel: string;
   onSelect: (slot: TimeSlot) => void;
 }
 
-/** Stage 3: available times rendered as an L2 book (BID = day, ASK = evening). */
-export function OrderBook({ day, selected, onSelect }: OrderBookProps) {
+/** Stage 3: available times as an L2 book (earlier half BID, later half ASK). */
+export function OrderBook({ day, selected, zoneLabel, onSelect }: OrderBookProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -37,7 +38,7 @@ export function OrderBook({ day, selected, onSelect }: OrderBookProps) {
 
         <div className="grid grid-cols-[3.5rem_1fr_4rem_5.5rem] gap-2 px-4 py-2 text-[10px] tracking-wider text-muted">
           <span>SIDE</span>
-          <span>TIME ({TUTOR_TIMEZONE.label})</span>
+          <span>TIME ({zoneLabel})</span>
           <span>SIZE</span>
           <span className="text-right">STATUS</span>
         </div>
@@ -47,7 +48,7 @@ export function OrderBook({ day, selected, onSelect }: OrderBookProps) {
           role="radiogroup"
           aria-label={`Available times on ${TerminalFormat.date(day.date)}`}
           onKeyDown={onKeyDown}
-          className="pb-2"
+          className="max-h-64 overflow-y-auto pb-2"
         >
           {day.slots.map((slot) => {
             const active = selected?.start === slot.start;
@@ -67,7 +68,7 @@ export function OrderBook({ day, selected, onSelect }: OrderBookProps) {
               >
                 <span className={slot.side === "BID" ? "text-quant" : "text-muted"}>{slot.side}</span>
                 <span className="text-sm">
-                  {slot.label} <span className="text-muted">{TUTOR_TIMEZONE.label}</span>
+                  {slot.label} <span className="text-muted">{zoneLabel}</span>
                 </span>
                 <span className="text-muted">{slot.durationMinutes}m</span>
                 <span className={`text-right ${active ? "text-gold" : "text-muted"}`}>

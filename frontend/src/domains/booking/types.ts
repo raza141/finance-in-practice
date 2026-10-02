@@ -12,15 +12,15 @@ export type BookSide = "BID" | "ASK";
 export interface TimeSlot {
   /** ISO 8601 start instant (UTC), the value a booking API will need. */
   start: string;
-  /** Wall-clock label in the tutor's timezone, e.g. "14:00". */
+  /** Wall-clock label in the viewer's timezone, e.g. "14:00". */
   label: string;
   durationMinutes: number;
-  /** Morning/afternoon slots sit on the bid side, evening slots on the ask. */
+  /** Earlier half of the day's book is the bid side, the later half the ask. */
   side: BookSide;
 }
 
 export interface DayLiquidity {
-  /** Calendar date in the tutor's timezone, YYYY-MM-DD. */
+  /** Calendar date in the viewer's timezone, YYYY-MM-DD. */
   date: string;
   slots: TimeSlot[];
 }
@@ -28,4 +28,6 @@ export interface DayLiquidity {
 export interface AvailabilityQuery {
   track: TrackId;
   days: number;
+  /** Visitor's IANA timezone: dates and labels are expressed in it. */
+  timeZone: string;
 }

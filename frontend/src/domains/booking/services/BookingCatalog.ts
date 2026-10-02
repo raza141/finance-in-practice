@@ -17,17 +17,4 @@ export class BookingCatalog {
     if (!track) throw new Error(`Unknown booking track: ${id}`);
     return track;
   }
-
-  /**
-   * Where a simulated selection is finalised until live booking lands in
-   * Phase 3. Returns null when no Cal.com event is configured.
-   */
-  confirmationUrl(date: string): string | null {
-    const calLink = process.env.NEXT_PUBLIC_CAL_LINK?.trim();
-    if (!calLink) return null;
-    const url = new URL(`https://cal.com/${calLink}`);
-    url.searchParams.set("date", date);
-    url.searchParams.set("month", date.slice(0, 7));
-    return url.toString();
-  }
 }

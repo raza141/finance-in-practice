@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+
+import { ApiError } from "@/core/http/ApiError";
 
 import { TerminalAnimator } from "../animations/TerminalAnimator";
-import {
-  MockAvailabilityProvider,
-  TUTOR_TIMEZONE,
-  type AvailabilityProvider,
-} from "../services/AvailabilityProvider";
+import { CalAvailabilityProvider, type AvailabilityProvider } from "../services/AvailabilityProvider";
+import { BookingApiClient } from "../services/BookingApiClient";
 import { BookingCatalog } from "../services/BookingCatalog";
+import { BookingContract, type CreateBookingResponse } from "../services/BookingContract";
 import { TerminalFormat } from "../services/TerminalFormat";
+import { ZonedCalendar } from "../services/ZonedCalendar";
 import type { DayLiquidity, TimeSlot, TrackId } from "../types";
 import { LiquidityCurve } from "./LiquidityCurve";
 import { OrderBook } from "./OrderBook";
@@ -18,97 +19,176 @@ import { TrackTabs } from "./TrackTabs";
 const PROJECTION_DAYS = 14;
 const STAGES = ["TRACK", "DATE", "TIME", "EXECUTE"] as const;
 
-type Feed =
+type Load<T> =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; days: DayLiquidity[] }
-  | { status: "error" };
+  | { status: "ready"; data: T }
+  | { status: "error"; message: string };
 
-type Execution = "idle" | "running" | "done";
+/** submitting = POST in flight; running = confirmed, animation playing. */
+type Execution = "idle" | "submitting" | "running" | "done";
+
+const isAbort = (error: unknown) =>
+  (error instanceof DOMException && error.name === "AbortError") ||
+  (error instanceof ApiError && error.kind === "aborted");
+
+const messageOf = (error: unknown) =>
+  error instanceof ApiError ? error.message : "Something went wrong. Please retry.";
+
+interface QuantBookingWidgetProps {
+  provider?: AvailabilityProvider;
+  bookingClient?: BookingApiClient;
+}
 
 /**
  * Booking as a trading terminal:
  *   1. asset-class tabs (track) -> 2. liquidity curve (date)
- *   -> 3. L2 order book (time) -> 4. trade execution (confirmation).
+ *   -> 3. L2 order book (time) -> 4. trade execution (live Cal.com booking).
  */
-export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvider }) {
+export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidgetProps) {
   // Instances are created once and never mutated during render.
-  const [feedProvider] = useState<AvailabilityProvider>(
-    () => provider ?? new MockAvailabilityProvider(),
-  );
+  const [feedProvider] = useState<AvailabilityProvider>(() => provider ?? new CalAvailabilityProvider());
+  const [api] = useState(() => bookingClient ?? new BookingApiClient());
   const [catalog] = useState(() => new BookingCatalog());
   const [animator] = useState(() => new TerminalAnimator());
 
   const [track, setTrack] = useState<TrackId | null>(null);
-  const [feed, setFeed] = useState<Feed>({ status: "idle" });
+  const [projection, setProjection] = useState<Load<DayLiquidity[]>>({ status: "idle" });
   const [date, setDate] = useState<string | null>(null);
+  const [book, setBook] = useState<Load<DayLiquidity>>({ status: "idle" });
   const [slot, setSlot] = useState<TimeSlot | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState(""); // honeypot
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [execution, setExecution] = useState<Execution>("idle");
+  const [booking, setBooking] = useState<CreateBookingResponse | null>(null);
+  const [timeZone, setTimeZone] = useState("UTC");
 
-  const requestRef = useRef<AbortController | null>(null);
+  const projectionRequest = useRef<AbortController | null>(null);
+  const bookRequest = useRef<AbortController | null>(null);
   const bookRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLParagraphElement>(null);
 
-  const days = feed.status === "ready" ? feed.days : null;
-  const day = days?.find((d) => d.date === date) ?? null;
-  const stage = !track ? 0 : !date ? 1 : execution === "idle" ? 2 : 3;
+  const days = projection.status === "ready" ? projection.data : null;
+  const day = book.status === "ready" ? book.data : null;
+  const busy = execution === "submitting" || execution === "running";
+  const stage = !track ? 0 : !date ? 1 : execution === "idle" || execution === "submitting" ? 2 : 3;
   const finalText = feedProvider.isSimulated
     ? "[ DIVIDEND CAPTURED: DEMO STAGED ]"
     : "[ DIVIDEND CAPTURED: DEMO SCHEDULED ]";
 
   // --- data --------------------------------------------------------------
 
-  const loadProjection = (id: TrackId) => {
-    requestRef.current?.abort();
+  const loadProjection = (id: TrackId, zone: string) => {
+    projectionRequest.current?.abort();
     const controller = new AbortController();
-    requestRef.current = controller;
-    setFeed({ status: "loading" });
+    projectionRequest.current = controller;
+    setProjection({ status: "loading" });
     feedProvider
-      .getProjection({ track: id, days: PROJECTION_DAYS }, controller.signal)
-      .then((result) => setFeed({ status: "ready", days: result }))
+      .getProjection({ track: id, days: PROJECTION_DAYS, timeZone: zone }, controller.signal)
+      .then((data) => setProjection({ status: "ready", data }))
       .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setFeed({ status: "error" });
-        }
+        if (!isAbort(error)) setProjection({ status: "error", message: messageOf(error) });
       });
   };
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  /** Always fetch the clicked day fresh: the projection may be minutes old. */
+  const loadBook = (forDate: string, zone: string) => {
+    bookRequest.current?.abort();
+    const controller = new AbortController();
+    bookRequest.current = controller;
+    setBook({ status: "loading" });
+    feedProvider
+      .getDay(forDate, zone, controller.signal)
+      .then((data) => setBook({ status: "ready", data }))
+      .catch((error: unknown) => {
+        if (!isAbort(error)) setBook({ status: "error", message: messageOf(error) });
+      });
+  };
+
+  useEffect(
+    () => () => {
+      projectionRequest.current?.abort();
+      bookRequest.current?.abort();
+    },
+    [],
+  );
   useEffect(() => () => animator.dispose(), [animator]);
 
   // --- interactions --------------------------------------------------------
 
   const lockTrack = (id: TrackId) => {
-    if (execution === "running" || (id === track && feed.status !== "error")) return;
+    if (busy || (id === track && projection.status !== "error")) return;
+    const zone = ZonedCalendar.visitorTimeZone();
+    setTimeZone(zone);
     setTrack(id);
     setDate(null);
+    setBook({ status: "idle" });
     setSlot(null);
+    setOrderError(null);
     setExecution("idle");
-    loadProjection(id);
+    loadProjection(id, zone);
   };
 
   const lockDate = (next: string) => {
     if (execution !== "idle") return;
     setDate(next);
     setSlot(null);
+    setOrderError(null);
+    loadBook(next, timeZone);
+  };
+
+  const execute = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!track || !slot || execution !== "idle") return;
+    if (name.trim().length < 2) return setOrderError("Enter your full name.");
+    if (!BookingContract.isEmail(email)) return setOrderError("Enter a valid email address.");
+
+    setOrderError(null);
+    setExecution("submitting");
+    try {
+      const result = await api.create({
+        start: slot.start,
+        name: name.trim(),
+        email: email.trim(),
+        timeZone,
+        track,
+        company,
+      });
+      setBooking(result);
+      setExecution("running"); // only now does the confirmation sequence play
+    } catch (error) {
+      setExecution("idle");
+      setOrderError(messageOf(error));
+      if (error instanceof ApiError && error.status === 409 && date) {
+        setSlot(null);
+        loadBook(date, timeZone); // refresh the book so the taken slot disappears
+      }
+    }
   };
 
   const reset = () => {
     setTrack(null);
-    setFeed({ status: "idle" });
+    setProjection({ status: "idle" });
     setDate(null);
+    setBook({ status: "idle" });
     setSlot(null);
+    setOrderError(null);
+    setBooking(null);
     setExecution("idle");
   };
 
   // --- animation hooks -----------------------------------------------------
 
   useEffect(() => {
-    if (date && execution === "idle" && bookRef.current) animator.openOrderBook(bookRef.current);
-    // Opening is tied to the date lock only.
+    if (book.status === "ready" && execution === "idle" && bookRef.current) {
+      animator.openOrderBook(bookRef.current);
+    }
+    // Opening is tied to a freshly loaded book only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animator, date]);
+  }, [animator, book.status, date]);
 
   useEffect(() => {
     if (execution !== "running" || !readoutRef.current) return;
@@ -130,8 +210,9 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
 
   // --- render --------------------------------------------------------------
 
-  const ticket = track && day && slot ? { track: catalog.track(track), day, slot } : null;
-  const confirmUrl = ticket ? catalog.confirmationUrl(ticket.day.date) : null;
+  const zone = new ZonedCalendar(timeZone);
+  const zoneLabel = zone.abbreviation(slot ? new Date(slot.start) : new Date());
+  const ticket = track && date && slot ? { track: catalog.track(track), date, slot } : null;
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-line font-mono text-ink shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)]">
@@ -170,38 +251,34 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
           <TrackTabs
             tracks={catalog.tracks()}
             locked={track}
-            disabled={execution === "running"}
+            disabled={busy}
             animator={animator}
             onLock={lockTrack}
           />
 
           {/* Stage 2 */}
           <div className="mt-4">
-            {feed.status === "idle" && (
-              <div className="grid aspect-[640/280] place-items-center rounded-lg border border-dashed border-line text-center text-[11px] tracking-wider text-muted">
-                <span>
-                  SELECT AN ASSET CLASS TO LOAD THE {PROJECTION_DAYS}-DAY LIQUIDITY CURVE
-                </span>
-              </div>
+            {projection.status === "idle" && (
+              <Placeholder>
+                SELECT AN ASSET CLASS TO LOAD THE {PROJECTION_DAYS}-DAY LIQUIDITY CURVE
+              </Placeholder>
             )}
-            {feed.status === "loading" && (
-              <div className="grid aspect-[640/280] place-items-center rounded-lg border border-line/60 text-[11px] tracking-wider text-quant">
-                <span className="animate-pulse-soft">FETCHING LIQUIDITY CURVE…</span>
-              </div>
+            {projection.status === "loading" && (
+              <Placeholder tone="quant">
+                <span className="animate-pulse-soft">FETCHING LIVE LIQUIDITY CURVE…</span>
+              </Placeholder>
             )}
-            {feed.status === "error" && (
-              <div className="grid aspect-[640/280] place-items-center rounded-lg border border-line text-[11px] tracking-wider text-muted">
-                <span>
-                  FEED ERROR ·{" "}
-                  <button
-                    type="button"
-                    className="text-quant underline-offset-4 hover:underline"
-                    onClick={() => track && loadProjection(track)}
-                  >
-                    RETRY
-                  </button>
-                </span>
-              </div>
+            {projection.status === "error" && (
+              <Placeholder>
+                FEED ERROR · {projection.message.toUpperCase()} ·{" "}
+                <button
+                  type="button"
+                  className="text-quant underline-offset-4 hover:underline"
+                  onClick={() => track && loadProjection(track, timeZone)}
+                >
+                  RETRY
+                </button>
+              </Placeholder>
             )}
             {days && (
               <LiquidityCurve
@@ -215,35 +292,108 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
           </div>
 
           {/* Stage 3 */}
+          {date && book.status === "loading" && (
+            <p className="mt-5 text-center text-[11px] tracking-wider text-quant">
+              <span className="animate-pulse-soft">FETCHING ORDER BOOK…</span>
+            </p>
+          )}
+          {date && book.status === "error" && (
+            <p className="mt-5 text-center text-[11px] tracking-wider text-muted">
+              ORDER BOOK UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
+              <button
+                type="button"
+                className="text-quant hover:underline"
+                onClick={() => loadBook(date, timeZone)}
+              >
+                RETRY
+              </button>
+            </p>
+          )}
+
           {day && execution !== "done" && (
             <div ref={bookRef} className="overflow-hidden">
-              <OrderBook day={day} selected={slot} onSelect={setSlot} />
-              <div className="tabular-data mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-[11px] tracking-wider text-muted">
-                  {ticket ? (
-                    <>
-                      ORDER <span className="text-ink">{ticket.track.ticker}</span> ·{" "}
-                      {TerminalFormat.date(ticket.day.date)} · {ticket.slot.label}{" "}
-                      {TUTOR_TIMEZONE.label} · {ticket.slot.durationMinutes}m
-                    </>
-                  ) : (
-                    "SELECT A TIME FROM THE BOOK"
-                  )}
+              {day.slots.length === 0 ? (
+                <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-[11px] tracking-wider text-muted">
+                  NO LIQUIDITY LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
                 </p>
-                <button
-                  type="button"
-                  disabled={!slot || execution !== "idle"}
-                  onClick={() => setExecution("running")}
-                  className="h-11 rounded-md bg-gold px-5 text-xs font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
-                >
-                  EXECUTE DEMO TRADE
-                </button>
-              </div>
+              ) : (
+                <OrderBook
+                  day={day}
+                  selected={slot}
+                  zoneLabel={zoneLabel}
+                  onSelect={(s) => {
+                    setSlot(s);
+                    setOrderError(null);
+                  }}
+                />
+              )}
+              <p className="mt-2 text-[10px] tracking-wider text-muted">
+                Converted to your local time: <span className="text-ink/80">{timeZone}</span>
+              </p>
+
+              {/* Attendee + execution */}
+              <form onSubmit={execute} noValidate className="mt-4 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TerminalInput
+                    label="NAME"
+                    value={name}
+                    onChange={setName}
+                    autoComplete="name"
+                    disabled={busy}
+                  />
+                  <TerminalInput
+                    label="EMAIL"
+                    type="email"
+                    value={email}
+                    onChange={setEmail}
+                    autoComplete="email"
+                    disabled={busy}
+                  />
+                </div>
+                {/* Honeypot: hidden from people and assistive tech, tempting to bots. */}
+                <input
+                  type="text"
+                  name="company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden
+                  className="absolute -left-[9999px] h-px w-px opacity-0"
+                />
+
+                {orderError && (
+                  <p role="alert" className="text-[11px] tracking-wider text-gold">
+                    ORDER REJECTED · {orderError}
+                  </p>
+                )}
+
+                <div className="tabular-data flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[11px] tracking-wider text-muted">
+                    {ticket ? (
+                      <>
+                        ORDER <span className="text-ink">{ticket.track.ticker}</span> ·{" "}
+                        {TerminalFormat.date(ticket.date)} · {ticket.slot.label} {zoneLabel} ·{" "}
+                        {ticket.slot.durationMinutes}m
+                      </>
+                    ) : (
+                      "SELECT A TIME FROM THE BOOK"
+                    )}
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={!slot || execution !== "idle"}
+                    className="h-11 rounded-md bg-gold px-5 text-xs font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
+                  >
+                    {execution === "submitting" ? "ROUTING ORDER…" : "EXECUTE DEMO TRADE"}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
           {/* Stage 4 */}
-          {execution !== "idle" && (
+          {(execution === "running" || execution === "done") && (
             <div className="mt-5">
               <p
                 ref={readoutRef}
@@ -256,9 +406,9 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
                   <dl className="tabular-data grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                     {[
                       ["TRACK", ticket.track.ticker],
-                      ["DATE", `${TerminalFormat.weekday(ticket.day.date)} ${TerminalFormat.date(ticket.day.date)}`],
-                      ["TIME", `${ticket.slot.label} ${TUTOR_TIMEZONE.label}`],
-                      ["SIZE", `${ticket.slot.durationMinutes} MIN`],
+                      ["DATE", `${TerminalFormat.weekday(ticket.date)} ${TerminalFormat.date(ticket.date)}`],
+                      ["TIME", `${ticket.slot.label} ${zoneLabel}`],
+                      ["REF", booking?.uid.slice(0, 8).toUpperCase() ?? "—"],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <dt className="text-[10px] tracking-widest text-muted">{label}</dt>
@@ -266,31 +416,10 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
                       </div>
                     ))}
                   </dl>
-
-                  {feedProvider.isSimulated && (
-                    <div className="mt-4 border-t border-line pt-4 font-sans text-sm leading-relaxed text-muted">
-                      <p>
-                        <span className="font-mono text-[11px] tracking-wider text-quant">
-                          SIMULATED FEED ·{" "}
-                        </span>
-                        This slot is not reserved yet.{" "}
-                        {confirmUrl
-                          ? "Confirm it on Cal.com to receive your calendar invite."
-                          : "Live scheduling opens shortly."}
-                      </p>
-                      {confirmUrl && (
-                        <a
-                          href={confirmUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-3 inline-flex h-10 items-center rounded-md bg-gold px-4 font-mono text-xs font-bold tracking-widest text-canvas hover:bg-gold-bright"
-                        >
-                          CONFIRM ON CAL.COM →
-                        </a>
-                      )}
-                    </div>
-                  )}
-
+                  <p className="mt-4 border-t border-line pt-4 font-sans text-sm leading-relaxed text-muted">
+                    Confirmed. A calendar invite with the meeting link is on its way to{" "}
+                    <span className="text-ink">{email.trim()}</span>.
+                  </p>
                   <button
                     type="button"
                     onClick={reset}
@@ -305,5 +434,44 @@ export function QuantBookingWidget({ provider }: { provider?: AvailabilityProvid
         </div>
       </div>
     </div>
+  );
+}
+
+function Placeholder({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "quant" }) {
+  return (
+    <div
+      className={`grid aspect-[640/280] place-items-center rounded-lg border border-dashed border-line px-4 text-center text-[11px] tracking-wider ${
+        tone === "quant" ? "text-quant" : "text-muted"
+      }`}
+    >
+      <span>{children}</span>
+    </div>
+  );
+}
+
+interface TerminalInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: "text" | "email";
+  autoComplete: string;
+  disabled?: boolean;
+}
+
+function TerminalInput({ label, value, onChange, type = "text", autoComplete, disabled }: TerminalInputProps) {
+  return (
+    <label className="flex items-center gap-3 rounded-md border border-line bg-canvas/70 px-3 focus-within:border-quant/70">
+      <span className="text-[10px] tracking-widest text-muted">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        required
+        maxLength={type === "email" ? 254 : 100}
+        className="h-10 min-w-0 flex-1 bg-transparent font-mono text-sm text-ink outline-none placeholder:text-muted/50 disabled:opacity-60"
+      />
+    </label>
   );
 }

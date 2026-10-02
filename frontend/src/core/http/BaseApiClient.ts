@@ -106,7 +106,9 @@ export abstract class BaseApiClient {
 
   private async httpError(response: Response): Promise<ApiError> {
     const payload = await response.json().catch(() => null);
-    const message = BaseApiClient.extractMessage(payload) ?? response.statusText;
+    // Resolved through the subclass so each API can describe its own error shape.
+    const extract = (this.constructor as typeof BaseApiClient).extractMessage;
+    const message = extract(payload) ?? response.statusText;
 
     if (response.status === 422 || response.status === 400) {
       return new ApiError("validation", message, response.status, payload);
