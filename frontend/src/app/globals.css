@@ -26,6 +26,15 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Full-width page container: stretches edge to edge with fluid gutters,
+ * capped at 1920px so ultra-wide monitors keep sensible line lengths. */
+@utility page-container {
+  width: 100%;
+  max-width: 1920px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 5rem);
+}
+
 /* Tabular figures for numeric readouts only (metrics, credentials, order
  * book), so digits align in columns while prose keeps proportional numerals. */
 @utility tabular-data {

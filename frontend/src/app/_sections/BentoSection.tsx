@@ -9,7 +9,7 @@ export function BentoSection() {
       id="curriculum"
       aria-labelledby="curriculum-heading"
       data-sequence="reveal"
-      className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28"
+      className="page-container py-20 lg:py-28"
     >
       <SectionHeading
         id="curriculum-heading"

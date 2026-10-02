@@ -10,7 +10,7 @@ const HEADLINE: { text: string; accent?: boolean }[][] = [
 export function HeroSection() {
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pt-12 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:pt-24 lg:pb-24">
+      <div className="page-container grid items-center gap-8 pt-12 pb-16 sm:pt-16 lg:grid-cols-2 xl:gap-16 lg:pt-24 lg:pb-24">
         <div>
           <p
             data-anim="hero-subtitle"
@@ -68,7 +68,7 @@ export function HeroSection() {
         </div>
 
         <div data-anim="hero-canvas" className="relative">
-          <HeroScene className="mx-auto aspect-square w-full max-w-[520px]" />
+          <HeroScene className="mx-auto aspect-square w-full max-w-[820px]" />
         </div>
       </div>
     </section>

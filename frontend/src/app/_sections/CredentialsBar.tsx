@@ -8,7 +8,7 @@ export function CredentialsBar() {
       data-sequence="credentials"
       className="border-y border-line bg-surface/60"
     >
-      <ul className="tabular-data mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 px-4 py-6 text-sm sm:flex-row sm:gap-0 sm:divide-x sm:divide-line sm:px-6">
+      <ul className="tabular-data page-container flex flex-col items-center justify-center gap-4 py-6 text-sm sm:flex-row sm:gap-0 sm:divide-x sm:divide-line">
         {siteConfig.credentials.map((credential) => (
           <li
             key={credential}
