@@ -38,3 +38,8 @@ Thumbs.db
 
 # --- Generated tooling output --------------------------------------------
 graphify-out/
+
+# --- Local agent / tooling state -----------------------------------------
+.agents/
+.serena/
+skills-lock.json
