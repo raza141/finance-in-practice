@@ -35,6 +35,7 @@ export function CourseEnrolCard({ course }: { course: Course }) {
             target="_blank"
             rel="noopener noreferrer"
             download
+            prefetch={false}
           >
             Download brochure
             <span aria-hidden className="font-mono text-xs opacity-70">
