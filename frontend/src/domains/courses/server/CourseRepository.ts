@@ -56,6 +56,14 @@ export class CourseRepository {
     return row ? CourseRepository.toCourse(row) : null;
   }
 
+  /** Slug and last edit of every active course, for the sitemap. */
+  async activeSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
+    const rows = (await this.sql`
+      SELECT slug, updated_at FROM courses WHERE is_active ORDER BY slug
+    `) as { slug: string; updated_at: Date | string }[];
+    return rows.map((row) => ({ slug: row.slug, updatedAt: new Date(row.updated_at) }));
+  }
+
   /** Every course, active or not, for the admin list. */
   async all(): Promise<Course[]> {
     const rows = (await this.sql`

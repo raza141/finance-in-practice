@@ -25,9 +25,10 @@ async function repository(): Promise<CourseRepository> {
   return repo;
 }
 
-/** Drop the cached public page(s), so a change is visible immediately rather than within the hour. */
+/** Drop the cached public page(s) and sitemap, so a change is visible immediately rather than within the hour. */
 function revalidateCourse(...slugs: (string | null)[]): void {
   for (const slug of new Set(slugs)) if (slug) revalidatePath(`/courses/${slug}`);
+  revalidatePath("/sitemap.xml");
 }
 
 export async function saveCourse(_state: CourseFormState, formData: FormData): Promise<CourseFormState> {
