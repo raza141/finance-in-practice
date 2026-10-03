@@ -1,17 +1,25 @@
-import type { TestimonialStatus } from "../types";
+import type { OrderSide, Ticker, TestimonialStatus } from "../types";
 
 /**
- * Wire contract between the submission form and `POST /api/testimonials`,
+ * Wire contract between the Order Ticket form and `POST /api/testimonials`,
  * plus the validation both sides apply. Pure: safe to import anywhere.
+ *
+ * A testimonial is filed as a trade: the student "buys" (recommends) or
+ * "holds" a ticker (the programme they took), with a conviction and a
+ * before/after score whose relative change is the yield.
  */
 
 export interface SubmitTestimonialRequest {
   author: string;
   email: string;
   context: string;
-  program: string;
+  ticker: string;
+  side: string;
+  conviction: number;
+  beforeScore: number;
+  afterScore: number;
+  /** The review itself ("note" on the ticket). */
   quote: string;
-  outcome?: string;
   /** The student agreed to have their name and words published. */
   consent: boolean;
   /** Honeypot: must stay empty. Bots that auto-fill every field are dropped. */
@@ -23,9 +31,12 @@ export interface TestimonialSubmission {
   author: string;
   email: string;
   context: string;
-  program: string;
+  ticker: Ticker;
+  side: OrderSide;
+  conviction: number;
+  beforeScore: number;
+  afterScore: number;
   quote: string;
-  outcome: string | null;
   website: string;
 }
 
@@ -56,28 +67,49 @@ export class TestimonialValidationError extends Error {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export class TestimonialContract {
-  /** Courses and services a student can attribute their testimonial to. */
-  static readonly PROGRAMS = [
-    "CFA® exam prep",
-    "FRM® exam prep",
-    "University finance",
-    "Financial automation",
-    "Stress testing & VaR",
-    "Financial modeling",
-    "Portfolio construction & ML",
-    "1-on-1 tutoring",
-    "Consulting",
-    "Other",
-  ] as const;
+  /** Tickers and what they stand for. Mirrors the CHECK in migration 004. */
+  static readonly TICKERS: Readonly<Record<Ticker, string>> = {
+    CFA: "CFA® exam prep",
+    FRM: "FRM® exam prep",
+    PSX: "PSX equity analysis",
+    QUANT: "Quant finance & Python",
+    UNI: "University finance",
+  };
+
+  static readonly SIDES: Readonly<Record<OrderSide, string>> = {
+    BUY: "Recommend",
+    HOLD: "Mixed / neutral",
+  };
 
   static readonly LIMITS = {
     author: { min: 2, max: 80 },
     context: { min: 2, max: 100 },
     quote: { min: 40, max: 600 },
-    outcome: { max: 100 },
+    conviction: { min: 1, max: 10 },
+    /** Scores are percentages; before must be at least 1 so the yield is defined. */
+    beforeScore: { min: 1, max: 100 },
+    afterScore: { min: 0, max: 100 },
   } as const;
 
   static readonly STATUSES: readonly TestimonialStatus[] = ["pending", "approved", "rejected"];
+
+  /**
+   * Relative change in percent, rounded to 2 dp half away from zero: the same
+   * value Postgres stores in the generated yield_percent column. Integer
+   * arithmetic, so the preview never disagrees with the database by a cent.
+   */
+  static yieldPercent(beforeScore: number, afterScore: number): number | null {
+    if (!Number.isInteger(beforeScore) || !Number.isInteger(afterScore) || beforeScore < 1) return null;
+    const numerator = (afterScore - beforeScore) * 10_000; // percent x 100
+    const hundredths = Math.floor((2 * Math.abs(numerator) + beforeScore) / (2 * beforeScore));
+    return (Math.sign(numerator) * hundredths) / 100;
+  }
+
+  /** "+45.45%", "−10.00%", "0.00%" (true minus sign, for tabular alignment). */
+  static formatYield(percent: number): string {
+    const sign = percent > 0 ? "+" : percent < 0 ? "−" : "";
+    return `${sign}${Math.abs(percent).toFixed(2)}%`;
+  }
 
   /** Validate and normalise an untrusted submission body. */
   static parseSubmission(body: unknown): TestimonialSubmission {
@@ -102,21 +134,16 @@ export class TestimonialContract {
       );
     }
 
-    const program = typeof b.program === "string" ? b.program : "";
-    if (!TestimonialContract.isProgram(program)) {
-      throw new TestimonialValidationError("program is not recognised");
-    }
+    if (!TestimonialContract.isTicker(b.ticker)) throw new TestimonialValidationError("choose a ticker");
+    if (!TestimonialContract.isSide(b.side)) throw new TestimonialValidationError("choose BUY or HOLD");
+
+    const conviction = TestimonialContract.integer(b.conviction, LIMITS.conviction, "conviction");
+    const beforeScore = TestimonialContract.integer(b.beforeScore, LIMITS.beforeScore, "before score");
+    const afterScore = TestimonialContract.integer(b.afterScore, LIMITS.afterScore, "after score");
 
     const quote = TestimonialContract.paragraph(b.quote);
     if (quote.length < LIMITS.quote.min || quote.length > LIMITS.quote.max) {
-      throw new TestimonialValidationError(
-        `testimonial must be ${LIMITS.quote.min}–${LIMITS.quote.max} characters`,
-      );
-    }
-
-    const outcome = TestimonialContract.line(b.outcome);
-    if (outcome.length > LIMITS.outcome.max) {
-      throw new TestimonialValidationError(`outcome must be at most ${LIMITS.outcome.max} characters`);
+      throw new TestimonialValidationError(`note must be ${LIMITS.quote.min}–${LIMITS.quote.max} characters`);
     }
 
     if (b.consent !== true) {
@@ -127,19 +154,34 @@ export class TestimonialContract {
       author,
       email,
       context,
-      program,
+      ticker: b.ticker,
+      side: b.side,
+      conviction,
+      beforeScore,
+      afterScore,
       quote,
-      outcome: outcome || null,
       website: typeof b.website === "string" ? b.website : "",
     };
   }
 
-  static isProgram(value: string): value is (typeof TestimonialContract.PROGRAMS)[number] {
-    return (TestimonialContract.PROGRAMS as readonly string[]).includes(value);
+  static isTicker(value: unknown): value is Ticker {
+    return typeof value === "string" && Object.hasOwn(TestimonialContract.TICKERS, value);
+  }
+
+  static isSide(value: unknown): value is OrderSide {
+    return value === "BUY" || value === "HOLD";
   }
 
   static isStatus(value: unknown): value is TestimonialStatus {
     return typeof value === "string" && (TestimonialContract.STATUSES as readonly string[]).includes(value);
+  }
+
+  private static integer(value: unknown, range: { min: number; max: number }, label: string): number {
+    const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < range.min || n > range.max) {
+      throw new TestimonialValidationError(`${label} must be a whole number from ${range.min} to ${range.max}`);
+    }
+    return n;
   }
 
   /** Single line: collapse all whitespace. */

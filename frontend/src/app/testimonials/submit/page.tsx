@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { CosmicBackdrop } from "@/core/components/3d/CosmicBackdrop";
-import { TestimonialSubmitForm } from "@/domains/testimonials/components/TestimonialSubmitForm";
+import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
+import { OrderTicketForm } from "@/domains/testimonials/components/OrderTicketForm";
 
 export const metadata: Metadata = {
   title: "Share your experience",
@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 export default function SubmitTestimonialPage() {
   return (
     <section aria-labelledby="submit-heading" className="relative -mt-20 overflow-hidden">
-      <CosmicBackdrop className="absolute inset-0" tilt={0.6} zoom={7.5} />
+      <GridBackdrop className="absolute inset-0" />
 
       <div className="page-container relative py-32">
         <div className="max-w-3xl">
-          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Testimonials · Your words</p>
+          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Testimonials · Order ticket</p>
           <h1
             id="submit-heading"
             className="mt-6 text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
@@ -28,8 +28,8 @@ export default function SubmitTestimonialPage() {
             before it appears on the site.
           </p>
 
-          <div className="mt-12">
-            <TestimonialSubmitForm />
+          <div className="mt-12 max-w-xl">
+            <OrderTicketForm />
           </div>
         </div>
       </div>

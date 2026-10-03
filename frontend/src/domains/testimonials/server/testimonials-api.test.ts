@@ -13,9 +13,12 @@ const VALID = {
   author: "  Ada   Lovelace ",
   email: " Ada@Example.com ",
   context: "CFA Level I candidate",
-  program: "CFA® exam prep",
+  ticker: "CFA",
+  side: "BUY",
+  conviction: 9,
+  beforeScore: 55,
+  afterScore: 80,
   quote: "The sessions turned formulas I had memorised into intuition.\r\n\r\n\r\nI passed on my first attempt.",
-  outcome: "Passed CFA Level I, May 2026",
   consent: true,
 };
 
@@ -27,25 +30,54 @@ describe("TestimonialContract", () => {
       author: "Ada Lovelace",
       email: "ada@example.com",
       context: "CFA Level I candidate",
-      program: "CFA® exam prep",
+      ticker: "CFA",
+      side: "BUY",
+      conviction: 9,
+      beforeScore: 55,
+      afterScore: 80,
       quote: "The sessions turned formulas I had memorised into intuition.\n\nI passed on my first attempt.",
-      outcome: "Passed CFA Level I, May 2026",
       website: "",
     });
   });
 
-  it("treats a blank outcome as absent", () => {
-    expect(TestimonialContract.parseSubmission({ ...VALID, outcome: "   " }).outcome).toBeNull();
+  it("accepts numeric strings for the scores and conviction", () => {
+    const parsed = TestimonialContract.parseSubmission({ ...VALID, conviction: "4", beforeScore: "70", afterScore: "63" });
+    expect([parsed.conviction, parsed.beforeScore, parsed.afterScore]).toEqual([4, 70, 63]);
+  });
+
+  it("computes yield like the database (round half away from zero, 2 dp)", () => {
+    expect(TestimonialContract.yieldPercent(55, 80)).toBe(45.45);
+    expect(TestimonialContract.yieldPercent(70, 63)).toBe(-10);
+    expect(TestimonialContract.yieldPercent(32, 33)).toBe(3.13); // 3.125 rounds up
+    expect(TestimonialContract.yieldPercent(32, 31)).toBe(-3.13); // and away from zero when negative
+    expect(TestimonialContract.yieldPercent(60, 60)).toBe(0);
+    expect(TestimonialContract.yieldPercent(1, 100)).toBe(9900);
+    expect(TestimonialContract.yieldPercent(0, 50)).toBeNull();
+    expect(TestimonialContract.yieldPercent(50.5, 60)).toBeNull();
+  });
+
+  it("formats yields with a sign", () => {
+    expect(TestimonialContract.formatYield(45.45)).toBe("+45.45%");
+    expect(TestimonialContract.formatYield(-10)).toBe("−10.00%");
+    expect(TestimonialContract.formatYield(0)).toBe("0.00%");
   });
 
   it.each([
     [{ author: "A" }, /name/],
     [{ email: "not-an-email" }, /email/],
     [{ context: "" }, /who you are/],
-    [{ program: "Astrology" }, /program/],
-    [{ quote: "Too short." }, /testimonial/],
-    [{ quote: "x".repeat(601) }, /testimonial/],
-    [{ outcome: "x".repeat(101) }, /outcome/],
+    [{ ticker: "BTC" }, /ticker/],
+    [{ ticker: "hasOwnProperty" }, /ticker/],
+    [{ side: "SELL" }, /BUY or HOLD/],
+    [{ conviction: 0 }, /conviction/],
+    [{ conviction: 11 }, /conviction/],
+    [{ conviction: 7.5 }, /conviction/],
+    [{ beforeScore: 0 }, /before score/],
+    [{ beforeScore: undefined }, /before score/],
+    [{ afterScore: 101 }, /after score/],
+    [{ afterScore: "" }, /after score/],
+    [{ quote: "Too short." }, /note/],
+    [{ quote: "x".repeat(601) }, /note/],
     [{ consent: false }, /confirm/],
     [{ consent: "true" }, /confirm/],
   ])("rejects %j", (patch, message) => {
@@ -69,6 +101,9 @@ describe("TestimonialContract", () => {
 class MemoryStore implements TestimonialStore {
   readonly created: TestimonialSubmission[] = [];
   async approved() {
+    return [];
+  }
+  async tickerQuotes() {
     return [];
   }
   async list() {

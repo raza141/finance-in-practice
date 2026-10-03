@@ -1,6 +1,7 @@
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
 import { deleteTestimonial, setTestimonialStatus } from "../actions/moderation";
+import { TestimonialContract } from "../services/TestimonialContract";
 import type { TestimonialRecord, TestimonialStatus } from "../types";
 
 const ACTIONS: Record<TestimonialStatus, { to: TestimonialStatus; label: string; tone: string }[]> = {
@@ -28,11 +29,25 @@ export function ModerationCard({ testimonial }: { testimonial: TestimonialRecord
         </time>
       </header>
       <p className="mt-1 text-sm text-muted">
-        {testimonial.context} · <span className="text-quant">{testimonial.program}</span> ·{" "}
+        {testimonial.context}
+        {!testimonial.fill && testimonial.program && <span className="text-quant"> · {testimonial.program}</span>} ·{" "}
         <a href={`mailto:${testimonial.email}`} className="underline decoration-line underline-offset-2 hover:text-ink">
           {testimonial.email}
         </a>
       </p>
+      {testimonial.fill && (
+        <p className="tabular-data mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          <span className={testimonial.fill.side === "BUY" ? "text-quant" : "text-gold"}>{testimonial.fill.side}</span>
+          <span className="text-ink">{testimonial.fill.ticker}</span>
+          <span>Conviction {testimonial.fill.conviction}/10</span>
+          <span>
+            {testimonial.fill.beforeScore}% → {testimonial.fill.afterScore}%
+          </span>
+          <span className={testimonial.fill.yieldPercent >= 0 ? "text-quant" : "text-gold"}>
+            Yield {TestimonialContract.formatYield(testimonial.fill.yieldPercent)}
+          </span>
+        </p>
+      )}
       <blockquote className="mt-4 border-l-2 border-gold/60 pl-4 leading-relaxed whitespace-pre-line text-ink">
         {testimonial.quote}
       </blockquote>

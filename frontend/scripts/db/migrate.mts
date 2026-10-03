@@ -88,6 +88,30 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX courses_active_start_idx ON courses (is_active, start_date)`,
     ],
   },
+  {
+    id: "004_order_testimonials",
+    statements: [
+      // Testimonials become a trade ledger ("order book"). The review text
+      // stays in quote and the name in author. The new fields are nullable
+      // so rows submitted before this migration remain valid, but a row has
+      // either all five or none (see testimonials_ledger_complete).
+      // Scores are percentages (e.g. a mock exam score), so yield is the
+      // relative improvement; it may be negative.
+      `ALTER TABLE testimonials
+        ADD COLUMN side          text CHECK (side IN ('BUY', 'HOLD')),
+        ADD COLUMN ticker        text CHECK (ticker IN ('CFA', 'FRM', 'PSX', 'QUANT', 'UNI')),
+        ADD COLUMN conviction    smallint CHECK (conviction BETWEEN 1 AND 10),
+        ADD COLUMN before_score  smallint CHECK (before_score BETWEEN 1 AND 100),
+        ADD COLUMN after_score   smallint CHECK (after_score BETWEEN 0 AND 100),
+        ADD COLUMN yield_percent numeric(7, 2) GENERATED ALWAYS AS (
+          round((after_score - before_score)::numeric * 100 / NULLIF(before_score, 0), 2)
+        ) STORED,
+        ADD CONSTRAINT testimonials_ledger_complete
+          CHECK (num_nulls(side, ticker, conviction, before_score, after_score) IN (0, 5)),
+        ALTER COLUMN program DROP NOT NULL`,
+      `CREATE INDEX testimonials_ticker_idx ON testimonials (ticker) WHERE status = 'approved'`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
