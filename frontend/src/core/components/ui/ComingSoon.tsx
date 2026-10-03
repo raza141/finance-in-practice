@@ -23,7 +23,7 @@ export function ComingSoon({ eyebrow, title, description }: ComingSoonProps) {
           <ButtonLink href={siteConfig.navCta.href} size="lg">
             {siteConfig.navCta.label}
           </ButtonLink>
-          <ButtonLink href="/#curriculum" variant="secondary" size="lg">
+          <ButtonLink href="/courses" variant="secondary" size="lg">
             Explore courses
           </ButtonLink>
         </div>

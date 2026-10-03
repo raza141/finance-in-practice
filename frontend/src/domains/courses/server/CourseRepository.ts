@@ -56,6 +56,18 @@ export class CourseRepository {
     return row ? CourseRepository.toCourse(row) : null;
   }
 
+  /** Every active course, for the /courses overview. */
+  async active(): Promise<Course[]> {
+    const rows = (await this.sql`
+      SELECT id, slug, title, summary, category, start_date::text AS start_date, duration,
+             price_minor, currency, is_active, syllabus, brochure_url
+      FROM courses
+      WHERE is_active
+      ORDER BY start_date NULLS LAST, title
+    `) as CourseRow[];
+    return rows.map(CourseRepository.toCourse);
+  }
+
   /** Slug and last edit of every active course, for the sitemap. */
   async activeSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
     const rows = (await this.sql`

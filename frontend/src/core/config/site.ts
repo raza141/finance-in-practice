@@ -13,29 +13,14 @@ export const siteConfig = {
   description:
     "CFA®, FRM® and university finance tutoring from a practitioner who builds the models in Python. Book a free 1-on-1 demo.",
 
-  /** Primary navigation. `children` render as a dropdown on desktop. */
+  /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [
+    { label: "Home", href: "/" },
     { label: "About", href: "/about" },
-    {
-      label: "Courses",
-      href: "/#curriculum",
-      children: [
-        { label: "CFA®", href: "/#exam-prep" },
-        { label: "FRM®", href: "/#exam-prep" },
-        { label: "Portfolio Construction & Optimization", href: "/#portfolio-ml" },
-        { label: "Goal-Based Wealth Management", href: "/#goal-based-wealth" },
-        { label: "IPS & CME", href: "/#ips-cme" },
-        { label: "Automation", href: "/#automation" },
-        { label: "Stress Testing", href: "/#stress-testing" },
-        { label: "Financial Modeling", href: "/#financial-modeling" },
-        { label: "On-Demand Financial Courses", href: "/#lms" },
-        { label: "University Finance", href: "/#university" },
-      ],
-    },
+    { label: "Courses", href: "/courses" },
     { label: "Journal", href: "/journal" },
-    { label: "Free Cohort", href: "/cohort" },
     { label: "Contact", href: "/contact" },
-  ] satisfies readonly NavItem[],
+  ] as readonly NavItem[],
 
   /** Gold conversion button at the end of the navbar. */
   navCta: { label: "Book free demo", href: "/consulting#book" },
