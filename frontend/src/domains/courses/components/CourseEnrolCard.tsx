@@ -1,10 +1,9 @@
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { siteConfig } from "@/core/config/site";
 
 import { CourseFormat } from "../services/CourseFormat";
 import type { Course } from "../types";
 
-/** Key facts plus the two actions: book a call (Cal.com) and download the brochure. */
+/** Key facts plus the two actions: jump to the on-page booking panel and download the brochure. */
 export function CourseEnrolCard({ course }: { course: Course }) {
   const facts = [
     { label: "Next start", value: CourseFormat.startDate(course.startDate) },
@@ -24,7 +23,7 @@ export function CourseEnrolCard({ course }: { course: Course }) {
       </dl>
 
       <div className="mt-6 grid gap-3">
-        <ButtonLink href={siteConfig.contact.calUrl} target="_blank" rel="noopener noreferrer" size="lg">
+        <ButtonLink href="#book" size="lg">
           Book a call about this course
         </ButtonLink>
         {course.brochureUrl && (

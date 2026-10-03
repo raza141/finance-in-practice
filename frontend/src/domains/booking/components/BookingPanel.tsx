@@ -10,15 +10,29 @@ const WHAT_YOU_GET = [
   "No obligation and no card required",
 ];
 
-export function BookingPanel({ headingId = "book-heading" }: { headingId?: string }) {
+interface BookingPanelProps {
+  headingId?: string;
+  /** Override the default free-demo copy, e.g. on a course page. */
+  title?: string;
+  lede?: string;
+}
+
+const DEFAULT_LEDE =
+  "Bring a topic you are stuck on, whether a CFA reading, an FRM formula or a university assignment, and leave with a clear plan.";
+
+export function BookingPanel({
+  headingId = "book-heading",
+  title = "Book your free demo session",
+  lede = DEFAULT_LEDE,
+}: BookingPanelProps) {
   return (
     <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
       <div className="lg:col-span-4">
         <SectionHeading
           id={headingId}
           eyebrow="Free demo session"
-          title="Book your free demo session"
-          lede="Bring a topic you are stuck on, whether a CFA reading, an FRM formula or a university assignment, and leave with a clear plan."
+          title={title}
+          lede={lede}
         />
         <ul className="mt-8 space-y-4" data-anim="reveal">
           {WHAT_YOU_GET.map((item) => (

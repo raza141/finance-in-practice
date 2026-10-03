@@ -1,3 +1,7 @@
+import type { CourseFormat } from "./services/CourseFormat";
+
+export type CourseCategory = (typeof CourseFormat.CATEGORIES)[number];
+
 export interface SyllabusModule {
   title: string;
   summary?: string;
@@ -10,14 +14,14 @@ export interface Course {
   slug: string;
   title: string;
   summary: string;
-  category: string;
+  category: CourseCategory;
   /** ISO date (YYYY-MM-DD); null when the next start date is on request. */
   startDate: string | null;
   /** Free text, e.g. "8 weeks · 16 live sessions". */
   duration: string;
   /** Fee in minor units (fils, cents); null when the price is on request. */
   priceMinor: number | null;
-  /** ISO 4217 code, e.g. "AED". */
+  /** ISO 4217 code; the database defaults it to "AED". */
   currency: string;
   isActive: boolean;
   syllabus: SyllabusModule[];

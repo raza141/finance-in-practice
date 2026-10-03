@@ -2,15 +2,14 @@ import type { Course, SyllabusModule } from "../types";
 
 /** Display rules and defensive parsing for course data. Pure; safe on client and server. */
 export class CourseFormat {
-  /** Suggested categories for the admin course form; the database accepts any short label. */
+  /** The fixed category list; mirrors the CHECK constraint in migration 003_courses. */
   static readonly CATEGORIES = [
     "Portfolio Construction",
     "Fixed Income",
+    "Quantitative Finance",
     "Risk Management",
-    "Derivatives",
     "Wealth Management",
     "Financial Modeling",
-    "Quantitative Methods",
     "Exam Prep",
   ] as const;
 
@@ -21,6 +20,8 @@ export class CourseFormat {
     return new Intl.NumberFormat("en-AE", {
       style: "currency",
       currency: course.currency,
+      // "AED 4,500" / "USD 999.50": a bare "$" is ambiguous for a Dubai audience.
+      currencyDisplay: "code",
       maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     }).format(amount);
   }

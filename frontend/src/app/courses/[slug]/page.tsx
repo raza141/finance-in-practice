@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import { siteConfig } from "@/core/config/site";
+import { BookingPanel } from "@/domains/booking/components/BookingPanel";
 import { CourseEnrolCard } from "@/domains/courses/components/CourseEnrolCard";
 import { CourseSyllabus } from "@/domains/courses/components/CourseSyllabus";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
@@ -77,7 +78,15 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
         </div>
       </section>
 
-      <p className="page-container pb-14 text-xs leading-relaxed text-muted">{siteConfig.disclosures.regulatory}</p>
+      <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-20 border-t border-line">
+        <div className="page-container py-16 lg:py-20">
+          <BookingPanel
+            headingId="course-book-heading"
+            title="Book a free call about this course"
+            lede={`A 30-minute 1-on-1 call to check fit, prerequisites and the schedule for ${course.title}.`}
+          />
+        </div>
+      </section>
     </>
   );
 }

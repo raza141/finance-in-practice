@@ -3,14 +3,14 @@ import "server-only";
 import { Database, type Sql } from "@/core/db/Database";
 
 import { CourseFormat } from "../services/CourseFormat";
-import type { Course } from "../types";
+import type { Course, CourseCategory } from "../types";
 
 interface CourseRow {
   id: string;
   slug: string;
   title: string;
   summary: string;
-  category: string;
+  category: CourseCategory;
   start_date: string | null;
   duration: string;
   price_minor: number | null;

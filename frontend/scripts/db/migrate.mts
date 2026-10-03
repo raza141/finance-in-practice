@@ -69,16 +69,19 @@ const MIGRATIONS: Migration[] = [
         slug         text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(slug) <= 80),
         title        text NOT NULL CHECK (char_length(title) BETWEEN 3 AND 120),
         summary      text NOT NULL CHECK (char_length(summary) BETWEEN 20 AND 600),
-        category     text NOT NULL CHECK (char_length(category) BETWEEN 2 AND 60),
+        -- Keep in sync with CourseFormat.CATEGORIES; adding one needs a new migration.
+        category     text NOT NULL CHECK (category IN (
+                       'Portfolio Construction', 'Fixed Income', 'Quantitative Finance', 'Risk Management',
+                       'Wealth Management', 'Financial Modeling', 'Exam Prep')),
         start_date   date,
         duration     text NOT NULL CHECK (char_length(duration) BETWEEN 2 AND 40),
         price_minor  integer CHECK (price_minor >= 0),
-        currency     text NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+        currency     text NOT NULL DEFAULT 'AED' CHECK (currency ~ '^[A-Z]{3}$'),
         is_active    boolean NOT NULL DEFAULT false,
         -- [{ "title": text, "summary"?: text, "topics": [text] }, ...]
         syllabus     jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(syllabus) = 'array'),
-        -- Absolute https URL (e.g. Vercel Blob) or a site path under /brochures/.
-        brochure_url text CHECK (brochure_url ~ '^(https://|/brochures/)' AND char_length(brochure_url) <= 500),
+        -- A PDF committed to public/brochures/, e.g. /brochures/portfolio-ml.pdf.
+        brochure_url text CHECK (brochure_url ~ '^/brochures/[A-Za-z0-9._-]+\\.pdf$'),
         created_at   timestamptz NOT NULL DEFAULT now(),
         updated_at   timestamptz NOT NULL DEFAULT now()
       )`,

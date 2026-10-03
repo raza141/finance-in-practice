@@ -4,8 +4,8 @@ import { CourseFormat } from "./CourseFormat";
 
 describe("CourseFormat", () => {
   it("formats fees from minor units", () => {
-    expect(CourseFormat.price({ priceMinor: 450000, currency: "AED" })).toMatch(/AED\s?4,500$/);
-    expect(CourseFormat.price({ priceMinor: 99950, currency: "USD" })).toMatch(/999\.50/);
+    expect(CourseFormat.price({ priceMinor: 450000, currency: "AED" })).toBe("AED\u00a04,500");
+    expect(CourseFormat.price({ priceMinor: 99950, currency: "USD" })).toBe("USD\u00a0999.50");
     expect(CourseFormat.price({ priceMinor: 0, currency: "AED" })).toBe("Free");
     expect(CourseFormat.price({ priceMinor: null, currency: "AED" })).toBe("On request");
   });
