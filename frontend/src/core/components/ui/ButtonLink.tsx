@@ -29,7 +29,7 @@ export function ButtonLink({
   return (
     <Link
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-md font-semibold whitespace-nowrap transition-colors duration-200 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-mono font-semibold whitespace-nowrap transition-colors duration-200 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
     />
   );
 }

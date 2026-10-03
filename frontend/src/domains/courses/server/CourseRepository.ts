@@ -2,6 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
+import type { CourseInput } from "../services/CourseContract";
 import { CourseFormat } from "../services/CourseFormat";
 import type { Course, CourseCategory } from "../types";
 
@@ -21,8 +22,20 @@ interface CourseRow {
 }
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Read side of the course catalogue. Schema: scripts/db/migrate.mts (003_courses). */
+/** Thrown when another course already uses the slug. */
+export class DuplicateSlugError extends Error {
+  constructor(slug: string) {
+    super(`A course with the slug "${slug}" already exists.`);
+    this.name = "DuplicateSlugError";
+  }
+}
+
+const isUniqueViolation = (error: unknown) =>
+  typeof error === "object" && error !== null && (error as { code?: unknown }).code === "23505";
+
+/** The course catalogue. Schema: scripts/db/migrate.mts (003_courses). */
 export class CourseRepository {
   constructor(private readonly sql: Sql) {}
 
@@ -41,6 +54,83 @@ export class CourseRepository {
       WHERE slug = ${slug} AND is_active
     `) as CourseRow[];
     return row ? CourseRepository.toCourse(row) : null;
+  }
+
+  /** Every course, active or not, for the admin list. */
+  async all(): Promise<Course[]> {
+    const rows = (await this.sql`
+      SELECT id, slug, title, summary, category, start_date::text AS start_date, duration,
+             price_minor, currency, is_active, syllabus, brochure_url
+      FROM courses
+      ORDER BY is_active DESC, start_date NULLS LAST, title
+    `) as CourseRow[];
+    return rows.map(CourseRepository.toCourse);
+  }
+
+  async byId(id: string): Promise<Course | null> {
+    if (!UUID.test(id)) return null;
+    const [row] = (await this.sql`
+      SELECT id, slug, title, summary, category, start_date::text AS start_date, duration,
+             price_minor, currency, is_active, syllabus, brochure_url
+      FROM courses
+      WHERE id = ${id}
+    `) as CourseRow[];
+    return row ? CourseRepository.toCourse(row) : null;
+  }
+
+  async create(input: CourseInput): Promise<string> {
+    try {
+      const [row] = (await this.sql`
+        INSERT INTO courses (slug, title, summary, category, start_date, duration, price_minor, currency,
+                             is_active, syllabus, brochure_url)
+        VALUES (${input.slug}, ${input.title}, ${input.summary}, ${input.category}, ${input.startDate},
+                ${input.duration}, ${input.priceMinor}, ${input.currency}, ${input.isActive},
+                ${JSON.stringify(input.syllabus)}::jsonb, ${input.brochureUrl})
+        RETURNING id
+      `) as { id: string }[];
+      return row.id;
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new DuplicateSlugError(input.slug);
+      throw error;
+    }
+  }
+
+  /** Returns the slug the course had before the update (to revalidate its old URL), or null if not found. */
+  async update(id: string, input: CourseInput): Promise<string | null> {
+    if (!UUID.test(id)) return null;
+    try {
+      const [row] = (await this.sql`
+        UPDATE courses AS c SET
+          slug = ${input.slug}, title = ${input.title}, summary = ${input.summary}, category = ${input.category},
+          start_date = ${input.startDate}, duration = ${input.duration}, price_minor = ${input.priceMinor},
+          currency = ${input.currency}, is_active = ${input.isActive},
+          syllabus = ${JSON.stringify(input.syllabus)}::jsonb, brochure_url = ${input.brochureUrl},
+          updated_at = now()
+        FROM courses AS old
+        WHERE c.id = ${id} AND old.id = c.id
+        RETURNING old.slug AS previous_slug
+      `) as { previous_slug: string }[];
+      return row?.previous_slug ?? null;
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new DuplicateSlugError(input.slug);
+      throw error;
+    }
+  }
+
+  /** Returns the course's slug, or null if not found. */
+  async setActive(id: string, active: boolean): Promise<string | null> {
+    if (!UUID.test(id)) return null;
+    const [row] = (await this.sql`
+      UPDATE courses SET is_active = ${active}, updated_at = now() WHERE id = ${id} RETURNING slug
+    `) as { slug: string }[];
+    return row?.slug ?? null;
+  }
+
+  /** Returns the deleted course's slug, or null if not found. */
+  async remove(id: string): Promise<string | null> {
+    if (!UUID.test(id)) return null;
+    const [row] = (await this.sql`DELETE FROM courses WHERE id = ${id} RETURNING slug`) as { slug: string }[];
+    return row?.slug ?? null;
   }
 
   private static toCourse(row: CourseRow): Course {

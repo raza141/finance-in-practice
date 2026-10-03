@@ -17,7 +17,7 @@ export function CourseEnrolCard({ course }: { course: Course }) {
         {facts.map((fact) => (
           <div key={fact.label} className="flex items-baseline justify-between gap-6 py-3 first:pt-0">
             <dt className="font-mono text-xs tracking-[0.16em] text-muted uppercase">{fact.label}</dt>
-            <dd className="text-right font-semibold">{fact.value}</dd>
+            <dd className="tabular-data text-right font-semibold">{fact.value}</dd>
           </div>
         ))}
       </dl>

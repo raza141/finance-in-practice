@@ -70,7 +70,7 @@ export default function ContactPage() {
           {STEPS.map((step, i) => (
             <li key={step.title}>
               <span className="font-mono text-xs text-quant">0{i + 1}</span>
-              <h2 className="mt-2 font-sans text-base font-semibold">{step.title}</h2>
+              <h2 className="mt-2 font-mono text-base font-semibold">{step.title}</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted">{step.body}</p>
             </li>
           ))}

@@ -35,9 +35,10 @@
   padding-inline: clamp(1rem, 4vw, 5rem);
 }
 
-/* Tabular figures for numeric readouts only (metrics, credentials, order
- * book), so digits align in columns while prose keeps proportional numerals. */
+/* Financial figures (metrics, fees, dates, order book): terminal mono with
+ * tabular digits so columns align. Prose keeps proportional numerals. */
 @utility tabular-data {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
@@ -85,11 +86,30 @@
     }
   }
 
+  /* Type system: serif display headings, terminal mono for everything
+   * structural (subheadings, form controls, buttons, figures), sans for prose. */
   h1,
-  h2,
-  h3 {
+  h2 {
     @apply font-serif text-ink;
     text-wrap: balance;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-mono text-ink;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  input,
+  select,
+  textarea,
+  button,
+  label,
+  legend {
+    @apply font-mono;
   }
 
   :focus-visible {

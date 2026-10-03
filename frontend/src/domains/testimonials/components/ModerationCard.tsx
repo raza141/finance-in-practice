@@ -22,7 +22,7 @@ export function ModerationCard({ testimonial }: { testimonial: TestimonialRecord
   return (
     <article className="rounded-xl border border-line bg-surface p-5 sm:p-6">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="font-sans text-base font-semibold text-ink">{testimonial.author}</h3>
+        <h3 className="text-base font-semibold">{testimonial.author}</h3>
         <time dateTime={testimonial.submittedAt} className="font-mono text-xs text-muted">
           {DATE.format(new Date(testimonial.submittedAt))}
         </time>

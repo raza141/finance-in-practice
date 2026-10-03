@@ -33,7 +33,7 @@ export function QuantLabMetrics() {
               <dt className="sr-only">{metric.label}</dt>
               <dd>
                 <span
-                  className="tabular-data block font-sans text-4xl font-semibold tracking-tight text-ink sm:text-5xl"
+                  className="tabular-data block text-4xl font-semibold tracking-tight text-ink sm:text-5xl"
                   data-count-to={metric.value}
                   data-count-decimals={decimals}
                   data-count-prefix={prefix}

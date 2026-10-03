@@ -32,7 +32,7 @@ export default async function AdminOverviewPage() {
                   className="block rounded-xl border border-line bg-surface p-5 transition-colors hover:border-quant/50"
                 >
                   <span className="block font-mono text-[11px] tracking-[0.22em] text-muted uppercase">{status}</span>
-                  <span className={`mt-2 block text-3xl tabular-nums ${status === "pending" && counts.pending > 0 ? "text-gold" : "text-ink"}`}>
+                  <span className={`tabular-data mt-2 block text-3xl ${status === "pending" && counts.pending > 0 ? "text-gold" : "text-ink"}`}>
                     {counts[status]}
                   </span>
                 </Link>
