@@ -4,6 +4,8 @@ export interface BookingTrack {
   id: TrackId;
   /** Terminal-style tab label, e.g. "CFA L1/L2". */
   ticker: string;
+  /** One-line description shown under the ticker. */
+  blurb: string;
   title: string;
 }
 

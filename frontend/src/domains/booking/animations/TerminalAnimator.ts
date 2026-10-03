@@ -20,18 +20,6 @@ export class TerminalAnimator {
 
   private readonly running: Pausable[] = [];
 
-  /** Slide the tab underline under `target` (or fade it out when null). */
-  moveIndicator(indicator: HTMLElement, target: HTMLElement | null): void {
-    const params: Record<string, number> = target
-      ? { translateX: target.offsetLeft, width: target.offsetWidth, opacity: 1 }
-      : { opacity: 0 };
-    if (this.reducedMotion) {
-      utils.set(indicator, params);
-      return;
-    }
-    this.track(animate(indicator, { ...params, duration: 380, ease: "outExpo" }));
-  }
-
   /** Draw the yield-curve path left to right and fade in its range band. */
   drawCurve(path: SVGPathElement, band: SVGPathElement | null): void {
     if (this.reducedMotion) return;

@@ -226,7 +226,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
             <span className="text-ink">FIP/BOOK</span> ▸ DEMO SESSION TERMINAL
           </span>
           <span className="flex items-center gap-2 text-quant">
-            <span aria-hidden className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-quant" />
+            <span aria-hidden className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-gold" />
             {feedProvider.isSimulated ? "SIMULATED FEED" : "LIVE FEED"}
           </span>
         </div>
@@ -252,7 +252,6 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
             tracks={catalog.tracks()}
             locked={track}
             disabled={busy}
-            animator={animator}
             onLock={lockTrack}
           />
 

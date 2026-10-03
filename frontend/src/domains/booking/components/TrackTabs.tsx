@@ -1,82 +1,56 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
-import type { TerminalAnimator } from "../animations/TerminalAnimator";
 import type { BookingTrack, TrackId } from "../types";
 
 interface TrackTabsProps {
   tracks: readonly BookingTrack[];
   locked: TrackId | null;
   disabled?: boolean;
-  animator: TerminalAnimator;
   onLock: (id: TrackId) => void;
 }
 
-function findTab(list: HTMLElement | null, id: TrackId | null): HTMLElement | null {
-  return id ? (list?.querySelector<HTMLElement>(`[data-track="${id}"]`) ?? null) : null;
-}
-
-/** Stage 1: asset-class tabs. Hover glides the cyan underline; click locks the track. */
-export function TrackTabs({ tracks, locked, disabled = false, animator, onLock }: TrackTabsProps) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const indicatorRef = useRef<HTMLSpanElement>(null);
-
-  const glideTo = (id: TrackId | null) => {
-    if (indicatorRef.current) {
-      animator.moveIndicator(indicatorRef.current, findTab(listRef.current, id));
-    }
-  };
-
-  // Keep the underline on the locked tab (also after layout changes such as resize).
-  useEffect(() => {
-    const settle = () => {
-      if (indicatorRef.current) {
-        animator.moveIndicator(indicatorRef.current, findTab(listRef.current, locked));
-      }
-    };
-    settle();
-    window.addEventListener("resize", settle);
-    return () => window.removeEventListener("resize", settle);
-  }, [animator, locked]);
-
+/** Stage 1: pick a session track. Bordered cards with a radio dot so the choice reads as clickable. */
+export function TrackTabs({ tracks, locked, disabled = false, onLock }: TrackTabsProps) {
   return (
-    <div className="relative overflow-x-auto">
-      <div
-        ref={listRef}
-        role="tablist"
-        aria-label="Session track"
-        className="relative flex min-w-max gap-1"
-        onMouseLeave={() => glideTo(locked)}
-      >
+    <fieldset disabled={disabled} className="disabled:opacity-60">
+      <legend className="mb-2 text-xs tracking-widest text-muted">
+        {locked ? "SESSION TRACK" : "CHOOSE A SESSION TRACK TO START"}
+      </legend>
+      <div role="radiogroup" aria-label="Session track" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {tracks.map((track) => {
           const active = track.id === locked;
           return (
             <button
               key={track.id}
               type="button"
-              role="tab"
-              aria-selected={active}
-              data-track={track.id}
-              disabled={disabled}
+              role="radio"
+              aria-checked={active}
               title={track.title}
-              onMouseEnter={() => glideTo(track.id)}
-              onFocus={() => glideTo(track.id)}
               onClick={() => onLock(track.id)}
-              className={`px-3 py-2.5 font-mono text-xs tracking-wider whitespace-nowrap transition-colors sm:text-sm ${
-                active ? "text-quant" : "text-muted hover:text-ink"
-              } disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`group flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed ${
+                active
+                  ? "border-quant bg-quant/10 shadow-[0_0_16px_-4px_rgb(34_211_238/0.6)]"
+                  : "border-line bg-canvas/40 hover:border-quant/60 hover:bg-white/5"
+              }`}
             >
-              [ {track.ticker} ]
+              <span
+                aria-hidden
+                className={`mt-0.5 grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border ${
+                  active ? "border-quant" : "border-muted group-hover:border-quant/70"
+                }`}
+              >
+                {active && <span className="h-1.5 w-1.5 rounded-full bg-quant" />}
+              </span>
+              <span className="min-w-0">
+                <span className={`block text-xs font-semibold tracking-wider sm:text-sm ${active ? "text-quant" : "text-ink"}`}>
+                  {track.ticker}
+                </span>
+                <span className="mt-0.5 block font-sans text-xs leading-snug text-muted">{track.blurb}</span>
+              </span>
             </button>
           );
         })}
-        <span
-          ref={indicatorRef}
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-0 bg-quant opacity-0 shadow-[0_0_12px_rgb(34_211_238/0.8)]"
-        />
       </div>
-    </div>
+    </fieldset>
   );
 }
