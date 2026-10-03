@@ -56,7 +56,7 @@ export function HeroSection() {
             </span>
             <span data-anim="hero-cta">
               <ButtonLink
-                href="/#curriculum"
+                href="/courses"
                 variant="secondary"
                 size="lg"
                 className="w-full sm:w-auto"

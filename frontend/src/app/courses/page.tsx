@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { BentoCard } from "@/domains/education/components/BentoCard";
+import { ServiceCatalog } from "@/domains/education/services/ServiceCatalog";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import type { Course } from "@/domains/courses/types";
@@ -35,16 +38,36 @@ export default async function CoursesPage() {
           Theory you can defend, models you can run
         </h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-          Pick a course to see its full curriculum, schedule and fees.
+          CFA® and FRM® exam prep, university mentorship and hands-on quantitative finance, taught by a practitioner who builds the models.
         </p>
       </section>
 
-      <section aria-label="Course list" className="border-t border-line">
+      <section id="curriculum" aria-labelledby="curriculum-heading" className="border-t border-line">
         <div className="page-container py-14 lg:py-20">
-          {courses.length === 0 ? (
-            <p className="text-muted">New courses are being scheduled. Book a free demo to hear about them first.</p>
-          ) : (
-            <ul className="grid gap-6 md:grid-cols-2">
+          <SectionHeading
+            id="curriculum-heading"
+            eyebrow="Courses & services"
+            title="From exam technique to production code"
+            lede="Exam preparation, university mentorship and hands-on quantitative engineering, under one roof."
+          />
+          <div className="mt-12 grid gap-4 lg:grid-cols-12">
+            {new ServiceCatalog().all().map((service) => (
+              <BentoCard key={service.id} service={service} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {courses.length > 0 && (
+        <section aria-labelledby="scheduled-heading" className="border-t border-line">
+          <div className="page-container py-14 lg:py-20">
+            <SectionHeading
+              id="scheduled-heading"
+              eyebrow="Scheduled"
+              title="Upcoming courses"
+              lede="Fixed-start courses with a full curriculum, schedule and fees."
+            />
+            <ul className="mt-12 grid gap-6 md:grid-cols-2">
               {courses.map((course) => (
                 <li key={course.id}>
                   <Link
@@ -52,7 +75,7 @@ export default async function CoursesPage() {
                     className="group flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors hover:border-quant/60"
                   >
                     <p className="font-mono text-xs tracking-[0.16em] text-quant uppercase">{course.category}</p>
-                    <h2 className="mt-3 text-2xl font-bold group-hover:text-quant">{course.title}</h2>
+                    <h3 className="mt-3 text-2xl font-bold group-hover:text-quant">{course.title}</h3>
                     <p className="mt-3 flex-1 leading-relaxed text-muted">{course.summary}</p>
                     <p className="mt-6 font-mono text-xs tracking-[0.12em] text-muted uppercase">
                       {CourseFormat.startDate(course.startDate)} · {course.duration} · {CourseFormat.price(course)}
@@ -61,9 +84,9 @@ export default async function CoursesPage() {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
     </>
   );
 }
