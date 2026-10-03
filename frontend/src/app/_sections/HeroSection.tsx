@@ -61,7 +61,7 @@ export function HeroSection() {
                 size="lg"
                 className="w-full sm:w-auto"
               >
-                Explore Curriculum
+                View Courses
               </ButtonLink>
             </span>
           </div>

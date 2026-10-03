@@ -1,20 +1,29 @@
 import { LandingAnimator } from "@/core/animations/LandingAnimator";
 
+import { AboutTeaserSection } from "./_sections/AboutTeaserSection";
 import { BookingSection } from "./_sections/BookingSection";
+import { FeaturedCoursesSection } from "./_sections/FeaturedCoursesSection";
 import { HeroSection } from "./_sections/HeroSection";
-import { QuantLabMetrics } from "./_sections/QuantLabMetrics";
+import { HowItWorksSection } from "./_sections/HowItWorksSection";
+import { JournalTeaserSection } from "./_sections/JournalTeaserSection";
 import { TestimonialsSection } from "./_sections/TestimonialsSection";
+import { WhyUsSection } from "./_sections/WhyUsSection";
 
 // Approved testimonials come from the database. Moderation actions revalidate
 // "/" immediately; this hourly ISR is a fallback.
 export const revalidate = 3600;
 
+/** One goal: book a free demo. Every section either builds trust or points at the booking panel. */
 export default function HomePage() {
   return (
     <LandingAnimator>
       <HeroSection />
-      <QuantLabMetrics />
+      <FeaturedCoursesSection />
+      <WhyUsSection />
       <TestimonialsSection />
+      <HowItWorksSection />
+      <AboutTeaserSection />
+      <JournalTeaserSection />
       <BookingSection />
     </LandingAnimator>
   );

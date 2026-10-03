@@ -1,14 +1,14 @@
 import { unstable_rethrow } from "next/navigation";
 
 import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
+import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
-import { OrderTicketForm } from "@/domains/testimonials/components/OrderTicketForm";
 import { TickerTape } from "@/domains/testimonials/components/TickerTape";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
 import type { Testimonial, TickerQuote } from "@/domains/testimonials/types";
 
 /** Fills shown in the book; older ones still count toward the ticker averages. */
-const BOOK_DEPTH = 12;
+const BOOK_DEPTH = 6;
 
 interface OrderBook {
   fills: Testimonial[];
@@ -30,9 +30,10 @@ async function loadOrderBook(): Promise<OrderBook> {
   }
 }
 
-/** Landing-page testimonials as a trading screen: ticker tape, order ticket (submit) and order book (approved). */
+/** Landing-page social proof: ticker tape and approved testimonials. Submissions live on /testimonials/submit. */
 export async function TestimonialsSection() {
   const { fills, quotes } = await loadOrderBook();
+  if (fills.length === 0) return null;
 
   return (
     <section
@@ -46,50 +47,25 @@ export async function TestimonialsSection() {
         <TickerTape quotes={quotes} />
 
         <div className="page-container py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
-            <h2 id="testimonials-heading" className="mt-4 text-4xl leading-tight font-bold sm:text-5xl">
-              What our students say
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-muted">
-              Placed an order with our notes, models, or market breakdowns? Log the trade. See your learning
-              return compound, then join the order book.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
+              <h2 id="testimonials-heading" className="mt-4 text-4xl leading-tight font-bold sm:text-5xl">
+                What our students say
+              </h2>
+            </div>
+            <ButtonLink href="/testimonials/submit" variant="secondary">
+              Share your experience
+            </ButtonLink>
           </div>
 
-          <div className="mt-12 grid gap-10 lg:grid-cols-12 lg:gap-12">
-            <div className="lg:col-span-5 xl:col-span-4">
-              <div className="lg:sticky lg:top-28">
-                <OrderTicketForm />
-              </div>
-            </div>
-
-            <div className="lg:col-span-7 xl:col-span-8">
-              <div className="flex items-baseline justify-between border-b border-line pb-3">
-                <h3 className="text-sm font-semibold tracking-[0.2em] uppercase">Testimonial order book</h3>
-                <p className="tabular-data text-xs text-muted">
-                  {fills.length === 0 ? "No fills yet" : `Latest ${fills.length} ${fills.length === 1 ? "fill" : "fills"}`}
-                </p>
-              </div>
-
-              {fills.length === 0 ? (
-                <div className="mt-6 rounded-lg border border-dashed border-line bg-canvas/60 px-6 py-16 text-center">
-                  <p className="tabular-data text-xs tracking-[0.25em] text-muted uppercase">Book is empty</p>
-                  <p className="mx-auto mt-3 max-w-sm text-muted">
-                    Approved reviews appear here. Use the order ticket to file the first one.
-                  </p>
-                </div>
-              ) : (
-                <ol className="mt-6 grid gap-4">
-                  {fills.map((testimonial, i) => (
-                    <li key={testimonial.id}>
-                      <OrderBookCard testimonial={testimonial} index={i} />
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          </div>
+          <ol className="mt-12 grid gap-4 lg:grid-cols-2">
+            {fills.map((testimonial, i) => (
+              <li key={testimonial.id}>
+                <OrderBookCard testimonial={testimonial} index={i} />
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
     </section>

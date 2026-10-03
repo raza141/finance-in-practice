@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { BentoCard } from "@/domains/education/components/BentoCard";
+import { QuantLabMetrics } from "@/domains/education/components/QuantLabMetrics";
 import { ServiceCatalog } from "@/domains/education/services/ServiceCatalog";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
@@ -57,6 +58,10 @@ export default async function CoursesPage() {
           </div>
         </div>
       </section>
+
+      <div className="border-t border-line">
+        <QuantLabMetrics />
+      </div>
 
       {courses.length > 0 && (
         <section aria-labelledby="scheduled-heading" className="border-t border-line">
