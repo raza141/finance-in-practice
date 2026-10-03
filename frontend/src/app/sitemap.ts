@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/contact", priority: 0.6 },
     { path: "/cohort", priority: 0.5 },
     { path: "/journal", priority: 0.5 },
+    { path: "/testimonials/submit", priority: 0.3 },
   ];
   return routes.map(({ path, priority }) => ({
     url: `${siteConfig.url}${path}`,

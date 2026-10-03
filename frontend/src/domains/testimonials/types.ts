@@ -1,3 +1,4 @@
+/** A testimonial as shown publicly. Never carries the author's email. */
 export interface Testimonial {
   id: string;
   quote: string;
@@ -8,6 +9,15 @@ export interface Testimonial {
   program: string;
   /** Optional outcome line, e.g. "Passed CFA Level I, May 2026". */
   outcome?: string;
-  /** True while the entry still holds placeholder copy that must be replaced. */
-  placeholder?: boolean;
+}
+
+export type TestimonialStatus = "pending" | "approved" | "rejected";
+
+/** Full row for the admin moderation queue. */
+export interface TestimonialRecord extends Testimonial {
+  email: string;
+  status: TestimonialStatus;
+  consentAt: string;
+  submittedAt: string;
+  reviewedAt: string | null;
 }

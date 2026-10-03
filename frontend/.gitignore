@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local copy of public/brand/fip-logo.png (source artwork, not used by the app)
+/logo/

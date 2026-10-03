@@ -4,6 +4,7 @@ import Script from "next/script";
 
 import { Footer } from "@/core/components/layout/Footer";
 import { Navbar } from "@/core/components/layout/Navbar";
+import { SiteChrome } from "@/core/components/layout/SiteChrome";
 import { CustomCursor } from "@/core/components/ui/CustomCursor";
 import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
 import { siteConfig } from "@/core/config/site";
@@ -84,13 +85,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <Navbar />
+        <SiteChrome>
+          <Navbar />
+        </SiteChrome>
         {/* pt clears the fixed floating navbar */}
         <main id="main" className="flex-1 pt-20">
           {children}
         </main>
-        <Footer />
-        <WhatsAppButton />
+        <SiteChrome>
+          <Footer />
+          <WhatsAppButton />
+        </SiteChrome>
         <CustomCursor />
       </body>
     </html>

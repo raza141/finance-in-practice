@@ -11,9 +11,12 @@
     "test": "vitest run",
     "api:schema": "cd ../quant-backend && uv run --no-sync python -c \"import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))\" > ../frontend/openapi/quant-api.json",
     "api:types": "openapi-typescript openapi/quant-api.json --default-non-nullable=false -o src/domains/quant-lab/types/api.generated.ts",
-    "gen:api": "npm run api:schema && npm run api:types"
+    "gen:api": "npm run api:schema && npm run api:types",
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/db/migrate.mts",
+    "admin:add": "node --env-file-if-exists=.env.local scripts/admin/add-admin.mts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "animejs": "^4.5.0",
