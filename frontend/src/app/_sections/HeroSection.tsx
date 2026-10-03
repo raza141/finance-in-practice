@@ -56,11 +56,11 @@ export function HeroSection() {
 
           <dl
             data-anim="hero-subtitle"
-            className="mt-6 grid max-w-xl gap-1.5 font-mono text-xs tracking-wide sm:text-[13px]"
+            className="mt-6 grid gap-1.5 font-mono text-xs tracking-wide sm:text-[13px]"
           >
             {STATUS.map((row) => (
-              <div key={row.label} className="flex flex-wrap gap-x-2">
-                <dt className="text-muted uppercase">{row.label}:</dt>
+              <div key={row.label} className="flex gap-x-2">
+                <dt className="shrink-0 text-muted uppercase">{row.label}:</dt>
                 <dd className={row.live ? "flex items-center gap-2 text-quant" : "text-ink/90"}>
                   {row.live && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-quant" />}
                   {row.value}
