@@ -31,8 +31,10 @@ export function TiltSurface({ children, maxTilt = 2.5, className = "" }: TiltSur
   const onMouseMove = (event: MouseEvent<HTMLDivElement>) => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - 0.5; // -0.5 .. 0.5
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    // Clamped to -0.5 .. 0.5: overflowing children (e.g. a dropdown) report points outside rect.
+    const clamp = (v: number) => Math.max(-0.5, Math.min(0.5, v));
+    const x = clamp((event.clientX - rect.left) / rect.width - 0.5);
+    const y = clamp((event.clientY - rect.top) / rect.height - 0.5);
     // Cursor at the top tips the top edge away; cursor right turns the right edge away.
     apply(-y * 2 * maxTilt, x * 2 * maxTilt);
   };

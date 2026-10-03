@@ -54,7 +54,7 @@ export function MobileNav() {
                 {item.children && (
                   <ul className="mb-1 ml-3 border-l border-line pl-2">
                     {item.children.map((child) => (
-                      <li key={child.href}>
+                      <li key={child.label}>
                         <Link
                           href={child.href}
                           onClick={() => setOpen(false)}
