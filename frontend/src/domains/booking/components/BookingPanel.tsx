@@ -4,10 +4,9 @@ import { TiltSurface } from "@/core/components/ui/TiltSurface";
 import { QuantBookingWidget } from "./QuantBookingWidget";
 
 const WHAT_YOU_GET = [
-  "A 30-minute 1-on-1 video session, free",
-  "A diagnostic of where you are against the syllabus",
-  "A personalised study or project plan you keep",
-  "No obligation and no card required",
+  { label: "Initial capital allocation", value: "Your time" },
+  { label: "Expected output", value: "A clearer learning plan" },
+  { label: "Commitment required", value: "None (no card, no cash)" },
 ];
 
 interface BookingPanelProps {
@@ -18,7 +17,7 @@ interface BookingPanelProps {
 }
 
 const DEFAULT_LEDE =
-  "Bring a topic you are stuck on, whether a CFA reading, an FRM formula or a university assignment, and leave with a clear plan.";
+  "A 30-minute introductory session to identify your starting point, clarify your objective and map the most efficient route forward.";
 
 export function BookingPanel({
   headingId = "book-heading",
@@ -36,14 +35,17 @@ export function BookingPanel({
         />
         <ul className="mt-8 space-y-4" data-anim="reveal">
           {WHAT_YOU_GET.map((item) => (
-            <li key={item} className="flex gap-3 text-[15px] text-ink/90">
+            <li key={item.label} className="flex gap-3 text-[15px] text-ink/90">
               <span
                 aria-hidden
                 className="mt-1.5 grid h-4 w-4 shrink-0 place-items-center rounded-sm border border-quant/70"
               >
                 <span className="h-1.5 w-1.5 rounded-[1px] bg-quant" />
               </span>
-              {item}
+              <span>
+                <span className="block font-mono text-xs tracking-wide text-muted uppercase">{item.label}</span>
+                {item.value}
+              </span>
             </li>
           ))}
         </ul>

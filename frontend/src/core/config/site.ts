@@ -15,11 +15,22 @@ export const siteConfig = {
 
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [
-    { label: "Home", href: "/" },
+    { label: "Terminal", href: "/" },
     { label: "About", href: "/about" },
     { label: "Courses", href: "/courses" },
-    { label: "Journal", href: "/journal" },
+    { label: "Research Terminal", href: "/journal" },
     { label: "Contact", href: "/contact" },
+  ] as readonly NavItem[],
+
+  // ponytail: add Privacy and Terms here once those pages exist.
+  footerNav: [
+    { label: "Terminal", href: "/" },
+    { label: "Learning Tracks", href: "/courses" },
+    { label: "Methodology", href: "/#methodology" },
+    { label: "Instructor", href: "/about" },
+    { label: "Research Terminal", href: "/journal" },
+    { label: "Contact", href: "/contact" },
+    { label: "Share your experience", href: "/testimonials/submit" },
   ] as readonly NavItem[],
 
   /** Gold conversion button at the end of the navbar. */

@@ -17,14 +17,11 @@ export function Footer() {
             </p>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            {siteConfig.nav.map((item) => (
+            {siteConfig.footerNav.map((item) => (
               <Link key={item.href} href={item.href} className="text-muted hover:text-ink">
                 {item.label}
               </Link>
             ))}
-            <Link href="/testimonials/submit" className="text-muted hover:text-ink">
-              Share your experience
-            </Link>
           </nav>
         </div>
 

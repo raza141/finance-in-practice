@@ -34,7 +34,7 @@ export default async function CoursesPage() {
   return (
     <>
       <section className="page-container pt-14 pb-12 lg:pt-20">
-        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Courses</p>
+        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Learning Allocation Desk</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">
           Theory you can defend, models you can run
         </h1>
@@ -47,9 +47,9 @@ export default async function CoursesPage() {
         <div className="page-container py-14 lg:py-20">
           <SectionHeading
             id="curriculum-heading"
-            eyebrow="Courses & services"
+            eyebrow="Select your learning mandate"
             title="From exam technique to production code"
-            lede="Exam preparation, university mentorship and hands-on quantitative engineering, under one roof."
+            lede="Every learner begins with a different mandate: pass an examination, repair a conceptual gap, build technical fluency or translate academic knowledge into practical finance. Select the track aligned with your current objective."
           />
           <div className="mt-12 grid gap-4 lg:grid-cols-12">
             {new ServiceCatalog().all().map((service) => (

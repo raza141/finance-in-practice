@@ -7,6 +7,12 @@ const HEADLINE: { text: string; accent?: boolean }[][] = [
   [{ text: "Build" }, { text: "Real-World" }, { text: "Systems.", accent: true }],
 ];
 
+const STATUS = [
+  { label: "System status", value: "Accepting new learners", live: true },
+  { label: "Primary coverage", value: "CFA® · FRM® · Quantitative Finance" },
+  { label: "Delivery model", value: "1-on-1 · Diagnostic-led · Application-focused" },
+];
+
 export function HeroSection() {
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden">
@@ -43,15 +49,30 @@ export function HeroSection() {
             data-anim="hero-subtitle"
             className="mt-6 max-w-xl text-lg leading-relaxed text-muted"
           >
-            1-on-1 tutoring for CFA Level I–II, FRM Part I and university finance, from a
-            practitioner who builds the models. Learn what the examiners test, then implement
-            it in Python.
+            Personalised tutoring for CFA, FRM and university finance learners who want more than
+            memorisation. Build conceptual depth, exam readiness and practical fluency across
+            valuation, risk, markets, financial modeling and automation.
           </p>
+
+          <dl
+            data-anim="hero-subtitle"
+            className="mt-6 grid max-w-xl gap-1.5 font-mono text-xs tracking-wide sm:text-[13px]"
+          >
+            {STATUS.map((row) => (
+              <div key={row.label} className="flex flex-wrap gap-x-2">
+                <dt className="text-muted uppercase">{row.label}:</dt>
+                <dd className={row.live ? "flex items-center gap-2 text-quant" : "text-ink/90"}>
+                  {row.live && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-quant" />}
+                  {row.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <span data-anim="hero-cta">
               <ButtonLink href={siteConfig.bookingHref} size="lg" className="w-full sm:w-auto">
-                Book a Free Demo
+                Open a Diagnostic Session
               </ButtonLink>
             </span>
             <span data-anim="hero-cta">
@@ -61,7 +82,7 @@ export function HeroSection() {
                 size="lg"
                 className="w-full sm:w-auto"
               >
-                View Courses
+                Learning Terminal
               </ButtonLink>
             </span>
           </div>

@@ -50,8 +50,16 @@ export async function TestimonialsSection() {
             <div className="max-w-2xl">
               <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
               <h2 id="testimonials-heading" className="mt-4 text-4xl leading-tight font-bold sm:text-5xl">
-                What our students say
+                Signals from the Learning Floor
               </h2>
+              <p className="mt-4 text-lg leading-relaxed text-muted">
+                The strongest evidence is not a marketing claim. It is the change in a learner’s ability to
+                understand, explain and apply financial concepts.
+              </p>
+              <p className="mt-4 font-mono text-xs tracking-wide text-muted">
+                <span className="text-quant uppercase">Feedback policy:</span> Published with learner permission.
+                Specificity is valued over exaggeration.
+              </p>
             </div>
             <ButtonLink href="/testimonials/submit" variant="secondary">
               Share your experience

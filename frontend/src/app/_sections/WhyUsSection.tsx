@@ -17,7 +17,7 @@ const POINTS = [
 
 export function WhyUsSection() {
   return (
-    <section aria-labelledby="why-heading" data-sequence="reveal" className="border-t border-line">
+    <section id="methodology" aria-labelledby="why-heading" data-sequence="reveal" className="border-t border-line">
       <div className="page-container py-20 lg:py-24">
         <SectionHeading id="why-heading" eyebrow="Why learn with us" title="Practice-first finance teaching" />
         <ul data-anim="reveal" className="mt-12 grid gap-8 md:grid-cols-3">
