@@ -58,6 +58,33 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX admin_sessions_user_idx ON admin_sessions (user_id)`,
     ],
   },
+  {
+    id: "003_courses",
+    statements: [
+      // Public course catalogue. Rows start inactive; only active ones are
+      // served on /courses/[slug]. Fee is in minor units (fils, cents) so no
+      // float rounding; null start date / price means "on request".
+      `CREATE TABLE courses (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        slug         text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(slug) <= 80),
+        title        text NOT NULL CHECK (char_length(title) BETWEEN 3 AND 120),
+        summary      text NOT NULL CHECK (char_length(summary) BETWEEN 20 AND 600),
+        category     text NOT NULL CHECK (char_length(category) BETWEEN 2 AND 60),
+        start_date   date,
+        duration     text NOT NULL CHECK (char_length(duration) BETWEEN 2 AND 40),
+        price_minor  integer CHECK (price_minor >= 0),
+        currency     text NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+        is_active    boolean NOT NULL DEFAULT false,
+        -- [{ "title": text, "summary"?: text, "topics": [text] }, ...]
+        syllabus     jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(syllabus) = 'array'),
+        -- Absolute https URL (e.g. Vercel Blob) or a site path under /brochures/.
+        brochure_url text CHECK (brochure_url ~ '^(https://|/brochures/)' AND char_length(brochure_url) <= 500),
+        created_at   timestamptz NOT NULL DEFAULT now(),
+        updated_at   timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX courses_active_start_idx ON courses (is_active, start_date)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
