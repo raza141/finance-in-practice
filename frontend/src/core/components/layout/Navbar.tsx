@@ -13,12 +13,12 @@ import { MobileNav } from "./MobileNav";
 
 /**
  * Fixed top bar: logo pinned to the top-left gutter, floating "pill" of links
- * centred on lg+, menu button on the right below lg.
+ * centred on lg+, menu button on the right below lg. A 1fr/auto/1fr grid
+ * centres the pill but never lets it overlap the logo when space is tight.
  *
  * The full-width header is click-through (`pointer-events-none`) so the empty
  * space between logo and pill never blocks the page; only its children take
- * clicks. The page-load timeline animates this element's translateY, which is
- * why the pill is centred with the separate CSS `translate` property instead.
+ * clicks.
  */
 export function Navbar() {
   const [animator] = useState(() => new NavLinkAnimator());
@@ -33,18 +33,18 @@ export function Navbar() {
       data-anim="nav"
       className="pointer-events-none fixed inset-x-0 top-6 z-50"
     >
-      <div className="page-container relative flex h-[46px] items-center justify-between">
+      <div className="page-container grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
         <Link
           href="/"
           aria-label="Finance in Practice home"
-          className="pointer-events-auto flex shrink-0 items-center"
+          className="pointer-events-auto flex min-w-max items-center justify-self-start"
         >
           <Logo height={34} priority />
         </Link>
 
         <TiltSurface
           maxTilt={3}
-          className="pointer-events-auto absolute top-0 left-1/2 hidden -translate-x-1/2 lg:block"
+          className="pointer-events-auto hidden lg:block"
         >
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-3 py-2 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] backdrop-blur-md">
             <nav aria-label="Primary">
@@ -120,7 +120,7 @@ export function Navbar() {
           </div>
         </TiltSurface>
 
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto justify-self-end">
           <MobileNav />
         </div>
       </div>

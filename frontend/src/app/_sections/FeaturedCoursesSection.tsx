@@ -3,38 +3,97 @@ import Link from "next/link";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 
 // ponytail: links point at /courses anchors until each course has its own page.
-const FEATURED = [
-  { title: "CFA®", outcome: "Level I–II prep with a personal study plan and exam-style drills.", href: "/courses#exam-prep" },
-  { title: "FRM®", outcome: "Part I prep where every quantitative topic is worked, then coded.", href: "/courses#exam-prep" },
-  { title: "Python for Finance", outcome: "Replace fragile spreadsheets with tested Python pipelines.", href: "/courses#automation" },
-  { title: "Financial Modeling", outcome: "Valuation, bond and option models checked against textbook values.", href: "/courses#financial-modeling" },
+const PRIMARY = [
+  {
+    title: "CFA®",
+    level: "Level I–II",
+    outcome: "Structured exam preparation where every quantitative reading is taught through worked problems and working code.",
+    points: ["Personal study plan", "Exam-style problem drills", "Formula intuition, not rote"],
+    href: "/courses#exam-prep",
+  },
+  {
+    title: "FRM®",
+    level: "Part I",
+    outcome: "Risk models, derivatives and quantitative methods built up from first principles, then tested on exam-style questions.",
+    points: ["VaR and stress testing in depth", "Exam-style problem drills", "Every formula worked, then coded"],
+    href: "/courses#exam-prep",
+  },
+];
+
+const SPECIALIST = [
+  { label: "AI in Finance", href: "/courses#portfolio-ml" },
+  { label: "Financial Modeling", href: "/courses#financial-modeling" },
+  { label: "IPS & CME", href: "/courses#ips-cme" },
+  { label: "Stress Testing & VaR", href: "/courses#stress-testing" },
+  { label: "Python Automation", href: "/courses#automation" },
+  { label: "Goal-Based Wealth", href: "/courses#goal-based-wealth" },
 ];
 
 export function FeaturedCoursesSection() {
   return (
     <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-20 lg:py-24">
-      <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick where you want to start" />
-      <ul data-anim="reveal" className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {FEATURED.map((course) => (
-          <li key={course.title}>
-            <Link
-              href={course.href}
-              className="group flex h-full flex-col rounded-2xl border border-white/5 bg-[#151E32] p-6 transition-colors hover:border-quant/30"
-            >
-              <h3 className="text-xl font-bold">{course.title}</h3>
-              <p className="mt-3 flex-1 text-[15px] leading-relaxed text-muted">{course.outcome}</p>
-              <span className="mt-6 text-sm font-semibold group-hover:text-quant">
-                Learn more <span aria-hidden>→</span>
-              </span>
-            </Link>
-          </li>
+      <SectionHeading id="featured-heading" eyebrow="Learning tracks" title="Pick where you want to start" />
+
+      <div data-anim="reveal" className="mt-12 grid gap-4 lg:grid-cols-2">
+        {PRIMARY.map((course) => (
+          <Link
+            key={course.title}
+            href={course.href}
+            className="group flex flex-col rounded-2xl border border-gold/30 bg-[#151E32] p-7 transition-colors hover:border-gold/70 sm:p-9"
+          >
+            <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Primary track · {course.level}</p>
+            <h3 className="mt-4 text-4xl font-black sm:text-5xl">{course.title}</h3>
+            <p className="mt-4 text-[17px] leading-relaxed text-muted">{course.outcome}</p>
+            <ul className="mt-6 space-y-2">
+              {course.points.map((point) => (
+                <li key={point} className="flex gap-3 text-[15px] text-ink/90">
+                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <span className="mt-8 font-semibold group-hover:text-gold">
+              Learn more <span aria-hidden>→</span>
+            </span>
+          </Link>
         ))}
-      </ul>
-      <p data-anim="reveal" className="mt-8">
-        <Link href="/courses" className="font-mono text-sm text-quant hover:text-ink">
-          See all courses →
+      </div>
+
+      <div data-anim="reveal" className="mt-4 grid gap-4 md:grid-cols-2">
+        <Link
+          href="/courses#university"
+          className="group flex flex-col rounded-2xl border border-white/5 bg-[#151E32] p-6 transition-colors hover:border-quant/30"
+        >
+          <p className="font-mono text-xs tracking-[0.18em] text-quant uppercase">Secondary track</p>
+          <h3 className="mt-3 text-xl font-bold">University Finance Mentorship</h3>
+          <p className="mt-3 flex-1 text-[15px] leading-relaxed text-muted">
+            1-on-1 support for corporate finance, investments and econometrics coursework, dissertations and interviews.
+          </p>
+          <span className="mt-6 text-sm font-semibold group-hover:text-quant">
+            Learn more <span aria-hidden>→</span>
+          </span>
         </Link>
-      </p>
+
+        <div className="flex flex-col rounded-2xl border border-white/5 bg-[#151E32] p-6">
+          <p className="font-mono text-xs tracking-[0.18em] text-quant uppercase">Specialist tracks</p>
+          <h3 className="mt-3 text-xl font-bold">Applied finance electives</h3>
+          <ul className="mt-4 flex flex-1 flex-wrap content-start gap-2">
+            {SPECIALIST.map((track) => (
+              <li key={track.label}>
+                <Link
+                  href={track.href}
+                  className="inline-block rounded-md border border-line px-3 py-1.5 font-mono text-xs text-ink/90 transition-colors hover:border-quant/50 hover:text-quant"
+                >
+                  {track.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link href="/courses" className="mt-6 text-sm font-semibold hover:text-quant">
+            All learning tracks <span aria-hidden>→</span>
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
