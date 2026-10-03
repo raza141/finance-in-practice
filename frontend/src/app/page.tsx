@@ -5,7 +5,6 @@ import { BookingSection } from "./_sections/BookingSection";
 import { FeaturedCoursesSection } from "./_sections/FeaturedCoursesSection";
 import { HeroSection } from "./_sections/HeroSection";
 import { HowItWorksSection } from "./_sections/HowItWorksSection";
-import { JournalTeaserSection } from "./_sections/JournalTeaserSection";
 import { TestimonialsSection } from "./_sections/TestimonialsSection";
 import { WhyUsSection } from "./_sections/WhyUsSection";
 
@@ -23,7 +22,6 @@ export default function HomePage() {
       <TestimonialsSection />
       <HowItWorksSection />
       <AboutTeaserSection />
-      <JournalTeaserSection />
       <BookingSection />
     </LandingAnimator>
   );

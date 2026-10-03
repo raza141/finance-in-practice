@@ -12,7 +12,7 @@ export class InstructorCatalog {
       id: "instructor-1",
       name: "Muhammad Ahmed Raza",
       role: "Founder · Lead Instructor",
-      bio: "Teaches financial theory the way practitioners use it: every concept is derived, drilled on exam-style problems, then implemented in Python.",
+      bio: "Muhammad Ahmed Raza teaches financial theory through exam-style practice and practical implementation. His approach connects CFA and FRM concepts with valuation, risk models, Python workflows and real-world financial analysis.",
       education: ["MSc Data Science", "CFA Level III Candidate", "FRM Part I Passed"],
       background:
         "Builds the in-house quant engine behind the site's pricing, risk and portfolio tools, and uses it in every 1-on-1 session.",

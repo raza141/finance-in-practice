@@ -28,7 +28,7 @@ export default function AboutPage() {
           id="about-heading"
           className="mt-6 max-w-4xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-7xl"
         >
-          Three practitioners, one way of teaching
+          Learn from someone who works at the intersection of finance, risk and technology
         </h1>
         <p data-reveal className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
           Theory first, then the model that proves it. Scroll to meet each of us.

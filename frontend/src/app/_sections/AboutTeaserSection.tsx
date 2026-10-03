@@ -29,7 +29,7 @@ export function AboutTeaserSection() {
             {founder.bio} {founder.background}
           </p>
           <ButtonLink href="/about" variant="secondary" className="mt-8">
-            Meet the team
+            Meet your instructor
           </ButtonLink>
         </div>
       </div>
