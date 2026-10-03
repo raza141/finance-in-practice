@@ -16,8 +16,8 @@ export const siteConfig = {
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [
     { label: "Terminal", href: "/" },
-    { label: "About", href: "/about" },
-    { label: "Courses", href: "/courses" },
+    { label: "Instructor", href: "/about" },
+    { label: "Learning Tracks", href: "/courses" },
     { label: "Research Terminal", href: "/journal" },
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
