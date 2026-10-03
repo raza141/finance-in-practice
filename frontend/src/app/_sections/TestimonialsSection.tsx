@@ -33,7 +33,6 @@ async function loadOrderBook(): Promise<OrderBook> {
 /** Landing-page social proof: ticker tape and approved testimonials. Submissions live on /testimonials/submit. */
 export async function TestimonialsSection() {
   const { fills, quotes } = await loadOrderBook();
-  if (fills.length === 0) return null;
 
   return (
     <section
@@ -59,13 +58,19 @@ export async function TestimonialsSection() {
             </ButtonLink>
           </div>
 
-          <ol className="mt-12 grid gap-4 lg:grid-cols-2">
-            {fills.map((testimonial, i) => (
-              <li key={testimonial.id}>
-                <OrderBookCard testimonial={testimonial} index={i} />
-              </li>
-            ))}
-          </ol>
+          {fills.length === 0 ? (
+            <p className="mt-12 rounded-lg border border-dashed border-line bg-canvas/60 px-6 py-12 text-center text-muted">
+              Reviews appear here once approved. Studied with us? Be the first to share your experience.
+            </p>
+          ) : (
+            <ol className="mt-12 grid gap-4 lg:grid-cols-2">
+              {fills.map((testimonial, i) => (
+                <li key={testimonial.id}>
+                  <OrderBookCard testimonial={testimonial} index={i} />
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
     </section>

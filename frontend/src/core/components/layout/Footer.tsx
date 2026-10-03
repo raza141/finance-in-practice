@@ -22,6 +22,9 @@ export function Footer() {
                 {item.label}
               </Link>
             ))}
+            <Link href="/testimonials/submit" className="text-muted hover:text-ink">
+              Share your experience
+            </Link>
           </nav>
         </div>
 
