@@ -10,6 +10,7 @@ const SIDE_STYLE = {
 /** One approved testimonial as an order-book fill. Older testimonials without ledger fields render as plain notes. */
 export function OrderBookCard({ testimonial, index = 0 }: { testimonial: Testimonial; index?: number }) {
   const { fill } = testimonial;
+  const location = [testimonial.city, testimonial.country].filter(Boolean).join(", ");
 
   return (
     <article className="rounded-lg border border-line bg-surface/80 p-4 backdrop-blur-sm sm:p-5">
@@ -26,8 +27,11 @@ export function OrderBookCard({ testimonial, index = 0 }: { testimonial: Testimo
         ) : (
           testimonial.program && <span className="font-mono text-xs text-quant">{testimonial.program}</span>
         )}
-        <span className="ml-auto min-w-0 truncate text-right text-sm text-muted">
-          <span className="text-ink">{testimonial.author}</span> · {testimonial.context}
+        <span className="ml-auto min-w-0 text-right text-sm text-muted">
+          <span className="block truncate">
+            <span className="text-ink">{testimonial.author}</span> · {testimonial.context}
+          </span>
+          {location && <span className="mt-0.5 block truncate font-mono text-[11px] tracking-wide text-muted/80">{location}</span>}
         </span>
       </header>
 

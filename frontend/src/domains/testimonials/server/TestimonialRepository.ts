@@ -21,6 +21,8 @@ interface TestimonialRow {
   author: string;
   email: string;
   context: string;
+  country: string | null;
+  city: string | null;
   program: string | null;
   quote: string;
   outcome: string | null;
@@ -52,7 +54,7 @@ export class TestimonialRepository implements TestimonialStore {
 
   async approved(): Promise<Testimonial[]> {
     const rows = (await this.sql`
-      SELECT id, author, context, program, quote, outcome,
+      SELECT id, author, context, country, city, program, quote, outcome,
              side, ticker, conviction, before_score, after_score, yield_percent
       FROM testimonials
       WHERE status = 'approved'
@@ -99,9 +101,10 @@ export class TestimonialRepository implements TestimonialStore {
 
   async create(submission: TestimonialSubmission, consentAt: Date) {
     const [row] = (await this.sql`
-      INSERT INTO testimonials (author, email, context, quote, side, ticker, conviction,
+      INSERT INTO testimonials (author, email, context, country, city, quote, side, ticker, conviction,
                                 before_score, after_score, consent_at)
-      VALUES (${submission.author}, ${submission.email}, ${submission.context}, ${submission.quote},
+      VALUES (${submission.author}, ${submission.email}, ${submission.context}, ${submission.country},
+              ${submission.city}, ${submission.quote},
               ${submission.side}, ${submission.ticker}, ${submission.conviction},
               ${submission.beforeScore}, ${submission.afterScore}, ${consentAt.toISOString()})
       RETURNING id, status
@@ -134,6 +137,8 @@ export class TestimonialRepository implements TestimonialStore {
       context: row.context,
       quote: row.quote,
       fill: TestimonialRepository.toFill(row),
+      ...(row.country ? { country: row.country } : {}),
+      ...(row.city ? { city: row.city } : {}),
       ...(row.program ? { program: row.program } : {}),
       ...(row.outcome ? { outcome: row.outcome } : {}),
     };

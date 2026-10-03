@@ -13,6 +13,8 @@ export interface SubmitTestimonialRequest {
   author: string;
   email: string;
   context: string;
+  country: string;
+  city: string;
   ticker: string;
   side: string;
   conviction: number;
@@ -31,6 +33,8 @@ export interface TestimonialSubmission {
   author: string;
   email: string;
   context: string;
+  country: string;
+  city: string;
   ticker: Ticker;
   side: OrderSide;
   conviction: number;
@@ -76,6 +80,22 @@ export class TestimonialContract {
     UNI: "University finance",
   };
 
+  /** Suggestions for the country field; any country can be typed. */
+  static readonly COUNTRIES = [
+    "Pakistan",
+    "United Arab Emirates",
+    "Saudi Arabia",
+    "Qatar",
+    "Oman",
+    "Kuwait",
+    "Bahrain",
+    "India",
+    "United Kingdom",
+    "United States",
+    "Canada",
+    "Australia",
+  ] as const;
+
   static readonly SIDES: Readonly<Record<OrderSide, string>> = {
     BUY: "Recommend",
     HOLD: "Mixed / neutral",
@@ -84,6 +104,8 @@ export class TestimonialContract {
   static readonly LIMITS = {
     author: { min: 2, max: 80 },
     context: { min: 2, max: 100 },
+    country: { min: 2, max: 60 },
+    city: { min: 2, max: 60 },
     quote: { min: 40, max: 600 },
     conviction: { min: 1, max: 10 },
     /** Scores are percentages; before must be at least 1 so the yield is defined. */
@@ -134,7 +156,16 @@ export class TestimonialContract {
       );
     }
 
-    if (!TestimonialContract.isTicker(b.ticker)) throw new TestimonialValidationError("choose a ticker");
+    const country = TestimonialContract.line(b.country);
+    if (country.length < LIMITS.country.min || country.length > LIMITS.country.max) {
+      throw new TestimonialValidationError(`country must be ${LIMITS.country.min}–${LIMITS.country.max} characters`);
+    }
+    const city = TestimonialContract.line(b.city);
+    if (city.length < LIMITS.city.min || city.length > LIMITS.city.max) {
+      throw new TestimonialValidationError(`city must be ${LIMITS.city.min}–${LIMITS.city.max} characters`);
+    }
+
+    if (!TestimonialContract.isTicker(b.ticker)) throw new TestimonialValidationError("choose a course ticker");
     if (!TestimonialContract.isSide(b.side)) throw new TestimonialValidationError("choose BUY or HOLD");
 
     const conviction = TestimonialContract.integer(b.conviction, LIMITS.conviction, "conviction");
@@ -154,6 +185,8 @@ export class TestimonialContract {
       author,
       email,
       context,
+      country,
+      city,
       ticker: b.ticker,
       side: b.side,
       conviction,

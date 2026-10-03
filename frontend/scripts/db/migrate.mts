@@ -112,6 +112,16 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX testimonials_ticker_idx ON testimonials (ticker) WHERE status = 'approved'`,
     ],
   },
+  {
+    id: "005_testimonial_location",
+    statements: [
+      // Where the learner is. Nullable for rows submitted before this
+      // migration; the submission API requires both for new ones.
+      `ALTER TABLE testimonials
+        ADD COLUMN country text CHECK (char_length(country) BETWEEN 2 AND 60),
+        ADD COLUMN city    text CHECK (char_length(city) BETWEEN 2 AND 60)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

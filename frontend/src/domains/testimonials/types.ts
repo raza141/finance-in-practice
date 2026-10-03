@@ -21,6 +21,9 @@ export interface Testimonial {
   author: string;
   /** Who they are, e.g. "CFA Level II candidate" or "MSc Finance, LSE". */
   context: string;
+  /** Where the learner is; absent on testimonials submitted before 005. */
+  country?: string;
+  city?: string;
   /** Null for testimonials submitted before the order-book format. */
   fill: OrderFill | null;
   /** Legacy (pre-004) programme label and outcome line, if any. */

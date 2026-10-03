@@ -11,7 +11,7 @@ import type { OrderSide, Ticker } from "../types";
 type Phase = { kind: "editing"; error?: string } | { kind: "sending" } | { kind: "sent" };
 
 const client = new TestimonialApiClient();
-const { LIMITS, TICKERS, SIDES } = TestimonialContract;
+const { LIMITS, TICKERS, SIDES, COUNTRIES } = TestimonialContract;
 
 const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
@@ -45,6 +45,8 @@ export function OrderTicketForm() {
       author: String(form.get("author") ?? ""),
       email: String(form.get("email") ?? ""),
       context: String(form.get("context") ?? ""),
+      country: String(form.get("country") ?? ""),
+      city: String(form.get("city") ?? ""),
       ticker,
       side,
       conviction,
@@ -99,7 +101,7 @@ export function OrderTicketForm() {
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <h3 id="order-ticket-heading" className="text-sm font-semibold tracking-[0.2em] uppercase">
-          Order ticket
+          Testimonial order ticket
         </h3>
         <span className="font-mono text-[10px] tracking-[0.2em] text-muted uppercase">Limit · Day</span>
       </div>
@@ -125,7 +127,7 @@ export function OrderTicketForm() {
           ))}
         </div>
 
-        <Field label="Ticker" hint={ticker ? TICKERS[ticker] : "The programme you took"}>
+        <Field label="Course ticker" hint={ticker ? TICKERS[ticker] : "The programme you took"}>
           <select
             name="ticker"
             required
@@ -191,15 +193,19 @@ export function OrderTicketForm() {
               className={`${FIELD} tabular-data`}
             />
           </Field>
-          <div className="min-w-24 rounded-md border border-line bg-surface px-3 py-2 text-right" aria-live="polite">
-            <span className="block text-[10px] tracking-[0.18em] text-muted uppercase">Yield</span>
-            <span
-              className={`tabular-data block text-base font-semibold ${
+          <div className="block">
+            <span id="yield-label" className="text-[11px] tracking-[0.22em] text-muted uppercase">
+              Yield
+            </span>
+            <output
+              aria-labelledby="yield-label"
+              aria-live="polite"
+              className={`tabular-data mt-2 block min-w-24 rounded-md border border-line bg-surface px-3 py-2.5 text-right text-sm font-semibold ${
                 preview === null ? "text-muted" : preview >= 0 ? "text-quant" : "text-gold"
               }`}
             >
               {preview === null ? "—" : TestimonialContract.formatYield(preview)}
-            </span>
+            </output>
           </div>
         </div>
         <p className="-mt-3 text-xs text-muted/80">
@@ -229,6 +235,34 @@ export function OrderTicketForm() {
         <Field label="Who you are" hint="e.g. CFA Level II candidate, MSc Finance at LSE">
           <input name="context" required maxLength={LIMITS.context.max} className={FIELD} />
         </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Country">
+            <input
+              name="country"
+              required
+              list="order-ticket-countries"
+              autoComplete="country-name"
+              maxLength={LIMITS.country.max}
+              placeholder="Pakistan"
+              className={FIELD}
+            />
+            <datalist id="order-ticket-countries">
+              {COUNTRIES.map((country) => (
+                <option key={country} value={country} />
+              ))}
+            </datalist>
+          </Field>
+          <Field label="City">
+            <input
+              name="city"
+              required
+              autoComplete="address-level2"
+              maxLength={LIMITS.city.max}
+              placeholder="Karachi"
+              className={FIELD}
+            />
+          </Field>
+        </div>
 
         {/* Honeypot: hidden from people and assistive tech, tempting to bots. */}
         <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-px w-px opacity-0" />

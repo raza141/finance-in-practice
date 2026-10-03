@@ -16,7 +16,7 @@ export default function SubmitTestimonialPage() {
 
       <div className="page-container relative py-32">
         <div className="max-w-3xl">
-          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Testimonials · Order ticket</p>
+          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
           <h1
             id="submit-heading"
             className="mt-6 text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"

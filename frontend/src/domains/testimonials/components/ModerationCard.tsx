@@ -30,6 +30,7 @@ export function ModerationCard({ testimonial }: { testimonial: TestimonialRecord
       </header>
       <p className="mt-1 text-sm text-muted">
         {testimonial.context}
+        {(testimonial.city || testimonial.country) && ` · ${[testimonial.city, testimonial.country].filter(Boolean).join(", ")}`}
         {!testimonial.fill && testimonial.program && <span className="text-quant"> · {testimonial.program}</span>} ·{" "}
         <a href={`mailto:${testimonial.email}`} className="underline decoration-line underline-offset-2 hover:text-ink">
           {testimonial.email}

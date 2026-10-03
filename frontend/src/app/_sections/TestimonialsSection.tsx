@@ -47,13 +47,13 @@ export async function TestimonialsSection() {
 
         <div className="page-container py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Testimonials · Order book</p>
+            <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
             <h2 id="testimonials-heading" className="mt-4 text-4xl leading-tight font-bold sm:text-5xl">
               What our students say
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-muted">
-              Every review is filed like a trade: the programme, a conviction rating and the score it moved.
-              Studied with us? Place your own order.
+              Placed an order with our notes, models, or market breakdowns? Log the trade. See your learning
+              return compound, then join the order book.
             </p>
           </div>
 
@@ -66,7 +66,7 @@ export async function TestimonialsSection() {
 
             <div className="lg:col-span-7 xl:col-span-8">
               <div className="flex items-baseline justify-between border-b border-line pb-3">
-                <h3 className="text-sm font-semibold tracking-[0.2em] uppercase">Order book</h3>
+                <h3 className="text-sm font-semibold tracking-[0.2em] uppercase">Testimonial order book</h3>
                 <p className="tabular-data text-xs text-muted">
                   {fills.length === 0 ? "No fills yet" : `Latest ${fills.length} ${fills.length === 1 ? "fill" : "fills"}`}
                 </p>
