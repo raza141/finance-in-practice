@@ -75,8 +75,8 @@ export class StructuredData {
         "@id": `${url}#article`,
         headline: article.title,
         description: article.summary,
-        datePublished: article.publishedAt,
-        dateModified: article.publishedAt,
+        datePublished: StructuredData.dateTime(article.publishedAt),
+        dateModified: StructuredData.dateTime(article.publishedAt),
         keywords: article.tags.join(", "),
         inLanguage: "en",
         url,
@@ -117,7 +117,7 @@ export class StructuredData {
           courseMode: "Online",
           // Free text like "8 weeks · 16 live sessions"; schema.org accepts text here.
           courseWorkload: course.duration,
-          ...(course.startDate && { startDate: course.startDate }),
+          ...(course.startDate && { startDate: StructuredData.dateTime(course.startDate) }),
         },
         ...(course.priceMinor !== null && {
           offers: {
@@ -154,6 +154,11 @@ export class StructuredData {
   /** Serialised for a <script type="application/ld+json">; "<" escaped so content can't close the tag. */
   static serialize(node: JsonLdNode): string {
     return JSON.stringify(node).replace(/</g, "\\u003c");
+  }
+
+  /** Google wants a full datetime with zone; our dates are calendar days, so start of day in GST (the business's zone). */
+  static dateTime(isoDate: string): string {
+    return `${isoDate}T00:00:00+04:00`;
   }
 
   private static graph(nodes: JsonLdNode[]): JsonLdNode {

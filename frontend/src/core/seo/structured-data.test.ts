@@ -40,7 +40,7 @@ describe("StructuredData", () => {
     const data = StructuredData.article(article);
     const post = byType(data, "BlogPosting");
     expect(post.headline).toBe(article.title);
-    expect(post.datePublished).toBe(article.publishedAt);
+    expect(post.datePublished).toBe(`${article.publishedAt}T00:00:00+04:00`);
     expect(post.publisher).toEqual({ "@id": StructuredData.ORG_ID });
     const crumbs = byType(data, "BreadcrumbList").itemListElement as JsonLdNode[];
     expect(crumbs.map((c) => c.position)).toEqual([1, 2, 3]);
@@ -50,7 +50,7 @@ describe("StructuredData", () => {
   it("marks up a course with an online instance and a priced offer", () => {
     const course = byType(StructuredData.course(COURSE), "Course");
     expect(course.provider).toEqual({ "@id": StructuredData.ORG_ID });
-    expect(course.hasCourseInstance).toMatchObject({ courseMode: "Online", startDate: "2026-11-01" });
+    expect(course.hasCourseInstance).toMatchObject({ courseMode: "Online", startDate: "2026-11-01T00:00:00+04:00" });
     expect(course.offers).toMatchObject({ price: "1500.00", priceCurrency: "AED", category: "Paid" });
   });
 
