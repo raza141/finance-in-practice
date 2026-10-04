@@ -153,7 +153,7 @@ export function OrderTicketForm() {
                 Conviction
               </label>
               <p id="conviction-hint" className="mt-1 text-xs text-muted">
-                How strong the investment thesis is.
+                How strongly would you recommend us? Rate from 1 to 10.
               </p>
             </div>
             <output htmlFor="conviction" className="tabular-data text-sm font-semibold text-quant">
