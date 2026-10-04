@@ -27,7 +27,7 @@ function generatedAt(iso: string): string {
 export function MarketPulseCard({ pulse, now = new Date() }: { pulse: MarketPulse | null; now?: Date }) {
   return (
     <figure className="rounded-xl border border-line bg-surface p-5 font-mono text-xs sm:p-6">
-      <p className="tracking-[0.2em] text-quant uppercase">Market Pulse // Daily Close</p>
+      <p className="tracking-[0.2em] text-quant uppercase">Market Pulse · Daily Close</p>
       <figcaption className="mt-2 font-sans text-sm leading-relaxed text-muted">
         Selected market indicators across developed, emerging and frontier markets.
       </figcaption>

@@ -35,12 +35,12 @@ export async function WhyUsSection() {
         <div className="mt-14 grid items-start gap-12 lg:grid-cols-2 xl:gap-16">
           <div data-anim="reveal">
             <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Why learn with us</p>
-            <h3 className="mt-3 text-2xl font-bold sm:text-3xl">Build Understanding that Compounds</h3>
+            <h3 className="mt-3 text-xl font-bold sm:text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl">Build Understanding that Compounds</h3>
             <ol className="mt-8 grid gap-7">
               {POINTS.map((point, i) => (
                 <li key={point.title}>
                   <p className="font-mono text-sm">
-                    <span className="text-quant">{`0${i + 1} //`}</span> <span className="font-semibold text-ink">{point.title}</span>
+                    <span className="text-quant">0{i + 1}</span> <span className="font-semibold text-ink">{point.title}</span>
                   </p>
                   <p className="mt-2 leading-relaxed text-muted">{point.body}</p>
                 </li>
@@ -57,8 +57,8 @@ export async function WhyUsSection() {
 
           <div data-anim="reveal">
             <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Market Pulse</p>
-            <h3 className="mt-3 text-2xl font-bold sm:text-3xl">The Market is the Case Study</h3>
-            <p className="mt-3 leading-relaxed text-muted">
+            <h3 className="mt-3 text-xl font-bold sm:text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl">The Market is the Case Study</h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted xl:text-[13px] 2xl:text-sm">
               Selected indicators across developed, emerging and frontier markets provide a practical reference point
               for understanding volatility, rates, returns and market regimes.
             </p>
