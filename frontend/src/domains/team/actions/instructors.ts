@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 
 import { InstructorRepository } from "../server/InstructorRepository";
+import { PhotoStorage } from "../server/PhotoStorage";
 import { InstructorContract, type InstructorFieldErrors } from "../services/InstructorContract";
 
 /**
@@ -35,6 +36,19 @@ export async function saveInstructor(_state: InstructorFormState, formData: Form
   const repo = await repository();
   const parsed = InstructorContract.parse(Object.fromEntries(formData));
   if (!parsed.ok) return { errors: parsed.errors, message: "Please fix the highlighted fields." };
+
+  // An uploaded file replaces whatever is in the photo URL field.
+  const file = formData.get("photoFile");
+  if (file instanceof File && file.size > 0) {
+    const problem = PhotoStorage.problem(file);
+    if (problem) return { errors: { photo: problem }, message: "Please fix the highlighted fields." };
+    try {
+      parsed.input.photo = await PhotoStorage.upload(file);
+    } catch (error) {
+      console.error("[team] photo upload failed", error);
+      return { errors: { photo: "Upload failed. Is BLOB_READ_WRITE_TOKEN set?" }, message: "The photo could not be uploaded." };
+    }
+  }
 
   const id = formData.get("id");
   if (typeof id === "string" && id) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useSyncExternalStore, type FormEvent } from "react";
+import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 
@@ -9,6 +9,9 @@ import type { InstructorField } from "../services/InstructorContract";
 import type { Instructor } from "../types";
 
 const noSubscribe = () => () => {};
+
+/** Matches PhotoStorage.MAX_BYTES; checked here so an oversized file never hits the request limit. */
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 
 /**
  * Create or edit an instructor. Fields are uncontrolled; submitting via
@@ -20,12 +23,18 @@ export function InstructorForm({ instructor }: { instructor?: Instructor }) {
   // Disabled until hydrated so text typed before React attaches isn't lost.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const pending = saving || !hydrated;
-  const errors = state.errors ?? {};
+  const [photoError, setPhotoError] = useState<string>();
+  const errors = { ...state.errors, ...(photoError && { photo: photoError }) };
   const invalid = (field: InstructorField) => (errors[field] ? true : undefined);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const file = data.get("photoFile");
+    if (file instanceof File && file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("Keep the photo under 4 MB.");
+      return;
+    }
     startTransition(() => action(data));
   };
 
@@ -78,13 +87,26 @@ export function InstructorForm({ instructor }: { instructor?: Instructor }) {
 
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_8rem]">
         <legend className="mb-4 text-sm text-quant">Photo, order & visibility</legend>
-        <Field
-          label="Photo URL"
-          error={errors.photo}
-          hint="An https:// image link, or a file in public/team/ such as /team/raza.jpg. Blank shows initials."
-        >
-          <input name="photo" maxLength={500} placeholder="https://…" defaultValue={instructor?.photo} aria-invalid={invalid("photo")} className={FIELD} />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+          {instructor?.photo && (
+            // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail; no optimisation needed
+            <img src={instructor.photo} alt="" className="aspect-[4/5] w-24 rounded-lg border border-line object-cover" />
+          )}
+          <div className={`grid gap-4 ${instructor?.photo ? "" : "sm:col-span-2"}`}>
+            <Field label="Upload photo" error={errors.photo} hint="JPG, PNG, WebP or AVIF, under 4 MB. Replaces the current photo.">
+              <input
+                name="photoFile"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={() => setPhotoError(undefined)}
+                className={`${FIELD} file:mr-3 file:rounded file:border-0 file:bg-quant/15 file:px-3 file:py-1 file:text-quant`}
+              />
+            </Field>
+            <Field label="…or photo link" hint="An https:// image link. Clear both to show initials.">
+              <input name="photo" maxLength={500} placeholder="https://…" defaultValue={instructor?.photo} className={FIELD} />
+            </Field>
+          </div>
+        </div>
         <Field label="Order" error={errors.sortOrder} hint="Lowest first.">
           <input
             name="sortOrder"
