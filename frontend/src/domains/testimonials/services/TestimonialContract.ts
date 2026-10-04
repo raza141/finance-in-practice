@@ -71,13 +71,14 @@ export class TestimonialValidationError extends Error {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export class TestimonialContract {
-  /** Tickers and what they stand for. Mirrors the CHECK in migration 004. */
+  /** Tickers and what they stand for, in dropdown order. Mirrors the CHECK in migration 006. */
   static readonly TICKERS: Readonly<Record<Ticker, string>> = {
-    CFA: "CFA® exam prep",
-    FRM: "FRM® exam prep",
+    CFA1: "CFA® Level I",
+    CFA2: "CFA® Level II",
+    FRM1: "FRM® Part I",
+    UNI: "University finance",
     PSX: "PSX equity analysis",
     QUANT: "Quant finance & Python",
-    UNI: "University finance",
   };
 
   /** Suggestions for the country field; any country can be typed. */

@@ -122,6 +122,17 @@ const MIGRATIONS: Migration[] = [
         ADD COLUMN city    text CHECK (char_length(city) BETWEEN 2 AND 60)`,
     ],
   },
+  {
+    id: "006_ticker_levels",
+    statements: [
+      // CFA and FRM split by exam level. Existing rows map to the first level.
+      `ALTER TABLE testimonials DROP CONSTRAINT testimonials_ticker_check`,
+      `UPDATE testimonials SET ticker = CASE ticker WHEN 'CFA' THEN 'CFA1' WHEN 'FRM' THEN 'FRM1' ELSE ticker END
+        WHERE ticker IN ('CFA', 'FRM')`,
+      `ALTER TABLE testimonials ADD CONSTRAINT testimonials_ticker_check
+        CHECK (ticker IN ('CFA1', 'CFA2', 'FRM1', 'UNI', 'PSX', 'QUANT'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

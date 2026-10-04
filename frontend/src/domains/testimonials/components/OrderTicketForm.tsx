@@ -148,9 +148,14 @@ export function OrderTicketForm() {
 
         <div>
           <div className="flex items-baseline justify-between">
-            <label htmlFor="conviction" className="text-[11px] tracking-[0.22em] text-muted uppercase">
-              Conviction
-            </label>
+            <div>
+              <label htmlFor="conviction" className="text-[11px] tracking-[0.22em] text-muted uppercase">
+                Conviction
+              </label>
+              <p id="conviction-hint" className="mt-1 text-xs text-muted">
+                How strong the investment thesis is.
+              </p>
+            </div>
             <output htmlFor="conviction" className="tabular-data text-sm font-semibold text-quant">
               {conviction}/10
             </output>
@@ -158,6 +163,7 @@ export function OrderTicketForm() {
           <input
             id="conviction"
             name="conviction"
+            aria-describedby="conviction-hint"
             type="range"
             min={LIMITS.conviction.min}
             max={LIMITS.conviction.max}
@@ -166,9 +172,10 @@ export function OrderTicketForm() {
             onChange={(e) => setConviction(Number(e.target.value))}
             className="mt-3 w-full accent-[var(--color-quant)]"
           />
-          <div aria-hidden className="tabular-data mt-1 flex justify-between text-[10px] text-muted/70">
+          <div aria-hidden className="tabular-data mt-1 grid grid-cols-3 text-[10px] text-muted/70">
             <span>1 · Low</span>
-            <span>10 · Max</span>
+            <span className="text-center">Moderate</span>
+            <span className="text-right">10 · High</span>
           </div>
         </div>
 
