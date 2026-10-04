@@ -286,7 +286,7 @@ export function OrderTicketForm() {
                 list="order-ticket-countries"
                 autoComplete="country-name"
                 maxLength={LIMITS.country.max}
-                placeholder="Pakistan"
+                placeholder="United Arab Emirates"
                 className={FIELD}
               />
               <datalist id="order-ticket-countries">
@@ -301,7 +301,7 @@ export function OrderTicketForm() {
                 required
                 autoComplete="address-level2"
                 maxLength={LIMITS.city.max}
-                placeholder="Karachi"
+                placeholder="Abu Dhabi"
                 className={FIELD}
               />
             </Field>

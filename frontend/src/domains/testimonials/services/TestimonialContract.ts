@@ -95,20 +95,20 @@ export class TestimonialContract {
     FINCON: "FIN CONSULT",
   };
 
-  /** Suggestions for the country field; any country can be typed. */
+  /** Suggestions for the country field, GCC first; any country can be typed. */
   static readonly COUNTRIES = [
-    "Pakistan",
     "United Arab Emirates",
     "Saudi Arabia",
     "Qatar",
     "Oman",
     "Kuwait",
     "Bahrain",
-    "India",
-    "United Kingdom",
     "United States",
+    "United Kingdom",
+    "India",
     "Canada",
     "Australia",
+    "Pakistan",
   ] as const;
 
   static readonly SIDES: Readonly<Record<OrderSide, string>> = {
