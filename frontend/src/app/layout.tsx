@@ -7,7 +7,9 @@ import { Navbar } from "@/core/components/layout/Navbar";
 import { SiteChrome } from "@/core/components/layout/SiteChrome";
 import { CustomCursor } from "@/core/components/ui/CustomCursor";
 import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
+import { JsonLd } from "@/core/components/seo/JsonLd";
 import { siteConfig } from "@/core/config/site";
+import { StructuredData } from "@/core/seo/StructuredData";
 
 import "./globals.css";
 
@@ -76,6 +78,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="flex min-h-screen flex-col pointer-fine:cursor-none">
+        <JsonLd data={StructuredData.site()} />
         <Script id="animation-prepaint" strategy="beforeInteractive">
           {ANIMATION_PREPAINT}
         </Script>

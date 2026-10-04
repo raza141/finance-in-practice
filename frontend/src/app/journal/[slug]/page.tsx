@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/core/components/seo/JsonLd";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
+import { StructuredData } from "@/core/seo/StructuredData";
 import { JournalCatalog } from "@/domains/journal/services/JournalCatalog";
 
 const catalog = new JournalCatalog();
@@ -37,6 +39,7 @@ export default async function ArticlePage({ params }: PageProps<"/journal/[slug]
 
   return (
     <article className="page-container max-w-3xl pt-14 pb-20 lg:pt-20">
+      <JsonLd data={StructuredData.article(article)} />
       <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
         ← Journal
       </Link>

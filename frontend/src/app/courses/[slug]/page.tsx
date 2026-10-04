@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
+import { JsonLd } from "@/core/components/seo/JsonLd";
 import { siteConfig } from "@/core/config/site";
+import { StructuredData } from "@/core/seo/StructuredData";
 import { BookingPanel } from "@/domains/booking/components/BookingPanel";
 import { CourseEnrolCard } from "@/domains/courses/components/CourseEnrolCard";
 import { CourseSyllabus } from "@/domains/courses/components/CourseSyllabus";
@@ -42,6 +44,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
 
   return (
     <>
+      <JsonLd data={StructuredData.course(course)} />
       <section className="page-container pt-14 pb-12 lg:pt-20">
         <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">{course.category}</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">{course.title}</h1>
