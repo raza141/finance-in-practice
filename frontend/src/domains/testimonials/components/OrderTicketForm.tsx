@@ -12,6 +12,7 @@ type Phase = { kind: "editing"; error?: string } | { kind: "sending" } | { kind:
 
 const client = new TestimonialApiClient();
 const { LIMITS, TICKERS, SIDES, COUNTRIES } = TestimonialContract;
+const SCALE = Array.from({ length: LIMITS.conviction.max - LIMITS.conviction.min + 1 }, (_, i) => LIMITS.conviction.min + i);
 
 const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
@@ -28,7 +29,7 @@ export function OrderTicketForm() {
   const [phase, setPhase] = useState<Phase>({ kind: "editing" });
   const [side, setSide] = useState<OrderSide>("BUY");
   const [ticker, setTicker] = useState<Ticker | "">("");
-  const [conviction, setConviction] = useState(8);
+  const [conviction, setConviction] = useState<number | null>(null);
   const [before, setBefore] = useState("");
   const [after, setAfter] = useState("");
   const [quoteLength, setQuoteLength] = useState(0);
@@ -49,13 +50,18 @@ export function OrderTicketForm() {
       city: String(form.get("city") ?? ""),
       ticker,
       side,
-      conviction,
+      conviction: conviction ?? Number.NaN,
       beforeScore: beforeScore ?? Number.NaN,
       afterScore: afterScore ?? Number.NaN,
       quote: String(form.get("quote") ?? ""),
       consent: form.get("consent") === "on",
       website: String(form.get("website") ?? ""),
     };
+
+    if (conviction === null) {
+      setPhase({ kind: "editing", error: "Tap a conviction number from 1 to 10." });
+      return;
+    }
 
     try {
       TestimonialContract.parseSubmission(body);
@@ -146,36 +152,41 @@ export function OrderTicketForm() {
           </select>
         </Field>
 
-        <div>
+        <div role="radiogroup" aria-labelledby="conviction-label" aria-describedby="conviction-hint">
           <div className="flex items-baseline justify-between">
             <div>
-              <label htmlFor="conviction" className="text-[11px] tracking-[0.22em] text-muted uppercase">
+              <p id="conviction-label" className="text-[11px] tracking-[0.22em] text-muted uppercase">
                 Conviction
-              </label>
+              </p>
               <p id="conviction-hint" className="mt-1 text-xs text-muted">
-                How strongly would you recommend us? Rate from 1 to 10.
+                How strongly would you recommend us? Tap a number from 1 to 10.
               </p>
             </div>
-            <output htmlFor="conviction" className="tabular-data text-sm font-semibold text-quant">
-              {conviction}/10
-            </output>
+            <output className="tabular-data text-sm font-semibold text-quant">{conviction ?? "–"}/10</output>
           </div>
-          <input
-            id="conviction"
-            name="conviction"
-            aria-describedby="conviction-hint"
-            type="range"
-            min={LIMITS.conviction.min}
-            max={LIMITS.conviction.max}
-            step={1}
-            value={conviction}
-            onChange={(e) => setConviction(Number(e.target.value))}
-            className="mt-3 w-full accent-[var(--color-quant)]"
-          />
-          <div aria-hidden className="tabular-data mt-1 grid grid-cols-3 text-[10px] text-muted/70">
-            <span>1 · Low</span>
-            <span className="text-center">Moderate</span>
-            <span className="text-right">10 · High</span>
+          <div className="mt-3 grid grid-cols-5 gap-1.5 sm:grid-cols-10">
+            {SCALE.map((n) => (
+              <label
+                key={n}
+                className={`tabular-data flex h-11 cursor-pointer items-center justify-center rounded-md border text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-quant ${
+                  conviction === n ? "border-quant bg-quant/15 text-quant" : "border-line text-muted hover:border-quant/50 hover:text-ink"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="conviction"
+                  value={n}
+                  checked={conviction === n}
+                  onChange={() => setConviction(n)}
+                  className="sr-only"
+                />
+                {n}
+              </label>
+            ))}
+          </div>
+          <div aria-hidden className="tabular-data mt-1 flex justify-between text-[10px] text-muted/70">
+            <span>Not likely</span>
+            <span>Absolutely</span>
           </div>
         </div>
 
