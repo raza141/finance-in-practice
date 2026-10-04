@@ -166,6 +166,15 @@ const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    id: "008_consultancy_tickers",
+    statements: [
+      // Consultancy clients can leave feedback too.
+      `ALTER TABLE testimonials DROP CONSTRAINT testimonials_ticker_check`,
+      `ALTER TABLE testimonials ADD CONSTRAINT testimonials_ticker_check
+        CHECK (ticker IN ('CFA1', 'CFA2', 'FRM1', 'UNI', 'PSX', 'QUANT', 'BIZCON', 'FINCON'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

@@ -1,5 +1,5 @@
 export type OrderSide = "BUY" | "HOLD";
-export type Ticker = "CFA1" | "CFA2" | "FRM1" | "UNI" | "PSX" | "QUANT";
+export type Ticker = "CFA1" | "CFA2" | "FRM1" | "UNI" | "PSX" | "QUANT" | "BIZCON" | "FINCON";
 
 /** The trade-ledger fields of a testimonial (migration 004). */
 export interface OrderFill {

@@ -71,7 +71,7 @@ export class TestimonialValidationError extends Error {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export class TestimonialContract {
-  /** Tickers and what they stand for, in dropdown order. Mirrors the CHECK in migration 006. */
+  /** Tickers and what they stand for, in dropdown order. Mirrors the CHECK in migration 008. */
   static readonly TICKERS: Readonly<Record<Ticker, string>> = {
     CFA1: "CFA® Level I",
     CFA2: "CFA® Level II",
@@ -79,6 +79,8 @@ export class TestimonialContract {
     UNI: "University finance",
     PSX: "PSX equity analysis",
     QUANT: "Quant finance & Python",
+    BIZCON: "Business consultancy",
+    FINCON: "Financial consultancy",
   };
 
   /** Display symbols, matching the booking widget ("CFA L1", "FRM P1"). The stored codes stay CFA1/FRM1. */
@@ -89,6 +91,8 @@ export class TestimonialContract {
     UNI: "UNI",
     PSX: "PSX",
     QUANT: "QUANT",
+    BIZCON: "BIZ CONSULT",
+    FINCON: "FIN CONSULT",
   };
 
   /** Suggestions for the country field; any country can be typed. */
