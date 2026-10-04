@@ -7,15 +7,17 @@ import { JournalCatalog } from "@/domains/journal/services/JournalCatalog";
 // Cached like a page and refreshed hourly; course saves in admin also revalidate it.
 export const revalidate = 3600;
 
-const STATIC_ROUTES = [
-  { path: "", priority: 1 },
-  { path: "/courses", priority: 0.9 },
-  { path: "/consulting", priority: 0.8 },
-  { path: "/about", priority: 0.7 },
-  { path: "/contact", priority: 0.6 },
-  { path: "/cohort", priority: 0.5 },
-  { path: "/journal", priority: 0.5 },
-  { path: "/testimonials/submit", priority: 0.3 },
+// No lastModified on hand-written pages: a date that always reads "now" teaches
+// crawlers to ignore it. Articles and courses carry their real dates below.
+const STATIC_ROUTES: { path: string; priority: number; changeFrequency: "daily" | "monthly" }[] = [
+  { path: "", priority: 1, changeFrequency: "daily" }, // Market Pulse card refreshes each trading day
+  { path: "/courses", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/consulting", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/about", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/contact", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/cohort", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/journal", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/testimonials/submit", priority: 0.3, changeFrequency: "monthly" },
 ];
 
 /** Active courses, or none when the database is unset or unreachable (e.g. at build time). */
@@ -35,10 +37,9 @@ async function courseEntries(): Promise<MetadataRoute.Sitemap> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const pages: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, priority }) => ({
+  const pages: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, priority, changeFrequency }) => ({
     url: `${siteConfig.url}${path}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
+    changeFrequency,
     priority,
   }));
   const articles: MetadataRoute.Sitemap = new JournalCatalog().all().map((article) => ({
