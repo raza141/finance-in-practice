@@ -86,7 +86,9 @@ function PulseBody({ pulse, now }: { pulse: MarketPulse; now: Date }) {
             {chart.lines.map((l) => (
               <li key={l.key} className="flex items-center gap-1.5">
                 <span aria-hidden className="h-0.5 w-3 rounded-full" style={{ backgroundColor: l.color }} />
-                {l.label} <span className="text-ink/90">{l.points.at(-1)!.norm.toFixed(1)}</span>
+                {l.label}
+                {l.since && <span className="text-muted/80"> since {MarketPulseContract.formatDate(l.since)}</span>}{" "}
+                <span className="text-ink/90">{l.points.at(-1)!.norm.toFixed(1)}</span>
               </li>
             ))}
           </ul>

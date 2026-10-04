@@ -12,7 +12,7 @@ export function PulseChartView({ chart }: { chart: PulseChart }) {
   const [x, setX] = useState<number | null>(null);
   const hits = x === null ? null : PulseChartGeometry.nearest(chart, x);
   const anchor = hits?.[0].point;
-  const xs = chart.lines[0].points.map((p) => p.x);
+  const xs = [...new Set(chart.lines.flatMap((l) => l.points.map((p) => p.x)))].sort((a, b) => a - b);
 
   function fromPointer(event: React.PointerEvent<SVGSVGElement>) {
     const box = event.currentTarget.getBoundingClientRect();

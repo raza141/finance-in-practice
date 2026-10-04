@@ -13,6 +13,8 @@ export interface ChartLine {
   label: string;
   color: string;
   points: ChartPoint[];
+  /** First date when the line starts later than the window (ADX while it builds history); its base 100 is that day. */
+  since?: string;
 }
 
 export interface PulseChart {
@@ -35,8 +37,8 @@ export class PulseChartGeometry {
     KSE100: "#8b5cf6",
     ADX: "#d97706",
   };
-  /** A line needs this many closes before it is drawn (ADX is still building history). */
-  static readonly MIN_POINTS = 20;
+  /** A line needs two closes to be a line; shorter histories start part-way along the date axis. */
+  static readonly MIN_POINTS = 2;
 
   constructor(
     private readonly width = 400,
@@ -59,25 +61,31 @@ export class PulseChartGeometry {
     const innerH = this.height - this.pad.top - this.pad.bottom;
     const y = (norm: number) => this.pad.top + ((hi - norm) / span) * innerH;
 
-    const lines = charted.map((s) => {
-      // ponytail: plots by index, not date; markets with different holidays drift a day apart. Align on dates if it shows.
-      const step = innerW / (s.history.length - 1);
-      return {
-        key: s.key,
-        label: s.label,
-        color: PulseChartGeometry.COLORS[s.key],
-        points: s.history.map((p, i) => ({ ...p, x: round(this.pad.left + i * step), y: round(y(p.norm)) })),
-      };
-    });
+    // x is shared by date, so a market closed on a holiday, or a series with a
+    // shorter history, lines up with the others instead of being stretched.
+    const dates = [...new Set(charted.flatMap((s) => s.history.map((p) => p.date)))].sort();
+    const col = new Map(dates.map((d, i) => [d, i]));
+    const step = innerW / Math.max(1, dates.length - 1);
+    const first = dates[0];
+
+    const lines = charted.map((s) => ({
+      key: s.key,
+      label: s.label,
+      color: PulseChartGeometry.COLORS[s.key],
+      points: s.history.map((p) => ({ ...p, x: round(this.pad.left + col.get(p.date)! * step), y: round(y(p.norm)) })),
+      ...(s.history[0].date > first && { since: s.history[0].date }),
+    }));
     return { lines, baseY: round(y(100)), width: this.width, height: this.height };
   }
 
-  /** Each line's point nearest to x (viewBox units): what the hover tooltip shows. */
+  /** The day nearest to x (viewBox units) and each line's close on it: what the hover tooltip shows. Lines with no close that day are left out. */
   static nearest(chart: PulseChart, x: number): { line: ChartLine; point: ChartPoint }[] {
-    return chart.lines.map((line) => ({
-      line,
-      point: line.points.reduce((best, p) => (Math.abs(p.x - x) < Math.abs(best.x - x) ? p : best)),
-    }));
+    const all = chart.lines.flatMap((line) => line.points);
+    const day = all.reduce((best, p) => (Math.abs(p.x - x) < Math.abs(best.x - x) ? p : best)).date;
+    return chart.lines.flatMap((line) => {
+      const point = line.points.find((p) => p.date === day);
+      return point ? [{ line, point }] : [];
+    });
   }
 }
 

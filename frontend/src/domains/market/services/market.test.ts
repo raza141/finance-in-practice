@@ -61,6 +61,26 @@ describe("PulseChartGeometry", () => {
     }
   });
 
+  it("starts a short history part-way along the shared date axis", () => {
+    const series = MarketPulseContract.parse(sample)!.series;
+    const adx = series.find((s) => s.key === "ADX")!;
+    adx.history = [
+      { date: "2026-10-01", value: 9900, norm: 100 },
+      { date: "2026-10-02", value: 9973.01, norm: 100.74 },
+    ];
+    const chart = new PulseChartGeometry().build(series)!;
+    expect(chart.lines.map((l) => l.key)).toEqual(["SPX", "ADX", "KSE100"]);
+    const spx = chart.lines[0];
+    const line = chart.lines[1];
+    expect(line.since).toBe("2026-10-01");
+    expect(spx.since).toBeUndefined();
+    // same date, same x as the S&P point for that day
+    expect(line.points.map((p) => p.x)).toEqual(spx.points.slice(-2).map((p) => p.x));
+    // hovering before ADX's first close shows only the lines that have that day
+    expect(PulseChartGeometry.nearest(chart, 0).map((h) => h.line.key)).toEqual(["SPX", "KSE100"]);
+    expect(PulseChartGeometry.nearest(chart, chart.width).map((h) => h.line.key)).toEqual(["SPX", "ADX", "KSE100"]);
+  });
+
   it("finds each line's nearest day for the tooltip", () => {
     const chart = new PulseChartGeometry().build(MarketPulseContract.parse(sample)!.series)!;
     const [spx] = PulseChartGeometry.nearest(chart, chart.width);
