@@ -126,6 +126,9 @@ class MemoryStore implements TestimonialStore {
   async setStatus() {
     return true;
   }
+  async updateText() {
+    return true;
+  }
   async remove() {
     return true;
   }

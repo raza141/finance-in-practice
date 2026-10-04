@@ -44,6 +44,16 @@ export interface TestimonialSubmission {
   website: string;
 }
 
+/** Admin corrections to a testimonial's wording (typos, wrong name). Scores and ticker are the learner's own and stay fixed. */
+export interface TestimonialEdit {
+  author: string;
+  context: string;
+  /** Null clears it (testimonials from before locations were collected). */
+  country: string | null;
+  city: string | null;
+  quote: string;
+}
+
 export interface SubmitTestimonialResponse {
   id: string;
   status: TestimonialStatus;
@@ -154,30 +164,11 @@ export class TestimonialContract {
     const b = body as Record<string, unknown>;
     const { LIMITS } = TestimonialContract;
 
-    const author = TestimonialContract.line(b.author);
-    if (author.length < LIMITS.author.min || author.length > LIMITS.author.max) {
-      throw new TestimonialValidationError(`name must be ${LIMITS.author.min}–${LIMITS.author.max} characters`);
-    }
+    const { author, context, country, city, quote } = TestimonialContract.parseEdit(b, { requireLocation: true });
 
     const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
     if (email.length > 254 || !EMAIL.test(email)) {
       throw new TestimonialValidationError("email must be a valid address");
-    }
-
-    const context = TestimonialContract.line(b.context);
-    if (context.length < LIMITS.context.min || context.length > LIMITS.context.max) {
-      throw new TestimonialValidationError(
-        `"who you are" must be ${LIMITS.context.min}–${LIMITS.context.max} characters`,
-      );
-    }
-
-    const country = TestimonialContract.line(b.country);
-    if (country.length < LIMITS.country.min || country.length > LIMITS.country.max) {
-      throw new TestimonialValidationError(`country must be ${LIMITS.country.min}–${LIMITS.country.max} characters`);
-    }
-    const city = TestimonialContract.line(b.city);
-    if (city.length < LIMITS.city.min || city.length > LIMITS.city.max) {
-      throw new TestimonialValidationError(`city must be ${LIMITS.city.min}–${LIMITS.city.max} characters`);
     }
 
     if (!TestimonialContract.isTicker(b.ticker)) throw new TestimonialValidationError("choose a course ticker");
@@ -187,11 +178,6 @@ export class TestimonialContract {
     const beforeScore = TestimonialContract.integer(b.beforeScore, LIMITS.beforeScore, "before score");
     const afterScore = TestimonialContract.integer(b.afterScore, LIMITS.afterScore, "after score");
 
-    const quote = TestimonialContract.paragraph(b.quote);
-    if (quote.length < LIMITS.quote.min || quote.length > LIMITS.quote.max) {
-      throw new TestimonialValidationError(`note must be ${LIMITS.quote.min}–${LIMITS.quote.max} characters`);
-    }
-
     if (b.consent !== true) {
       throw new TestimonialValidationError("please confirm we may publish your name and words");
     }
@@ -200,8 +186,8 @@ export class TestimonialContract {
       author,
       email,
       context,
-      country,
-      city,
+      country: country!,
+      city: city!,
       ticker: b.ticker,
       side: b.side,
       conviction,
@@ -210,6 +196,45 @@ export class TestimonialContract {
       quote,
       website: typeof b.website === "string" ? b.website : "",
     };
+  }
+
+  /**
+   * The free-text fields, checked the same way for a public submission and
+   * an admin correction. Location is optional on edits so older
+   * testimonials without one can still be fixed.
+   */
+  static parseEdit(b: Record<string, unknown>, { requireLocation = false } = {}): TestimonialEdit {
+    const { LIMITS } = TestimonialContract;
+
+    const author = TestimonialContract.line(b.author);
+    if (author.length < LIMITS.author.min || author.length > LIMITS.author.max) {
+      throw new TestimonialValidationError(`name must be ${LIMITS.author.min}–${LIMITS.author.max} characters`);
+    }
+
+    const context = TestimonialContract.line(b.context);
+    if (context.length < LIMITS.context.min || context.length > LIMITS.context.max) {
+      throw new TestimonialValidationError(
+        `"who you are" must be ${LIMITS.context.min}–${LIMITS.context.max} characters`,
+      );
+    }
+
+    const place = (raw: unknown, label: "country" | "city"): string | null => {
+      const value = TestimonialContract.line(raw);
+      if (!value && !requireLocation) return null;
+      if (value.length < LIMITS[label].min || value.length > LIMITS[label].max) {
+        throw new TestimonialValidationError(`${label} must be ${LIMITS[label].min}–${LIMITS[label].max} characters`);
+      }
+      return value;
+    };
+    const country = place(b.country, "country");
+    const city = place(b.city, "city");
+
+    const quote = TestimonialContract.paragraph(b.quote);
+    if (quote.length < LIMITS.quote.min || quote.length > LIMITS.quote.max) {
+      throw new TestimonialValidationError(`note must be ${LIMITS.quote.min}–${LIMITS.quote.max} characters`);
+    }
+
+    return { author, context, country, city, quote };
   }
 
   static isTicker(value: unknown): value is Ticker {

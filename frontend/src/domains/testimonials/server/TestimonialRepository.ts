@@ -2,7 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
-import type { TestimonialSubmission } from "../services/TestimonialContract";
+import type { TestimonialEdit, TestimonialSubmission } from "../services/TestimonialContract";
 import type { OrderFill, OrderSide, Testimonial, TestimonialRecord, TestimonialStatus, Ticker, TickerQuote } from "../types";
 
 /** Persistence for testimonials. Implemented by Postgres; faked in tests. */
@@ -13,6 +13,7 @@ export interface TestimonialStore {
   counts(): Promise<Record<TestimonialStatus, number>>;
   create(submission: TestimonialSubmission, consentAt: Date): Promise<{ id: string; status: TestimonialStatus }>;
   setStatus(id: string, status: TestimonialStatus): Promise<boolean>;
+  updateText(id: string, edit: TestimonialEdit): Promise<boolean>;
   remove(id: string): Promise<boolean>;
 }
 
@@ -118,6 +119,18 @@ export class TestimonialRepository implements TestimonialStore {
     const rows = await this.sql`
       UPDATE testimonials
       SET status = ${status}, reviewed_at = ${reviewedAt}
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  /** Admin correction of name, role, location or wording. Status and review date are untouched. */
+  async updateText(id: string, edit: TestimonialEdit): Promise<boolean> {
+    if (!UUID.test(id)) return false;
+    const rows = await this.sql`
+      UPDATE testimonials
+      SET author = ${edit.author}, context = ${edit.context}, country = ${edit.country}, city = ${edit.city}, quote = ${edit.quote}
       WHERE id = ${id}
       RETURNING id
     `;

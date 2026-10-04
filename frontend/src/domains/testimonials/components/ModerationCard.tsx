@@ -3,6 +3,7 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { deleteTestimonial, setTestimonialStatus } from "../actions/moderation";
 import { TestimonialContract } from "../services/TestimonialContract";
 import type { TestimonialRecord, TestimonialStatus } from "../types";
+import { TestimonialEditForm } from "./TestimonialEditForm";
 
 const ACTIONS: Record<TestimonialStatus, { to: TestimonialStatus; label: string; tone: string }[]> = {
   pending: [
@@ -53,6 +54,8 @@ export function ModerationCard({ testimonial }: { testimonial: TestimonialRecord
         {testimonial.quote}
       </blockquote>
       {testimonial.outcome && <p className="mt-3 font-mono text-xs text-quant">Outcome: {testimonial.outcome}</p>}
+
+      <TestimonialEditForm key={`${testimonial.author}|${testimonial.quote}`} testimonial={testimonial} />
 
       <footer className="mt-5 flex flex-wrap items-center gap-2">
         {ACTIONS[testimonial.status].map((action) => (
