@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function SubmitTestimonialPage() {
   return (
-    <section aria-labelledby="submit-heading" className="relative -mt-20 overflow-hidden">
+    <section aria-labelledby="submit-heading" className="relative -mt-20 overflow-clip">
       <GridBackdrop className="absolute inset-0" />
 
       <div className="page-container relative py-32">
@@ -27,10 +27,10 @@ export default function SubmitTestimonialPage() {
             Studied or worked with us? Tell future students what it was like. We review every testimonial
             before it appears on the site.
           </p>
+        </div>
 
-          <div className="mt-12 max-w-xl">
-            <OrderTicketForm />
-          </div>
+        <div className="mt-12 max-w-6xl">
+          <OrderTicketForm />
         </div>
       </div>
     </section>
