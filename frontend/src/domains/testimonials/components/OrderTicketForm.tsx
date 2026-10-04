@@ -140,7 +140,7 @@ export function OrderTicketForm() {
             </option>
             {(Object.keys(TICKERS) as Ticker[]).map((t) => (
               <option key={t} value={t}>
-                {t} · {TICKERS[t]}
+                {TestimonialContract.SYMBOLS[t]} · {TICKERS[t]}
               </option>
             ))}
           </select>
@@ -291,7 +291,7 @@ export function OrderTicketForm() {
           type="submit"
           className="h-12 rounded-md bg-gold font-semibold tracking-wider text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
         >
-          {busy ? "Routing order…" : `Place ${side} order${ticker ? ` · ${ticker}` : ""}`}
+          {busy ? "Routing order…" : `Place ${side} order${ticker ? ` · ${TestimonialContract.SYMBOLS[ticker]}` : ""}`}
         </button>
       </fieldset>
     </form>

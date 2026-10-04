@@ -21,7 +21,7 @@ export function OrderBookCard({ testimonial, index = 0 }: { testimonial: Testimo
               {fill.side}
             </span>
             <span className="font-mono text-sm font-semibold text-ink" title={TestimonialContract.TICKERS[fill.ticker]}>
-              {fill.ticker}
+              {TestimonialContract.SYMBOLS[fill.ticker]}
             </span>
           </>
         ) : (

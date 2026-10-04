@@ -16,7 +16,7 @@ function TapeItems({ quotes, hidden }: { quotes: readonly TickerQuote[]; hidden?
         const up = quote.avgYieldPercent >= 0;
         return (
           <li key={`${quote.ticker}-${i}`} className="tabular-data flex items-center gap-2 px-6 text-sm whitespace-nowrap">
-            <span className="font-semibold text-ink">{quote.ticker}</span>
+            <span className="font-semibold text-ink">{TestimonialContract.SYMBOLS[quote.ticker]}</span>
             <span className={up ? "text-quant" : "text-gold"}>
               {up ? "▲" : "▼"} {TestimonialContract.formatYield(quote.avgYieldPercent)}
             </span>
@@ -61,7 +61,7 @@ export function TickerTape({ quotes }: { quotes: readonly TickerQuote[] }) {
     >
       <p className="sr-only">
         Average yield by ticker:{" "}
-        {quotes.map((q) => `${q.ticker} ${TestimonialContract.formatYield(q.avgYieldPercent)} over ${q.fills} fills`).join(", ")}
+        {quotes.map((q) => `${TestimonialContract.SYMBOLS[q.ticker]} ${TestimonialContract.formatYield(q.avgYieldPercent)} over ${q.fills} fills`).join(", ")}
       </p>
       {/* Two identical halves: the animation shifts by exactly one half, then loops. */}
       <div ref={track} aria-hidden className="flex w-max will-change-transform">

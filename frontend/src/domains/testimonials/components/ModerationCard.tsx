@@ -39,7 +39,7 @@ export function ModerationCard({ testimonial }: { testimonial: TestimonialRecord
       {testimonial.fill && (
         <p className="tabular-data mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
           <span className={testimonial.fill.side === "BUY" ? "text-quant" : "text-gold"}>{testimonial.fill.side}</span>
-          <span className="text-ink">{testimonial.fill.ticker}</span>
+          <span className="text-ink">{TestimonialContract.SYMBOLS[testimonial.fill.ticker]}</span>
           <span>Conviction {testimonial.fill.conviction}/10</span>
           <span>
             {testimonial.fill.beforeScore}% → {testimonial.fill.afterScore}%

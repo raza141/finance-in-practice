@@ -81,6 +81,16 @@ export class TestimonialContract {
     QUANT: "Quant finance & Python",
   };
 
+  /** Display symbols, matching the booking widget ("CFA L1", "FRM P1"). The stored codes stay CFA1/FRM1. */
+  static readonly SYMBOLS: Readonly<Record<Ticker, string>> = {
+    CFA1: "CFA L1",
+    CFA2: "CFA L2",
+    FRM1: "FRM P1",
+    UNI: "UNI",
+    PSX: "PSX",
+    QUANT: "QUANT",
+  };
+
   /** Suggestions for the country field; any country can be typed. */
   static readonly COUNTRIES = [
     "Pakistan",
