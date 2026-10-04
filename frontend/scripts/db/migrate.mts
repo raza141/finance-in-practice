@@ -133,6 +133,39 @@ const MIGRATIONS: Migration[] = [
         CHECK (ticker IN ('CFA1', 'CFA2', 'FRM1', 'UNI', 'PSX', 'QUANT'))`,
     ],
   },
+  {
+    id: "007_instructors",
+    statements: [
+      // The teaching team on /about, managed from /admin/instructors. Lowest
+      // sort_order shows first; the first active one is the home-page teaser.
+      `CREATE TABLE instructors (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name       text NOT NULL CHECK (char_length(name) BETWEEN 2 AND 80),
+        role       text NOT NULL CHECK (char_length(role) BETWEEN 2 AND 120),
+        bio        text NOT NULL CHECK (char_length(bio) BETWEEN 20 AND 1200),
+        background text NOT NULL DEFAULT '' CHECK (char_length(background) <= 800),
+        -- JSON arrays of strings.
+        education  jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(education) = 'array'),
+        highlights jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(highlights) = 'array'),
+        -- A file in public/team/ or an https:// image URL.
+        photo_url  text CHECK (photo_url ~ '^(/team/[A-Za-z0-9._-]+|https://\\S+)$' AND char_length(photo_url) <= 500),
+        sort_order integer NOT NULL DEFAULT 0,
+        is_active  boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      // Seed with the profile that used to be hard-coded in InstructorCatalog.
+      `INSERT INTO instructors (name, role, bio, background, education, highlights, sort_order, is_active) VALUES (
+        'Muhammad Ahmed Raza',
+        'Founder · Lead Instructor',
+        $$Muhammad Ahmed Raza teaches financial theory through exam-style practice and practical implementation. His approach connects CFA and FRM concepts with valuation, risk models, Python workflows and real-world financial analysis.$$,
+        $$Builds the in-house quant engine behind the site's pricing, risk and portfolio tools, and uses it in every 1-on-1 session.$$,
+        '["MSc Data Science", "CFA Level III Candidate", "FRM Part I Passed"]',
+        '["CFA®", "FRM®", "Python", "Risk & VaR"]',
+        0, true
+      )`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

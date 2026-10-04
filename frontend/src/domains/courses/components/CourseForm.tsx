@@ -1,43 +1,14 @@
 "use client";
 
-import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { startTransition, useActionState, useState, useSyncExternalStore, type FormEvent } from "react";
+
+import { FIELD, Field } from "@/domains/admin/components/FormField";
 
 import { saveCourse, type CourseFormState } from "../actions/courses";
 import { CourseContract, type CourseField } from "../services/CourseContract";
 import { CourseFormat } from "../services/CourseFormat";
 import type { Course } from "../types";
 import { SyllabusEditor } from "./SyllabusEditor";
-
-const FIELD =
-  "mt-2 w-full rounded-md border border-line bg-canvas/70 px-3 py-2.5 text-ink outline-none focus:border-quant/70 aria-[invalid=true]:border-gold/70 disabled:opacity-60";
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-  className = "",
-}: {
-  label: string;
-  hint?: ReactNode;
-  error?: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="text-[11px] tracking-[0.22em] text-muted uppercase">{label}</span>
-      {children}
-      {error ? (
-        <span role="alert" className="mt-1.5 block text-xs text-gold">
-          {error}
-        </span>
-      ) : (
-        hint && <span className="mt-1.5 block text-xs text-muted/80">{hint}</span>
-      )}
-    </label>
-  );
-}
 
 const noSubscribe = () => () => {};
 

@@ -37,6 +37,8 @@ export function InstructorProfile({ instructor, index, total }: InstructorProfil
                 alt={`Portrait of ${instructor.name}`}
                 fill
                 sizes="(min-width: 1024px) 24rem, 20rem"
+                // External links skip the optimizer, which only allows configured hosts.
+                unoptimized={!instructor.photo.startsWith("/")}
                 className="object-cover"
               />
             ) : (

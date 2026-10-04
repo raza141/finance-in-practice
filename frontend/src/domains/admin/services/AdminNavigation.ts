@@ -10,7 +10,7 @@ export class AdminNavigation {
   private static readonly MODULES: readonly AdminModule[] = [
     { href: "/admin", label: "Overview" },
     { href: "/admin/testimonials", label: "Testimonials" },
-    { href: "/admin/instructors", label: "Instructors", comingSoon: true },
+    { href: "/admin/instructors", label: "Instructors" },
     { href: "/admin/courses", label: "Courses" },
     { href: "/admin/pricing", label: "Pricing", comingSoon: true },
     { href: "/admin/account", label: "Account" },

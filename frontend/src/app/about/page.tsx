@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 
 import { InstructorProfile } from "@/domains/team/components/InstructorProfile";
 import { InstructorShowcase } from "@/domains/team/components/InstructorShowcase";
-import { InstructorCatalog } from "@/domains/team/services/InstructorCatalog";
+import { InstructorRepository } from "@/domains/team/server/InstructorRepository";
+
+// Instructors come from the database. Admin saves revalidate "/about"
+// immediately; this hourly ISR is a fallback.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -10,8 +14,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/about" },
 };
 
-export default function AboutPage() {
-  const instructors = new InstructorCatalog().all();
+export default async function AboutPage() {
+  const instructors = await InstructorRepository.published();
 
   return (
     <InstructorShowcase count={instructors.length}>

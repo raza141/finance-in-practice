@@ -3,7 +3,7 @@ export interface Instructor {
   name: string;
   /** One-line role shown under the name, e.g. "Lead Instructor · CFA® & FRM®". */
   role: string;
-  /** Path under /public, e.g. "/team/raza.jpg". Falls back to a monogram when absent. */
+  /** A file in /public/team/ or an https:// image URL. Falls back to a monogram when absent. */
   photo?: string;
   bio: string;
   education: readonly string[];
@@ -11,6 +11,7 @@ export interface Instructor {
   /** Short credential / specialism chips. */
   highlights: readonly string[];
   links?: readonly { label: string; href: string }[];
-  /** True while the profile still holds placeholder copy that must be replaced. */
-  placeholder?: boolean;
+  /** Lowest first on /about. */
+  sortOrder: number;
+  isActive: boolean;
 }
