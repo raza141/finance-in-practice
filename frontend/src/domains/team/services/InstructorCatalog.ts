@@ -19,26 +19,6 @@ export class InstructorCatalog {
       highlights: ["CFA®", "FRM®", "Python", "Risk & VaR"],
       placeholder: true,
     },
-    {
-      id: "instructor-2",
-      name: "Instructor Two",
-      role: "Instructor · Financial Modeling",
-      bio: "Placeholder bio. Two or three sentences on teaching style and what students walk away with.",
-      education: ["Degree, University", "Professional certification"],
-      background: "Placeholder background. Industry experience, previous roles and areas of expertise.",
-      highlights: ["Valuation", "Excel", "Corporate finance"],
-      placeholder: true,
-    },
-    {
-      id: "instructor-3",
-      name: "Instructor Three",
-      role: "Instructor · Automation",
-      bio: "Placeholder bio. Two or three sentences on teaching style and what students walk away with.",
-      education: ["Degree, University", "Professional certification"],
-      background: "Placeholder background. Industry experience, previous roles and areas of expertise.",
-      highlights: ["Python", "Data pipelines", "Reporting"],
-      placeholder: true,
-    },
   ];
 
   all(): readonly Instructor[] {
