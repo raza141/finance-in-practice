@@ -7,8 +7,12 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
  * failing the whole card, so one broken feed only removes its own row.
  */
 export class MarketPulseContract {
-  /** Older than this and the card says so instead of passing it off as today's close. */
-  static readonly STALE_AFTER_DAYS = 4;
+  /**
+   * Weekdays allowed to pass after a close before the card calls it stale.
+   * Weekends never count, so Friday's close shows cleanly all weekend; 3
+   * covers FRED's one-day lag plus a market holiday.
+   */
+  static readonly STALE_AFTER_WEEKDAYS = 3;
 
   static parse(input: unknown): MarketPulse | null {
     if (!isRecord(input) || !Array.isArray(input.series)) return null;
@@ -25,10 +29,15 @@ export class MarketPulseContract {
     };
   }
 
-  /** True when this series' latest close is more than STALE_AFTER_DAYS old (covers weekends and holidays). */
+  /** True when more than STALE_AFTER_WEEKDAYS weekdays have passed since this series' latest close. */
   static isStale(series: PulseSeries, now: Date = new Date()): boolean {
-    const ageDays = (now.getTime() - Date.parse(`${series.as_of}T00:00:00Z`)) / 86_400_000;
-    return ageDays > MarketPulseContract.STALE_AFTER_DAYS;
+    const day = new Date(`${series.as_of}T00:00:00Z`);
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    let weekdays = 0;
+    for (day.setUTCDate(day.getUTCDate() + 1); day.getTime() <= today; day.setUTCDate(day.getUTCDate() + 1)) {
+      if (day.getUTCDay() % 6 !== 0) weekdays++;
+    }
+    return weekdays > MarketPulseContract.STALE_AFTER_WEEKDAYS;
   }
 
   static formatValue(series: PulseSeries): string {

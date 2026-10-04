@@ -24,17 +24,29 @@ export class MarketPulseSource extends BaseApiClient {
    * Live payload when MARKET_PULSE_URL is set. Without it, development falls
    * back to the bundled sample and production returns null, so made-up
    * numbers never reach the public site.
+   *
+   * A failed read during an hourly refresh throws on purpose: ISR then keeps
+   * serving the last good page (e.g. Friday's closes) instead of an empty card.
+   * Only the build, which has no earlier page to fall back to, gets null.
    */
   static async load(env: NodeJS.ProcessEnv = process.env, fetchImpl?: typeof fetch): Promise<MarketPulse | null> {
     const url = env.MARKET_PULSE_URL?.trim();
     if (!url) return env.NODE_ENV === "production" ? null : MarketPulseSource.sample();
+
+    let pulse: MarketPulse | null = null;
+    let failure: unknown = "invalid payload";
     try {
       const target = new URL(url);
-      return MarketPulseContract.parse(await new MarketPulseSource(target.origin, fetchImpl).fetchPulse(target));
+      pulse = MarketPulseContract.parse(await new MarketPulseSource(target.origin, fetchImpl).fetchPulse(target));
     } catch (error) {
-      console.error("[market-pulse] fetch failed", error);
-      return null;
+      failure = error;
     }
+    if (pulse) return pulse;
+
+    console.error("[market-pulse] read failed", failure);
+    const keepLastGood = env.NODE_ENV === "production" && env.NEXT_PHASE !== "phase-production-build";
+    if (keepLastGood) throw new Error("Market Pulse unavailable; keeping the last generated page");
+    return null;
   }
 
   static sample(): MarketPulse | null {

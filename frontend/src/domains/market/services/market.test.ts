@@ -34,10 +34,16 @@ describe("MarketPulseContract", () => {
     expect(MarketPulseContract.parse(sample)!.series.find((s) => s.key === "UST3M")!.history).toHaveLength(21);
   });
 
-  it("flags a close older than four days as stale", () => {
-    const spx = MarketPulseContract.parse(sample)!.series[0];
-    expect(MarketPulseContract.isStale(spx, new Date("2026-10-05T12:00:00Z"))).toBe(false); // over a weekend
-    expect(MarketPulseContract.isStale(spx, new Date("2026-10-08T12:00:00Z"))).toBe(true);
+  it("never flags Friday's close over the weekend; counts weekdays only", () => {
+    const series = MarketPulseContract.parse(sample)!.series;
+    const spx = series[0]; // as_of Fri 2026-10-02
+    const ust = series.find((s) => s.key === "UST3M")!; // as_of Thu 2026-10-01 (FRED lag)
+    for (const now of ["2026-10-03T12:00:00Z", "2026-10-04T23:00:00Z", "2026-10-05T08:00:00Z"]) {
+      expect(MarketPulseContract.isStale(spx, new Date(now))).toBe(false);
+      expect(MarketPulseContract.isStale(ust, new Date(now))).toBe(false);
+    }
+    expect(MarketPulseContract.isStale(spx, new Date("2026-10-07T12:00:00Z"))).toBe(false); // Mon-Wed: 3 weekdays
+    expect(MarketPulseContract.isStale(spx, new Date("2026-10-08T12:00:00Z"))).toBe(true); // Thursday: 4
   });
 });
 
@@ -69,7 +75,7 @@ describe("MarketPulseSource", () => {
     expect((await MarketPulseSource.load({ NODE_ENV: "development" } as NodeJS.ProcessEnv))?.series[0].source).toMatch(/sample/);
   });
 
-  it("reads the Blob URL and returns null on failure", async () => {
+  it("reads the Blob URL; a failed refresh throws so ISR keeps the last page, a failed build gets null", async () => {
     const env = { NODE_ENV: "production", MARKET_PULSE_URL: "https://x.public.blob.vercel-storage.com/market-pulse/latest.json" } as NodeJS.ProcessEnv;
     const ok = (async (url: string) => {
       expect(url).toBe(env.MARKET_PULSE_URL);
@@ -77,6 +83,9 @@ describe("MarketPulseSource", () => {
     }) as typeof fetch;
     expect((await MarketPulseSource.load(env, ok))?.series).toHaveLength(5);
     const down = (async () => new Response("", { status: 503 })) as typeof fetch;
-    expect(await MarketPulseSource.load(env, down)).toBeNull();
+    const junk = (async () => new Response("{}", { headers: { "Content-Type": "application/json" } })) as typeof fetch;
+    await expect(MarketPulseSource.load(env, down)).rejects.toThrow(/keeping the last generated page/);
+    await expect(MarketPulseSource.load(env, junk)).rejects.toThrow();
+    expect(await MarketPulseSource.load({ ...env, NEXT_PHASE: "phase-production-build" }, down)).toBeNull();
   });
 });
