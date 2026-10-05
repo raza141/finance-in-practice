@@ -304,6 +304,64 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX booking_blocks_range_idx ON booking_blocks (ends_at, starts_at)`,
     ],
   },
+  {
+    id: "012_invoices",
+    statements: [
+      // Invoice numbers come from one sequence, drawn only by the UPDATE that
+      // issues a draft, so numbers are never reused and never skipped.
+      // Shown as FIP-<issue year>-<seq padded to 4>.
+      `CREATE SEQUENCE invoice_number_seq`,
+      // Drafts are editable; once issued (sent) the content is a frozen
+      // snapshot and only the status moves on (paid or void). Amounts are
+      // integer minor units, computed server-side. items is
+      // [{description, quantity, unitMinor, amountMinor}]. token keys the
+      // public /invoice/<token> page.
+      `CREATE TABLE invoices (
+        id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        number_seq           integer UNIQUE,
+        token                text NOT NULL UNIQUE CHECK (char_length(token) BETWEEN 32 AND 64),
+        status               text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'void')),
+        booking_uid          text CHECK (char_length(booking_uid) <= 100),
+        client_name          text NOT NULL CHECK (char_length(client_name) BETWEEN 1 AND 120),
+        client_email         text NOT NULL CHECK (char_length(client_email) <= 254),
+        currency             text NOT NULL CHECK (currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')),
+        items                jsonb NOT NULL CHECK (jsonb_typeof(items) = 'array'),
+        subtotal_minor       integer NOT NULL CHECK (subtotal_minor >= 0),
+        discount_minor       integer NOT NULL DEFAULT 0 CHECK (discount_minor >= 0 AND discount_minor <= subtotal_minor),
+        tax_rate_bp          integer NOT NULL DEFAULT 0 CHECK (tax_rate_bp BETWEEN 0 AND 10000),
+        tax_minor            integer NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+        total_minor          integer NOT NULL CHECK (total_minor >= 0),
+        trn                  text NOT NULL DEFAULT '' CHECK (char_length(trn) <= 30),
+        due_date             date NOT NULL,
+        notes                text NOT NULL DEFAULT '' CHECK (char_length(notes) <= 2000),
+        payment_instructions text NOT NULL DEFAULT '' CHECK (char_length(payment_instructions) <= 2000),
+        issue_date           date,
+        created_at           timestamptz NOT NULL DEFAULT now(),
+        updated_at           timestamptz NOT NULL DEFAULT now(),
+        sent_at              timestamptz,
+        paid_at              timestamptz,
+        voided_at            timestamptz,
+        CHECK ((status = 'draft') = (number_seq IS NULL)),
+        CHECK ((status = 'draft') = (issue_date IS NULL))
+      )`,
+      `CREATE INDEX invoices_created_idx ON invoices (created_at DESC)`,
+      `CREATE INDEX invoices_booking_idx ON invoices (booking_uid) WHERE booking_uid IS NOT NULL`,
+      // Every email the admin panel sends (invoices, booking confirmations).
+      `CREATE TABLE email_log (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        kind         text NOT NULL CHECK (kind IN ('invoice', 'confirmation')),
+        to_email     text NOT NULL CHECK (char_length(to_email) <= 254),
+        subject      text NOT NULL CHECK (char_length(subject) <= 300),
+        invoice_id   uuid REFERENCES invoices (id) ON DELETE SET NULL,
+        booking_uid  text CHECK (char_length(booking_uid) <= 100),
+        provider_id  text,
+        sent_at      timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX email_log_sent_idx ON email_log (sent_at DESC)`,
+      `CREATE INDEX email_log_invoice_idx ON email_log (invoice_id) WHERE invoice_id IS NOT NULL`,
+      `CREATE INDEX email_log_booking_idx ON email_log (booking_uid) WHERE booking_uid IS NOT NULL`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
