@@ -67,13 +67,18 @@
     }
   }
 
+  :root {
+    /* 8px minor / 40px major grid; also used by bg-grid-lines (e.g. the invoice header and footer). */
+    --grid-lines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 .5H40M.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.09'/%3E%3Cpath d='M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.035'/%3E%3C/svg%3E");
+  }
+
   body {
     @apply bg-canvas text-ink font-sans antialiased;
 
     /* Mathematical grid: 8px minor / 40px major lines plus a soft cyan glow up top. */
     background-image:
       radial-gradient(ellipse 80% 50% at 70% -10%, rgb(34 211 238 / 0.10), transparent 60%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 .5H40M.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.09'/%3E%3Cpath d='M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40' fill='none' stroke='%2394A3B8' stroke-opacity='.035'/%3E%3C/svg%3E");
+      var(--grid-lines);
     background-attachment: fixed;
   }
 
@@ -158,4 +163,9 @@
 }
 html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   display: none;
+}
+
+/* The site's grid lines on a dark band, e.g. the invoice header and footer. */
+@utility bg-grid-lines {
+  background-image: var(--grid-lines);
 }

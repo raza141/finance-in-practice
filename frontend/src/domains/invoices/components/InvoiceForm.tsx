@@ -43,6 +43,7 @@ const row = (courses: readonly CourseOption[], item?: Partial<DraftItem>): Row =
     key: nextKey++,
     description,
     detail: item?.detail ?? "",
+    period: item?.period ?? "",
     unit: item?.unit ?? "hour",
     quantity: item?.quantity ?? "1",
     unitPrice: item?.unitPrice ?? "",
@@ -74,6 +75,7 @@ export function InvoiceForm({
           row(courses, {
             description: item.description,
             detail: item.detail,
+            period: item.period,
             unit: item.unit,
             quantity: String(item.quantity),
             unitPrice: item.unitMinor ? InvoiceMath.majorInput(item.unitMinor) : "",
@@ -238,7 +240,7 @@ export function InvoiceForm({
 
       <fieldset disabled={pending}>
         <legend className="mb-4 text-sm text-quant">Line items</legend>
-        <input type="hidden" name="items" value={JSON.stringify(rows.map(({ description, detail, unit, quantity, unitPrice }) => ({ description, detail, unit, quantity, unitPrice })))} />
+        <input type="hidden" name="items" value={JSON.stringify(rows.map(({ description, detail, period, unit, quantity, unitPrice }) => ({ description, detail, period, unit, quantity, unitPrice })))} />
         <div className="hidden grid-cols-[1fr_8rem_5rem_8rem_8rem_4rem] gap-3 px-1 text-[11px] tracking-[0.18em] text-muted uppercase sm:grid">
           <span>Course</span>
           <span>Basis</span>
@@ -285,7 +287,15 @@ export function InvoiceForm({
                 maxLength={200}
                 value={r.detail}
                 onChange={(e) => update(r.key, { detail: e.target.value })}
-                className={`${FIELD} mt-0 text-sm sm:col-span-5`}
+                className={`${FIELD} mt-0 text-sm sm:col-span-3`}
+              />
+              <input
+                aria-label={`Line ${index + 1} period`}
+                placeholder={r.unit === "month" ? "Month, e.g. October 2026" : "Session date, e.g. 14 Oct 2026"}
+                maxLength={60}
+                value={r.period}
+                onChange={(e) => update(r.key, { period: e.target.value })}
+                className={`${FIELD} mt-0 text-sm sm:col-span-2`}
               />
             </li>
           ))}

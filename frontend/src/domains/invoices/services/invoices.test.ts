@@ -15,7 +15,7 @@ const invoiceFields = (overrides: Record<string, string> = {}) => ({
   clientEmail: "Sara@Example.com",
   currency: "AED",
   items: JSON.stringify([
-    { description: "CFA Level I session", detail: " 6-30 Oct ", unit: "hour", quantity: "1.5", unitPrice: "333.33" },
+    { description: "CFA Level I session", detail: " 6-30 Oct ", period: " October 2026 ", unit: "hour", quantity: "1.5", unitPrice: "333.33" },
     { description: "Mock exam review", detail: "", unit: "contract", quantity: "2", unitPrice: "100" },
   ]),
   discount: "",
@@ -74,7 +74,7 @@ describe("InvoiceContract.parseInvoice", () => {
     expect(parsed.input.discountMinor).toBe(5_010);
     expect(parsed.input.taxRateBp).toBe(500);
     expect(parsed.input.bookingUid).toBeNull();
-    expect(parsed.input.items[0]).toMatchObject({ detail: "6-30 Oct", unit: "hour" });
+    expect(parsed.input.items[0]).toMatchObject({ detail: "6-30 Oct", period: "October 2026", unit: "hour" });
     expect(parsed.input.items[1]).not.toHaveProperty("detail");
     expect(parsed.input).toMatchObject({ clientId: null, bankAccountId: null, clientPhone: "", clientAddress: "" });
   });

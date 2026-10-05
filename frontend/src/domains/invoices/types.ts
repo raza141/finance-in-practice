@@ -9,6 +9,8 @@ export interface InvoiceItem {
   description: string;
   /** Optional second line under the title. Absent on invoices issued before 013. */
   detail?: string;
+  /** Which month or session this line pays for, e.g. "October 2026" or "Session · 14 Oct 2026". */
+  period?: string;
   /** Absent on invoices issued before 013. */
   unit?: ItemUnit;
   /** Up to two decimals (e.g. 1.5 hours). */

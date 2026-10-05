@@ -16,6 +16,7 @@ type Parsed<T, E> = { ok: true; input: T } | { ok: false; errors: E };
 export interface DraftItem {
   description: string;
   detail: string;
+  period: string;
   unit: string;
   quantity: string;
   unitPrice: string;
@@ -40,6 +41,7 @@ export class InvoiceContract {
     email: 254,
     items: 30,
     description: 200,
+    period: 60,
     maxQuantity: 1000,
     /** 10 million in major units: well inside a Postgres integer. */
     maxMinor: 1_000_000_000,
@@ -332,6 +334,8 @@ export class InvoiceContract {
       if (!description || description.length > LIMITS.description) return `${row}choose a course or enter a description (up to ${LIMITS.description} characters).`;
       const detail = typeof d.detail === "string" ? d.detail.trim() : "";
       if (detail.length > LIMITS.description) return `${row}details up to ${LIMITS.description} characters.`;
+      const period = typeof d.period === "string" ? d.period.trim() : "";
+      if (period.length > LIMITS.period) return `${row}period up to ${LIMITS.period} characters.`;
       const unit = d.unit as ItemUnit;
       if (typeof unit !== "string" || !Object.hasOwn(InvoiceContract.UNITS, unit)) return `${row}choose hourly, monthly, on demand or contract.`;
       const quantityText = typeof d.quantity === "string" ? d.quantity.trim() : "";
@@ -341,7 +345,7 @@ export class InvoiceContract {
       }
       const unitMinor = typeof d.unitPrice === "string" ? InvoiceMath.parseMajor(d.unitPrice) : null;
       if (unitMinor === null || unitMinor > LIMITS.maxMinor) return `${row}enter a unit price, e.g. 450 or 450.50.`;
-      items.push({ description, ...(detail && { detail }), unit, quantity, unitMinor, amountMinor: InvoiceMath.lineAmount(quantity, unitMinor) });
+      items.push({ description, ...(detail && { detail }), ...(period && { period }), unit, quantity, unitMinor, amountMinor: InvoiceMath.lineAmount(quantity, unitMinor) });
     }
     return items;
   }

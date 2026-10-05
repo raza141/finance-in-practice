@@ -28,10 +28,12 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
   const stamp = STAMP[invoice.status];
   const { whatsapp } = siteConfig.contact;
   const bankRows = invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
+  const hasPeriod = invoice.items.some((item) => item.period);
+  const firstName = invoice.clientName.trim().split(/\s+/)[0];
 
   return (
     <article className="mx-auto w-full max-w-3xl overflow-hidden bg-white font-sans text-slate-800 shadow-xl [-webkit-print-color-adjust:exact] [print-color-adjust:exact] print:max-w-none print:shadow-none">
-      <header className="flex flex-wrap items-center justify-between gap-6 border-b-4 border-gold bg-canvas px-8 py-7 sm:px-12">
+      <header className="flex flex-wrap items-center justify-between gap-6 border-b-4 border-gold bg-canvas bg-grid-lines px-8 py-7 sm:px-12">
         <Logo height={44} />
         <div className="text-right">
           <h1 className="font-serif text-3xl font-bold tracking-[0.12em] text-white uppercase">{invoice.taxRateBp > 0 ? "Tax invoice" : "Invoice"}</h1>
@@ -103,6 +105,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               <tr className="bg-canvas text-left text-[11px] tracking-[0.18em] text-white uppercase">
                 <th className="w-14 px-3 py-3 font-semibold">No.</th>
                 <th className="px-3 py-3 font-semibold">Description</th>
+                {hasPeriod && <th className="px-3 py-3 font-semibold">Period</th>}
                 <th className="px-3 py-3 text-center font-semibold">Qty</th>
                 <th className="px-3 py-3 text-right font-semibold">Unit price</th>
                 <th className="px-3 py-3 text-right font-semibold">Amount</th>
@@ -116,6 +119,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
                     <p className="font-semibold text-slate-900">{item.description}</p>
                     {item.detail && <p className="mt-0.5 text-xs text-slate-500">{item.detail}</p>}
                   </td>
+                  {hasPeriod && <td className="px-3 py-3 whitespace-nowrap text-slate-700">{item.period ?? "—"}</td>}
                   <td className="px-3 py-3 text-center tabular-nums">
                     {item.quantity}
                     {item.unit && <span className="block text-[11px] text-slate-500">{InvoiceContract.UNITS[item.unit]}</span>}
@@ -171,22 +175,38 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           </dl>
         </section>
 
-        <section className="mt-8 grid gap-8 sm:grid-cols-2 print:grid-cols-2">
-          <div className="h-fit break-inside-avoid rounded-lg border border-slate-200 border-l-4 border-l-gold p-5">
-            <h2 className={LABEL}>Thank you</h2>
-            <p className="mt-2 text-sm text-slate-600">Thank you for learning with {siteConfig.name}. Questions about this invoice? Message {whatsapp.display}.</p>
+        {invoice.notes && (
+          <section className="mt-8 break-inside-avoid">
+            <h2 className={`${LABEL} border-b border-slate-200 pb-2`}>Terms &amp; notes</h2>
+            <p className="mt-3 text-sm whitespace-pre-line text-slate-600">{invoice.notes}</p>
+          </section>
+        )}
+
+        <section className="mt-8 grid break-inside-avoid gap-6 rounded-lg border border-slate-200 border-l-4 border-l-gold bg-slate-50 p-6 sm:grid-cols-[1fr_auto] sm:items-center print:grid-cols-[1fr_auto]">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Thank you for learning with {siteConfig.name}. Every session is built around your own attempts, so keep bringing the
+              questions you find hardest. Questions about this invoice, or ready to book your next session? We are one message away.
+            </p>
           </div>
-          {invoice.notes && (
-            <div className="break-inside-avoid">
-              <h2 className={`${LABEL} border-b border-slate-200 pb-2`}>Terms &amp; notes</h2>
-              <p className="mt-3 text-sm whitespace-pre-line text-slate-600">{invoice.notes}</p>
-            </div>
-          )}
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+            <dt className={ROW_LABEL}>WhatsApp</dt>
+            <dd className="font-semibold text-slate-900">{whatsapp.display}</dd>
+            {siteConfig.contact.email && (
+              <>
+                <dt className={ROW_LABEL}>Email</dt>
+                <dd className="font-semibold text-slate-900">{siteConfig.contact.email}</dd>
+              </>
+            )}
+            <dt className={ROW_LABEL}>Book</dt>
+            <dd className="font-semibold text-slate-900">{siteConfig.domain}</dd>
+          </dl>
         </section>
       </div>
 
-      <footer className="bg-canvas px-8 py-4 text-center">
-        <p className="font-serif text-sm tracking-[0.18em] text-gold italic">{TAGLINE}</p>
+      <footer className="bg-canvas bg-grid-lines px-8 py-5 text-center">
+        <p className="text-sm font-semibold tracking-[0.12em] text-gold">{TAGLINE}</p>
       </footer>
     </article>
   );
