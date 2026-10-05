@@ -243,12 +243,12 @@ export function CourseView({
       {(course.audience || course.notFor) && (
         <section aria-labelledby="fit-heading" className="border-t border-line">
           <div className="page-container py-14 lg:py-20">
-            <div className="max-w-3xl rounded-2xl border border-line bg-surface p-8 sm:p-12">
+            <div className="rounded-2xl border border-line bg-surface p-8 sm:p-12">
               <h2 id="fit-heading" className="text-3xl font-bold">
                 Is this for you?
               </h2>
-              {course.audience && <p className="mt-4 text-lg leading-relaxed">{course.audience}</p>}
-              {course.notFor && <p className="mt-3 leading-relaxed text-muted">{course.notFor}</p>}
+              {course.audience && <p className="mt-4 max-w-3xl text-lg leading-relaxed">{course.audience}</p>}
+              {course.notFor && <p className="mt-3 max-w-3xl leading-relaxed text-muted">{course.notFor}</p>}
               <div className="mt-8">{cta}</div>
             </div>
           </div>
