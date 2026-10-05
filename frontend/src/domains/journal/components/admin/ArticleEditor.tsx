@@ -151,7 +151,8 @@ export function ArticleEditor({ article, viewer, aiEnabled, revisions, published
 
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (saveState !== "saved") e.preventDefault();
+      // In a conflict the edits can't be saved anyway, and the banner's Reload must not be blocked.
+      if (saveState === "dirty" || saveState === "saving" || saveState === "error") e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);

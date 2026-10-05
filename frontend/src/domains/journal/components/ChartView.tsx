@@ -86,6 +86,12 @@ export function ChartView({ block }: { block: ChartBlock }) {
     return best;
   }
 
+  /** Pointer position in viewBox units (the SVG may be drawn scaled). */
+  function toChartX(e: React.PointerEvent<SVGSVGElement>): number {
+    const box = e.currentTarget.getBoundingClientRect();
+    return ((e.clientX - box.left) / box.width) * g.width;
+  }
+
   const rows = CsvText.parse(block.csv);
   const id = `chart-${block.id}`;
 
@@ -107,15 +113,14 @@ export function ChartView({ block }: { block: ChartBlock }) {
 
       <div ref={box} className="relative mt-3 w-full">
         <svg
-          width={g.width}
-          height={g.height}
+          // Drawn at the measured width; until measured it scales proportionally rather than letterboxing.
           viewBox={`0 0 ${g.width} ${g.height}`}
           role="img"
           aria-label={`${block.alt} Use the arrow keys to read each value.`}
           tabIndex={0}
-          className="block max-w-full touch-pan-y outline-none focus-visible:ring-1 focus-visible:ring-quant"
-          onPointerMove={(e) => setActive(nearest(e.clientX - e.currentTarget.getBoundingClientRect().left))}
-          onPointerDown={(e) => setActive(nearest(e.clientX - e.currentTarget.getBoundingClientRect().left))}
+          className="block h-auto w-full touch-pan-y outline-none focus-visible:ring-1 focus-visible:ring-quant"
+          onPointerMove={(e) => setActive(nearest(toChartX(e)))}
+          onPointerDown={(e) => setActive(nearest(toChartX(e)))}
           onPointerLeave={() => setActive(null)}
           onBlur={() => setActive(null)}
           onKeyDown={(e) => {
@@ -133,8 +138,16 @@ export function ChartView({ block }: { block: ChartBlock }) {
             </g>
           ))}
           {chart.x.map((label, i) =>
-            i % labelEvery === 0 || i === n - 1 ? (
-              <text key={i} x={g.xOf(i)} y={g.height - MARGIN.bottom + 18} textAnchor="middle" className="fill-muted font-mono text-[11px]">
+            // Every nth label, always the last, and none crowding the last.
+            (i % labelEvery === 0 && n - 1 - i >= labelEvery / 2) || i === n - 1 ? (
+              <text
+                key={i}
+                x={g.xOf(i)}
+                y={g.height - MARGIN.bottom + 18}
+                // Edge labels on line charts hug the plot so they aren't clipped.
+                textAnchor={block.kind === "bar" || n === 1 ? "middle" : i === n - 1 ? "end" : i === 0 ? "start" : "middle"}
+                className="fill-muted font-mono text-[11px]"
+              >
                 {label.length > 12 ? `${label.slice(0, 11)}…` : label}
               </text>
             ) : null,
@@ -212,7 +225,9 @@ export function ChartView({ block }: { block: ChartBlock }) {
           <div
             aria-live="polite"
             className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-md border border-line bg-canvas/95 px-3 py-2 text-xs shadow-lg"
-            style={g.xOf(active) > g.width / 2 ? { right: g.width - g.xOf(active) + 12 } : { left: g.xOf(active) + 12 }}
+            style={
+              g.xOf(active) > g.width / 2 ? { right: `calc(${(1 - g.xOf(active) / g.width) * 100}% + 12px)` } : { left: `calc(${(g.xOf(active) / g.width) * 100}% + 12px)` }
+            }
           >
             <p className="font-mono text-muted">{chart.x[active]}</p>
             {chart.series.map((s, si) => (
