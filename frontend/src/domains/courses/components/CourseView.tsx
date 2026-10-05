@@ -61,7 +61,7 @@ export function CourseView({
           <div className="mt-8 flex flex-wrap gap-3">
             {cta}
             {course.method.length > 0 && (
-              <ButtonLink href="#method" variant="ghost" size="lg">
+              <ButtonLink href="#method" variant="secondary" size="lg">
                 See the method ↓
               </ButtonLink>
             )}
@@ -175,21 +175,19 @@ export function CourseView({
       {course.options.length > 0 && (
         <section aria-labelledby="options-heading" className="border-t border-line">
           <div className="page-container py-14 lg:py-20">
-            <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
+            {/* One booking button for the whole section, not one per card. */}
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
+              {cta}
+            </div>
             <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
-              {course.options.map((option, index) => {
-                const href = option.bookingUrl || course.bookingUrl;
-                return (
-                  <li key={index} className="flex flex-col rounded-xl border border-line bg-surface p-6">
-                    <h3 className="text-lg font-bold">{option.title}</h3>
-                    {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
-                    {option.description && <p className="mt-3 flex-1 leading-relaxed text-muted">{option.description}</p>}
-                    <ButtonLink href={href} variant="secondary" className="mt-6" {...external(href)}>
-                      {course.ctaLabel}
-                    </ButtonLink>
-                  </li>
-                );
-              })}
+              {course.options.map((option, index) => (
+                <li key={index} className="rounded-xl border border-line bg-surface p-6">
+                  <h3 className="text-lg font-bold">{option.title}</h3>
+                  {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
+                  {option.description && <p className="mt-3 leading-relaxed text-muted">{option.description}</p>}
+                </li>
+              ))}
             </ul>
           </div>
         </section>

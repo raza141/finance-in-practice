@@ -297,7 +297,6 @@ export function CourseEditor({
                     <input aria-label="Fee" placeholder="e.g. AED 450 / session" maxLength={60} value={option.fee} onChange={(e) => update({ fee: e.target.value })} className={`${FIELD} mt-0`} />
                   </div>
                   <textarea aria-label="Option description" placeholder="What is included" rows={2} maxLength={400} value={option.description} onChange={(e) => update({ description: e.target.value })} className={`${FIELD} mt-0 resize-y`} />
-                  <input aria-label="Booking link (optional)" placeholder="Booking link (optional; defaults to the course link)" maxLength={500} value={option.bookingUrl} onChange={(e) => update({ bookingUrl: e.target.value })} className={`${FIELD} mt-0`} />
                 </>
               )}
             </RepeatableList>

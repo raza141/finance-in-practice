@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
 
 import { siteConfig } from "@/core/config/site";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
@@ -22,7 +23,9 @@ export default async function CoursePdfPage({ params }: PageProps<"/admin/course
   if (!course) notFound();
   const ticker = course.testimonialTicker;
   const testimonials = (ticker && (await TestimonialRepository.fromEnv()?.approvedFor(ticker))) || [];
+  const { contact } = siteConfig;
   const url = `${siteConfig.url}/courses/${course.slug}`;
+  const qr = await QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#0b1120", light: "#ffffff" } });
 
   return (
     <div data-plain-page className="pt-20 font-body print:pt-0">
@@ -36,9 +39,20 @@ export default async function CoursePdfPage({ params }: PageProps<"/admin/course
         course={course}
         testimonials={testimonials}
         booking={
-          <p className="text-center text-lg">
-            Book your session at <span className="text-gold">{url.replace("https://", "")}</span>
-          </p>
+          <div className="flex flex-col items-center gap-8 sm:flex-row sm:justify-center">
+            {/* Generated locally from our own URL, so the SVG markup is trusted. */}
+            <div className="size-36 shrink-0 overflow-hidden rounded-lg bg-white p-2" dangerouslySetInnerHTML={{ __html: qr }} />
+            <div>
+              <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Scan for the online copy</p>
+              <p className="mt-2 text-lg">
+                Book your session at <span className="text-gold">{url.replace("https://", "")}</span>
+              </p>
+              <p className="mt-1 text-muted">
+                {contact.whatsapp.owner} · WhatsApp {contact.whatsapp.display}
+                {contact.email && ` · ${contact.email}`}
+              </p>
+            </div>
+          </div>
         }
       />
     </div>
