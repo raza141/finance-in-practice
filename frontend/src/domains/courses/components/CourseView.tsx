@@ -47,6 +47,7 @@ export function CourseView({
     </ButtonLink>
   );
 
+  const weights = Boolean(course.weightLabel) && course.modules.some((m) => m.weight);
   return (
     <>
       <section className="page-container grid gap-10 pt-14 pb-14 lg:grid-cols-12 lg:pt-20">
@@ -129,51 +130,41 @@ export function CourseView({
         <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-20 border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
-            <ol className="mt-10 divide-y divide-line border-y border-line">
+            {/* Priority (and weight) | module | practice: compact rows, the weight label written once as a header. */}
+            {weights && (
+              <p className="mt-10 font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{course.weightLabel}</p>
+            )}
+            <ol className={`${weights ? "mt-3" : "mt-10"} divide-y divide-line border-y border-line`}>
               {course.modules.map((module, index) => (
-                <li key={index}>
-                  <details open className="group py-5">
-                    <summary className="grid cursor-pointer list-none gap-x-6 gap-y-2 sm:grid-cols-[4.5rem_1fr_auto] [&::-webkit-details-marker]:hidden">
-                      <span className="font-mono text-sm text-quant tabular-nums">{String(index + 1).padStart(2, "0")}</span>
-                      <span>
-                        <span className="block text-lg leading-snug font-bold">{module.title}</span>
-                        {module.summary && <span className="mt-1 block leading-relaxed text-muted">{module.summary}</span>}
-                        {course.weightLabel && module.weight && (
-                          <span className="mt-2 block font-mono text-xs tracking-wider text-quant">
-                            {course.weightLabel}: <span className="font-semibold text-ink">{module.weight}</span>
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex items-start gap-3">
-                        <span className={`rounded border px-2 py-0.5 font-mono text-[11px] tracking-wider uppercase ${PRIORITY_STYLE[module.priority]}`}>
-                          {CourseFormat.PRIORITIES[module.priority]}
-                        </span>
-                        <span aria-hidden className="text-muted transition-transform group-open:rotate-45">
-                          +
-                        </span>
-                      </span>
-                    </summary>
-                    <dl className="mt-4 grid gap-4 sm:ml-[6rem] sm:grid-cols-2">
-                      {module.coaching && (
-                        <div className="rounded-lg border border-line p-4">
-                          <dt className="font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{course.coachingLabel}</dt>
-                          <dd className="mt-2 leading-relaxed">{module.coaching}</dd>
-                        </div>
-                      )}
-                      {module.practice && (
-                        <div className="rounded-lg border border-line p-4">
-                          <dt className="font-mono text-[11px] tracking-[0.16em] text-gold uppercase">{course.practiceLabel}</dt>
-                          <dd className="mt-2 leading-relaxed">{module.practice}</dd>
-                        </div>
-                      )}
-                      {module.deliverable && (
-                        <div className="sm:col-span-2">
-                          <dt className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">You leave with</dt>
-                          <dd className="mt-1 leading-relaxed">{module.deliverable}</dd>
-                        </div>
-                      )}
-                    </dl>
-                  </details>
+                <li key={index} className="grid gap-x-8 gap-y-3 py-6 md:grid-cols-[9rem_1fr_16rem] lg:grid-cols-[9rem_1fr_20rem]">
+                  <div className="flex items-center gap-3 md:flex-col md:items-start">
+                    <span className={`rounded-full border px-3 py-1 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase ${PRIORITY_STYLE[module.priority]}`}>
+                      {CourseFormat.PRIORITIES[module.priority]}
+                    </span>
+                    {weights && module.weight && <span className="font-mono text-sm font-semibold text-ink tabular-nums">{module.weight}</span>}
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl font-bold">
+                      <span className="text-quant tabular-nums">{String(index + 1).padStart(2, "0")}.</span> {module.title}
+                    </h3>
+                    {module.summary && <p className="mt-1 leading-relaxed text-muted">{module.summary}</p>}
+                    {module.coaching && (
+                      <p className="mt-3 leading-relaxed">
+                        <strong className="text-quant">{course.coachingLabel}:</strong> {module.coaching}
+                      </p>
+                    )}
+                    {module.deliverable && (
+                      <p className="mt-2 leading-relaxed">
+                        <strong className="text-muted">You leave with:</strong> {module.deliverable}
+                      </p>
+                    )}
+                  </div>
+                  {module.practice && (
+                    <div>
+                      <p className="font-bold text-gold">{course.practiceLabel}</p>
+                      <p className="mt-1 leading-relaxed">{module.practice}</p>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
