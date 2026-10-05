@@ -244,7 +244,7 @@ export function CourseEditor({
           {tab === "modules" && (
             <>
               <div className="grid gap-5 sm:grid-cols-2">
-                {text("coachingLabel", "Coaching line label", { max: 40, hint: "e.g. Official-question coaching, Code review" })}
+                {text("coachingLabel", "Coaching line label", { max: 40, hint: "e.g. Question work, Code review" })}
                 {text("practiceLabel", "Practice line label", { max: 40, hint: "e.g. In practice, Build" })}
                 {text("weightLabel", "Weight line label", { max: 40, hint: "e.g. Official weight (2027). Blank hides the weight line." })}
               </div>
@@ -270,10 +270,10 @@ export function CourseEditor({
                         ))}
                       </select>
                     </div>
-                    <input aria-label="One-line outcome" placeholder="One-line outcome" maxLength={300} value={module.summary} onChange={(e) => update({ summary: e.target.value })} className={`${FIELD} mt-0`} />
+                    <input aria-label="Objective" placeholder="Objective (one line)" maxLength={300} value={module.summary} onChange={(e) => update({ summary: e.target.value })} className={`${FIELD} mt-0`} />
                     <textarea aria-label={draft.coachingLabel || "Coaching"} placeholder={`${draft.coachingLabel || "Coaching"}…`} rows={2} maxLength={600} value={module.coaching} onChange={(e) => update({ coaching: e.target.value })} className={`${FIELD} mt-0 resize-y`} />
                     <textarea aria-label={draft.practiceLabel || "Practice"} placeholder={`${draft.practiceLabel || "Practice"}…`} rows={2} maxLength={600} value={module.practice} onChange={(e) => update({ practice: e.target.value })} className={`${FIELD} mt-0 resize-y`} />
-                    <input aria-label="Student deliverable" placeholder="Student deliverable (optional)" maxLength={300} value={module.deliverable} onChange={(e) => update({ deliverable: e.target.value })} className={`${FIELD} mt-0`} />
+                    <input aria-label="Deliverable" placeholder="Deliverable (optional)" maxLength={300} value={module.deliverable} onChange={(e) => update({ deliverable: e.target.value })} className={`${FIELD} mt-0`} />
                   </>
                 )}
               </RepeatableList>

@@ -504,6 +504,13 @@ const MIGRATIONS: Migration[] = [
       `UPDATE courses SET weight_label = 'Official weight (2027)' WHERE category IN ('CFA', 'FRM') AND weight_label = ''`,
     ],
   },
+  {
+    id: "024_course_line_labels",
+    statements: [
+      `UPDATE courses SET coaching_label = 'Question work' WHERE coaching_label = 'Official-question coaching'`,
+      `UPDATE courses SET practice_label = 'Live case' WHERE practice_label = 'In practice'`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

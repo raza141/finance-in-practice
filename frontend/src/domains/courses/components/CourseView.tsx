@@ -9,7 +9,7 @@ import { CourseFormat } from "../services/CourseFormat";
 import type { Course, ModulePriority } from "../types";
 
 const PRIORITY_STYLE: Record<ModulePriority, string> = {
-  foundation: "border-line text-muted",
+  foundation: "border-muted/60 bg-muted/15 text-ink",
   core: "border-quant/40 text-quant",
   high_priority: "border-gold bg-gold font-semibold text-canvas",
 };
@@ -147,7 +147,11 @@ export function CourseView({
                     <h3 className="font-serif text-xl font-bold">
                       <span className="text-quant tabular-nums">{String(index + 1).padStart(2, "0")}.</span> {module.title}
                     </h3>
-                    {module.summary && <p className="mt-1 leading-relaxed text-muted">{module.summary}</p>}
+                    {module.summary && (
+                      <p className="mt-1 leading-relaxed text-muted">
+                        <strong className="text-ink">Objective:</strong> {module.summary}
+                      </p>
+                    )}
                     {module.coaching && (
                       <p className="mt-3 leading-relaxed">
                         <strong className="text-quant">{course.coachingLabel}:</strong> {module.coaching}
@@ -155,7 +159,7 @@ export function CourseView({
                     )}
                     {module.deliverable && (
                       <p className="mt-2 leading-relaxed">
-                        <strong className="text-muted">You leave with:</strong> {module.deliverable}
+                        <strong className="text-ink">Deliverable:</strong> {module.deliverable}
                       </p>
                     )}
                   </div>

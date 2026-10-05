@@ -15,7 +15,7 @@ export interface MethodStep {
 export interface CourseModule {
   title: string;
   priority: ModulePriority;
-  /** One-line outcome. */
+  /** One-line objective, shown as "Objective: …". */
   summary: string;
   coaching: string;
   practice: string;
