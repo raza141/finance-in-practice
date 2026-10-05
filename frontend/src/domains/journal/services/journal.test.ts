@@ -158,6 +158,17 @@ describe("ArticleContract", () => {
     expect(doc.blocks[1].type === "image" && doc.blocks[1].url).toBe("");
   });
 
+  it("drops script URLs from sources, chart links and the call to action", () => {
+    const doc = ArticleContract.normalize({
+      sources: [{ id: "a", url: "javascript:alert(1)" }, { id: "b", url: "https://www.sbp.org.pk" }],
+      cta: { label: "Go", href: "javascript:alert(1)" },
+      blocks: [{ type: "chart", id: "c", sourceUrl: "data:text/html,x" }],
+    });
+    expect(doc.sources.map((s) => s.url)).toEqual(["", "https://www.sbp.org.pk"]);
+    expect(doc.cta?.href).toBe("");
+    expect(doc.blocks[0].type === "chart" && doc.blocks[0].sourceUrl).toBe("");
+  });
+
   it("refuses oversized documents", () => {
     expect(ArticleContract.parseJson("x".repeat(ArticleContract.MAX_BYTES + 1)).ok).toBe(false);
   });

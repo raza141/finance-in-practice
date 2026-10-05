@@ -9,6 +9,7 @@ import type {
   SocialStatus,
   Source,
 } from "../types";
+import { InlineText } from "./InlineText";
 import { JournalFramework } from "./JournalFramework";
 import { JournalTaxonomy } from "./JournalTaxonomy";
 
@@ -101,7 +102,7 @@ export class ArticleContract {
           .map((s): CarouselSlide => ({ title: str(obj(s).title, 120), points: list(obj(s).points).map((p) => str(p, 200)).slice(0, 6) })),
         status: oneOf(social.status, ArticleContract.SOCIAL_STATUSES, "not-started"),
       },
-      cta: cta.label || cta.href ? { label: str(cta.label, 60), href: str(cta.href, 300), text: str(cta.text, 300) } : null,
+      cta: cta.label || cta.href ? { label: str(cta.label, 60), href: ArticleContract.href(cta.href), text: str(cta.text, 300) } : null,
       disclaimer: typeof v.disclaimer === "string" ? v.disclaimer.slice(0, 1000) : JournalFramework.DEFAULT_DISCLAIMER,
       sources: list(v.sources).slice(0, 100).map(ArticleContract.source),
       blocks: list(v.blocks)
@@ -124,13 +125,25 @@ export class ArticleContract {
     return ArticleContract.IMAGE_URL.test(url) ? url : "";
   }
 
+  /** External links (sources, chart data): http(s) only, so drafts previewed by an owner can't carry script URLs. */
+  private static webUrl(value: unknown): string {
+    const url = str(value, 500).trim();
+    return url === "" || /^https?:\/\//i.test(url) ? url : "";
+  }
+
+  /** Call-to-action links: http(s), site-relative, #anchor or mailto. */
+  private static href(value: unknown): string {
+    const href = str(value, 300).trim();
+    return href === "" || InlineText.isSafeHref(href) ? href : "";
+  }
+
   private static source(value: unknown): Source {
     const s = obj(value);
     return {
       id: str(s.id, 40).replace(/[^A-Za-z0-9_-]/g, ""),
       title: str(s.title, 300),
       publisher: str(s.publisher, 160),
-      url: str(s.url, 500),
+      url: ArticleContract.webUrl(s.url),
       accessedAt: str(s.accessedAt, 10),
       citation: str(s.citation, 600),
     };
@@ -176,7 +189,7 @@ export class ArticleContract {
           unit: str(b.unit, 30),
           currency: str(b.currency, 3).toUpperCase(),
           source: str(b.source, 200),
-          sourceUrl: str(b.sourceUrl, 500),
+          sourceUrl: ArticleContract.webUrl(b.sourceUrl),
           asOf: str(b.asOf, 10),
           frequency: oneOf(b.frequency, ArticleContract.FREQUENCIES, "n/a"),
           methodology: str(b.methodology, 2000),
