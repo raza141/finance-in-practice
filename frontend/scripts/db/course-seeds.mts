@@ -412,10 +412,13 @@ export const COURSE_SEEDS: CourseSeed[] = [
   },
 ];
 
-/** A single-line SQL literal (E-strings carry the newlines) so `db:migrate -- --print` keeps it intact. */
+/**
+ * A single-line SQL literal. Plain quotes, with newlines as chr(10): the Vercel
+ * query editor mangles E'...\n' strings ("unterminated quoted string").
+ */
 const q = (value: string | null) =>
-  value === null ? "NULL" : `E'${value.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n")}'`;
-const json = (value: unknown) => `${q(JSON.stringify(value))}::jsonb`;
+  value === null ? "NULL" : `'${value.replace(/'/g, "''").split("\n").join("' || chr(10) || '")}'`;
+const json = (value: unknown) => `(${q(JSON.stringify(value))})::jsonb`;
 
 /** 021: the exam courses get the four-stage method and the ways to learn, unless their method was already edited. */
 export function examMethodUpdateStatement(): string {
@@ -423,6 +426,11 @@ export function examMethodUpdateStatement(): string {
     `UPDATE courses SET method = ${json(EXAM_METHOD_V2)}, modes = ${json(EXAM_MODES)} ` +
     `WHERE slug IN ('cfa-level-1', 'cfa-level-2', 'frm-part-1') AND method = ${json(EXAM_METHOD)}`
   );
+}
+
+/** 022: CFA Level I's italic tagline, unless one was already set. */
+export function cfa1TaglineStatement(): string {
+  return `UPDATE courses SET tagline = ${q("Learn it by doing it.")} WHERE slug = 'cfa-level-1' AND tagline = ''`;
 }
 
 /** As seeded by 016. */

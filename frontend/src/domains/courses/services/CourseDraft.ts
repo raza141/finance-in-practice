@@ -15,6 +15,7 @@ export interface CourseDraftState {
   slug: string;
   category: string;
   eyebrow: string;
+  tagline: string;
   summary: string;
   audience: string;
   notFor: string;
@@ -50,6 +51,7 @@ export class CourseDraft {
       slug: course?.slug ?? "",
       category: course?.category ?? "",
       eyebrow: course?.eyebrow ?? "",
+      tagline: course?.tagline ?? "",
       summary: course?.summary ?? "",
       audience: course?.audience ?? "",
       notFor: course?.notFor ?? "",
@@ -98,6 +100,7 @@ export class CourseDraft {
       title: draft.title.trim() || "Untitled course",
       category: CourseContract.isCategory(draft.category) ? draft.category : CourseFormat.CATEGORIES[0],
       eyebrow: draft.eyebrow.trim(),
+      tagline: draft.tagline.trim(),
       summary: draft.summary.trim(),
       audience: draft.audience.trim(),
       notFor: draft.notFor.trim(),

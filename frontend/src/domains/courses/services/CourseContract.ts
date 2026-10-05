@@ -24,6 +24,7 @@ export class CourseContract {
     label: [2, 40],
     slug: 80,
     eyebrow: 40,
+    tagline: 80,
     prose: 800,
     url: 500,
     seoTitle: 70,
@@ -108,6 +109,8 @@ export class CourseContract {
     within("summary", summary, ...LIMITS.summary);
     const eyebrow = text("eyebrow");
     within("eyebrow", eyebrow, 0, LIMITS.eyebrow);
+    const tagline = text("tagline");
+    within("tagline", tagline, 0, LIMITS.tagline);
     const prose = {
       audience: text("audience"),
       notFor: text("notFor"),
@@ -168,6 +171,7 @@ export class CourseContract {
         title,
         category: category as CourseCategory,
         eyebrow,
+        tagline,
         summary,
         ...prose,
         ctaLabel,

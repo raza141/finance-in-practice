@@ -17,7 +17,7 @@ import { RepeatableList, listKey } from "./RepeatableList";
 const noSubscribe = () => () => {};
 
 const TABS = {
-  basics: { label: "Basics", fields: ["title", "slug", "category", "eyebrow", "summary", "audience", "notFor"] },
+  basics: { label: "Basics", fields: ["title", "slug", "category", "eyebrow", "tagline", "summary", "audience", "notFor"] },
   method: { label: "Coaching method", fields: ["method", "modes"] },
   modules: { label: "Modules", fields: ["modules", "coachingLabel", "practiceLabel"] },
   options: { label: "Engagement options", fields: ["options"] },
@@ -193,6 +193,7 @@ export function CourseEditor({
                 </select>
               </Field>
               {text("eyebrow", "Eyebrow", { max: 40, placeholder: "e.g. Exam coaching", hint: "Small label above the title. Blank shows the category." })}
+              {text("tagline", "Tagline", { max: 80, placeholder: "e.g. Learn it by doing it.", hint: "Italic line under the title. Optional." })}
               {text("summary", "Positioning statement", { rows: 3, max: 600, className: "sm:col-span-2", hint: `${counter(draft.summary, 600)} · under the title and on course cards` })}
               {text("audience", "Who it is for", { rows: 3, max: 800, className: "sm:col-span-2" })}
               {text("notFor", "Who it is not for", { rows: 2, max: 800, className: "sm:col-span-2" })}

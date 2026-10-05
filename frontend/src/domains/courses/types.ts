@@ -48,6 +48,8 @@ export interface Course {
   category: CourseCategory;
   /** Small label above the title; blank shows the category. */
   eyebrow: string;
+  /** Short italic line under the title, e.g. "Learn it by doing it."; blank hides it. */
+  tagline: string;
   /** Positioning statement, shown under the title and on course cards. */
   summary: string;
   audience: string;

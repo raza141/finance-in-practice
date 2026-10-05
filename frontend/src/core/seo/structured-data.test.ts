@@ -17,6 +17,7 @@ const COURSE: Course = {
   summary: "Exam prep.",
   category: "CFA",
   eyebrow: "",
+  tagline: "",
   audience: "",
   notFor: "",
   difference: "",

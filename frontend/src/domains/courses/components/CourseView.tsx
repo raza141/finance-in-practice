@@ -52,7 +52,10 @@ export function CourseView({
       <section className="page-container grid gap-10 pt-14 pb-14 lg:grid-cols-12 lg:pt-20">
         <div className="lg:col-span-7">
           <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">{course.eyebrow || course.category}</p>
-          <h1 className="mt-4 text-4xl leading-tight font-black sm:text-5xl">{course.title}</h1>
+          <h1 className="mt-4 text-4xl leading-tight font-black sm:text-5xl">
+            {course.title}
+            {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
+          </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             {cta}

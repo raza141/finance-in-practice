@@ -13,6 +13,7 @@ interface CourseRow {
   title: string;
   category: CourseCategory;
   eyebrow: string;
+  tagline: string;
   summary: string;
   audience: string;
   not_for: string;
@@ -55,7 +56,7 @@ const isUniqueViolation = (error: unknown) =>
 /** The course catalogue. Schema: scripts/db/migrate.mts (003_courses, 015_course_cms). */
 export class CourseRepository {
   /** Every column a Course needs; updated_by stays admin-side. */
-  private static readonly COLUMNS = `id, slug, title, category, eyebrow, summary, audience, not_for, difference, disclaimer,
+  private static readonly COLUMNS = `id, slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
     cta_label, booking_url, coaching_label, practice_label, start_date::text AS start_date, duration, price_minor,
     currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title, seo_description, testimonial_ticker`;
 
@@ -108,11 +109,11 @@ export class CourseRepository {
   async create(input: CourseInput, isActive: boolean, adminId: string): Promise<string> {
     try {
       const [row] = (await this.sql`
-        INSERT INTO courses (slug, title, category, eyebrow, summary, audience, not_for, difference, disclaimer,
+        INSERT INTO courses (slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
                              cta_label, booking_url, coaching_label, practice_label, start_date, duration, price_minor,
                              currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title,
                              seo_description, testimonial_ticker, updated_by)
-        VALUES (${input.slug}, ${input.title}, ${input.category}, ${input.eyebrow}, ${input.summary}, ${input.audience},
+        VALUES (${input.slug}, ${input.title}, ${input.category}, ${input.eyebrow}, ${input.tagline}, ${input.summary}, ${input.audience},
                 ${input.notFor}, ${input.difference}, ${input.disclaimer}, ${input.ctaLabel}, ${input.bookingUrl},
                 ${input.coachingLabel}, ${input.practiceLabel}, ${input.startDate}, ${input.duration},
                 ${input.priceMinor}, ${input.currency}, ${isActive}, ${JSON.stringify(input.method)}::jsonb, ${JSON.stringify(input.modes)}::jsonb,
@@ -134,7 +135,7 @@ export class CourseRepository {
     try {
       const [row] = (await this.sql`
         UPDATE courses AS c SET
-          slug = ${input.slug}, title = ${input.title}, category = ${input.category}, eyebrow = ${input.eyebrow},
+          slug = ${input.slug}, title = ${input.title}, category = ${input.category}, eyebrow = ${input.eyebrow}, tagline = ${input.tagline},
           summary = ${input.summary}, audience = ${input.audience}, not_for = ${input.notFor},
           difference = ${input.difference}, disclaimer = ${input.disclaimer}, cta_label = ${input.ctaLabel},
           booking_url = ${input.bookingUrl}, coaching_label = ${input.coachingLabel},
@@ -179,6 +180,7 @@ export class CourseRepository {
       title: row.title,
       category: row.category,
       eyebrow: row.eyebrow,
+      tagline: row.tagline,
       summary: row.summary,
       audience: row.audience,
       notFor: row.not_for,
