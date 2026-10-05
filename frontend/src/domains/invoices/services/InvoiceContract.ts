@@ -1,18 +1,22 @@
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
-import type { ConfirmationInput, Currency, InvoiceInput, InvoiceItem } from "../types";
+import type { BankDetails, ClientInput, ConfirmationInput, Currency, InvoiceInput, InvoiceItem, ItemUnit } from "../types";
 import { InvoiceMath } from "./InvoiceMath";
 
 export type InvoiceField = keyof InvoiceInput;
 export type InvoiceFieldErrors = Partial<Record<InvoiceField, string>>;
 export type ConfirmationField = keyof ConfirmationInput | "date" | "time";
 export type ConfirmationFieldErrors = Partial<Record<ConfirmationField, string>>;
+export type ClientFieldErrors = Partial<Record<keyof ClientInput, string>>;
+export type BankFieldErrors = Partial<Record<keyof BankDetails, string>>;
 
 type Parsed<T, E> = { ok: true; input: T } | { ok: false; errors: E };
 
 /** A line item as the form submits it (JSON in the hidden `items` field). */
 export interface DraftItem {
   description: string;
+  detail: string;
+  unit: string;
   quantity: string;
   unitPrice: string;
 }
@@ -24,6 +28,13 @@ export interface DraftItem {
 export class InvoiceContract {
   static readonly CURRENCIES: readonly Currency[] = ["AED", "USD", "PKR", "GBP", "EUR"];
   static readonly DEFAULT_TIME_ZONE = "Asia/Dubai";
+  /** Billing basis of a line, as labelled on the form and the invoice. */
+  static readonly UNITS: Readonly<Record<ItemUnit, string>> = {
+    hour: "Hourly",
+    month: "Monthly",
+    "on-demand": "On demand",
+    contract: "Contract",
+  };
   static readonly LIMITS = {
     name: 120,
     email: 254,
@@ -33,6 +44,9 @@ export class InvoiceContract {
     /** 10 million in major units: well inside a Postgres integer. */
     maxMinor: 1_000_000_000,
     trn: 30,
+    phone: 40,
+    address: 500,
+    bank: { bankName: 120, accountTitle: 120, accountNumber: 40, iban: 40, branch: 200, swift: 20 },
     longText: 2000,
     topic: 120,
     location: 500,
@@ -46,6 +60,7 @@ export class InvoiceContract {
   private static readonly TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
   private static readonly QUANTITY = /^\d+(\.\d{1,2})?$/;
   private static readonly SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+  private static readonly UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   static isBookingUid(value: unknown): value is string {
     return typeof value === "string" && InvoiceContract.BOOKING_UID.test(value);
@@ -68,6 +83,14 @@ export class InvoiceContract {
     if (!clientName || clientName.length > LIMITS.name) errors.clientName = `Enter the client's name (up to ${LIMITS.name} characters).`;
     const clientEmail = text("clientEmail").toLowerCase();
     if (!InvoiceContract.EMAIL.test(clientEmail) || clientEmail.length > LIMITS.email) errors.clientEmail = "Enter a valid email address.";
+    const clientPhone = text("clientPhone");
+    if (clientPhone.length > LIMITS.phone) errors.clientPhone = `Up to ${LIMITS.phone} characters.`;
+    const clientAddress = text("clientAddress");
+    if (clientAddress.length > LIMITS.address) errors.clientAddress = `Up to ${LIMITS.address} characters.`;
+    const clientId = text("clientId");
+    if (clientId && !InvoiceContract.UUID.test(clientId)) errors.clientId = "Invalid client.";
+    const bankAccountId = text("bankAccountId");
+    if (bankAccountId && !InvoiceContract.UUID.test(bankAccountId)) errors.bankAccountId = "Invalid bank account.";
 
     const currency = text("currency") as Currency;
     if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
@@ -106,8 +129,11 @@ export class InvoiceContract {
       ok: true,
       input: {
         bookingUid: bookingUid || null,
+        clientId: clientId || null,
         clientName,
         clientEmail,
+        clientPhone,
+        clientAddress,
         currency,
         items,
         discountMinor: discount,
@@ -116,8 +142,41 @@ export class InvoiceContract {
         dueDate,
         notes,
         paymentInstructions,
+        bankAccountId: bankAccountId || null,
       },
     };
+  }
+
+  static parseClient(fields: Record<string, unknown>): Parsed<ClientInput, ClientFieldErrors> {
+    const { LIMITS } = InvoiceContract;
+    const text = InvoiceContract.text(fields);
+    const errors: ClientFieldErrors = {};
+    const name = text("name");
+    if (!name || name.length > LIMITS.name) errors.name = `Enter the client's name (up to ${LIMITS.name} characters).`;
+    const email = text("email").toLowerCase();
+    if (!InvoiceContract.EMAIL.test(email) || email.length > LIMITS.email) errors.email = "Enter a valid email address.";
+    const phone = text("phone");
+    if (phone.length > LIMITS.phone) errors.phone = `Up to ${LIMITS.phone} characters.`;
+    const address = text("address");
+    if (address.length > LIMITS.address) errors.address = `Up to ${LIMITS.address} characters.`;
+    if (Object.keys(errors).length > 0) return { ok: false, errors };
+    return { ok: true, input: { name, email, phone, address } };
+  }
+
+  static parseBank(fields: Record<string, unknown>): Parsed<BankDetails, BankFieldErrors> {
+    const limits = InvoiceContract.LIMITS.bank;
+    const text = InvoiceContract.text(fields);
+    const errors: BankFieldErrors = {};
+    const input = {} as BankDetails;
+    for (const key of Object.keys(limits) as (keyof BankDetails)[]) {
+      // IBAN and SWIFT are printed grouped as typed, but upper-cased.
+      input[key] = key === "iban" || key === "swift" ? text(key).toUpperCase() : text(key);
+      if (input[key].length > limits[key]) errors[key] = `Up to ${limits[key]} characters.`;
+    }
+    if (!input.bankName) errors.bankName = "Enter the bank name.";
+    if (!input.accountNumber && !input.iban) errors.accountNumber = "Enter an account number or an IBAN.";
+    if (Object.keys(errors).length > 0) return { ok: false, errors };
+    return { ok: true, input };
   }
 
   static parseConfirmation(fields: Record<string, unknown>): Parsed<ConfirmationInput, ConfirmationFieldErrors> {
@@ -229,7 +288,11 @@ export class InvoiceContract {
       const row = `Line ${index + 1}: `;
       const d = (draft ?? {}) as Partial<Record<keyof DraftItem, unknown>>;
       const description = typeof d.description === "string" ? d.description.trim() : "";
-      if (!description || description.length > LIMITS.description) return `${row}enter a description (up to ${LIMITS.description} characters).`;
+      if (!description || description.length > LIMITS.description) return `${row}choose a course or enter a description (up to ${LIMITS.description} characters).`;
+      const detail = typeof d.detail === "string" ? d.detail.trim() : "";
+      if (detail.length > LIMITS.description) return `${row}details up to ${LIMITS.description} characters.`;
+      const unit = d.unit as ItemUnit;
+      if (typeof unit !== "string" || !Object.hasOwn(InvoiceContract.UNITS, unit)) return `${row}choose hourly, monthly, on demand or contract.`;
       const quantityText = typeof d.quantity === "string" ? d.quantity.trim() : "";
       const quantity = Number(quantityText);
       if (!InvoiceContract.QUANTITY.test(quantityText) || quantity <= 0 || quantity > LIMITS.maxQuantity) {
@@ -237,7 +300,7 @@ export class InvoiceContract {
       }
       const unitMinor = typeof d.unitPrice === "string" ? InvoiceMath.parseMajor(d.unitPrice) : null;
       if (unitMinor === null || unitMinor > LIMITS.maxMinor) return `${row}enter a unit price, e.g. 450 or 450.50.`;
-      items.push({ description, quantity, unitMinor, amountMinor: InvoiceMath.lineAmount(quantity, unitMinor) });
+      items.push({ description, ...(detail && { detail }), unit, quantity, unitMinor, amountMinor: InvoiceMath.lineAmount(quantity, unitMinor) });
     }
     return items;
   }

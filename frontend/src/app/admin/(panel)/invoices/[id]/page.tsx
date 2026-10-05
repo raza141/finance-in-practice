@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 import { ResendClient } from "@/core/email/ResendClient";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
-import { deleteDraftInvoice, duplicateInvoice, markInvoicePaid, resendInvoice, voidInvoice } from "@/domains/invoices/actions/invoices";
+import { copyInvoiceForNextMonth, deleteDraftInvoice, duplicateInvoice, markInvoicePaid, resendInvoice, voidInvoice } from "@/domains/invoices/actions/invoices";
 import { EmailHistory, EmailNotConfigured, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { InvoiceDocument } from "@/domains/invoices/components/InvoiceDocument";
 import { InvoiceForm } from "@/domains/invoices/components/InvoiceForm";
+import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 
 export const metadata: Metadata = { title: "Invoice" };
@@ -19,6 +20,7 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   emailed: { text: "Invoice emailed to the client.", tone: "ok" },
   "email-failed": { text: "The invoice is issued, but the email could not be sent. Check the email settings and use “Email again”.", tone: "warn" },
   duplicated: { text: "Copied into a new draft. Edit it and issue it when ready.", tone: "ok" },
+  "next-month": { text: "Next month’s draft is ready: due date moved a month on, and month names in the lines updated. Check it, then issue it.", tone: "ok" },
 };
 
 const BUTTON = "h-9 rounded-md border border-line px-3 text-sm text-muted transition-colors hover:text-ink";
@@ -30,7 +32,7 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
   if (!repo || !invoice) notFound();
   const notice = NOTICES[String((await searchParams).notice)];
   const emailEnabled = ResendClient.fromEnv() !== null;
-  const emails = await repo.emails(invoice.id);
+  const [emails, options] = await Promise.all([repo.emails(invoice.id), invoice.status === "draft" ? InvoiceFormLoader.options() : null]);
 
   return (
     <div className="max-w-4xl">
@@ -57,10 +59,10 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
         {!emailEnabled && invoice.status !== "void" && invoice.status !== "paid" && <EmailNotConfigured />}
       </div>
 
-      {invoice.status === "draft" ? (
+      {invoice.status === "draft" && options ? (
         <>
           <div className="mt-8">
-            <InvoiceForm key={invoice.id} id={invoice.id} initial={invoice} emailEnabled={emailEnabled} />
+            <InvoiceForm key={invoice.id} id={invoice.id} initial={invoice} options={options} emailEnabled={emailEnabled} />
           </div>
           <form action={deleteDraftInvoice} className="mt-10">
             <input type="hidden" name="id" value={invoice.id} />
@@ -90,6 +92,12 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
                 )}
               </>
             )}
+            <form action={copyInvoiceForNextMonth}>
+              <input type="hidden" name="id" value={invoice.id} />
+              <PendingButton pendingLabel="Copying…" className={BUTTON}>
+                Copy for next month
+              </PendingButton>
+            </form>
             <form action={duplicateInvoice}>
               <input type="hidden" name="id" value={invoice.id} />
               <PendingButton pendingLabel="Copying…" className={BUTTON}>

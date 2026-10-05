@@ -1,8 +1,16 @@
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 export type Currency = "AED" | "USD" | "PKR" | "GBP" | "EUR";
 
+/** How a line is billed: per hour, per month, on demand, or a fixed contract. */
+export type ItemUnit = "hour" | "month" | "on-demand" | "contract";
+
 export interface InvoiceItem {
+  /** Usually a course title. */
   description: string;
+  /** Optional second line under the title. Absent on invoices issued before 013. */
+  detail?: string;
+  /** Absent on invoices issued before 013. */
+  unit?: ItemUnit;
   /** Up to two decimals (e.g. 1.5 hours). */
   quantity: number;
   unitMinor: number;
@@ -19,8 +27,12 @@ export interface InvoiceTotals {
 /** What the invoice form saves (validated). Totals are derived from it server-side. */
 export interface InvoiceInput {
   bookingUid: string | null;
+  /** The saved client this bills, if any; the contact fields below are the snapshot printed. */
+  clientId: string | null;
   clientName: string;
   clientEmail: string;
+  clientPhone: string;
+  clientAddress: string;
   currency: Currency;
   items: InvoiceItem[];
   discountMinor: number;
@@ -31,10 +43,14 @@ export interface InvoiceInput {
   dueDate: string;
   notes: string;
   paymentInstructions: string;
+  /** The bank shown under "Payment information"; its details are snapshotted on save. */
+  bankAccountId: string | null;
 }
 
 export interface Invoice extends InvoiceInput, InvoiceTotals {
   id: string;
+  /** Snapshot of the bank when last saved; null on older invoices or when none was chosen. */
+  bank: BankDetails | null;
   /** Null for drafts; e.g. "FIP-2026-0001" once issued. */
   number: string | null;
   token: string;
@@ -101,4 +117,29 @@ export interface BookingPrefill {
   durationMinutes: number;
   topic: string;
   location: string;
+}
+
+export interface ClientInput {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export interface Client extends ClientInput {
+  id: string;
+}
+
+export interface BankDetails {
+  bankName: string;
+  accountTitle: string;
+  accountNumber: string;
+  iban: string;
+  branch: string;
+  swift: string;
+}
+
+export interface BankAccount extends BankDetails {
+  id: string;
+  isDefault: boolean;
 }

@@ -11,6 +11,7 @@ export class AdminNavigation {
     { href: "/admin", label: "Overview" },
     { href: "/admin/schedule", label: "Schedule" },
     { href: "/admin/invoices", label: "Invoices" },
+    { href: "/admin/clients", label: "Clients" },
     { href: "/admin/journal", label: "Research Terminal" },
     { href: "/admin/testimonials", label: "Testimonials" },
     { href: "/admin/instructors", label: "Instructors" },

@@ -1,7 +1,7 @@
 import { siteConfig } from "@/core/config/site";
 import { EmailHtml, type EmailMessage } from "@/core/email/EmailHtml";
 
-import type { ConfirmationInput, Invoice } from "../types";
+import type { BankDetails, ConfirmationInput, Invoice } from "../types";
 import { InvoiceContract } from "./InvoiceContract";
 import { InvoiceMath } from "./InvoiceMath";
 
@@ -29,6 +29,19 @@ export class InvoiceEmails {
     return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(
       new Date(`${isoDate}T00:00:00Z`),
     );
+  }
+
+  /** Label/value rows of a bank's details, skipping the empty ones. */
+  static bankRows(bank: BankDetails): [string, string][] {
+    const rows: [string, string][] = [
+      ["Bank name", bank.bankName],
+      ["Account title", bank.accountTitle],
+      ["Account number", bank.accountNumber],
+      ["IBAN", bank.iban],
+      ["Branch", bank.branch],
+      ["SWIFT / BIC", bank.swift],
+    ];
+    return rows.filter(([, value]) => value);
   }
 
   static confirmation(input: ConfirmationInput): EmailMessage {
@@ -86,6 +99,8 @@ export class InvoiceEmails {
     ];
     const subject = `Invoice ${number} from ${siteConfig.name}`;
     const owner = siteConfig.contact.whatsapp.owner;
+    const bankRows = invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
+    const hasPayment = bankRows.length > 0 || invoice.paymentInstructions !== "";
 
     const html = EmailHtml.document(
       subject,
@@ -94,7 +109,9 @@ export class InvoiceEmails {
         EmailHtml.paragraph(`Please find invoice ${number} for ${amount} below.`),
         EmailHtml.table(rows),
         EmailHtml.button(url, "View and print invoice"),
-        invoice.paymentInstructions ? `<p style="margin:0 0 6px;font-weight:600">How to pay</p>${EmailHtml.paragraph(invoice.paymentInstructions)}` : "",
+        hasPayment ? '<p style="margin:0 0 6px;font-weight:600">How to pay</p>' : "",
+        bankRows.length > 0 ? EmailHtml.table([...bankRows, ["Reference", number]]) : "",
+        invoice.paymentInstructions ? EmailHtml.paragraph(invoice.paymentInstructions) : "",
         EmailHtml.paragraph("Questions about this invoice? Just reply to this email."),
         EmailHtml.paragraph(`Thank you,\n${owner}\n${siteConfig.name}`),
       ].join(""),
@@ -107,7 +124,9 @@ export class InvoiceEmails {
       ...rows.map(([label, value]) => `${label}: ${value}`),
       "",
       `View and print the invoice: ${url}`,
-      ...(invoice.paymentInstructions ? ["", "How to pay:", invoice.paymentInstructions] : []),
+      ...(hasPayment ? ["", "How to pay:"] : []),
+      ...(bankRows.length > 0 ? [...bankRows, ["Reference", number]].map(([label, value]) => `${label}: ${value}`) : []),
+      ...(invoice.paymentInstructions ? [invoice.paymentInstructions] : []),
       "",
       "Questions about this invoice? Just reply to this email.",
       "",

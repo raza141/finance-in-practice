@@ -77,15 +77,18 @@ describe("BookingContract", () => {
       start: "2026-10-05T05:00:00.000Z",
       name: "Ada Lovelace",
       email: "ada@example.com",
+      phone: "",
       timeZone: "Europe/London",
       track: "cfa",
       company: "",
     });
+    expect(BookingContract.parseCreateRequest({ ...valid, phone: " +971 50 123 4567 " }, NOW).phone).toBe("+971 50 123 4567");
   });
 
   it.each([
     [{ name: "A" }, "name"],
     [{ email: "not-an-email" }, "email"],
+    [{ phone: "call me" }, "phone"],
     [{ timeZone: "Nowhere/City" }, "timeZone"],
     [{ track: "crypto" }, "track"],
     [{ start: "2026-10-01T00:00:00Z" }, "future"],

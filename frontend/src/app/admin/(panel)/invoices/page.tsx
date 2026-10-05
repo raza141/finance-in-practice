@@ -30,6 +30,9 @@ export default async function AdminInvoicesPage() {
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-3xl font-normal tracking-tight italic">Invoices</h1>
         <div className="flex gap-3">
+          <Link href="/admin/invoices/banks" className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
+            Bank accounts
+          </Link>
           <Link href="/admin/invoices/confirm" className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
             Send a confirmation
           </Link>

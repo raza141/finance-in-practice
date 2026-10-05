@@ -29,6 +29,8 @@ export interface CreateBookingRequest {
   start: string;
   name: string;
   email: string;
+  /** Optional, saved on the client record (not sent to Cal.com). */
+  phone?: string;
   timeZone: string;
   track: TrackId;
   /** Honeypot: must stay empty. Bots that auto-fill every field are dropped. */
@@ -64,6 +66,7 @@ export class BookingValidationError extends Error {
 
 const TRACKS: readonly TrackId[] = ["cfa", "frm", "uni", "systems"];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE = /^\+?[\d\s().-]{6,30}$/;
 
 export class BookingContract {
   static readonly MAX_RANGE_DAYS = 31;
@@ -113,6 +116,9 @@ export class BookingContract {
       throw new BookingValidationError("email must be a valid address");
     }
 
+    const phone = typeof b.phone === "string" ? b.phone.trim() : "";
+    if (phone && !PHONE.test(phone)) throw new BookingValidationError("phone must be a phone number, e.g. +971 50 123 4567");
+
     if (!ZonedCalendar.isValidTimeZone(b.timeZone)) {
       throw new BookingValidationError("timeZone must be a valid IANA zone");
     }
@@ -132,10 +138,15 @@ export class BookingContract {
       start: start.toISOString(),
       name,
       email,
+      phone,
       timeZone: b.timeZone,
       track: b.track as TrackId,
       company: typeof b.company === "string" ? b.company : "",
     };
+  }
+
+  static isPhone(value: string): boolean {
+    return PHONE.test(value.trim());
   }
 
   static isEmail(value: string): boolean {

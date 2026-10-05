@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { Database, type Sql } from "@/core/db/Database";
 
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { Currency, EmailKind, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoiceStatus, InvoiceSummary } from "../types";
+import type { BankDetails, Currency, EmailKind, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoiceStatus, InvoiceSummary } from "../types";
 
 interface InvoiceRow {
   id: string;
@@ -13,8 +13,11 @@ interface InvoiceRow {
   token: string;
   status: InvoiceStatus;
   booking_uid: string | null;
+  client_id: string | null;
   client_name: string;
   client_email: string;
+  client_phone: string;
+  client_address: string;
   currency: Currency;
   items: InvoiceItem[];
   subtotal_minor: number;
@@ -26,6 +29,8 @@ interface InvoiceRow {
   due_date: string;
   notes: string;
   payment_instructions: string;
+  bank_account_id: string | null;
+  bank: BankDetails | null;
   issue_date: string | null;
   created_at: Date;
   sent_at: Date | null;
@@ -43,6 +48,10 @@ interface EmailLogRow {
   provider_id: string | null;
   sent_at: Date;
 }
+
+type SummaryRow = Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at"> & {
+  last_emailed_at: Date | null;
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -64,17 +73,18 @@ export class InvoiceRepository {
     return typeof value === "string" && TOKEN.test(value);
   }
 
-  async list(): Promise<InvoiceSummary[]> {
+  /** Newest first; optionally only one saved client's invoices. */
+  async list(clientId?: string): Promise<InvoiceSummary[]> {
+    if (clientId !== undefined && !UUID.test(clientId)) return [];
     const rows = (await this.sql`
       SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
              i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at,
              (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
       FROM invoices i
+      WHERE ${clientId ?? null}::uuid IS NULL OR i.client_id = ${clientId ?? null}::uuid
       ORDER BY i.created_at DESC
       LIMIT 300
-    `) as (Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at"> & {
-      last_emailed_at: Date | null;
-    })[];
+    `) as SummaryRow[];
     return rows.map((row) => ({
       id: row.id,
       number: InvoiceRepository.number(row),
@@ -104,39 +114,36 @@ export class InvoiceRepository {
     return row ? InvoiceRepository.toInvoice(row) : null;
   }
 
-  /** Prefill for a new invoice: the payment instructions used last time. */
-  async lastPaymentInstructions(): Promise<string> {
-    const [row] = (await this.sql`
-      SELECT payment_instructions FROM invoices WHERE payment_instructions <> '' ORDER BY created_at DESC LIMIT 1
-    `) as { payment_instructions: string }[];
-    return row?.payment_instructions ?? "";
-  }
-
-  async createDraft(input: InvoiceInput): Promise<string> {
+  /** `bank` is the snapshot of input.bankAccountId, looked up by the caller. */
+  async createDraft(input: InvoiceInput, bank: BankDetails | null): Promise<string> {
     const t = InvoiceRepository.totals(input);
     const [row] = (await this.sql`
-      INSERT INTO invoices (token, booking_uid, client_name, client_email, currency, items, subtotal_minor,
-                            discount_minor, tax_rate_bp, tax_minor, total_minor, trn, due_date, notes, payment_instructions)
-      VALUES (${randomBytes(32).toString("base64url")}, ${input.bookingUid}, ${input.clientName}, ${input.clientEmail},
-              ${input.currency}, ${JSON.stringify(input.items)}::jsonb, ${t.subtotalMinor}, ${t.discountMinor},
-              ${input.taxRateBp}, ${t.taxMinor}, ${t.totalMinor}, ${input.trn}, ${input.dueDate}, ${input.notes},
-              ${input.paymentInstructions})
+      INSERT INTO invoices (token, booking_uid, client_id, client_name, client_email, client_phone, client_address,
+                            currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor, trn,
+                            due_date, notes, payment_instructions, bank_account_id, bank)
+      VALUES (${randomBytes(32).toString("base64url")}, ${input.bookingUid}, ${input.clientId}, ${input.clientName},
+              ${input.clientEmail}, ${input.clientPhone}, ${input.clientAddress}, ${input.currency},
+              ${JSON.stringify(input.items)}::jsonb, ${t.subtotalMinor}, ${t.discountMinor}, ${input.taxRateBp},
+              ${t.taxMinor}, ${t.totalMinor}, ${input.trn}, ${input.dueDate}, ${input.notes},
+              ${input.paymentInstructions}, ${input.bankAccountId}, ${bank && JSON.stringify(bank)}::jsonb)
       RETURNING id
     `) as { id: string }[];
     return row.id;
   }
 
   /** False when the invoice is gone or no longer a draft. */
-  async updateDraft(id: string, input: InvoiceInput): Promise<boolean> {
+  async updateDraft(id: string, input: InvoiceInput, bank: BankDetails | null): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const t = InvoiceRepository.totals(input);
     const rows = await this.sql`
       UPDATE invoices SET
-        booking_uid = ${input.bookingUid}, client_name = ${input.clientName}, client_email = ${input.clientEmail},
+        booking_uid = ${input.bookingUid}, client_id = ${input.clientId}, client_name = ${input.clientName},
+        client_email = ${input.clientEmail}, client_phone = ${input.clientPhone}, client_address = ${input.clientAddress},
         currency = ${input.currency}, items = ${JSON.stringify(input.items)}::jsonb, subtotal_minor = ${t.subtotalMinor},
         discount_minor = ${t.discountMinor}, tax_rate_bp = ${input.taxRateBp}, tax_minor = ${t.taxMinor},
         total_minor = ${t.totalMinor}, trn = ${input.trn}, due_date = ${input.dueDate}, notes = ${input.notes},
-        payment_instructions = ${input.paymentInstructions}, updated_at = now()
+        payment_instructions = ${input.paymentInstructions}, bank_account_id = ${input.bankAccountId},
+        bank = ${bank && JSON.stringify(bank)}::jsonb, updated_at = now()
       WHERE id = ${id} AND status = 'draft'
       RETURNING id
     `;
@@ -214,9 +221,9 @@ export class InvoiceRepository {
   }
 
   // Dates as text so they stay YYYY-MM-DD regardless of the server's timezone.
-  private static readonly COLUMNS = `id, number_seq, token, status, booking_uid, client_name, client_email, currency, items,
-    subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor, trn, due_date::text AS due_date, notes,
-    payment_instructions, issue_date::text AS issue_date, created_at, sent_at, paid_at, voided_at`;
+  private static readonly COLUMNS = `id, number_seq, token, status, booking_uid, client_id, client_name, client_email,
+    client_phone, client_address, currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor,
+    trn, due_date::text AS due_date, notes, payment_instructions, bank_account_id, bank, issue_date::text AS issue_date, created_at, sent_at, paid_at, voided_at`;
 
   private static totals(input: InvoiceInput) {
     return InvoiceMath.totals(
@@ -237,8 +244,11 @@ export class InvoiceRepository {
       token: row.token,
       status: row.status,
       bookingUid: row.booking_uid,
+      clientId: row.client_id,
       clientName: row.client_name,
       clientEmail: row.client_email,
+      clientPhone: row.client_phone,
+      clientAddress: row.client_address,
       currency: row.currency,
       items: row.items,
       subtotalMinor: row.subtotal_minor,
@@ -250,6 +260,8 @@ export class InvoiceRepository {
       dueDate: row.due_date,
       notes: row.notes,
       paymentInstructions: row.payment_instructions,
+      bankAccountId: row.bank_account_id,
+      bank: row.bank,
       issueDate: row.issue_date,
       createdAt: row.created_at,
       sentAt: row.sent_at,

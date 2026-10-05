@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
@@ -28,7 +29,8 @@ function isSameOrigin(request: NextRequest): boolean {
 
 /**
  * POST /api/booking/create
- *   body: { start, name, email, timeZone, track, company? }
+ *   body: { start, name, email, phone?, timeZone, track, company? }
+ *   Also saves the attendee as a client (admin Clients) for invoicing.
  *   200 -> { uid, start, end, status }
  */
 export async function POST(request: NextRequest) {
@@ -57,6 +59,12 @@ export async function POST(request: NextRequest) {
       return reject(400, "INVALID_REQUEST", "Unable to process this request.");
     }
     const result = await new BookingGateway(cal, BlockRepository.fromEnv()).create(booking);
+    // The booking is made: a failure saving the client record must not undo or hide it.
+    try {
+      await ClientRepository.fromEnv()?.recordBooking({ name: booking.name, email: booking.email, phone: booking.phone ?? "" });
+    } catch (error) {
+      console.error("Could not save the client record for booking", result.uid, error);
+    }
     return Response.json(result, { status: 200, headers: NO_STORE });
   } catch (error) {
     const { status, body } = BookingGateway.errorResponse(error);

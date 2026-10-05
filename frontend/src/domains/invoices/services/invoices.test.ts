@@ -15,8 +15,8 @@ const invoiceFields = (overrides: Record<string, string> = {}) => ({
   clientEmail: "Sara@Example.com",
   currency: "AED",
   items: JSON.stringify([
-    { description: "CFA Level I session", quantity: "1.5", unitPrice: "333.33" },
-    { description: "Mock exam review", quantity: "2", unitPrice: "100" },
+    { description: "CFA Level I session", detail: " 6-30 Oct ", unit: "hour", quantity: "1.5", unitPrice: "333.33" },
+    { description: "Mock exam review", detail: "", unit: "contract", quantity: "2", unitPrice: "100" },
   ]),
   discount: "",
   taxRate: "",
@@ -45,6 +45,24 @@ describe("InvoiceMath", () => {
   });
 });
 
+describe("InvoiceMath monthly copy", () => {
+  it("adds months, clamping to the month's end", () => {
+    expect(InvoiceMath.addMonths("2026-10-12", 1)).toBe("2026-11-12");
+    expect(InvoiceMath.addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(InvoiceMath.addMonths("2028-01-31", 1)).toBe("2028-02-29");
+    expect(InvoiceMath.addMonths("2026-12-15", 1)).toBe("2027-01-15");
+  });
+
+  it("moves month names on, keeping their style and rolling the year", () => {
+    expect(InvoiceMath.nextMonthText("October cohort")).toBe("November cohort");
+    expect(InvoiceMath.nextMonthText("8 sessions, 6-30 Oct")).toBe("8 sessions, 6-30 Nov");
+    expect(InvoiceMath.nextMonthText("Dec 2026 tutoring")).toBe("Jan 2027 tutoring");
+    expect(InvoiceMath.nextMonthText("December 2026")).toBe("January 2027");
+    expect(InvoiceMath.nextMonthText("Sept-Oct")).toBe("Oct-Nov");
+    expect(InvoiceMath.nextMonthText("CFA Level I: Octane, decimal")).toBe("CFA Level I: Octane, decimal");
+  });
+});
+
 describe("InvoiceContract.parseInvoice", () => {
   it("validates, normalises and prices the items", () => {
     const parsed = InvoiceContract.parseInvoice(invoiceFields({ discount: "50.10", taxRate: "5" }));
@@ -56,6 +74,9 @@ describe("InvoiceContract.parseInvoice", () => {
     expect(parsed.input.discountMinor).toBe(5_010);
     expect(parsed.input.taxRateBp).toBe(500);
     expect(parsed.input.bookingUid).toBeNull();
+    expect(parsed.input.items[0]).toMatchObject({ detail: "6-30 Oct", unit: "hour" });
+    expect(parsed.input.items[1]).not.toHaveProperty("detail");
+    expect(parsed.input).toMatchObject({ clientId: null, bankAccountId: null, clientPhone: "", clientAddress: "" });
   });
 
   it("rejects bad input field by field", () => {
@@ -67,10 +88,36 @@ describe("InvoiceContract.parseInvoice", () => {
     expect(Object.keys(parsed.errors).sort()).toEqual(["bookingUid", "clientEmail", "currency", "dueDate", "taxRateBp"]);
     expect(InvoiceContract.parseInvoice(invoiceFields({ discount: "800" }))).toMatchObject({ ok: false, errors: { discountMinor: expect.any(String) } });
     expect(InvoiceContract.parseInvoice(invoiceFields({ items: "[]" }))).toMatchObject({ ok: false, errors: { items: "Add at least one line item." } });
-    expect(InvoiceContract.parseInvoice(invoiceFields({ items: '[{"description":"x","quantity":"0","unitPrice":"1"}]' }))).toMatchObject({
+    expect(InvoiceContract.parseInvoice(invoiceFields({ items: '[{"description":"x","unit":"hour","quantity":"0","unitPrice":"1"}]' }))).toMatchObject({
       ok: false,
       errors: { items: expect.stringContaining("Line 1") },
     });
+    for (const unit of ["weekly", "toString", undefined]) {
+      expect(InvoiceContract.parseInvoice(invoiceFields({ items: JSON.stringify([{ description: "x", unit, quantity: "1", unitPrice: "1" }]) }))).toMatchObject({
+        ok: false,
+        errors: { items: expect.stringContaining("hourly") },
+      });
+    }
+    expect(InvoiceContract.parseInvoice(invoiceFields({ clientId: "1; DROP", bankAccountId: "x" }))).toMatchObject({
+      ok: false,
+      errors: { clientId: expect.any(String), bankAccountId: expect.any(String) },
+    });
+  });
+});
+
+describe("InvoiceContract.parseClient / parseBank", () => {
+  it("validates a saved client", () => {
+    expect(InvoiceContract.parseClient({ name: " Sara ", email: "SARA@x.co", phone: "", address: "Dubai" })).toEqual({
+      ok: true,
+      input: { name: "Sara", email: "sara@x.co", phone: "", address: "Dubai" },
+    });
+    expect(InvoiceContract.parseClient({ name: "", email: "x" })).toMatchObject({ ok: false, errors: { name: expect.any(String), email: expect.any(String) } });
+  });
+
+  it("needs a bank name and an account number or IBAN", () => {
+    const parsed = InvoiceContract.parseBank({ bankName: "Emirates NBD", iban: "ae07 0331", swift: "ebiliaead" });
+    expect(parsed).toMatchObject({ ok: true, input: { bankName: "Emirates NBD", iban: "AE07 0331", swift: "EBILIAEAD", accountNumber: "" } });
+    expect(InvoiceContract.parseBank({ bankName: "" })).toMatchObject({ ok: false, errors: { bankName: expect.any(String), accountNumber: expect.any(String) } });
   });
 });
 
@@ -141,6 +188,16 @@ describe("emails", () => {
     expect(message.subject).toBe("Invoice FIP-2026-0007 from Finance in Practice");
     expect(message.html).toContain('href="https://financeinpractice.me/invoice/tok"');
     expect(message.text).toContain("AED 682.40");
+  });
+
+  it("puts the bank details in the invoice email, skipping empty fields", () => {
+    const bank = { bankName: "Emirates NBD", accountTitle: "M A Raza", accountNumber: "", iban: "AE07 0331", branch: "", swift: "" };
+    const invoice = { number: "FIP-2026-0008", clientName: "Sara", totalMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "", bank } as Invoice;
+    const message = InvoiceEmails.invoice(invoice, "https://x.test/invoice/tok");
+    expect(message.text).toContain("IBAN: AE07 0331");
+    expect(message.text).toContain("Reference: FIP-2026-0008");
+    expect(message.text).not.toContain("Branch");
+    expect(message.html).toContain("Emirates NBD");
   });
 });
 

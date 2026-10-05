@@ -59,6 +59,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
   const [slot, setSlot] = useState<TimeSlot | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [company, setCompany] = useState(""); // honeypot
   const [orderError, setOrderError] = useState<string | null>(null);
   const [execution, setExecution] = useState<Execution>("idle");
@@ -145,6 +146,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
     if (!track || !slot || execution !== "idle") return;
     if (name.trim().length < 2) return setOrderError("Enter your full name.");
     if (!BookingContract.isEmail(email)) return setOrderError("Enter a valid email address.");
+    if (phone.trim() && !BookingContract.isPhone(phone)) return setOrderError("Enter a valid phone number, or leave it empty.");
 
     setOrderError(null);
     setExecution("submitting");
@@ -153,6 +155,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
         start: slot.start,
         name: name.trim(),
         email: email.trim(),
+        phone: phone.trim(),
         timeZone,
         track,
         company,
@@ -348,6 +351,16 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                     autoComplete="email"
                     disabled={busy}
                   />
+                  <TerminalInput
+                    label="PHONE"
+                    type="tel"
+                    value={phone}
+                    onChange={setPhone}
+                    autoComplete="tel"
+                    disabled={busy}
+                    optional
+                    className="sm:col-span-2"
+                  />
                 </div>
                 {/* Honeypot: hidden from people and assistive tech, tempting to bots. */}
                 <input
@@ -452,14 +465,17 @@ interface TerminalInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: "text" | "email";
+  type?: "text" | "email" | "tel";
   autoComplete: string;
   disabled?: boolean;
+  /** Shows an "optional" placeholder and drops `required`. */
+  optional?: boolean;
+  className?: string;
 }
 
-function TerminalInput({ label, value, onChange, type = "text", autoComplete, disabled }: TerminalInputProps) {
+function TerminalInput({ label, value, onChange, type = "text", autoComplete, disabled, optional = false, className = "" }: TerminalInputProps) {
   return (
-    <label className="flex items-center gap-3 rounded-md border border-line bg-canvas/70 px-3 focus-within:border-quant/70">
+    <label className={`flex items-center gap-3 rounded-md border border-line bg-canvas/70 px-3 focus-within:border-quant/70 ${className}`}>
       <span className="text-xs tracking-widest text-muted">{label}</span>
       <input
         type={type}
@@ -467,7 +483,8 @@ function TerminalInput({ label, value, onChange, type = "text", autoComplete, di
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         disabled={disabled}
-        required
+        required={!optional}
+        placeholder={optional ? "optional" : undefined}
         maxLength={type === "email" ? 254 : 100}
         className="h-10 min-w-0 flex-1 bg-transparent font-mono text-sm text-ink outline-none placeholder:text-muted/50 disabled:opacity-60"
       />

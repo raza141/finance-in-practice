@@ -362,6 +362,47 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX email_log_booking_idx ON email_log (booking_uid) WHERE booking_uid IS NOT NULL`,
     ],
   },
+  {
+    id: "013_clients_banks",
+    statements: [
+      // Saved clients to bill, picked from the invoice form.
+      `CREATE TABLE clients (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name       text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
+        email      text NOT NULL CHECK (char_length(email) <= 254),
+        phone      text NOT NULL DEFAULT '' CHECK (char_length(phone) <= 40),
+        address    text NOT NULL DEFAULT '' CHECK (char_length(address) <= 500),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX clients_name_idx ON clients (lower(name))`,
+      // Bank accounts shown under "Payment information". At most one default,
+      // preselected on new invoices.
+      `CREATE TABLE bank_accounts (
+        id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        bank_name      text NOT NULL CHECK (char_length(bank_name) BETWEEN 1 AND 120),
+        account_title  text NOT NULL DEFAULT '' CHECK (char_length(account_title) <= 120),
+        account_number text NOT NULL DEFAULT '' CHECK (char_length(account_number) <= 40),
+        iban           text NOT NULL DEFAULT '' CHECK (char_length(iban) <= 40),
+        branch         text NOT NULL DEFAULT '' CHECK (char_length(branch) <= 200),
+        swift          text NOT NULL DEFAULT '' CHECK (char_length(swift) <= 20),
+        is_default     boolean NOT NULL DEFAULT false,
+        created_at     timestamptz NOT NULL DEFAULT now(),
+        updated_at     timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE UNIQUE INDEX bank_accounts_one_default ON bank_accounts (is_default) WHERE is_default`,
+      // Client contact and the bank are snapshotted onto the invoice (frozen
+      // once issued); the ids only link back to the records. Items gain
+      // "unit" and "detail" inside the jsonb, no column change.
+      `ALTER TABLE invoices
+        ADD COLUMN client_id uuid REFERENCES clients (id) ON DELETE SET NULL,
+        ADD COLUMN client_address text NOT NULL DEFAULT '' CHECK (char_length(client_address) <= 500),
+        ADD COLUMN client_phone text NOT NULL DEFAULT '' CHECK (char_length(client_phone) <= 40),
+        ADD COLUMN bank_account_id uuid REFERENCES bank_accounts (id) ON DELETE SET NULL,
+        ADD COLUMN bank jsonb CHECK (bank IS NULL OR jsonb_typeof(bank) = 'object')`,
+      `CREATE INDEX invoices_client_idx ON invoices (client_id) WHERE client_id IS NOT NULL`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

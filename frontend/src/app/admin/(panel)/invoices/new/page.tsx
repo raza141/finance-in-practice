@@ -7,32 +7,46 @@ import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { EmailNotConfigured } from "@/domains/invoices/components/AdminBits";
 import { InvoiceForm } from "@/domains/invoices/components/InvoiceForm";
 import { BookingPrefillLoader } from "@/domains/invoices/server/BookingPrefillLoader";
-import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
+import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import type { InvoiceInput } from "@/domains/invoices/types";
 
 export const metadata: Metadata = { title: "New invoice" };
 
-/** Blank for an offline client, or prefilled from a Cal.com booking (`?booking=<uid>`, linked from Schedule). */
+/**
+ * Blank for an offline client, for a saved client (`?client=<id>`), or
+ * prefilled from a Cal.com booking (`?booking=<uid>`, linked from Schedule).
+ * The default bank account is preselected.
+ */
 export default async function NewInvoicePage({ searchParams }: PageProps<"/admin/invoices/new">) {
   await AdminAuth.require();
-  const [{ prefill, error }, paymentInstructions] = await Promise.all([
-    BookingPrefillLoader.load((await searchParams).booking),
-    InvoiceRepository.fromEnv()?.lastPaymentInstructions() ?? "",
-  ]);
+  const query = await searchParams;
+  const clients = ClientRepository.fromEnv();
+  const [{ prefill, error }, options] = await Promise.all([BookingPrefillLoader.load(query.booking), InvoiceFormLoader.options()]);
+  // A booking by someone already saved links to that client.
+  const client =
+    (typeof query.client === "string" && (await clients?.byId(query.client))) ||
+    (prefill?.clientEmail && (await clients?.byEmail(prefill.clientEmail))) ||
+    null;
 
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const initial: InvoiceInput = {
     bookingUid: prefill?.bookingUid ?? null,
-    clientName: prefill?.clientName ?? "",
-    clientEmail: prefill?.clientEmail ?? "",
+    clientId: client?.id ?? null,
+    clientName: client?.name ?? prefill?.clientName ?? "",
+    clientEmail: client?.email ?? prefill?.clientEmail ?? "",
+    clientPhone: client?.phone ?? "",
+    clientAddress: client?.address ?? "",
     currency: "AED",
     items: prefill
       ? [
           {
-            description: `${prefill.topic}: ${prefill.durationMinutes}-minute session, ${InvoiceEmails.day(prefill.date)}`.slice(0, InvoiceContract.LIMITS.description),
-            quantity: 1,
+            description: prefill.topic.slice(0, InvoiceContract.LIMITS.description),
+            detail: `${prefill.durationMinutes}-minute session, ${InvoiceEmails.day(prefill.date)}`,
+            unit: "hour",
+            quantity: Math.round((prefill.durationMinutes / 60) * 100) / 100,
             unitMinor: 0,
             amountMinor: 0,
           },
@@ -43,7 +57,8 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     trn: "",
     dueDate: ZonedCalendar.addDays(today, 7),
     notes: "",
-    paymentInstructions,
+    paymentInstructions: "",
+    bankAccountId: options.banks.find((bank) => bank.isDefault)?.id ?? null,
   };
 
   return (
@@ -63,7 +78,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
         )}
         {!ResendClient.fromEnv() && <EmailNotConfigured />}
       </div>
-      <InvoiceForm initial={initial} emailEnabled={ResendClient.fromEnv() !== null} />
+      <InvoiceForm initial={initial} options={options} emailEnabled={ResendClient.fromEnv() !== null} />
     </div>
   );
 }

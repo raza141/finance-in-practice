@@ -7,10 +7,13 @@ import { ApiError } from "@/core/http/ApiError";
 import { ResendClient } from "@/core/email/ResendClient";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 
+import { BankAccountRepository } from "../server/BankAccountRepository";
+import { ClientRepository } from "../server/ClientRepository";
 import { InvoiceRepository } from "../server/InvoiceRepository";
 import { InvoiceContract, type ConfirmationFieldErrors, type InvoiceFieldErrors } from "../services/InvoiceContract";
 import { InvoiceEmails } from "../services/InvoiceEmails";
-import type { Invoice } from "../types";
+import { InvoiceMath } from "../services/InvoiceMath";
+import type { BankDetails, Invoice, InvoiceInput } from "../types";
 
 /**
  * Admin invoice and confirmation actions. Each one re-checks the session:
@@ -43,6 +46,34 @@ async function origin(): Promise<string> {
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;
+}
+
+/**
+ * Server-side links for a parsed invoice: checks the saved client exists (or
+ * saves a new one when asked) and snapshots the chosen bank's details. The
+ * browser only ever sends ids. Returns an error message instead when one is gone.
+ */
+async function resolveLinks(input: InvoiceInput, saveClient: boolean): Promise<{ input: InvoiceInput; bank: BankDetails | null } | string> {
+  const clients = ClientRepository.fromEnv();
+  const banks = BankAccountRepository.fromEnv();
+  if (!clients || !banks) throw new Error("DATABASE_URL is not configured");
+
+  let clientId = input.clientId;
+  if (clientId && !(await clients.byId(clientId))) return "That saved client no longer exists. Choose another or clear it.";
+  // An email already on file links to that client instead of saving a duplicate.
+  if (!clientId && saveClient) {
+    clientId =
+      (await clients.byEmail(input.clientEmail))?.id ??
+      (await clients.create({ name: input.clientName, email: input.clientEmail, phone: input.clientPhone, address: input.clientAddress }));
+  }
+
+  let bank: BankDetails | null = null;
+  if (input.bankAccountId) {
+    const account = await banks.byId(input.bankAccountId);
+    if (!account) return "That bank account no longer exists. Choose another.";
+    bank = BankAccountRepository.details(account);
+  }
+  return { input: { ...input, clientId }, bank };
 }
 
 /** Emails an issued invoice and logs it. Returns an error message, or null when sent. */
@@ -81,11 +112,14 @@ export async function saveInvoice(_state: InvoiceFormState, formData: FormData):
   const intent = formData.get("intent");
   if (intent === "send" && !ResendClient.fromEnv()) return { message: NO_EMAIL };
 
+  const resolved = await resolveLinks(parsed.input, formData.get("saveClient") === "on");
+  if (typeof resolved === "string") return { message: resolved };
+
   let id = formData.get("id");
   if (typeof id === "string" && id) {
-    if (!(await repo.updateDraft(id, parsed.input))) return { message: "This invoice was already issued or deleted." };
+    if (!(await repo.updateDraft(id, resolved.input, resolved.bank))) return { message: "This invoice was already issued or deleted." };
   } else {
-    id = await repo.createDraft(parsed.input);
+    id = await repo.createDraft(resolved.input, resolved.bank);
   }
 
   let notice = "saved";
@@ -125,25 +159,45 @@ export async function voidInvoice(formData: FormData): Promise<void> {
   redirect(`/admin/invoices/${id}`);
 }
 
+/** A new draft from an existing invoice. The bank snapshot is copied as is; saving the draft refreshes it from the account. */
+async function copyAsDraft(repo: InvoiceRepository, source: Invoice, nextMonth: boolean): Promise<string> {
+  const roll = (text: string) => (nextMonth ? InvoiceMath.nextMonthText(text) : text);
+  return repo.createDraft(
+    {
+      bookingUid: nextMonth ? null : source.bookingUid,
+      clientId: source.clientId,
+      clientName: source.clientName,
+      clientEmail: source.clientEmail,
+      clientPhone: source.clientPhone,
+      clientAddress: source.clientAddress,
+      currency: source.currency,
+      items: source.items.map((item) => ({ ...item, description: roll(item.description), ...(item.detail && { detail: roll(item.detail) }) })),
+      discountMinor: source.discountMinor,
+      taxRateBp: source.taxRateBp,
+      trn: source.trn,
+      dueDate: nextMonth ? InvoiceMath.addMonths(source.dueDate, 1) : source.dueDate,
+      notes: source.notes,
+      paymentInstructions: source.paymentInstructions,
+      bankAccountId: source.bankAccountId,
+    },
+    source.bank,
+  );
+}
+
 /** New draft with the same client, items and terms (the way to "edit" an issued invoice). */
 export async function duplicateInvoice(formData: FormData): Promise<void> {
   const repo = await repository();
   const source = await repo.byId(String(formData.get("id")));
   if (!source) return;
-  const id = await repo.createDraft({
-    bookingUid: source.bookingUid,
-    clientName: source.clientName,
-    clientEmail: source.clientEmail,
-    currency: source.currency,
-    items: source.items,
-    discountMinor: source.discountMinor,
-    taxRateBp: source.taxRateBp,
-    trn: source.trn,
-    dueDate: source.dueDate,
-    notes: source.notes,
-    paymentInstructions: source.paymentInstructions,
-  });
-  redirect(`/admin/invoices/${id}?notice=duplicated`);
+  redirect(`/admin/invoices/${await copyAsDraft(repo, source, false)}?notice=duplicated`);
+}
+
+/** Next month's invoice for a monthly client: same lines, due a month later, month names moved on. */
+export async function copyInvoiceForNextMonth(formData: FormData): Promise<void> {
+  const repo = await repository();
+  const source = await repo.byId(String(formData.get("id")));
+  if (!source) return;
+  redirect(`/admin/invoices/${await copyAsDraft(repo, source, true)}?notice=next-month`);
 }
 
 export async function deleteDraftInvoice(formData: FormData): Promise<void> {
