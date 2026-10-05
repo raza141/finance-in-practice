@@ -74,8 +74,8 @@ export function CourseView({
         </div>
         <div className="grid content-start gap-4 lg:col-span-5">
           {difference && (
-            <div className="rounded-xl border border-gold/40 bg-gold/5 p-6">
-              <p className="text-xl font-bold">{difference.headline}</p>
+            <div className="rounded-r-lg border-l-4 border-gold bg-gold/5 py-5 pr-6 pl-6">
+              <p className="font-serif text-xl font-bold">{difference.headline}</p>
               {difference.body && <p className="mt-2 leading-relaxed whitespace-pre-line text-muted">{difference.body}</p>}
             </div>
           )}
