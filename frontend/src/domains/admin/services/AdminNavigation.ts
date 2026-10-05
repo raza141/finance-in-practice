@@ -9,7 +9,7 @@ export interface AdminModule {
 export class AdminNavigation {
   private static readonly MODULES: readonly AdminModule[] = [
     { href: "/admin", label: "Overview" },
-    { href: "/admin/journal", label: "Research" },
+    { href: "/admin/journal", label: "Research Terminal" },
     { href: "/admin/testimonials", label: "Testimonials" },
     { href: "/admin/instructors", label: "Instructors" },
     { href: "/admin/courses", label: "Courses" },

@@ -11,7 +11,7 @@ import { JournalFramework } from "@/domains/journal/services/JournalFramework";
 import { JournalTaxonomy } from "@/domains/journal/services/JournalTaxonomy";
 import type { ArticleListItem } from "@/domains/journal/types";
 
-export const metadata: Metadata = { title: "Research" };
+export const metadata: Metadata = { title: "Research Terminal" };
 
 const FILTERS = ["all", "review", "draft", "live", "scheduled", "archived"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -48,7 +48,7 @@ export default async function AdminJournalPage({ searchParams }: PageProps<"/adm
   return (
     <div className="max-w-6xl">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Research</h1>
+        <h1 className="text-3xl font-normal tracking-tight italic">Research Terminal</h1>
         <p className="text-sm text-muted">
           {admin.role === "owner" ? "You publish directly; editors' articles wait for your review." : "Submit finished drafts for an owner to review."}
         </p>
