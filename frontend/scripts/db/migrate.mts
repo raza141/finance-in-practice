@@ -403,6 +403,19 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX invoices_client_idx ON invoices (client_id) WHERE client_id IS NOT NULL`,
     ],
   },
+  {
+    id: "014_client_plans",
+    statements: [
+      // What a client studies (course titles, as on their invoices) and how
+      // they pay. A new invoice for the client starts from these.
+      `ALTER TABLE clients
+        ADD COLUMN courses text[] NOT NULL DEFAULT '{}' CHECK (cardinality(courses) <= 20),
+        ADD COLUMN plan_unit text CHECK (plan_unit IN ('hour', 'month', 'on-demand', 'contract')),
+        ADD COLUMN plan_fee_minor integer CHECK (plan_fee_minor >= 0),
+        ADD COLUMN plan_currency text NOT NULL DEFAULT 'AED' CHECK (plan_currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')),
+        ADD COLUMN plan_notes text NOT NULL DEFAULT '' CHECK (char_length(plan_notes) <= 500)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { deleteClient } from "@/domains/invoices/actions/billing";
 import { StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { ClientForm } from "@/domains/invoices/components/BillingForms";
@@ -20,7 +21,7 @@ export default async function ClientPage({ params }: PageProps<"/admin/clients/[
   const { id } = await params;
   const client = await ClientRepository.fromEnv()?.byId(id);
   if (!client) notFound();
-  const invoices = (await InvoiceRepository.fromEnv()?.list(client.id)) ?? [];
+  const [invoices, courses] = await Promise.all([InvoiceRepository.fromEnv()?.list(client.id) ?? [], CourseRepository.fromEnv()?.all() ?? []]);
 
   return (
     <div className="max-w-4xl">
@@ -35,7 +36,7 @@ export default async function ClientPage({ params }: PageProps<"/admin/clients/[
       </div>
 
       <div className="mt-8">
-        <ClientForm key={client.id} client={client} />
+        <ClientForm key={client.id} client={client} courses={courses.map((c) => c.title)} />
       </div>
 
       <h2 className="mt-12 mb-4 text-lg">Invoices</h2>

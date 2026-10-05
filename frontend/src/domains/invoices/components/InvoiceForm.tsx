@@ -114,6 +114,15 @@ export function InvoiceForm({
 
   const pickClient = (clientId: string) => {
     const saved = clients.find((c) => c.id === clientId);
+    // Start from the client's courses and payment plan, unless lines were already filled in.
+    if (saved && saved.courses.length > 0 && rows.every((r) => !r.description && !r.unitPrice)) {
+      setCurrency(saved.planCurrency);
+      setRows(
+        InvoiceContract.planItems(saved).map((item) =>
+          row(courses, { description: item.description, unit: item.unit, quantity: "1", unitPrice: item.unitMinor ? InvoiceMath.majorInput(item.unitMinor) : "" }),
+        ),
+      );
+    }
     setClient(
       saved
         ? { clientId, clientName: saved.name, clientEmail: saved.email, clientPhone: saved.phone, clientAddress: saved.address }

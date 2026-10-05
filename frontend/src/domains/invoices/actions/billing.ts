@@ -39,7 +39,7 @@ async function banks(): Promise<BankAccountRepository> {
 
 export async function saveClient(_state: ClientFormState, formData: FormData): Promise<ClientFormState> {
   const repo = await clients();
-  const parsed = InvoiceContract.parseClient(Object.fromEntries(formData));
+  const parsed = InvoiceContract.parseClient({ ...Object.fromEntries(formData), courses: formData.getAll("courses") });
   if (!parsed.ok) return { errors: parsed.errors, message: "Please fix the highlighted fields." };
   const id = formData.get("id");
   if (typeof id === "string" && id) {

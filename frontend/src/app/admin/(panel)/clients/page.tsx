@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { ClientForm } from "@/domains/invoices/components/BillingForms";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
+import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 
 export const metadata: Metadata = { title: "Clients" };
 
@@ -17,7 +19,7 @@ export default async function AdminClientsPage() {
       </p>
     );
   }
-  const clients = await repo.all();
+  const [clients, courses] = await Promise.all([repo.all(), CourseRepository.fromEnv()?.all() ?? []]);
 
   return (
     <div className="max-w-5xl">
@@ -27,7 +29,7 @@ export default async function AdminClientsPage() {
       <details className="mt-8 rounded-lg border border-line p-5" open={clients.length === 0}>
         <summary className="cursor-pointer text-sm text-quant">+ New client</summary>
         <div className="mt-5">
-          <ClientForm />
+          <ClientForm courses={courses.map((c) => c.title)} />
         </div>
       </details>
 
@@ -35,12 +37,14 @@ export default async function AdminClientsPage() {
         <p className="mt-10 text-muted">No clients yet. You can also save one from the invoice form.</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] tracking-[0.18em] text-muted uppercase">
                 <th className="py-2 pr-4 font-normal">Name</th>
                 <th className="py-2 pr-4 font-normal">Email</th>
                 <th className="py-2 pr-4 font-normal">Phone</th>
+                <th className="py-2 pr-4 font-normal">Courses</th>
+                <th className="py-2 pr-4 font-normal">Plan</th>
                 <th className="py-2 font-normal" />
               </tr>
             </thead>
@@ -54,6 +58,8 @@ export default async function AdminClientsPage() {
                   </td>
                   <td className="py-2.5 pr-4 text-muted">{client.email}</td>
                   <td className="py-2.5 pr-4 text-muted">{client.phone || "—"}</td>
+                  <td className="py-2.5 pr-4 text-muted">{client.courses.join(", ") || "—"}</td>
+                  <td className="py-2.5 pr-4 font-mono text-xs whitespace-nowrap text-muted">{InvoiceContract.planSummary(client) || "—"}</td>
                   <td className="py-2.5 text-right">
                     <Link href={`/admin/invoices/new?client=${client.id}`} className="text-xs text-muted hover:text-ink">
                       New invoice →

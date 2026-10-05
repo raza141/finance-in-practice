@@ -107,11 +107,35 @@ describe("InvoiceContract.parseInvoice", () => {
 
 describe("InvoiceContract.parseClient / parseBank", () => {
   it("validates a saved client", () => {
-    expect(InvoiceContract.parseClient({ name: " Sara ", email: "SARA@x.co", phone: "", address: "Dubai" })).toEqual({
+    expect(InvoiceContract.parseClient({ name: " Sara ", email: "SARA@x.co", phone: "", address: "Dubai", planUnit: "", planFee: "", planCurrency: "AED" })).toEqual({
       ok: true,
-      input: { name: "Sara", email: "sara@x.co", phone: "", address: "Dubai" },
+      input: { name: "Sara", email: "sara@x.co", phone: "", address: "Dubai", courses: [], planUnit: null, planFeeMinor: null, planCurrency: "AED", planNotes: "" },
+    });
+    const withPlan = InvoiceContract.parseClient({
+      name: "Sara",
+      email: "sara@x.co",
+      courses: [" CFA Level I ", "FRM Part I", "CFA Level I", ""],
+      planUnit: "month",
+      planFee: "1,500",
+      planCurrency: "USD",
+      planNotes: "Due on the 1st",
+    });
+    expect(withPlan).toMatchObject({ ok: true, input: { courses: ["CFA Level I", "FRM Part I"], planUnit: "month", planFeeMinor: 150_000, planCurrency: "USD" } });
+    expect(InvoiceContract.parseClient({ name: "S", email: "s@x.co", planUnit: "weekly", planFee: "abc", planCurrency: "BTC" })).toMatchObject({
+      ok: false,
+      errors: { planUnit: expect.any(String), planFeeMinor: expect.any(String), planCurrency: expect.any(String) },
     });
     expect(InvoiceContract.parseClient({ name: "", email: "x" })).toMatchObject({ ok: false, errors: { name: expect.any(String), email: expect.any(String) } });
+  });
+
+  it("turns a client's courses and plan into invoice lines", () => {
+    const client = { courses: ["CFA Level I", "FRM Part I"], planUnit: "month" as const, planFeeMinor: 150_000, planCurrency: "AED" as const };
+    expect(InvoiceContract.planItems(client)).toEqual([
+      { description: "CFA Level I", unit: "month", quantity: 1, unitMinor: 150_000, amountMinor: 150_000 },
+      { description: "FRM Part I", unit: "month", quantity: 1, unitMinor: 150_000, amountMinor: 150_000 },
+    ]);
+    expect(InvoiceContract.planSummary(client)).toBe("AED 1,500.00 · Monthly");
+    expect(InvoiceContract.planSummary({ planUnit: null, planFeeMinor: null, planCurrency: "AED" })).toBe("");
   });
 
   it("needs a bank name and an account number or IBAN", () => {

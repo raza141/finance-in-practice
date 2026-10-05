@@ -39,8 +39,10 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     clientEmail: client?.email ?? prefill?.clientEmail ?? "",
     clientPhone: client?.phone ?? "",
     clientAddress: client?.address ?? "",
-    currency: "AED",
-    items: prefill
+    currency: client?.planCurrency ?? "AED",
+    items: client?.courses.length
+      ? InvoiceContract.planItems(client)
+      : prefill
       ? [
           {
             description: prefill.topic.slice(0, InvoiceContract.LIMITS.description),

@@ -1,6 +1,6 @@
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
-import type { BankDetails, ClientInput, ConfirmationInput, Currency, InvoiceInput, InvoiceItem, ItemUnit } from "../types";
+import type { BankDetails, Client, ClientInput, ConfirmationInput, Currency, InvoiceInput, InvoiceItem, ItemUnit } from "../types";
 import { InvoiceMath } from "./InvoiceMath";
 
 export type InvoiceField = keyof InvoiceInput;
@@ -46,6 +46,8 @@ export class InvoiceContract {
     trn: 30,
     phone: 40,
     address: 500,
+    clientCourses: 20,
+    planNotes: 500,
     bank: { bankName: 120, accountTitle: 120, accountNumber: 40, iban: 40, branch: 200, swift: 20 },
     longText: 2000,
     topic: 120,
@@ -147,6 +149,28 @@ export class InvoiceContract {
     };
   }
 
+  /** Invoice lines for a client's courses on their payment plan: one per course, at the plan fee. */
+  static planItems(client: Pick<Client, "courses" | "planUnit" | "planFeeMinor">): InvoiceItem[] {
+    const unitMinor = client.planFeeMinor ?? 0;
+    return client.courses.map((description) => ({
+      description,
+      unit: client.planUnit ?? "hour",
+      quantity: 1,
+      unitMinor,
+      amountMinor: unitMinor,
+    }));
+  }
+
+  /** "AED 1,500.00 · Monthly", or "" when no plan is set. */
+  static planSummary(client: Pick<Client, "planUnit" | "planFeeMinor" | "planCurrency">): string {
+    return [
+      client.planFeeMinor !== null ? InvoiceMath.money(client.planFeeMinor, client.planCurrency) : "",
+      client.planUnit ? InvoiceContract.UNITS[client.planUnit] : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
   static parseClient(fields: Record<string, unknown>): Parsed<ClientInput, ClientFieldErrors> {
     const { LIMITS } = InvoiceContract;
     const text = InvoiceContract.text(fields);
@@ -159,8 +183,25 @@ export class InvoiceContract {
     if (phone.length > LIMITS.phone) errors.phone = `Up to ${LIMITS.phone} characters.`;
     const address = text("address");
     if (address.length > LIMITS.address) errors.address = `Up to ${LIMITS.address} characters.`;
+
+    // Checkboxes: the action passes formData.getAll("courses") as an array.
+    const rawCourses = Array.isArray(fields.courses) ? fields.courses : [];
+    const courses = [...new Set(rawCourses.filter((c): c is string => typeof c === "string").map((c) => c.trim()).filter(Boolean))];
+    if (courses.length > LIMITS.clientCourses || courses.some((c) => c.length > LIMITS.description)) errors.courses = `Up to ${LIMITS.clientCourses} courses.`;
+
+    const unit = text("planUnit");
+    const planUnit = unit === "" ? null : (unit as ItemUnit);
+    if (planUnit !== null && !Object.hasOwn(InvoiceContract.UNITS, planUnit)) errors.planUnit = "Choose how the client is billed.";
+    const fee = text("planFee");
+    const planFeeMinor = fee === "" ? null : InvoiceMath.parseMajor(fee);
+    if (fee !== "" && (planFeeMinor === null || planFeeMinor > LIMITS.maxMinor)) errors.planFeeMinor = "Enter a fee, e.g. 1500 or 1500.50, or leave it empty.";
+    const planCurrency = text("planCurrency") as Currency;
+    if (!InvoiceContract.CURRENCIES.includes(planCurrency)) errors.planCurrency = "Choose a currency.";
+    const planNotes = text("planNotes");
+    if (planNotes.length > LIMITS.planNotes) errors.planNotes = `Up to ${LIMITS.planNotes} characters.`;
+
     if (Object.keys(errors).length > 0) return { ok: false, errors };
-    return { ok: true, input: { name, email, phone, address } };
+    return { ok: true, input: { name, email, phone, address, courses, planUnit, planFeeMinor, planCurrency, planNotes } };
   }
 
   static parseBank(fields: Record<string, unknown>): Parsed<BankDetails, BankFieldErrors> {

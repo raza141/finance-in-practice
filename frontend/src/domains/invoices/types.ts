@@ -124,6 +124,14 @@ export interface ClientInput {
   email: string;
   phone: string;
   address: string;
+  /** Course titles the client is enrolled in. */
+  courses: string[];
+  /** Payment plan: how they are billed, and the fee per hour / month / contract. */
+  planUnit: ItemUnit | null;
+  planFeeMinor: number | null;
+  planCurrency: Currency;
+  /** e.g. "3 instalments", "due on the 1st". */
+  planNotes: string;
 }
 
 export interface Client extends ClientInput {
