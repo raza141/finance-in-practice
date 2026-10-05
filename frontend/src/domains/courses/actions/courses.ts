@@ -39,6 +39,8 @@ async function session(): Promise<{ admin: AdminUser; repo: CourseRepository }> 
 function revalidateCourse(...slugs: (string | null)[]): void {
   for (const slug of new Set(slugs)) if (slug) revalidatePath(`/courses/${slug}`);
   revalidatePath("/courses");
+  // The home page links its CFA/FRM cards to published course pages.
+  revalidatePath("/");
   revalidatePath("/sitemap.xml");
 }
 

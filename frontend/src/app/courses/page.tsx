@@ -64,13 +64,13 @@ export default async function CoursesPage() {
       </div>
 
       {courses.length > 0 && (
-        <section aria-labelledby="scheduled-heading" className="border-t border-line">
+        <section aria-labelledby="course-list-heading" className="border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading
-              id="scheduled-heading"
-              eyebrow="Scheduled"
-              title="Upcoming courses"
-              lede="Fixed-start courses with a full curriculum, schedule and fees."
+              id="course-list-heading"
+              eyebrow="Course pages"
+              title="Explore a course"
+              lede="The full curriculum, method and ways to learn for each course."
             />
             <ul className="mt-12 grid gap-6 md:grid-cols-2">
               {courses.map((course) => (
@@ -83,7 +83,9 @@ export default async function CoursesPage() {
                     <h3 className="mt-3 text-2xl font-bold group-hover:text-quant">{course.title}</h3>
                     <p className="mt-3 flex-1 leading-relaxed text-muted">{course.summary}</p>
                     <p className="mt-6 font-mono text-xs tracking-[0.12em] text-muted uppercase">
-                      {CourseFormat.startDate(course.startDate)} · {course.duration} · {CourseFormat.price(course)}
+                      {[course.startDate && `Starts ${CourseFormat.startDate(course.startDate)}`, course.duration, CourseFormat.price(course)]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </Link>
                 </li>
