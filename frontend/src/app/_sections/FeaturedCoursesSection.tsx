@@ -10,8 +10,8 @@ const PRIMARY = [
     level: "Level I–II",
     outcome: "Structured exam preparation where every quantitative reading is taught through worked problems and working code.",
     points: ["Personal study plan", "Exam-style problem drills", "Formula intuition, not rote"],
-    /** Opens this course page once it is published; until then the fallback. */
-    slug: "cfa-level-1",
+    /** Opens the first published course in this category; until there is one, the fallback href. */
+    category: "CFA",
     href: "/courses#exam-prep",
   },
   {
@@ -19,7 +19,7 @@ const PRIMARY = [
     level: "Part I",
     outcome: "Risk models, derivatives and quantitative methods built up from first principles, then tested on exam-style questions.",
     points: ["VaR and stress testing in depth", "Exam-style problem drills", "Every formula worked, then coded"],
-    slug: "frm-part-1",
+    category: "FRM",
     href: "/courses#exam-prep",
   },
 ];
@@ -33,18 +33,21 @@ const SPECIALIST = [
   { label: "Goal-Based Wealth", href: "/courses#goal-based-wealth" },
 ];
 
-/** Slugs of published courses; none when the database is unset or unreachable (e.g. at build time). */
-async function liveSlugs(): Promise<Set<string>> {
+/** Category -> slug of its first published course (by title, so Level I before Level II); empty if the database is unreachable. */
+async function liveCourses(): Promise<Map<string, string>> {
   try {
-    return new Set(((await CourseRepository.fromEnv()?.activeSlugs()) ?? []).map((c) => c.slug));
+    const courses = ((await CourseRepository.fromEnv()?.active()) ?? []).toSorted((a, b) => a.title.localeCompare(b.title));
+    const byCategory = new Map<string, string>();
+    for (const course of courses) if (!byCategory.has(course.category)) byCategory.set(course.category, course.slug);
+    return byCategory;
   } catch (error) {
-    console.error("home: could not load course slugs", error);
-    return new Set();
+    console.error("home: could not load courses", error);
+    return new Map();
   }
 }
 
 export async function FeaturedCoursesSection() {
-  const live = await liveSlugs();
+  const live = await liveCourses();
   return (
     <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-20 lg:py-24">
       <SectionHeading id="featured-heading" eyebrow="Learning tracks" title="Pick where you want to start" />
@@ -53,7 +56,7 @@ export async function FeaturedCoursesSection() {
         {PRIMARY.map((course) => (
           <Link
             key={course.title}
-            href={live.has(course.slug) ? `/courses/${course.slug}` : course.href}
+            href={live.has(course.category) ? `/courses/${live.get(course.category)}` : course.href}
             className="group flex flex-col rounded-2xl border border-gold/30 bg-[#151E32] p-7 transition-colors hover:border-gold/70 sm:p-9"
           >
             <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Primary track · {course.level}</p>
