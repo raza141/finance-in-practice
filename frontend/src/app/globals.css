@@ -147,3 +147,14 @@
   }
 }
 
+
+/* Admin: the sidebar toggle (SidebarToggle) hides the menu on desktop. */
+@media (min-width: 48rem) {
+  html[data-admin-sidebar-hidden] [data-admin-sidebar],
+  html[data-admin-sidebar-hidden] .admin-sidebar-hide {
+    display: none;
+  }
+}
+html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
+  display: none;
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logout } from "@/domains/admin/actions/auth";
+import { SidebarToggle } from "@/domains/admin/components/SidebarToggle";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { AdminNavigation } from "@/domains/admin/services/AdminNavigation";
 
@@ -10,7 +11,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="border-b border-line bg-surface md:w-60 md:shrink-0 md:border-r md:border-b-0">
+      <aside data-admin-sidebar className="border-b border-line bg-surface md:w-60 md:shrink-0 md:border-r md:border-b-0">
         <div className="flex items-center justify-between p-5 md:block">
           <Link href="/admin" className="block">
             <span className="block font-mono text-[11px] tracking-[0.3em] text-quant uppercase">FIP</span>
@@ -57,7 +58,10 @@ export default async function AdminPanelLayout({ children }: { children: React.R
           </form>
         </div>
       </aside>
-      <div className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">{children}</div>
+      <div className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">
+        <SidebarToggle />
+        {children}
+      </div>
     </div>
   );
 }
