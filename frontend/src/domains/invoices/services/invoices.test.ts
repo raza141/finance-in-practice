@@ -1,0 +1,169 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { EmailHtml } from "@/core/email/EmailHtml";
+import { ResendClient } from "@/core/email/ResendClient";
+
+import type { Invoice } from "../types";
+import { InvoiceContract } from "./InvoiceContract";
+import { InvoiceEmails } from "./InvoiceEmails";
+import { InvoiceMath } from "./InvoiceMath";
+
+vi.mock("server-only", () => ({}));
+
+const invoiceFields = (overrides: Record<string, string> = {}) => ({
+  clientName: "  Sara Khan ",
+  clientEmail: "Sara@Example.com",
+  currency: "AED",
+  items: JSON.stringify([
+    { description: "CFA Level I session", quantity: "1.5", unitPrice: "333.33" },
+    { description: "Mock exam review", quantity: "2", unitPrice: "100" },
+  ]),
+  discount: "",
+  taxRate: "",
+  trn: "",
+  dueDate: "2026-10-12",
+  notes: "",
+  paymentInstructions: "IBAN AE00 0000",
+  ...overrides,
+});
+
+describe("InvoiceMath", () => {
+  it("computes line amounts and totals in integer minor units, rounding half-up", () => {
+    expect(InvoiceMath.lineAmount(1.5, 33_333)).toBe(50_000); // 499.995 -> 500.00
+    expect(InvoiceMath.lineAmount(0.1, 5)).toBe(1); // 0.5 -> 1
+    expect(InvoiceMath.totals([50_000, 20_000], 0, 0)).toEqual({ subtotalMinor: 70_000, discountMinor: 0, taxMinor: 0, totalMinor: 70_000 });
+    // Discount comes off before tax: (700.00 - 50.10) * 5% = 32.495 -> 32.50
+    expect(InvoiceMath.totals([50_000, 20_000], 5_010, 500)).toEqual({ subtotalMinor: 70_000, discountMinor: 5_010, taxMinor: 3_250, totalMinor: 68_240 });
+  });
+
+  it("formats invoice numbers and money", () => {
+    expect(InvoiceMath.number("2026-10-05", 1)).toBe("FIP-2026-0001");
+    expect(InvoiceMath.number("2027-01-02", 12_345)).toBe("FIP-2027-12345");
+    expect(InvoiceMath.money(125_050, "AED")).toBe("AED 1,250.50");
+    expect(InvoiceMath.parseMajor("4,500.5")).toBe(450_050);
+    expect(InvoiceMath.parseMajor("1.234")).toBeNull();
+  });
+});
+
+describe("InvoiceContract.parseInvoice", () => {
+  it("validates, normalises and prices the items", () => {
+    const parsed = InvoiceContract.parseInvoice(invoiceFields({ discount: "50.10", taxRate: "5" }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.input.clientName).toBe("Sara Khan");
+    expect(parsed.input.clientEmail).toBe("sara@example.com");
+    expect(parsed.input.items.map((i) => i.amountMinor)).toEqual([50_000, 20_000]);
+    expect(parsed.input.discountMinor).toBe(5_010);
+    expect(parsed.input.taxRateBp).toBe(500);
+    expect(parsed.input.bookingUid).toBeNull();
+  });
+
+  it("rejects bad input field by field", () => {
+    const parsed = InvoiceContract.parseInvoice(
+      invoiceFields({ clientEmail: "nope", currency: "BTC", taxRate: "120", dueDate: "2026-02-30", bookingUid: "../x" }),
+    );
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(Object.keys(parsed.errors).sort()).toEqual(["bookingUid", "clientEmail", "currency", "dueDate", "taxRateBp"]);
+    expect(InvoiceContract.parseInvoice(invoiceFields({ discount: "800" }))).toMatchObject({ ok: false, errors: { discountMinor: expect.any(String) } });
+    expect(InvoiceContract.parseInvoice(invoiceFields({ items: "[]" }))).toMatchObject({ ok: false, errors: { items: "Add at least one line item." } });
+    expect(InvoiceContract.parseInvoice(invoiceFields({ items: '[{"description":"x","quantity":"0","unitPrice":"1"}]' }))).toMatchObject({
+      ok: false,
+      errors: { items: expect.stringContaining("Line 1") },
+    });
+  });
+});
+
+describe("InvoiceContract.parseConfirmation", () => {
+  const fields = {
+    clientName: "Omar",
+    clientEmail: "omar@example.com",
+    date: "2026-10-25",
+    time: "09:30",
+    clientTimeZone: "Europe/London",
+    durationMinutes: "60",
+    topic: "FRM Part I",
+    location: "https://meet.google.com/abc-defg-hij",
+    note: "",
+  };
+
+  it("converts the client's wall-clock time to an instant across DST changes", () => {
+    // 25 Oct 2026: London is back on GMT (clocks went back at 01:00 UTC).
+    expect(InvoiceContract.zonedInstant("2026-10-25", "09:30", "Europe/London").toISOString()).toBe("2026-10-25T09:30:00.000Z");
+    expect(InvoiceContract.zonedInstant("2026-10-24", "09:30", "Europe/London").toISOString()).toBe("2026-10-24T08:30:00.000Z");
+    expect(InvoiceContract.zonedInstant("2026-03-29", "03:00", "Europe/London").toISOString()).toBe("2026-03-29T02:00:00.000Z");
+    expect(InvoiceContract.zonedInstant("2026-10-05", "00:15", "Asia/Dubai").toISOString()).toBe("2026-10-04T20:15:00.000Z");
+    const parsed = InvoiceContract.parseConfirmation(fields);
+    expect(parsed).toMatchObject({ ok: true, input: { start: "2026-10-25T09:30:00.000Z", durationMinutes: 60 } });
+  });
+
+  it("only accepts http(s) links", () => {
+    expect(InvoiceContract.parseConfirmation({ ...fields, location: "javascript:alert(1)" })).toMatchObject({ ok: false, errors: { location: expect.any(String) } });
+    expect(InvoiceContract.parseConfirmation({ ...fields, location: "Office, Business Bay" }).ok).toBe(true);
+    expect(InvoiceContract.parseConfirmation({ ...fields, clientTimeZone: "Mars/Base", time: "25:00" })).toMatchObject({
+      ok: false,
+      errors: { clientTimeZone: expect.any(String), time: expect.any(String) },
+    });
+  });
+});
+
+describe("emails", () => {
+  it("escapes user text and attribute values", () => {
+    expect(EmailHtml.escape(`<b>"Tom" & 'Jerry'</b>`)).toBe("&lt;b&gt;&quot;Tom&quot; &amp; &#39;Jerry&#39;&lt;/b&gt;");
+    expect(EmailHtml.link('https://x.test/?a="><script>')).not.toContain("<script>");
+    expect(EmailHtml.link("javascript:alert(1)")).not.toContain("<a");
+  });
+
+  it("builds a confirmation in the client's zone and Dubai time", () => {
+    const message = InvoiceEmails.confirmation({
+      bookingUid: null,
+      clientName: "<img src=x onerror=alert(1)>",
+      clientEmail: "a@b.co",
+      start: "2026-10-06T10:00:00.000Z",
+      durationMinutes: 45,
+      clientTimeZone: "Asia/Karachi",
+      topic: "CFA Level II",
+      location: "https://zoom.us/j/1",
+      note: "Bring\nyour notes",
+    });
+    expect(message.html).not.toContain("<img");
+    expect(message.html).toContain("&lt;img");
+    expect(message.html).toContain("Bring<br>your notes");
+    expect(message.text).toContain("15:00"); // Karachi, UTC+5
+    expect(message.text).toContain("14:00"); // Dubai, UTC+4
+    expect(message.text).toContain("45 minutes");
+    expect(message.subject).toContain("CFA Level II");
+  });
+
+  it("links the invoice email to the public page", () => {
+    const invoice = { number: "FIP-2026-0007", clientName: "Sara", totalMinor: 68_240, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "IBAN" } as Invoice;
+    const message = InvoiceEmails.invoice(invoice, "https://financeinpractice.me/invoice/tok");
+    expect(message.subject).toBe("Invoice FIP-2026-0007 from Finance in Practice");
+    expect(message.html).toContain('href="https://financeinpractice.me/invoice/tok"');
+    expect(message.text).toContain("AED 682.40");
+  });
+});
+
+describe("ResendClient", () => {
+  it("is disabled without configuration", () => {
+    expect(ResendClient.fromEnv({ RESEND_API_KEY: "k" } as unknown as NodeJS.ProcessEnv)).toBeNull();
+    expect(ResendClient.fromEnv({ EMAIL_FROM: "a@b.co" } as unknown as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it("posts to /emails and returns the message id", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ id: "msg_1" }), { status: 200 }));
+    const client = new ResendClient({ apiKey: "re_test", from: "FIP <b@fip.test>", replyTo: "me@fip.test" }, fetchImpl);
+    await expect(client.send("c@x.test", { subject: "S", html: "<p>H</p>", text: "H" })).resolves.toBe("msg_1");
+
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.resend.com/emails");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer re_test");
+    expect(JSON.parse(init.body as string)).toEqual({ from: "FIP <b@fip.test>", to: ["c@x.test"], subject: "S", html: "<p>H</p>", text: "H", reply_to: "me@fip.test" });
+  });
+
+  it("surfaces Resend's error message", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ statusCode: 403, name: "validation_error", message: "Domain not verified" }), { status: 403 }));
+    const client = new ResendClient({ apiKey: "k", from: "a@b.co", replyTo: null }, fetchImpl);
+    await expect(client.send("c@x.test", { subject: "S", html: "", text: "" })).rejects.toThrow("Domain not verified");
+  });
+});
