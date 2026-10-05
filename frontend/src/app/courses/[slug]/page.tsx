@@ -55,7 +55,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
   if (!course) notFound();
 
   return (
-    <div data-plain-page>
+    <div data-plain-page className="font-body">
       <JsonLd data={StructuredData.course(course)} />
       <CourseView
         course={course}

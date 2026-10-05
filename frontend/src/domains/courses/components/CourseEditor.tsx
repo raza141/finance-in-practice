@@ -414,7 +414,7 @@ export function CourseEditor({
             className="h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-line bg-canvas"
           >
             {/* Zoom an inner wrapper: zoom on the scroll box would halve its height too. */}
-            <div className="xl:[zoom:0.5]">
+            <div className="font-body xl:[zoom:0.5]">
             <CourseView
               course={preview}
               testimonials={previewTestimonials}

@@ -22,6 +22,7 @@
 /* Font families come from next/font CSS variables set on <html>. */
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-roboto), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-merriweather), ui-serif, Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
