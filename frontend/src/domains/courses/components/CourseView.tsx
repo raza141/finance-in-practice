@@ -238,7 +238,7 @@ export function CourseView({
       {(course.audience || course.notFor) && (
         <section aria-labelledby="fit-heading" className="border-t border-line">
           <div className="page-container py-14 lg:py-20">
-            <div className="mx-auto max-w-3xl rounded-2xl border border-line bg-surface p-8 text-center sm:p-12">
+            <div className="max-w-3xl rounded-2xl border border-line bg-surface p-8 sm:p-12">
               <h2 id="fit-heading" className="text-3xl font-bold">
                 Is this for you?
               </h2>
