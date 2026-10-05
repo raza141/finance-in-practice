@@ -286,6 +286,24 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX articles_review_idx ON articles (review_state) WHERE review_state IS NOT NULL`,
     ],
   },
+  {
+    id: "011_booking_blocks",
+    statements: [
+      // Time the owner blocks from the admin Schedule page (offline clients,
+      // personal time). The public slots API drops any slot that overlaps one,
+      // and booking a blocked slot is refused. 012 is reserved for invoices.
+      `CREATE TABLE booking_blocks (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        starts_at   timestamptz NOT NULL,
+        ends_at     timestamptz NOT NULL,
+        reason      text NOT NULL DEFAULT '' CHECK (char_length(reason) <= 120),
+        created_by  uuid REFERENCES admin_users (id) ON DELETE SET NULL,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        CHECK (ends_at > starts_at AND ends_at - starts_at <= interval '31 days')
+      )`,
+      `CREATE INDEX booking_blocks_range_idx ON booking_blocks (ends_at, starts_at)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
