@@ -11,7 +11,7 @@ import type { Course, ModulePriority } from "../types";
 const PRIORITY_STYLE: Record<ModulePriority, string> = {
   foundation: "border-line text-muted",
   core: "border-quant/40 text-quant",
-  high_priority: "border-gold/50 bg-gold/10 text-gold",
+  high_priority: "border-gold bg-gold font-semibold text-canvas",
 };
 
 /** Cards side by side from tablet width: up to four in one row, so four never wrap as 3 + 1. */
@@ -132,7 +132,7 @@ export function CourseView({
             <ol className="mt-10 divide-y divide-line border-y border-line">
               {course.modules.map((module, index) => (
                 <li key={index}>
-                  <details className="group py-5">
+                  <details open className="group py-5">
                     <summary className="grid cursor-pointer list-none gap-x-6 gap-y-2 sm:grid-cols-[4.5rem_1fr_auto] [&::-webkit-details-marker]:hidden">
                       <span className="font-mono text-sm text-quant tabular-nums">{String(index + 1).padStart(2, "0")}</span>
                       <span>

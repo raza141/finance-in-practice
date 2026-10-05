@@ -27,11 +27,16 @@ export default async function EditCoursePage({ params }: PageProps<"/admin/cours
       </Link>
       <div className="mt-3 mb-8 flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-3xl font-normal tracking-tight italic">{course.title}</h1>
-        {course.isActive && (
-          <Link href={`/courses/${course.slug}`} target="_blank" className="text-sm text-quant hover:underline">
-            View live page ↗
+        <span className="flex gap-5">
+          <Link href={`/admin/course-pdf/${course.id}`} target="_blank" className="text-sm text-gold hover:underline">
+            Download PDF ↗
           </Link>
-        )}
+          {course.isActive && (
+            <Link href={`/courses/${course.slug}`} target="_blank" className="text-sm text-quant hover:underline">
+              View live page ↗
+            </Link>
+          )}
+        </span>
       </div>
       {/* Keyed by id so navigating between courses resets the editor state. */}
       <CourseEditor key={course.id} course={course} canPublish={CoursePolicy.canPublish(admin)} testimonials={testimonials ?? []} />
