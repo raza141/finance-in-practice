@@ -76,6 +76,11 @@
     background-attachment: fixed;
   }
 
+  /* Pages that opt out of the grid (data-plain-page), e.g. course pages: plain canvas, full focus on content. */
+  body:has([data-plain-page]) {
+    background-image: none;
+  }
+
   /* CustomCursor replaces the native pointer for mouse users; links, buttons
    * and inputs would otherwise re-assert their own pointer / text cursors. */
   @media (pointer: fine) {
