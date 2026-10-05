@@ -324,8 +324,9 @@ class SchemaMigrator {
   }
 }
 
-// `npm run db:migrate -- --print 009_articles` prints one migration as SQL to
-// paste into the Vercel/Neon query editor (production has no local URL).
+// `npm run db:migrate -- --print 009_articles` prints one migration as a single
+// line of SQL to paste into the Vercel/Neon query editor (production has no
+// local URL). It also records the migration, so db:migrate later skips it.
 const printIndex = process.argv.indexOf("--print");
 if (printIndex !== -1) {
   const migration = MIGRATIONS.find((m) => m.id === process.argv[printIndex + 1]);
@@ -334,7 +335,8 @@ if (printIndex !== -1) {
     process.exit(1);
   }
   const statements = [...migration.statements, `INSERT INTO schema_migrations (id) VALUES ('${migration.id}')`];
-  console.log(`BEGIN;\n${statements.map((st) => st.replace(/\s*\n\s*/g, " ")).join(";\n")};\nCOMMIT;`);
+  // One line: the Vercel query editor takes a single line without comments.
+  console.log(`BEGIN; ${statements.map((st) => st.replace(/\s*\n\s*/g, " ")).join("; ")}; COMMIT;`);
   process.exit(0);
 }
 
