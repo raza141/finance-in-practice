@@ -19,7 +19,7 @@ const noSubscribe = () => () => {};
 const TABS = {
   basics: { label: "Basics", fields: ["title", "slug", "category", "eyebrow", "tagline", "summary", "audience", "notFor"] },
   method: { label: "Coaching method", fields: ["method", "modes"] },
-  modules: { label: "Modules", fields: ["modules", "coachingLabel", "practiceLabel"] },
+  modules: { label: "Modules", fields: ["modules", "coachingLabel", "practiceLabel", "weightLabel"] },
   options: { label: "Engagement options", fields: ["options"] },
   faqs: { label: "FAQs", fields: ["faqs"] },
   conversion: {
@@ -246,11 +246,12 @@ export function CourseEditor({
               <div className="grid gap-5 sm:grid-cols-2">
                 {text("coachingLabel", "Coaching line label", { max: 40, hint: "e.g. Official-question coaching, Code review" })}
                 {text("practiceLabel", "Practice line label", { max: 40, hint: "e.g. In practice, Build" })}
+                {text("weightLabel", "Weight line label", { max: 40, hint: "e.g. Official weight (2027). Blank hides the weight line." })}
               </div>
               <RepeatableList
                 items={draft.modules}
                 onChange={(modules) => set({ modules })}
-                create={(): ModuleDraft => ({ key: listKey(), title: "", priority: "core", summary: "", coaching: "", practice: "", deliverable: "" })}
+                create={(): ModuleDraft => ({ key: listKey(), title: "", priority: "core", summary: "", coaching: "", practice: "", deliverable: "", weight: "" })}
                 max={CourseContract.LIMITS.modules}
                 noun="Module"
                 disabled={pending}
@@ -258,8 +259,9 @@ export function CourseEditor({
               >
                 {(module, update) => (
                   <>
-                    <div className="grid gap-3 sm:grid-cols-[1fr_11rem]">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_8rem_11rem]">
                       <input aria-label="Module title" placeholder="Module title, e.g. Fixed Income" maxLength={160} value={module.title} onChange={(e) => update({ title: e.target.value })} className={`${FIELD} mt-0`} />
+                      <input aria-label="Weight" placeholder="Weight, e.g. 10–15%" maxLength={40} value={module.weight} onChange={(e) => update({ weight: e.target.value })} className={`${FIELD} mt-0`} />
                       <select aria-label="Priority" value={module.priority} onChange={(e) => update({ priority: e.target.value as typeof module.priority })} className={`${FIELD} mt-0`}>
                         {Object.entries(CourseFormat.PRIORITIES).map(([value, label]) => (
                           <option key={value} value={value}>

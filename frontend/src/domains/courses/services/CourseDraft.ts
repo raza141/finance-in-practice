@@ -5,7 +5,7 @@ import { CourseFormat } from "./CourseFormat";
 type Keyed<T> = T & { key: number };
 
 export type MethodDraft = Keyed<MethodStep>;
-export type ModuleDraft = Keyed<{ title: string; priority: ModulePriority; summary: string; coaching: string; practice: string; deliverable: string }>;
+export type ModuleDraft = Keyed<{ title: string; priority: ModulePriority; summary: string; coaching: string; practice: string; deliverable: string; weight: string }>;
 export type OptionDraft = Keyed<{ title: string; description: string; fee: string; bookingUrl: string }>;
 export type FaqDraft = Keyed<CourseFaq>;
 
@@ -25,6 +25,7 @@ export interface CourseDraftState {
   bookingUrl: string;
   coachingLabel: string;
   practiceLabel: string;
+  weightLabel: string;
   startDate: string;
   duration: string;
   price: string;
@@ -61,6 +62,7 @@ export class CourseDraft {
       bookingUrl: course?.bookingUrl ?? "#book",
       coachingLabel: course?.coachingLabel ?? "Official-question coaching",
       practiceLabel: course?.practiceLabel ?? "In practice",
+      weightLabel: course?.weightLabel ?? "",
       startDate: course?.startDate ?? "",
       duration: course?.duration ?? "1-on-1 · flexible schedule",
       price: CourseContract.priceInput(course?.priceMinor ?? null),
@@ -73,7 +75,7 @@ export class CourseDraft {
         ? course.method.map((m) => ({ ...m, key: key() }))
         : CourseDraft.NEW_METHOD.map((title) => ({ title, description: "", key: key() })),
       modes: (course?.modes ?? []).map((m) => ({ ...m, key: key() })),
-      modules: (course?.modules ?? []).map((m) => ({ ...m, deliverable: m.deliverable ?? "", key: key() })),
+      modules: (course?.modules ?? []).map((m) => ({ ...m, deliverable: m.deliverable ?? "", weight: m.weight ?? "", key: key() })),
       options: (course?.options ?? []).map((o) => ({ ...o, bookingUrl: o.bookingUrl ?? "", key: key() })),
       faqs: (course?.faqs ?? []).map((f) => ({ ...f, key: key() })),
     };
@@ -110,6 +112,7 @@ export class CourseDraft {
       bookingUrl: CourseContract.isLink(draft.bookingUrl.trim()) ? draft.bookingUrl.trim() : "#book",
       coachingLabel: draft.coachingLabel.trim(),
       practiceLabel: draft.practiceLabel.trim(),
+      weightLabel: draft.weightLabel.trim(),
       startDate: /^\d{4}-\d{2}-\d{2}$/.test(draft.startDate) ? draft.startDate : null,
       duration: draft.duration.trim(),
       priceMinor: price === "invalid" ? null : price,

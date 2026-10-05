@@ -20,6 +20,8 @@ export interface CourseModule {
   coaching: string;
   practice: string;
   deliverable?: string;
+  /** Share of the exam, e.g. "10–15%"; shown after the course's weightLabel. */
+  weight?: string;
 }
 
 /** A way to study a topic, e.g. "Self-study" or "Study with me". Same shape as a method step. */
@@ -62,6 +64,8 @@ export interface Course {
   bookingUrl: string;
   coachingLabel: string;
   practiceLabel: string;
+  /** Label before each module's weight, e.g. "Official weight (2027)". */
+  weightLabel: string;
   /** ISO date (YYYY-MM-DD); null when the next start date is on request. */
   startDate: string | null;
   /** Free text, e.g. "1-on-1 · flexible schedule". */

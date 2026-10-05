@@ -138,6 +138,11 @@ export function CourseView({
                       <span>
                         <span className="block text-lg leading-snug font-bold">{module.title}</span>
                         {module.summary && <span className="mt-1 block leading-relaxed text-muted">{module.summary}</span>}
+                        {course.weightLabel && module.weight && (
+                          <span className="mt-2 block font-mono text-xs tracking-wider text-quant">
+                            {course.weightLabel}: <span className="font-semibold text-ink">{module.weight}</span>
+                          </span>
+                        )}
                       </span>
                       <span className="flex items-start gap-3">
                         <span className={`rounded border px-2 py-0.5 font-mono text-[11px] tracking-wider uppercase ${PRIORITY_STYLE[module.priority]}`}>

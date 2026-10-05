@@ -70,6 +70,7 @@ export class CourseFormat {
       const title = CourseFormat.str(o.title);
       if (!title) return null;
       const deliverable = CourseFormat.str(o.deliverable);
+      const weight = CourseFormat.str(o.weight);
       return {
         title,
         priority: CourseFormat.isPriority(o.priority) ? o.priority : "core",
@@ -77,6 +78,7 @@ export class CourseFormat {
         coaching: CourseFormat.str(o.coaching),
         practice: CourseFormat.str(o.practice),
         ...(deliverable && { deliverable }),
+        ...(weight && { weight }),
       };
     });
   }

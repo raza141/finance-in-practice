@@ -16,6 +16,7 @@ const VALID = {
   bookingUrl: "#book",
   coachingLabel: "Code review",
   practiceLabel: "Build",
+  weightLabel: "",
   startDate: "2027-02-01",
   duration: "6 weeks · 12 live sessions",
   price: "3,250.5",

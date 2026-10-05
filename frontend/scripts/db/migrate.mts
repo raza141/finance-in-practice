@@ -497,6 +497,13 @@ const MIGRATIONS: Migration[] = [
       cfa1TaglineStatement(),
     ],
   },
+  {
+    id: "023_course_weight_label",
+    statements: [
+      `ALTER TABLE courses ADD COLUMN weight_label text NOT NULL DEFAULT '' CHECK (char_length(weight_label) <= 40)`,
+      `UPDATE courses SET weight_label = 'Official weight (2027)' WHERE category IN ('CFA', 'FRM') AND weight_label = ''`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

@@ -23,6 +23,7 @@ interface CourseRow {
   booking_url: string;
   coaching_label: string;
   practice_label: string;
+  weight_label: string;
   start_date: string | null;
   duration: string;
   price_minor: number | null;
@@ -57,7 +58,7 @@ const isUniqueViolation = (error: unknown) =>
 export class CourseRepository {
   /** Every column a Course needs; updated_by stays admin-side. */
   private static readonly COLUMNS = `id, slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
-    cta_label, booking_url, coaching_label, practice_label, start_date::text AS start_date, duration, price_minor,
+    cta_label, booking_url, coaching_label, practice_label, weight_label, start_date::text AS start_date, duration, price_minor,
     currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title, seo_description, testimonial_ticker`;
 
   constructor(private readonly sql: Sql) {}
@@ -110,12 +111,12 @@ export class CourseRepository {
     try {
       const [row] = (await this.sql`
         INSERT INTO courses (slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
-                             cta_label, booking_url, coaching_label, practice_label, start_date, duration, price_minor,
+                             cta_label, booking_url, coaching_label, practice_label, weight_label, start_date, duration, price_minor,
                              currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title,
                              seo_description, testimonial_ticker, updated_by)
         VALUES (${input.slug}, ${input.title}, ${input.category}, ${input.eyebrow}, ${input.tagline}, ${input.summary}, ${input.audience},
                 ${input.notFor}, ${input.difference}, ${input.disclaimer}, ${input.ctaLabel}, ${input.bookingUrl},
-                ${input.coachingLabel}, ${input.practiceLabel}, ${input.startDate}, ${input.duration},
+                ${input.coachingLabel}, ${input.practiceLabel}, ${input.weightLabel}, ${input.startDate}, ${input.duration},
                 ${input.priceMinor}, ${input.currency}, ${isActive}, ${JSON.stringify(input.method)}::jsonb, ${JSON.stringify(input.modes)}::jsonb,
                 ${JSON.stringify(input.modules)}::jsonb, ${JSON.stringify(input.options)}::jsonb,
                 ${JSON.stringify(input.faqs)}::jsonb, ${input.brochureUrl}, ${input.seoTitle}, ${input.seoDescription},
@@ -139,7 +140,7 @@ export class CourseRepository {
           summary = ${input.summary}, audience = ${input.audience}, not_for = ${input.notFor},
           difference = ${input.difference}, disclaimer = ${input.disclaimer}, cta_label = ${input.ctaLabel},
           booking_url = ${input.bookingUrl}, coaching_label = ${input.coachingLabel},
-          practice_label = ${input.practiceLabel}, start_date = ${input.startDate}, duration = ${input.duration},
+          practice_label = ${input.practiceLabel}, weight_label = ${input.weightLabel}, start_date = ${input.startDate}, duration = ${input.duration},
           price_minor = ${input.priceMinor}, currency = ${input.currency}, is_active = ${isActive},
           method = ${JSON.stringify(input.method)}::jsonb, modes = ${JSON.stringify(input.modes)}::jsonb,
           modules = ${JSON.stringify(input.modules)}::jsonb,
@@ -190,6 +191,7 @@ export class CourseRepository {
       bookingUrl: row.booking_url,
       coachingLabel: row.coaching_label,
       practiceLabel: row.practice_label,
+      weightLabel: row.weight_label,
       startDate: row.start_date,
       duration: row.duration,
       priceMinor: row.price_minor,

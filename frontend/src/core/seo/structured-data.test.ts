@@ -26,6 +26,7 @@ const COURSE: Course = {
   bookingUrl: "#book",
   coachingLabel: "Official-question coaching",
   practiceLabel: "In practice",
+  weightLabel: "",
   startDate: "2026-11-01",
   duration: "8 weeks · 16 live sessions",
   priceMinor: 150000,

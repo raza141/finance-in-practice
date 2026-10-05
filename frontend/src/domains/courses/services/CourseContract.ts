@@ -125,6 +125,8 @@ export class CourseContract {
     within("coachingLabel", coachingLabel, ...LIMITS.label);
     const practiceLabel = text("practiceLabel");
     within("practiceLabel", practiceLabel, ...LIMITS.label);
+    const weightLabel = text("weightLabel");
+    within("weightLabel", weightLabel, 0, LIMITS.label[1]);
 
     const bookingUrl = text("bookingUrl") || "#book";
     if (!CourseContract.isLink(bookingUrl)) errors.bookingUrl = "Use #book, a site path like /contact, or an https:// link.";
@@ -178,6 +180,7 @@ export class CourseContract {
         bookingUrl,
         coachingLabel,
         practiceLabel,
+        weightLabel,
         startDate: startDate || null,
         duration,
         priceMinor: priceMinor as number | null,
@@ -254,6 +257,7 @@ export class CourseContract {
       coaching: [false, 600],
       practice: [false, 600],
       deliverable: [false, 300],
+      weight: [false, 40],
     });
     if (problem) return problem;
     if (!CourseFormat.isPriority(o.priority)) return "choose a priority.";
@@ -264,6 +268,7 @@ export class CourseContract {
       coaching: o.coaching ?? "",
       practice: o.practice ?? "",
       ...(o.deliverable && { deliverable: o.deliverable }),
+      ...(o.weight && { weight: o.weight }),
     };
   }
 
