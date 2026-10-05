@@ -14,6 +14,44 @@ interface Migration {
   statements: string[];
 }
 
+/** Seed for 009_articles: the Journal's first article, formerly hard-coded in JournalCatalog. */
+const VAR_ARTICLE = {
+  title: "Three ways to compute Value at Risk",
+  slug: "three-ways-to-compute-var",
+  subtitle: "",
+  excerpt:
+    "Parametric, historical and Monte Carlo VaR answer the same question with different assumptions. Here is when each one earns its place.",
+  format: "Explainer",
+  category: "FRM & Risk Management",
+  difficulty: "Intermediate",
+  audience: ["FRM Part I", "Risk Professional"],
+  tags: ["Risk", "FRM", "Python"],
+  featuredImage: null,
+  seo: {
+    title: "",
+    description: "Parametric, historical and Monte Carlo VaR answer the same question with different assumptions. When each one earns its place.",
+    canonical: "",
+    ogTitle: "",
+    ogDescription: "",
+    ogImage: "",
+  },
+  social: { hook: "", body: "", question: "", hashtags: [], imageUrl: "", carousel: [], status: "not-started" },
+  cta: null,
+  disclaimer: "",
+  sources: [],
+  blocks: [
+    { id: "intro", type: "text", text: "Value at Risk asks one question: over a given horizon, what loss will not be exceeded with a given confidence? A one-day 99% VaR of 1 million means that on 99 days out of 100 the portfolio should lose less than 1 million. The three standard methods differ only in how they model the distribution of returns." },
+    { id: "h-param", type: "heading", level: 2, text: "Parametric (variance-covariance)" },
+    { id: "param", type: "text", text: "Assume returns are normally distributed, estimate the portfolio's volatility from the covariance matrix, and scale it by the z-score for the chosen confidence level (2.33 at 99%). It is fast and transparent, which is why it dominates exam questions, but it understates fat-tailed losses." },
+    { id: "h-hist", type: "heading", level: 2, text: "Historical simulation" },
+    { id: "hist", type: "text", text: "Revalue today's portfolio under every daily return in a look-back window, sort the resulting P&L and read off the loss at the chosen percentile. No distribution is assumed, so fat tails and skew in the data come through, but the answer is only as good as the window: a calm year produces a calm VaR." },
+    { id: "h-mc", type: "heading", level: 2, text: "Monte Carlo simulation" },
+    { id: "mc", type: "text", text: "Specify a model for the risk factors, simulate thousands of scenarios, revalue the portfolio in each and take the percentile. It handles options and other non-linear payoffs that the parametric method gets wrong, at the cost of computation time and model risk." },
+    { id: "h-which", type: "heading", level: 2, text: "Which one to use" },
+    { id: "which", type: "text", text: "For a linear portfolio and a quick answer, parametric VaR is fine. For realistic tails with enough data, use historical simulation. For options books or path-dependent exposure, Monte Carlo is the honest choice. In practice, run more than one: when they disagree, the disagreement is the insight." },
+  ],
+};
+
 const MIGRATIONS: Migration[] = [
   {
     id: "001_testimonials",
@@ -175,6 +213,79 @@ const MIGRATIONS: Migration[] = [
         CHECK (ticker IN ('CFA1', 'CFA2', 'FRM1', 'UNI', 'PSX', 'QUANT', 'BIZCON', 'FINCON'))`,
     ],
   },
+  {
+    id: "009_articles",
+    statements: [
+      // Research-article roles: owners publish directly and approve; editors
+      // submit for review. Everyone who is an admin today is the owner.
+      `ALTER TABLE admin_users ADD COLUMN role text NOT NULL DEFAULT 'editor' CHECK (role IN ('owner', 'editor'))`,
+      `UPDATE admin_users SET role = 'owner'`,
+      // One row per article. The body is a JSON document (see
+      // src/domains/journal/types.ts ArticleDocument): `draft` is what the
+      // editor autosaves, `published` is the snapshot readers see, so a live
+      // article can be edited for days without leaking half-done changes.
+      // The filter columns mirror the published snapshot (or the draft until
+      // the first publish). A future date_published means "scheduled".
+      // Keep the lists in sync with JournalTaxonomy.
+      `CREATE TABLE articles (
+        id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        slug           text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(slug) <= 100),
+        status         text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'review', 'published', 'archived')),
+        author_id      uuid NOT NULL REFERENCES admin_users (id),
+        format         text NOT NULL CHECK (format IN ('Explainer', 'Worked Example', 'Case Study', 'Python Notebook',
+                         'Market Note', 'Research Commentary', 'Framework')),
+        category       text CHECK (category IN ('CFA Curriculum', 'FRM & Risk Management', 'Quantitative Finance',
+                         'Portfolio Management', 'Valuation & Financial Modeling', 'Python & Financial Data',
+                         'Markets: Pakistan, UAE & Global')),
+        difficulty     text CHECK (difficulty IN ('Foundation', 'Intermediate', 'Advanced')),
+        audience       text[] NOT NULL DEFAULT '{}',
+        tags           text[] NOT NULL DEFAULT '{}',
+        draft          jsonb NOT NULL CHECK (jsonb_typeof(draft) = 'object'),
+        published      jsonb CHECK (jsonb_typeof(published) = 'object'),
+        review_note    text CHECK (char_length(review_note) <= 2000),
+        ai_review      jsonb,
+        date_published timestamptz,
+        date_modified  timestamptz,
+        version        integer NOT NULL DEFAULT 1,
+        created_at     timestamptz NOT NULL DEFAULT now(),
+        updated_at     timestamptz NOT NULL DEFAULT now(),
+        CHECK (status <> 'published' OR (published IS NOT NULL AND date_published IS NOT NULL AND date_modified IS NOT NULL))
+      )`,
+      `CREATE INDEX articles_public_idx ON articles (status, date_published DESC)`,
+      `CREATE INDEX articles_tags_idx ON articles USING gin (tags)`,
+      `CREATE INDEX articles_author_idx ON articles (author_id)`,
+      // Snapshots: every publish, manual checkpoint (Cmd+S), submit and restore.
+      `CREATE TABLE article_revisions (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        article_id uuid NOT NULL REFERENCES articles (id) ON DELETE CASCADE,
+        kind       text NOT NULL CHECK (kind IN ('publish', 'checkpoint', 'restore', 'submit')),
+        document   jsonb NOT NULL,
+        created_by uuid REFERENCES admin_users (id) ON DELETE SET NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX article_revisions_article_idx ON article_revisions (article_id, created_at DESC)`,
+      // The article that used to be hard-coded in JournalCatalog, so its URL keeps working.
+      `INSERT INTO articles (slug, status, author_id, format, category, difficulty, audience, tags, draft, published,
+                             date_published, date_modified)
+       SELECT 'three-ways-to-compute-var', 'published', id, 'Explainer', 'FRM & Risk Management', 'Intermediate',
+              '{FRM Part I,Risk Professional}', '{Risk,FRM,Python}', doc, doc,
+              '2026-10-04T00:00:00+04:00', '2026-10-04T00:00:00+04:00'
+       FROM admin_users, (SELECT $seed$${JSON.stringify(VAR_ARTICLE)}$seed$::jsonb AS doc) AS seed
+       WHERE role = 'owner' ORDER BY created_at LIMIT 1`,
+    ],
+  },
+  {
+    id: "010_article_review",
+    statements: [
+      // Review moves out of status into its own column, so a live article
+      // stays live while an editor's changes to it wait for the owner.
+      `ALTER TABLE articles DROP CONSTRAINT articles_status_check`,
+      `UPDATE articles SET status = 'draft' WHERE status = 'review'`,
+      `ALTER TABLE articles ADD CONSTRAINT articles_status_check CHECK (status IN ('draft', 'published', 'archived'))`,
+      `ALTER TABLE articles ADD COLUMN review_state text CHECK (review_state IN ('pending', 'changes-requested'))`,
+      `CREATE INDEX articles_review_idx ON articles (review_state) WHERE review_state IS NOT NULL`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
@@ -211,6 +322,20 @@ class SchemaMigrator {
       console.log(`Applied ${migration.id}`);
     }
   }
+}
+
+// `npm run db:migrate -- --print 009_articles` prints one migration as SQL to
+// paste into the Vercel/Neon query editor (production has no local URL).
+const printIndex = process.argv.indexOf("--print");
+if (printIndex !== -1) {
+  const migration = MIGRATIONS.find((m) => m.id === process.argv[printIndex + 1]);
+  if (!migration) {
+    console.error(`Unknown migration. Known: ${MIGRATIONS.map((m) => m.id).join(", ")}`);
+    process.exit(1);
+  }
+  const statements = [...migration.statements, `INSERT INTO schema_migrations (id) VALUES ('${migration.id}')`];
+  console.log(`BEGIN;\n${statements.map((st) => st.replace(/\s*\n\s*/g, " ")).join(";\n")};\nCOMMIT;`);
+  process.exit(0);
 }
 
 const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;

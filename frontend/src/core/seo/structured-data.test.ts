@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { Course } from "@/domains/courses/types";
-import { JournalCatalog } from "@/domains/journal/services/JournalCatalog";
+import { JournalFramework } from "@/domains/journal/services/JournalFramework";
+import type { PublishedArticle } from "@/domains/journal/types";
 import type { Instructor } from "@/domains/team/types";
 
 import { StructuredData, type JsonLdNode } from "./StructuredData";
@@ -35,16 +36,28 @@ describe("StructuredData", () => {
     expect(byType(site, "WebSite").publisher).toEqual({ "@id": StructuredData.ORG_ID });
   });
 
-  it("marks up a journal article with dates, publisher and breadcrumbs", () => {
-    const article = new JournalCatalog().all()[0];
+  it("marks up a journal article from its visible fields, with real dates and author", () => {
+    const doc = { ...JournalFramework.newDocument("Explainer", "three-ways-to-compute-var"), title: "Three ways to compute VaR", excerpt: "Summary.", tags: ["Risk", "FRM"] };
+    const article: PublishedArticle = {
+      id: "a1",
+      doc: { ...doc, featuredImage: { url: "https://cdn.example.com/var.png", alt: "VaR", caption: "" } },
+      authorName: "Muhammad Ahmed Raza",
+      datePublished: "2026-10-04T05:00:00.000Z",
+      dateModified: "2026-10-06T08:00:00.000Z",
+    };
     const data = StructuredData.article(article);
-    const post = byType(data, "BlogPosting");
-    expect(post.headline).toBe(article.title);
-    expect(post.datePublished).toBe(`${article.publishedAt}T00:00:00+04:00`);
+    const post = byType(data, "Article");
+    expect(post.headline).toBe(doc.title);
+    expect(post.datePublished).toBe(article.datePublished);
+    expect(post.dateModified).toBe(article.dateModified);
+    expect(post.image).toBe("https://cdn.example.com/var.png");
+    expect(post.author).toMatchObject({ "@type": "Person", name: "Muhammad Ahmed Raza" });
+    expect(post.keywords).toBe("Risk, FRM");
     expect(post.publisher).toEqual({ "@id": StructuredData.ORG_ID });
+    expect(nodes(data).some((n) => n["@type"] === "FAQPage")).toBe(false);
     const crumbs = byType(data, "BreadcrumbList").itemListElement as JsonLdNode[];
     expect(crumbs.map((c) => c.position)).toEqual([1, 2, 3]);
-    expect(crumbs[2].item).toBe(`https://financeinpractice.me/journal/${article.slug}`);
+    expect(crumbs[2].item).toBe("https://financeinpractice.me/journal/three-ways-to-compute-var");
   });
 
   it("marks up a course with an online instance and a priced offer", () => {

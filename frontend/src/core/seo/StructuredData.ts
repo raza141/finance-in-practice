@@ -1,6 +1,6 @@
 import { siteConfig } from "@/core/config/site";
 import type { Course } from "@/domains/courses/types";
-import type { Article } from "@/domains/journal/types";
+import type { PublishedArticle } from "@/domains/journal/types";
 import type { Instructor } from "@/domains/team/types";
 
 export type JsonLdNode = Record<string, unknown>;
@@ -66,29 +66,32 @@ export class StructuredData {
     ]);
   }
 
-  /** /journal/[slug]. Authored and published by the organisation until articles carry a named author. */
-  static article(article: Article): JsonLdNode {
-    const url = `${siteConfig.url}/journal/${article.slug}`;
+  /** /journal/[slug]: built only from what the page shows (title, excerpt, dates, author, image, tags). */
+  static article(article: PublishedArticle): JsonLdNode {
+    const { doc } = article;
+    const url = `${siteConfig.url}/journal/${doc.slug}`;
     return StructuredData.graph([
       {
-        "@type": "BlogPosting",
+        "@type": "Article",
         "@id": `${url}#article`,
-        headline: article.title,
-        description: article.summary,
-        datePublished: StructuredData.dateTime(article.publishedAt),
-        dateModified: StructuredData.dateTime(article.publishedAt),
-        keywords: article.tags.join(", "),
+        headline: doc.title,
+        description: doc.excerpt,
+        datePublished: article.datePublished,
+        dateModified: article.dateModified,
+        ...(doc.tags.length > 0 && { keywords: doc.tags.join(", ") }),
+        ...(doc.category && { articleSection: doc.category }),
+        ...(doc.audience.length > 0 && { audience: { "@type": "EducationalAudience", educationalRole: doc.audience.join(", ") } }),
         inLanguage: "en",
         url,
         mainEntityOfPage: url,
-        image: `${siteConfig.url}/brand/fip-logo.png`,
-        author: { "@id": StructuredData.ORG_ID },
+        image: doc.featuredImage?.url ? StructuredData.absolute(doc.featuredImage.url) : `${siteConfig.url}/brand/fip-logo.png`,
+        author: { "@type": "Person", name: article.authorName, url: `${siteConfig.url}/about` },
         publisher: { "@id": StructuredData.ORG_ID },
         isPartOf: { "@id": StructuredData.SITE_ID },
       },
       StructuredData.breadcrumbs([
         { name: "Research Terminal", path: "/journal" },
-        { name: article.title, path: `/journal/${article.slug}` },
+        { name: doc.title, path: `/journal/${doc.slug}` },
       ]),
     ]);
   }

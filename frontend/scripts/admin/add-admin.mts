@@ -3,6 +3,11 @@
  *
  *   npm run admin:add -- --email you@example.com --name "Your Name"
  *   npm run admin:add -- --email you@example.com --name "Your Name" --password
+ *   npm run admin:add -- --email you@example.com --name "Your Name" --role owner
+ *
+ * New admins are editors (they submit research articles for review) unless
+ * --role owner is given; owners publish directly and approve others' work.
+ * Without --role, an existing admin keeps their role.
  *
  * Without --password the admin signs in with Google (an account using the
  * same email) and can set a password later under Admin → Account. With
@@ -40,13 +45,15 @@ const { values } = parseArgs({
     email: { type: "string" },
     name: { type: "string" },
     password: { type: "boolean", default: false },
+    role: { type: "string" },
   },
 });
 
 const email = values.email?.trim().toLowerCase() ?? "";
 const name = values.name?.trim() ?? "";
-if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !name) {
-  console.error('Usage: npm run admin:add -- --email you@example.com --name "Your Name" [--password]');
+const role = values.role ?? null;
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !name || (role !== null && role !== "owner" && role !== "editor")) {
+  console.error('Usage: npm run admin:add -- --email you@example.com --name "Your Name" [--password] [--role owner|editor]');
   process.exit(1);
 }
 
@@ -73,10 +80,11 @@ if (values.password) {
 
 const sql = neon(url);
 const [row] = (await sql`
-  INSERT INTO admin_users (email, name, password_hash)
-  VALUES (${email}, ${name}, ${passwordHash})
+  INSERT INTO admin_users (email, name, password_hash, role)
+  VALUES (${email}, ${name}, ${passwordHash}, ${role ?? "editor"})
   ON CONFLICT (email) DO UPDATE
     SET name = EXCLUDED.name,
+        role = COALESCE(${role}, admin_users.role),
         password_hash = COALESCE(EXCLUDED.password_hash, admin_users.password_hash),
         active = true
   RETURNING (xmax = 0) AS inserted
