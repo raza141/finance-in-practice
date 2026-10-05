@@ -1,17 +1,24 @@
-import type { Course, SyllabusModule } from "../types";
+import type { Course, CourseFaq, CourseModule, EngagementOption, MethodStep, ModulePriority } from "../types";
 
 /** Display rules and defensive parsing for course data. Pure; safe on client and server. */
 export class CourseFormat {
-  /** The fixed category list; mirrors the CHECK constraint in migration 003_courses. */
+  /** The fixed category list; mirrors the CHECK constraint in migration 015_course_cms. */
   static readonly CATEGORIES = [
-    "Portfolio Construction",
-    "Fixed Income",
-    "Quantitative Finance",
-    "Risk Management",
-    "Wealth Management",
-    "Financial Modeling",
-    "Exam Prep",
+    "CFA",
+    "FRM",
+    "Uni Finance",
+    "Applied Finance",
+    "Business Consultancy",
+    "Financial Consultancy",
   ] as const;
+
+  static readonly PRIORITIES = {
+    foundation: "Foundation",
+    core: "Core",
+    high_priority: "High priority",
+  } as const;
+
+  private static readonly NUMBERS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
 
   static price(course: Pick<Course, "priceMinor" | "currency">): string {
     if (course.priceMinor === null) return "On request";
@@ -34,26 +41,73 @@ export class CourseFormat {
     );
   }
 
-  /** Keep only well-formed modules, so one bad JSON edit can't break the page. */
-  static syllabus(value: unknown): SyllabusModule[] {
-    if (!Array.isArray(value)) return [];
-    return value.flatMap((item): SyllabusModule[] => {
-      if (typeof item !== "object" || item === null) return [];
-      const { title, summary, topics } = item as Record<string, unknown>;
-      if (typeof title !== "string" || !title.trim()) return [];
-      return [
-        {
-          title: title.trim(),
-          ...(typeof summary === "string" && summary.trim() ? { summary: summary.trim() } : {}),
-          topics: Array.isArray(topics)
-            ? topics.filter((t): t is string => typeof t === "string" && t.trim() !== "").map((t) => t.trim())
-            : [],
-        },
-      ];
+  /** 3 -> "three"; digits past eight. */
+  static count(n: number): string {
+    return CourseFormat.NUMBERS[n] ?? String(n);
+  }
+
+  static isPriority(value: unknown): value is ModulePriority {
+    return typeof value === "string" && Object.hasOwn(CourseFormat.PRIORITIES, value);
+  }
+
+  /** "Not another lecture series.\nBring your attempt…" -> headline + body. */
+  static splitFirstLine(text: string): { headline: string; body: string } {
+    const [headline, ...rest] = text.trim().split("\n");
+    return { headline: headline.trim(), body: rest.join("\n").trim() };
+  }
+
+  // Defensive readers for the jsonb columns: keep only well-formed items, so one bad row can't break a page.
+
+  static method(value: unknown): MethodStep[] {
+    return CourseFormat.items(value, (o) => {
+      const title = CourseFormat.str(o.title);
+      return title ? { title, description: CourseFormat.str(o.description) } : null;
     });
   }
 
-  static topicCount(syllabus: readonly SyllabusModule[]): number {
-    return syllabus.reduce((sum, module) => sum + module.topics.length, 0);
+  static modules(value: unknown): CourseModule[] {
+    return CourseFormat.items(value, (o) => {
+      const title = CourseFormat.str(o.title);
+      if (!title) return null;
+      const deliverable = CourseFormat.str(o.deliverable);
+      return {
+        title,
+        priority: CourseFormat.isPriority(o.priority) ? o.priority : "core",
+        summary: CourseFormat.str(o.summary),
+        coaching: CourseFormat.str(o.coaching),
+        practice: CourseFormat.str(o.practice),
+        ...(deliverable && { deliverable }),
+      };
+    });
+  }
+
+  static options(value: unknown): EngagementOption[] {
+    return CourseFormat.items(value, (o) => {
+      const title = CourseFormat.str(o.title);
+      if (!title) return null;
+      const bookingUrl = CourseFormat.str(o.bookingUrl);
+      return { title, description: CourseFormat.str(o.description), fee: CourseFormat.str(o.fee), ...(bookingUrl && { bookingUrl }) };
+    });
+  }
+
+  static faqs(value: unknown): CourseFaq[] {
+    return CourseFormat.items(value, (o) => {
+      const question = CourseFormat.str(o.question);
+      const answer = CourseFormat.str(o.answer);
+      return question && answer ? { question, answer } : null;
+    });
+  }
+
+  private static str(value: unknown): string {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  private static items<T>(value: unknown, read: (o: Record<string, unknown>) => T | null): T[] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item) => {
+      if (typeof item !== "object" || item === null) return [];
+      const parsed = read(item as Record<string, unknown>);
+      return parsed ? [parsed] : [];
+    });
   }
 }

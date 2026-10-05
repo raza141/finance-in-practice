@@ -9,6 +9,8 @@
  */
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 
+import { COURSE_SEEDS, courseSeedStatement } from "./course-seeds.mts";
+
 interface Migration {
   id: string;
   statements: string[];
@@ -416,6 +418,62 @@ const MIGRATIONS: Migration[] = [
         ADD COLUMN plan_notes text NOT NULL DEFAULT '' CHECK (char_length(plan_notes) <= 500)`,
     ],
   },
+  {
+    id: "015_course_cms",
+    statements: [
+      // New category list (keep in sync with CourseFormat.CATEGORIES). Old
+      // values map: Exam Prep -> CFA, Wealth Management -> Financial
+      // Consultancy, everything else -> Applied Finance.
+      `ALTER TABLE courses DROP CONSTRAINT courses_category_check`,
+      `UPDATE courses SET category = CASE category WHEN 'Exam Prep' THEN 'CFA'
+        WHEN 'Wealth Management' THEN 'Financial Consultancy' ELSE 'Applied Finance' END
+        WHERE category NOT IN ('CFA', 'FRM', 'Uni Finance', 'Applied Finance', 'Business Consultancy', 'Financial Consultancy')`,
+      `ALTER TABLE courses ADD CONSTRAINT courses_category_check CHECK (category IN
+        ('CFA', 'FRM', 'Uni Finance', 'Applied Finance', 'Business Consultancy', 'Financial Consultancy'))`,
+      // Brochures may also be uploaded PDFs (Vercel Blob https URLs).
+      `ALTER TABLE courses DROP CONSTRAINT courses_brochure_url_check`,
+      `ALTER TABLE courses ADD CONSTRAINT courses_brochure_url_check CHECK (char_length(brochure_url) <= 500
+        AND brochure_url ~ '^(/brochures/[A-Za-z0-9._-]+\\.pdf|https://\\S+\\.pdf)$')`,
+      // The syllabus becomes coaching modules: [{ title, priority, summary,
+      // coaching, practice, deliverable? }]. Old topics become the practice line.
+      `ALTER TABLE courses RENAME COLUMN syllabus TO modules`,
+      `ALTER TABLE courses RENAME CONSTRAINT courses_syllabus_check TO courses_modules_check`,
+      `UPDATE courses SET modules = (
+        SELECT coalesce(jsonb_agg(jsonb_build_object(
+          'title', m->>'title', 'priority', 'core', 'summary', coalesce(m->>'summary', ''), 'coaching', '',
+          'practice', coalesce((SELECT string_agg(t, '; ') FROM jsonb_array_elements_text(coalesce(m->'topics', '[]')) AS t), '')
+        ) ORDER BY ord), '[]')
+        FROM jsonb_array_elements(modules) WITH ORDINALITY AS x(m, ord))`,
+      // Page content. Lists are jsonb arrays in display order (see
+      // src/domains/courses/types.ts); the editor always saves a course whole.
+      // testimonial_ticker uses the same list as testimonials_ticker_check (008).
+      // No SQL comments inside statements: --print joins each onto one line.
+      `ALTER TABLE courses
+        ADD COLUMN eyebrow         text NOT NULL DEFAULT '' CHECK (char_length(eyebrow) <= 40),
+        ADD COLUMN audience        text NOT NULL DEFAULT '' CHECK (char_length(audience) <= 800),
+        ADD COLUMN not_for         text NOT NULL DEFAULT '' CHECK (char_length(not_for) <= 800),
+        ADD COLUMN difference      text NOT NULL DEFAULT '' CHECK (char_length(difference) <= 800),
+        ADD COLUMN disclaimer      text NOT NULL DEFAULT '' CHECK (char_length(disclaimer) <= 800),
+        ADD COLUMN cta_label       text NOT NULL DEFAULT 'Book a free call' CHECK (char_length(cta_label) BETWEEN 2 AND 40),
+        ADD COLUMN booking_url     text NOT NULL DEFAULT '#book' CHECK (char_length(booking_url) <= 500
+                                     AND booking_url ~ '^(#[a-z0-9-]+|/[A-Za-z0-9/_?=&.#-]*|https://\\S+)$'),
+        ADD COLUMN coaching_label  text NOT NULL DEFAULT 'Official-question coaching' CHECK (char_length(coaching_label) BETWEEN 2 AND 40),
+        ADD COLUMN practice_label  text NOT NULL DEFAULT 'In practice' CHECK (char_length(practice_label) BETWEEN 2 AND 40),
+        ADD COLUMN method          jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(method) = 'array'),
+        ADD COLUMN options         jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(options) = 'array'),
+        ADD COLUMN faqs            jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(faqs) = 'array'),
+        ADD COLUMN seo_title       text NOT NULL DEFAULT '' CHECK (char_length(seo_title) <= 70),
+        ADD COLUMN seo_description text NOT NULL DEFAULT '' CHECK (char_length(seo_description) <= 170),
+        ADD COLUMN testimonial_ticker text CHECK (testimonial_ticker IN ('CFA1', 'CFA2', 'FRM1', 'UNI', 'PSX', 'QUANT', 'BIZCON', 'FINCON')),
+        ADD COLUMN updated_by      uuid REFERENCES admin_users (id) ON DELETE SET NULL`,
+    ],
+  },
+  // Sample courses (scripts/db/course-seeds.mts), one migration each so a
+  // printed block stays short enough for the Vercel query editor.
+  ...COURSE_SEEDS.map((seed, index) => ({
+    id: `0${16 + index}_course_${seed.slug.replace(/-/g, "_")}`,
+    statements: [courseSeedStatement(seed)],
+  })),
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

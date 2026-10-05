@@ -65,6 +65,19 @@ export class TestimonialRepository implements TestimonialStore {
     return rows.map(TestimonialRepository.toTestimonial);
   }
 
+  /** Approved testimonials for one ticker, e.g. on a course page. */
+  async approvedFor(ticker: Ticker, limit = 6): Promise<Testimonial[]> {
+    const rows = (await this.sql`
+      SELECT id, author, context, country, city, program, quote, outcome,
+             side, ticker, conviction, before_score, after_score, yield_percent
+      FROM testimonials
+      WHERE status = 'approved' AND ticker = ${ticker}
+      ORDER BY reviewed_at DESC NULLS LAST, submitted_at DESC
+      LIMIT ${limit}
+    `) as PublicRow[];
+    return rows.map(TestimonialRepository.toTestimonial);
+  }
+
   /** Average yield per ticker over approved order-book testimonials. */
   async tickerQuotes(): Promise<TickerQuote[]> {
     const rows = (await this.sql`

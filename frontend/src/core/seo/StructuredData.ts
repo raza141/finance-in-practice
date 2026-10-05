@@ -108,8 +108,8 @@ export class StructuredData {
         url,
         inLanguage: "en",
         provider: { "@id": StructuredData.ORG_ID },
-        ...(course.syllabus.length > 0 && {
-          syllabusSections: course.syllabus.map((m) => ({
+        ...(course.modules.length > 0 && {
+          syllabusSections: course.modules.map((m) => ({
             "@type": "Syllabus",
             name: m.title,
             ...(m.summary && { description: m.summary }),

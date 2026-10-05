@@ -1,29 +1,77 @@
+import type { Ticker } from "@/domains/testimonials/types";
+
 import type { CourseFormat } from "./services/CourseFormat";
 
 export type CourseCategory = (typeof CourseFormat.CATEGORIES)[number];
+export type ModulePriority = keyof typeof CourseFormat.PRIORITIES;
 
-export interface SyllabusModule {
+/** One stage of the coaching method, e.g. "Prepare". */
+export interface MethodStep {
   title: string;
-  summary?: string;
-  topics: string[];
+  description: string;
 }
 
-/** A published course, as served on /courses/[slug]. */
+/** One curriculum module. The two labelled lines use the course's coachingLabel / practiceLabel. */
+export interface CourseModule {
+  title: string;
+  priority: ModulePriority;
+  /** One-line outcome. */
+  summary: string;
+  coaching: string;
+  practice: string;
+  deliverable?: string;
+}
+
+/** A way to buy, e.g. "Single session" or "Full-level programme". */
+export interface EngagementOption {
+  title: string;
+  description: string;
+  /** Free text, e.g. "AED 450 per session" or "On request". */
+  fee: string;
+  /** Overrides the course's booking link for this option. */
+  bookingUrl?: string;
+}
+
+export interface CourseFaq {
+  question: string;
+  answer: string;
+}
+
+/** A course as served on /courses/[slug] and edited in /admin/courses. Holds no admin-only data. */
 export interface Course {
   id: string;
   slug: string;
   title: string;
-  summary: string;
   category: CourseCategory;
+  /** Small label above the title; blank shows the category. */
+  eyebrow: string;
+  /** Positioning statement, shown under the title and on course cards. */
+  summary: string;
+  audience: string;
+  notFor: string;
+  /** What makes it different. The first line is the headline. */
+  difference: string;
+  disclaimer: string;
+  ctaLabel: string;
+  /** "#book" (the on-page booking panel), a site path, or an https URL. */
+  bookingUrl: string;
+  coachingLabel: string;
+  practiceLabel: string;
   /** ISO date (YYYY-MM-DD); null when the next start date is on request. */
   startDate: string | null;
-  /** Free text, e.g. "8 weeks · 16 live sessions". */
+  /** Free text, e.g. "1-on-1 · flexible schedule". */
   duration: string;
-  /** Fee in minor units (fils, cents); null when the price is on request. */
+  /** Headline fee in minor units (fils, cents); null when on request. Invoices and client plans pick it up. */
   priceMinor: number | null;
-  /** ISO 4217 code; the database defaults it to "AED". */
   currency: string;
   isActive: boolean;
-  syllabus: SyllabusModule[];
+  method: MethodStep[];
+  modules: CourseModule[];
+  options: EngagementOption[];
+  faqs: CourseFaq[];
   brochureUrl: string | null;
+  seoTitle: string;
+  seoDescription: string;
+  /** Approved testimonials with this ticker show on the page. */
+  testimonialTicker: Ticker | null;
 }

@@ -4,8 +4,8 @@ import { CourseFormat } from "./CourseFormat";
 
 describe("CourseFormat", () => {
   it("formats fees from minor units", () => {
-    expect(CourseFormat.price({ priceMinor: 450000, currency: "AED" })).toBe("AED\u00a04,500");
-    expect(CourseFormat.price({ priceMinor: 99950, currency: "USD" })).toBe("USD\u00a0999.50");
+    expect(CourseFormat.price({ priceMinor: 450000, currency: "AED" })).toBe("AED 4,500");
+    expect(CourseFormat.price({ priceMinor: 99950, currency: "USD" })).toBe("USD 999.50");
     expect(CourseFormat.price({ priceMinor: 0, currency: "AED" })).toBe("Free");
     expect(CourseFormat.price({ priceMinor: null, currency: "AED" })).toBe("On request");
   });
@@ -15,24 +15,32 @@ describe("CourseFormat", () => {
     expect(CourseFormat.startDate(null)).toBe("On request");
   });
 
-  it("keeps only well-formed syllabus modules", () => {
+  it("keeps only well-formed modules, defaulting an unknown priority to core", () => {
     expect(
-      CourseFormat.syllabus([
-        { title: " Risk budgeting ", summary: "", topics: ["HRP", 3, " ", "Shrinkage "] },
-        { title: "", topics: [] },
-        { summary: "no title" },
+      CourseFormat.modules([
+        { title: " Fixed Income ", priority: "high_priority", summary: "Yield", coaching: "c", practice: "p", deliverable: " " },
+        { title: "", priority: "core" },
         "junk",
         null,
-        { title: "Backtesting" },
+        { title: "Ethics", priority: "urgent" },
       ]),
     ).toEqual([
-      { title: "Risk budgeting", topics: ["HRP", "Shrinkage"] },
-      { title: "Backtesting", topics: [] },
+      { title: "Fixed Income", priority: "high_priority", summary: "Yield", coaching: "c", practice: "p" },
+      { title: "Ethics", priority: "core", summary: "", coaching: "", practice: "" },
     ]);
-    expect(CourseFormat.syllabus({ not: "an array" })).toEqual([]);
+    expect(CourseFormat.modules({ not: "an array" })).toEqual([]);
   });
 
-  it("counts topics", () => {
-    expect(CourseFormat.topicCount([{ title: "a", topics: ["x", "y"] }, { title: "b", topics: ["z"] }])).toBe(3);
+  it("drops FAQs missing a question or answer, and untitled steps and options", () => {
+    expect(CourseFormat.faqs([{ question: "Q", answer: "" }, { question: "Q2", answer: "A2" }])).toEqual([{ question: "Q2", answer: "A2" }]);
+    expect(CourseFormat.method([{ description: "no title" }, { title: "Apply" }])).toEqual([{ title: "Apply", description: "" }]);
+    expect(CourseFormat.options([{ title: "Single", fee: "Free", bookingUrl: "" }])).toEqual([{ title: "Single", description: "", fee: "Free" }]);
+  });
+
+  it("splits the difference into headline and body, and spells small counts", () => {
+    expect(CourseFormat.splitFirstLine("Not a lecture.\nBring your attempt.")).toEqual({ headline: "Not a lecture.", body: "Bring your attempt." });
+    expect(CourseFormat.splitFirstLine("One line")).toEqual({ headline: "One line", body: "" });
+    expect(CourseFormat.count(3)).toBe("three");
+    expect(CourseFormat.count(12)).toBe("12");
   });
 });
