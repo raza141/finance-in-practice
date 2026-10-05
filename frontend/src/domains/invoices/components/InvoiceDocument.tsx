@@ -2,10 +2,9 @@ import { siteConfig } from "@/core/config/site";
 import { Logo } from "@/core/components/layout/Logo";
 import { WHATSAPP_GLYPH } from "@/core/components/ui/WhatsAppButton";
 
-import { InvoiceContract } from "../services/InvoiceContract";
 import { InvoiceEmails } from "../services/InvoiceEmails";
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { Invoice } from "../types";
+import type { Invoice, ItemUnit } from "../types";
 
 const STAMP: Partial<Record<Invoice["status"], string>> = {
   paid: "border-emerald-400 text-emerald-300",
@@ -37,9 +36,16 @@ const LABEL =
   "font-mono text-[11px] font-semibold tracking-[0.25em] text-gold uppercase";
 /** Row label inside a section. */
 const ROW_LABEL =
-  "font-mono text-[11px] tracking-[0.18em] text-slate-500 uppercase";
+  "font-mono text-[11px] tracking-[0.18em] whitespace-nowrap text-slate-500 uppercase";
 const TH =
   "px-3 py-3 font-mono text-[11px] font-semibold tracking-[0.2em] text-slate-900 uppercase";
+/** The unit beside a line's quantity: "1 month", "1.5 hours". */
+const QTY_UNIT: Record<ItemUnit, (quantity: number) => string> = {
+  hour: (q) => (q === 1 ? "hour" : "hours"),
+  month: (q) => (q === 1 ? "month" : "months"),
+  "on-demand": () => "on demand",
+  contract: () => "contract",
+};
 /** Bank rows whose values are codes, set in mono. */
 const CODE_ROWS = new Set(["Account number", "IBAN", "SWIFT / BIC"]);
 
@@ -82,16 +88,16 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
       </header>
 
       <div className="px-8 py-10 sm:px-12">
-        <section className="grid gap-8 text-sm leading-relaxed sm:grid-cols-3 print:grid-cols-3">
+        <section className="grid gap-8 text-sm leading-relaxed sm:grid-cols-[1fr_1fr_auto] print:grid-cols-[1fr_1fr_auto]">
           <div>
             <h2 className={LABEL}>From</h2>
             <p className="mt-3 font-serif text-lg font-bold text-canvas">
               {siteConfig.name}
             </p>
             <p className="mt-1 text-slate-500">
-              {whatsapp.owner}
+              Ahmed Raza
               <br />
-              Dubai, United Arab Emirates
+              Abu Dhabi, UAE
               <br />
               {whatsapp.display}
               {siteConfig.contact.email && (
@@ -137,7 +143,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <h2 className={LABEL}>Details</h2>
             <dl className="mt-3 grid grid-cols-[auto_1fr] items-baseline gap-x-5 gap-y-1.5">
               <dt className={ROW_LABEL}>Invoice no.</dt>
-              <dd className="font-semibold text-slate-900">
+              <dd className="font-semibold whitespace-nowrap text-slate-900">
                 {invoice.number ?? "Assigned on issue"}
               </dd>
               <dt className={ROW_LABEL}>Issued</dt>
@@ -189,11 +195,11 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
                       {item.period ? InvoiceEmails.period(item.period) : "—"}
                     </td>
                   )}
-                  <td className="px-3 py-4 text-right tabular-nums">
+                  <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">
                     {item.quantity}
                     {item.unit && (
-                      <span className="mt-0.5 block text-slate-500">
-                        {InvoiceContract.UNITS[item.unit]}
+                      <span className="ml-1 text-xs text-slate-500">
+                        {QTY_UNIT[item.unit](item.quantity)}
                       </span>
                     )}
                   </td>
@@ -209,13 +215,13 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           </table>
         </div>
 
-        <section className="mt-10 grid gap-8 sm:grid-cols-[1fr_19rem] print:grid-cols-[1fr_19rem]">
+        <section className="mt-10 grid gap-8 sm:grid-cols-[1fr_19rem] sm:gap-16 print:grid-cols-[1fr_19rem] print:gap-16">
           <div className="break-inside-avoid">
             {(bankRows.length > 0 || invoice.paymentInstructions) && (
               <>
                 <h2 className={LABEL}>Payment desk</h2>
                 {bankRows.length > 0 && (
-                  <dl className="mt-3 grid grid-cols-[auto_1fr] items-baseline gap-x-8 gap-y-2 text-sm">
+                  <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-0.5 text-sm">
                     {bankRows.map(([label, value]) => (
                       <div key={label} className="contents">
                         <dt className={ROW_LABEL}>
@@ -290,7 +296,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         )}
 
         <section className="mt-10 grid break-inside-avoid gap-8 border-t border-slate-200 pt-8 sm:grid-cols-[1fr_auto] print:grid-cols-[1fr_auto]">
-          <div>
+          <div className="border-l-4 border-gold pl-5">
             <h2 className="font-serif text-xl font-bold text-canvas">
               Thank you{firstName ? `, ${firstName}` : ""}.
             </h2>
