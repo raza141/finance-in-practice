@@ -411,8 +411,12 @@ if (printIndex !== -1) {
     process.exit(1);
   }
   const statements = [...migration.statements, `INSERT INTO schema_migrations (id) VALUES ('${migration.id}')`];
-  // One line: the Vercel query editor takes a single line without comments.
-  console.log(`BEGIN; ${statements.map((st) => st.replace(/\s*\n\s*/g, " ")).join("; ")}; COMMIT;`);
+  // One line, one statement: the Vercel query editor takes a single line and
+  // runs it as one prepared statement. A DO block is a single statement and
+  // runs atomically, like the transaction db:migrate uses.
+  const body = statements.map((st) => st.replace(/\s*\n\s*/g, " ")).join("; ");
+  if (body.includes("$migrate$")) throw new Error("Statement contains the DO block delimiter $migrate$");
+  console.log(`DO $migrate$ BEGIN ${body}; END $migrate$`);
   process.exit(0);
 }
 
