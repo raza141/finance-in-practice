@@ -14,6 +14,10 @@ const PRIORITY_STYLE: Record<ModulePriority, string> = {
   high_priority: "border-gold/50 bg-gold/10 text-gold",
 };
 
+/** Cards side by side from tablet width: up to four in one row, so four never wrap as 3 + 1. */
+const ROW: Record<number, string> = { 1: "md:grid-cols-1", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" };
+const row = (count: number) => ROW[count] ?? "md:grid-cols-3";
+
 const external = (href: string) => (href.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {});
 
 /**
@@ -90,7 +94,7 @@ export function CourseView({
               eyebrow="The Finance in Practice method"
               title={`Every topic goes through ${CourseFormat.count(course.method.length)} ${course.method.length === 1 ? "stage" : "stages"}.`}
             />
-            <ol className={`mt-10 grid gap-4 md:grid-cols-2 ${course.method.length % 3 === 0 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+            <ol className={`mt-10 grid gap-4 ${row(course.method.length)}`}>
               {course.method.map((step, index) => (
                 <li key={index} className="rounded-xl border border-line bg-surface p-6">
                   <span className="font-mono text-sm text-quant tabular-nums">{String(index + 1).padStart(2, "0")}</span>
@@ -104,7 +108,7 @@ export function CourseView({
                 <h3 className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
                   {CourseFormat.count(course.modes.length)} {course.modes.length === 1 ? "way" : "ways"} to learn
                 </h3>
-                <ul className={`mt-5 grid gap-4 ${course.modes.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+                <ul className={`mt-5 grid gap-4 ${row(course.modes.length)}`}>
                   {course.modes.map((mode, index) => (
                     <li key={index} className="rounded-xl border border-line p-5">
                       <p className="font-bold">{mode.title}</p>
@@ -173,7 +177,7 @@ export function CourseView({
         <section aria-labelledby="options-heading" className="border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
-            <ul className={`mt-10 grid gap-4 ${course.options.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+            <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
               {course.options.map((option, index) => {
                 const href = option.bookingUrl || course.bookingUrl;
                 return (

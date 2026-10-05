@@ -425,6 +425,15 @@ export function examMethodUpdateStatement(): string {
   );
 }
 
+/** As seeded by 016. */
+const CFA1_DIFFERENCE = COURSE_SEEDS.find((seed) => seed.slug === "cfa-level-1")!.difference;
+
+/** 021: CFA Level I's difference text now opens with "Learn it your way", unless it was already edited. */
+export function cfa1DifferenceUpdateStatement(): string {
+  const next = "Not another lecture series.\nLearn it your way. Leave knowing exactly what went wrong and what to do next.";
+  return `UPDATE courses SET difference = ${q(next)} WHERE slug = 'cfa-level-1' AND difference = ${q(CFA1_DIFFERENCE)}`;
+}
+
 /** One INSERT per course. */
 export function courseSeedStatement(seed: CourseSeed): string {
   return (

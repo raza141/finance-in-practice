@@ -9,7 +9,7 @@
  */
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 
-import { COURSE_SEEDS, courseSeedStatement, examMethodUpdateStatement } from "./course-seeds.mts";
+import { COURSE_SEEDS, cfa1DifferenceUpdateStatement, courseSeedStatement, examMethodUpdateStatement } from "./course-seeds.mts";
 
 interface Migration {
   id: string;
@@ -481,6 +481,7 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE courses ADD COLUMN modes jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(modes) = 'array')`,
       // Exam courses move to Learn / Solve / Apply / Revise. Run 016–018 first if you want the samples updated too.
       examMethodUpdateStatement(),
+      cfa1DifferenceUpdateStatement(),
     ],
   },
 ];
