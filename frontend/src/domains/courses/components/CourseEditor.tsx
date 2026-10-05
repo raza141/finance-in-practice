@@ -386,8 +386,10 @@ export function CourseEditor({
             onClickCapture={(e) => {
               if ((e.target as HTMLElement).closest("a")) e.preventDefault();
             }}
-            className="h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-line bg-canvas xl:[zoom:0.5]"
+            className="h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-line bg-canvas"
           >
+            {/* Zoom an inner wrapper: zoom on the scroll box would halve its height too. */}
+            <div className="xl:[zoom:0.5]">
             <CourseView
               course={preview}
               testimonials={previewTestimonials}
@@ -397,6 +399,7 @@ export function CourseEditor({
                 </p>
               }
             />
+            </div>
           </div>
         </div>
       </div>
