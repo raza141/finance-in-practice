@@ -60,7 +60,7 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
       {invoice.status === "draft" ? (
         <>
           <div className="mt-8">
-            <InvoiceForm id={invoice.id} initial={invoice} emailEnabled={emailEnabled} />
+            <InvoiceForm key={invoice.id} id={invoice.id} initial={invoice} emailEnabled={emailEnabled} />
           </div>
           <form action={deleteDraftInvoice} className="mt-10">
             <input type="hidden" name="id" value={invoice.id} />

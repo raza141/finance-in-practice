@@ -144,9 +144,10 @@ export class InvoiceRepository {
   }
 
   /**
-   * Draft -> sent: draws the next number and freezes the content. The
-   * sequence is only evaluated for the matched row, so a lost race or a
-   * non-draft never burns a number.
+   * Draft -> sent: draws the next number and freezes the content. The row is
+   * locked (FOR UPDATE) before nextval runs, so a concurrent issue of the same
+   * draft waits, finds it no longer a draft and matches nothing: a lost race
+   * never burns a number.
    */
   async issue(id: string): Promise<boolean> {
     if (!UUID.test(id)) return false;
@@ -154,7 +155,7 @@ export class InvoiceRepository {
       UPDATE invoices SET
         status = 'sent', number_seq = nextval('invoice_number_seq')::int,
         issue_date = (now() AT TIME ZONE 'Asia/Dubai')::date, sent_at = now(), updated_at = now()
-      WHERE id = ${id} AND status = 'draft'
+      WHERE id = (SELECT id FROM invoices WHERE id = ${id} AND status = 'draft' FOR UPDATE)
       RETURNING id
     `;
     return rows.length > 0;

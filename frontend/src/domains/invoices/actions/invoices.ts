@@ -1,6 +1,5 @@
 "use server";
 
-import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -114,14 +113,16 @@ export async function resendInvoice(formData: FormData): Promise<void> {
 
 export async function markInvoicePaid(formData: FormData): Promise<void> {
   const repo = await repository();
-  await repo.markPaid(String(formData.get("id")));
-  refresh();
+  const id = String(formData.get("id"));
+  await repo.markPaid(id);
+  redirect(`/admin/invoices/${id}`);
 }
 
 export async function voidInvoice(formData: FormData): Promise<void> {
   const repo = await repository();
-  await repo.void(String(formData.get("id")));
-  refresh();
+  const id = String(formData.get("id"));
+  await repo.void(id);
+  redirect(`/admin/invoices/${id}`);
 }
 
 /** New draft with the same client, items and terms (the way to "edit" an issued invoice). */

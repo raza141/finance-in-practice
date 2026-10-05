@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 // Printing shows only the invoice (no cursor overlay or other site furniture).
-const PRINT_CSS = "@media print{body>:not(main){display:none!important}body{background:#fff!important}@page{margin:16mm}}";
+const PRINT_CSS = "@media print{body>:not(main){display:none!important}body{background:#fff!important}main{padding-top:0!important}@page{margin:16mm}}";
 
 /** Client-facing invoice, keyed by an unguessable token (not the sequential number). */
 export default async function PublicInvoicePage({ params }: PageProps<"/invoice/[token]">) {
