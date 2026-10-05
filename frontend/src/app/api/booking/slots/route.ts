@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const query = BookingContract.parseSlotsQuery(request.nextUrl.searchParams);
-    const gateway = new BookingGateway(cal);
+    const gateway = new BookingGateway(cal, BlockRepository.fromEnv());
     const body =
       query.kind === "day"
         ? await gateway.day(query.date, query.timeZone)

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       // success, so a human whose browser autofilled the field isn't misled.
       return reject(400, "INVALID_REQUEST", "Unable to process this request.");
     }
-    const result = await new BookingGateway(cal).create(booking);
+    const result = await new BookingGateway(cal, BlockRepository.fromEnv()).create(booking);
     return Response.json(result, { status: 200, headers: NO_STORE });
   } catch (error) {
     const { status, body } = BookingGateway.errorResponse(error);
