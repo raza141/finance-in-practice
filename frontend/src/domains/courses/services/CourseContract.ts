@@ -6,7 +6,7 @@ import { CourseFormat } from "./CourseFormat";
 /** What the course editor saves: every course field except the id and the published flag. */
 export type CourseInput = Omit<Course, "id" | "isActive">;
 
-/** Keyed by field name; list errors use the list name (method, modules, options, faqs). */
+/** Keyed by field name; list errors use the list name (method, modes, modules, options, faqs). */
 export type CourseFieldErrors = Partial<Record<keyof CourseInput, string>>;
 export type CourseParseResult = { ok: true; input: CourseInput } | { ok: false; errors: CourseFieldErrors };
 
@@ -29,6 +29,7 @@ export class CourseContract {
     seoTitle: 70,
     seoDescription: 170,
     method: 6,
+    modes: 4,
     modules: 40,
     options: 6,
     faqs: 20,
@@ -151,10 +152,11 @@ export class CourseContract {
     if (ticker && !TestimonialContract.isTicker(ticker)) errors.testimonialTicker = "Choose a testimonial ticker.";
 
     const method = CourseContract.list(fields.method, LIMITS.method, "Step", CourseContract.methodStep);
+    const modes = CourseContract.list(fields.modes, LIMITS.modes, "Way to learn", CourseContract.methodStep);
     const modules = CourseContract.list(fields.modules, LIMITS.modules, "Module", CourseContract.module);
     const options = CourseContract.list(fields.options, LIMITS.options, "Option", CourseContract.option);
     const faqs = CourseContract.list(fields.faqs, LIMITS.faqs, "FAQ", CourseContract.faq);
-    for (const [field, value] of Object.entries({ method, modules, options, faqs })) {
+    for (const [field, value] of Object.entries({ method, modes, modules, options, faqs })) {
       if (typeof value === "string") errors[field as keyof CourseInput] = value;
     }
 
@@ -177,6 +179,7 @@ export class CourseContract {
         priceMinor: priceMinor as number | null,
         currency,
         method: method as MethodStep[],
+        modes: modes as MethodStep[],
         modules: modules as CourseModule[],
         options: options as EngagementOption[],
         faqs: faqs as CourseFaq[],

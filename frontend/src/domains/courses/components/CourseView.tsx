@@ -90,7 +90,7 @@ export function CourseView({
               eyebrow="The Finance in Practice method"
               title={`Every topic goes through ${CourseFormat.count(course.method.length)} ${course.method.length === 1 ? "stage" : "stages"}.`}
             />
-            <ol className="mt-10 grid gap-4 md:grid-cols-3">
+            <ol className={`mt-10 grid gap-4 md:grid-cols-2 ${course.method.length % 3 === 0 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
               {course.method.map((step, index) => (
                 <li key={index} className="rounded-xl border border-line bg-surface p-6">
                   <span className="font-mono text-sm text-quant tabular-nums">{String(index + 1).padStart(2, "0")}</span>
@@ -99,6 +99,21 @@ export function CourseView({
                 </li>
               ))}
             </ol>
+            {course.modes.length > 0 && (
+              <div className="mt-12">
+                <h3 className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
+                  {CourseFormat.count(course.modes.length)} {course.modes.length === 1 ? "way" : "ways"} to learn
+                </h3>
+                <ul className={`mt-5 grid gap-4 ${course.modes.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+                  {course.modes.map((mode, index) => (
+                    <li key={index} className="rounded-xl border border-line p-5">
+                      <p className="font-bold">{mode.title}</p>
+                      {mode.description && <p className="mt-2 leading-relaxed text-muted">{mode.description}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
       )}

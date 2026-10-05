@@ -30,6 +30,7 @@ interface CourseSeed {
 const CFA_DISCLAIMER =
   "CFA® and Chartered Financial Analyst® are registered trademarks owned by CFA Institute. CFA Institute does not endorse, promote or warrant the accuracy or quality of the services offered by Finance in Practice.";
 
+/** The original exam method, as seeded by 016–018. 021 replaces it with EXAM_METHOD_V2. */
 const EXAM_METHOD = [
   {
     title: "Prepare",
@@ -44,6 +45,30 @@ const EXAM_METHOD = [
     title: "Apply",
     description: "We connect the idea to a small real-world task: a spreadsheet, company report, bond-pricing exercise, or investor decision.",
   },
+];
+
+/** Four stages plus the ways to learn (021). */
+const EXAM_METHOD_V2 = [
+  { title: "Learn", description: "Understand the topic your way: on your own, with me teaching it live, or a mix of both." },
+  {
+    title: "Solve",
+    description:
+      "We work through official curriculum questions. You explain your thinking; we find whether the issue is concept, formula, interpretation, calculation or timing.",
+  },
+  {
+    title: "Apply",
+    description: "We connect the idea to a small real-world task: a spreadsheet, company report, bond-pricing exercise or investor decision.",
+  },
+  {
+    title: "Revise",
+    description: "Short, spaced recall brings topics back before they fade: quick quizzes, retried mistakes and mixed sets.",
+  },
+];
+
+const EXAM_MODES = [
+  { title: "Self-study", description: "You read the official curriculum first and bring your questions." },
+  { title: "Study with me", description: "I teach the topic live, then we go straight into questions." },
+  { title: "Guided", description: "You read first; I teach only the parts you found hard." },
 ];
 
 const BUILD_METHOD = [
@@ -387,11 +412,21 @@ export const COURSE_SEEDS: CourseSeed[] = [
   },
 ];
 
-/** One INSERT per course, as a single line (E-strings carry the newlines) so `db:migrate -- --print` keeps it intact. */
+/** A single-line SQL literal (E-strings carry the newlines) so `db:migrate -- --print` keeps it intact. */
+const q = (value: string | null) =>
+  value === null ? "NULL" : `E'${value.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n")}'`;
+const json = (value: unknown) => `${q(JSON.stringify(value))}::jsonb`;
+
+/** 021: the exam courses get the four-stage method and the ways to learn, unless their method was already edited. */
+export function examMethodUpdateStatement(): string {
+  return (
+    `UPDATE courses SET method = ${json(EXAM_METHOD_V2)}, modes = ${json(EXAM_MODES)} ` +
+    `WHERE slug IN ('cfa-level-1', 'cfa-level-2', 'frm-part-1') AND method = ${json(EXAM_METHOD)}`
+  );
+}
+
+/** One INSERT per course. */
 export function courseSeedStatement(seed: CourseSeed): string {
-  const q = (value: string | null) =>
-    value === null ? "NULL" : `E'${value.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/\n/g, "\\n")}'`;
-  const json = (value: unknown) => `${q(JSON.stringify(value))}::jsonb`;
   return (
     "INSERT INTO courses (slug, title, category, eyebrow, summary, audience, not_for, difference, disclaimer, cta_label, " +
     "coaching_label, practice_label, duration, testimonial_ticker, seo_title, seo_description, method, modules, options, faqs) " +

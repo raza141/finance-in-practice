@@ -22,6 +22,9 @@ export interface CourseModule {
   deliverable?: string;
 }
 
+/** A way to study a topic, e.g. "Self-study" or "Study with me". Same shape as a method step. */
+export type LearningMode = MethodStep;
+
 /** A way to buy, e.g. "Single session" or "Full-level programme". */
 export interface EngagementOption {
   title: string;
@@ -66,6 +69,8 @@ export interface Course {
   currency: string;
   isActive: boolean;
   method: MethodStep[];
+  /** Shown under the method as "N ways to learn"; empty hides it. */
+  modes: LearningMode[];
   modules: CourseModule[];
   options: EngagementOption[];
   faqs: CourseFaq[];

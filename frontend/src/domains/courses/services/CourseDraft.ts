@@ -33,6 +33,7 @@ export interface CourseDraftState {
   seoDescription: string;
   testimonialTicker: string;
   method: MethodDraft[];
+  modes: MethodDraft[];
   modules: ModuleDraft[];
   options: OptionDraft[];
   faqs: FaqDraft[];
@@ -40,8 +41,8 @@ export interface CourseDraftState {
 
 /** Converts between a saved Course, the editor state, the save payload and the live preview. Pure. */
 export class CourseDraft {
-  /** A new course starts with the three method stages named; the admin fills in the wording. */
-  static readonly NEW_METHOD = ["Prepare", "Solve and diagnose", "Apply"];
+  /** A new course starts with the method stages named; the admin fills in the wording. */
+  static readonly NEW_METHOD = ["Learn", "Solve", "Apply", "Revise"];
 
   static from(course: Course | undefined, key: () => number): CourseDraftState {
     return {
@@ -69,6 +70,7 @@ export class CourseDraft {
       method: course
         ? course.method.map((m) => ({ ...m, key: key() }))
         : CourseDraft.NEW_METHOD.map((title) => ({ title, description: "", key: key() })),
+      modes: (course?.modes ?? []).map((m) => ({ ...m, key: key() })),
       modules: (course?.modules ?? []).map((m) => ({ ...m, deliverable: m.deliverable ?? "", key: key() })),
       options: (course?.options ?? []).map((o) => ({ ...o, bookingUrl: o.bookingUrl ?? "", key: key() })),
       faqs: (course?.faqs ?? []).map((f) => ({ ...f, key: key() })),
@@ -83,7 +85,7 @@ export class CourseDraft {
         delete rest.key;
         return rest;
       });
-    return { ...draft, method: strip(draft.method), modules: strip(draft.modules), options: strip(draft.options), faqs: strip(draft.faqs) };
+    return { ...draft, method: strip(draft.method), modes: strip(draft.modes), modules: strip(draft.modules), options: strip(draft.options), faqs: strip(draft.faqs) };
   }
 
   /** A best-effort Course for the preview: shows what is typed even before it validates. */
@@ -110,6 +112,7 @@ export class CourseDraft {
       priceMinor: price === "invalid" ? null : price,
       currency: /^[A-Z]{3}$/.test(draft.currency) ? draft.currency : "AED",
       method: CourseFormat.method(payload.method),
+      modes: CourseFormat.method(payload.modes),
       modules: CourseFormat.modules(payload.modules),
       options: CourseFormat.options(payload.options),
       faqs: CourseFormat.faqs(payload.faqs),

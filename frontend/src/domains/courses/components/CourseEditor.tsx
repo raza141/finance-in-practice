@@ -18,7 +18,7 @@ const noSubscribe = () => () => {};
 
 const TABS = {
   basics: { label: "Basics", fields: ["title", "slug", "category", "eyebrow", "summary", "audience", "notFor"] },
-  method: { label: "Coaching method", fields: ["method"] },
+  method: { label: "Coaching method", fields: ["method", "modes"] },
   modules: { label: "Modules", fields: ["modules", "coachingLabel", "practiceLabel"] },
   options: { label: "Engagement options", fields: ["options"] },
   faqs: { label: "FAQs", fields: ["faqs"] },
@@ -216,6 +216,28 @@ export function CourseEditor({
                 </>
               )}
             </RepeatableList>
+          )}
+
+          {tab === "method" && (
+            <div className="mt-6 border-t border-line pt-6">
+              <p className="mb-4 text-[11px] tracking-[0.22em] text-muted uppercase">Ways to learn · shown under the method</p>
+              <RepeatableList
+                items={draft.modes}
+                onChange={(modes) => set({ modes })}
+                create={() => ({ key: listKey(), title: "", description: "" })}
+                max={CourseContract.LIMITS.modes}
+                noun="Way"
+                disabled={pending}
+                error={errors.modes}
+              >
+                {(mode, update) => (
+                  <>
+                    <input aria-label="Way to learn" placeholder="e.g. Self-study" maxLength={80} value={mode.title} onChange={(e) => update({ title: e.target.value })} className={`${FIELD} mt-0`} />
+                    <textarea aria-label="Description" placeholder="How it works" rows={2} maxLength={400} value={mode.description} onChange={(e) => update({ description: e.target.value })} className={`${FIELD} mt-0 resize-y`} />
+                  </>
+                )}
+              </RepeatableList>
+            </div>
           )}
 
           {tab === "modules" && (

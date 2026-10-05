@@ -31,6 +31,7 @@ const COURSE: Course = {
   currency: "AED",
   isActive: true,
   method: [],
+  modes: [],
   modules: [{ title: "Ethics", priority: "core", summary: "Code and Standards", coaching: "", practice: "" }],
   options: [],
   faqs: [],
