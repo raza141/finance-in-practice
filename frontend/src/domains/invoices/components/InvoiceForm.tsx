@@ -30,21 +30,31 @@ export interface InvoiceFormOptions {
   courses: CourseOption[];
 }
 
+/** How a line's period is entered: a month picker, a date picker, or typed text. */
+type PeriodKind = "month" | "date" | "text";
+const PERIOD_KINDS: Record<PeriodKind, string> = { month: "Month", date: "Session date", text: "Free text" };
+const periodKind = (period: string, unit: string): PeriodKind =>
+  /^\d{4}-\d{2}-\d{2}$/.test(period) ? "date" : /^\d{4}-\d{2}$/.test(period) ? "month" : period ? "text" : unit === "month" ? "month" : "date";
+
 interface Row extends DraftItem {
   key: number;
   /** Typed description rather than a course from the list. */
   custom: boolean;
+  periodKind: PeriodKind;
 }
 
 let nextKey = 0;
 const row = (courses: readonly CourseOption[], item?: Partial<DraftItem>): Row => {
   const description = item?.description ?? "";
+  const period = item?.period ?? "";
+  const unit = item?.unit ?? "hour";
   return {
     key: nextKey++,
     description,
     detail: item?.detail ?? "",
-    period: item?.period ?? "",
-    unit: item?.unit ?? "hour",
+    period,
+    periodKind: periodKind(period, unit),
+    unit,
     quantity: item?.quantity ?? "1",
     unitPrice: item?.unitPrice ?? "",
     custom: description !== "" && !courses.some((c) => c.title === description),
@@ -289,14 +299,29 @@ export function InvoiceForm({
                 onChange={(e) => update(r.key, { detail: e.target.value })}
                 className={`${FIELD} mt-0 text-sm sm:col-span-3`}
               />
-              <input
-                aria-label={`Line ${index + 1} period`}
-                placeholder={r.unit === "month" ? "Month, e.g. October 2026" : "Session date, e.g. 14 Oct 2026"}
-                maxLength={60}
-                value={r.period}
-                onChange={(e) => update(r.key, { period: e.target.value })}
-                className={`${FIELD} mt-0 text-sm sm:col-span-2`}
-              />
+              <div className="grid grid-cols-[8rem_1fr] gap-2 sm:col-span-2">
+                <select
+                  aria-label={`Line ${index + 1} period type`}
+                  value={r.periodKind}
+                  onChange={(e) => update(r.key, { periodKind: e.target.value as PeriodKind, period: "" })}
+                  className={`${FIELD} mt-0 text-sm`}
+                >
+                  {Object.entries(PERIOD_KINDS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  aria-label={`Line ${index + 1} period`}
+                  type={r.periodKind === "text" ? "text" : r.periodKind}
+                  placeholder={r.periodKind === "text" ? "e.g. 6–30 Oct 2026" : undefined}
+                  maxLength={60}
+                  value={r.period}
+                  onChange={(e) => update(r.key, { period: e.target.value })}
+                  className={`${FIELD} mt-0 text-sm`}
+                />
+              </div>
             </li>
           ))}
         </ol>

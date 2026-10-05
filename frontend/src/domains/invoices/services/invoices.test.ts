@@ -248,3 +248,11 @@ describe("ResendClient", () => {
     await expect(client.send("c@x.test", { subject: "S", html: "", text: "" })).rejects.toThrow("Domain not verified");
   });
 });
+
+describe("InvoiceEmails.period", () => {
+  it("formats picked months and dates, keeps typed text", () => {
+    expect(InvoiceEmails.period("2026-10")).toBe("October 2026");
+    expect(InvoiceEmails.period("2026-10-14")).toBe("14 Oct 2026");
+    expect(InvoiceEmails.period("6–30 Oct")).toBe("6–30 Oct");
+  });
+});

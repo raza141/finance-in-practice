@@ -1,5 +1,6 @@
 import { siteConfig } from "@/core/config/site";
 import { Logo } from "@/core/components/layout/Logo";
+import { WHATSAPP_GLYPH } from "@/core/components/ui/WhatsAppButton";
 
 import { InvoiceContract } from "../services/InvoiceContract";
 import { InvoiceEmails } from "../services/InvoiceEmails";
@@ -15,7 +16,15 @@ const STAMP: Partial<Record<Invoice["status"], string>> = {
 /** The tagline from the logo artwork. */
 const TAGLINE = "Learn Finance the way it is practiced.";
 
-const LABEL = "text-[11px] font-semibold tracking-[0.2em] text-canvas uppercase";
+/** The standard terms on every invoice; per-invoice notes print above them. */
+const TERMS = [
+  ["Payment", "Due within 7 days of issue. Sessions are confirmed once payment is received. Please quote the invoice number as the transfer reference."],
+  ["Rescheduling", "Sessions can be moved with at least 24 hours’ notice. Later changes may count as delivered."],
+  ["Scope", "Fees cover the coaching period stated on this invoice and are non-transferable. No exam result is guaranteed."],
+] as const;
+
+// The site's cyan (quant) is too light for text on white paper; cyan-700 is the same hue at print contrast.
+const LABEL = "text-[11px] font-semibold tracking-[0.2em] text-cyan-700 uppercase";
 const ROW_LABEL = "text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase";
 
 /**
@@ -102,7 +111,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         <div className="mt-8 overflow-x-auto print:overflow-visible">
           <table className="w-full min-w-[540px] border-b-2 border-canvas text-sm">
             <thead>
-              <tr className="bg-canvas text-left text-[11px] tracking-[0.18em] text-white uppercase">
+              <tr className="bg-canvas text-left text-[11px] tracking-[0.18em] text-quant uppercase">
                 <th className="w-14 px-3 py-3 font-semibold">No.</th>
                 <th className="px-3 py-3 font-semibold">Description</th>
                 {hasPeriod && <th className="px-3 py-3 font-semibold">Period</th>}
@@ -119,7 +128,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
                     <p className="font-semibold text-slate-900">{item.description}</p>
                     {item.detail && <p className="mt-0.5 text-xs text-slate-500">{item.detail}</p>}
                   </td>
-                  {hasPeriod && <td className="px-3 py-3 whitespace-nowrap text-slate-700">{item.period ?? "—"}</td>}
+                  {hasPeriod && <td className="px-3 py-3 whitespace-nowrap text-slate-700">{item.period ? InvoiceEmails.period(item.period) : "—"}</td>}
                   <td className="px-3 py-3 text-center tabular-nums">
                     {item.quantity}
                     {item.unit && <span className="block text-[11px] text-slate-500">{InvoiceContract.UNITS[item.unit]}</span>}
@@ -177,30 +186,38 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
 
         {invoice.notes && (
           <section className="mt-8 break-inside-avoid">
-            <h2 className={`${LABEL} border-b border-slate-200 pb-2`}>Terms &amp; notes</h2>
+            <h2 className={`${LABEL} border-b border-slate-200 pb-2`}>Notes</h2>
             <p className="mt-3 text-sm whitespace-pre-line text-slate-600">{invoice.notes}</p>
           </section>
         )}
 
-        <section className="mt-8 grid break-inside-avoid gap-6 rounded-lg border border-slate-200 border-l-4 border-l-gold bg-slate-50 p-6 sm:grid-cols-[1fr_auto] sm:items-center print:grid-cols-[1fr_auto]">
-          <div>
-            <h2 className="font-serif text-2xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Thank you for learning with {siteConfig.name}. Every session is built around your own attempts, so keep bringing the
-              questions you find hardest. Questions about this invoice, or ready to book your next session? We are one message away.
-            </p>
-          </div>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+        <section className="mt-8 break-inside-avoid rounded-lg border border-slate-200 border-l-4 border-l-gold bg-slate-50 p-6">
+          <h2 className="font-serif text-2xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Thank you for learning with {siteConfig.name}. Every session is built around your own attempts, so keep bringing the
+            questions you find hardest. Questions about this invoice, or ready to book your next session? We are one message away.
+          </p>
+          <dl className="mt-5 grid grid-cols-[1.25rem_6.5rem_1fr] items-start gap-x-3 gap-y-3 border-t border-slate-200 pt-4 text-sm">
+            <Icon path={WHATSAPP_GLYPH} fill />
             <dt className={ROW_LABEL}>WhatsApp</dt>
             <dd className="font-semibold text-slate-900">{whatsapp.display}</dd>
-            {siteConfig.contact.email && (
-              <>
-                <dt className={ROW_LABEL}>Email</dt>
-                <dd className="font-semibold text-slate-900">{siteConfig.contact.email}</dd>
-              </>
-            )}
+            <Icon path="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
             <dt className={ROW_LABEL}>Book</dt>
             <dd className="font-semibold text-slate-900">{siteConfig.domain}</dd>
+            <Icon path="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Zm0 0v6h6M8 13h8M8 17h5" />
+            <dt className={ROW_LABEL}>Terms</dt>
+            <dd>
+              <ol className="grid gap-1 text-[11px] leading-snug text-slate-600">
+                {TERMS.map(([title, text], index) => (
+                  <li key={title}>
+                    <span className="font-semibold text-slate-800">
+                      {index + 1}. {title}:
+                    </span>{" "}
+                    {text}
+                  </li>
+                ))}
+              </ol>
+            </dd>
           </dl>
         </section>
       </div>
@@ -209,5 +226,14 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         <p className="text-sm font-semibold tracking-[0.12em] text-gold">{TAGLINE}</p>
       </footer>
     </article>
+  );
+}
+
+/** A 20px icon in the row-label column: WhatsApp is a filled glyph, the rest are outline icons. */
+function Icon({ path, fill = false }: { path: string; fill?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden className="mt-px text-cyan-700" {...(fill ? { fill: "currentColor" } : { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" })}>
+      <path d={path} />
+    </svg>
   );
 }

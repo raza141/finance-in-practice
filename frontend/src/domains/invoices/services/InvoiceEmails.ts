@@ -31,6 +31,14 @@ export class InvoiceEmails {
     );
   }
 
+  /** A line's period: "2026-10" -> "October 2026", "2026-10-14" -> "14 Oct 2026"; anything else as typed. */
+  static period(value: string): string {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "long", year: "numeric" }).format(new Date(`${value}-01T00:00:00Z`));
+    }
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? InvoiceEmails.day(value) : value;
+  }
+
   /** Label/value rows of a bank's details, skipping the empty ones. */
   static bankRows(bank: BankDetails): [string, string][] {
     const rows: [string, string][] = [
