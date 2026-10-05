@@ -2,7 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
-import type { Client, ClientInput, Currency, ItemUnit } from "../types";
+import type { Client, ClientDashboard, ClientInput, Currency, ItemUnit } from "../types";
 
 interface ClientRow {
   id: string;
@@ -44,6 +44,41 @@ export class ClientRepository {
     if (!UUID.test(id)) return null;
     const [row] = (await this.sql`SELECT ${this.sql.unsafe(COLUMNS)} FROM clients WHERE id = ${id}`) as ClientRow[];
     return row ? ClientRepository.toClient(row) : null;
+  }
+
+  /** The most recently added clients. */
+  async recent(limit = 5): Promise<Client[]> {
+    const rows = (await this.sql`SELECT ${this.sql.unsafe(COLUMNS)} FROM clients ORDER BY created_at DESC LIMIT ${limit}`) as ClientRow[];
+    return rows.map(ClientRepository.toClient);
+  }
+
+  /** Client counts and expected monthly income for the admin dashboard ("this month" in Dubai). */
+  async dashboard(): Promise<ClientDashboard> {
+    const [[counts], expected] = await Promise.all([
+      this.sql`
+        SELECT count(*) AS total,
+          count(*) FILTER (WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') AT TIME ZONE 'Asia/Dubai') AS new_this_month,
+          count(*) FILTER (WHERE plan_unit = 'hour') AS hour,
+          count(*) FILTER (WHERE plan_unit = 'month') AS month,
+          count(*) FILTER (WHERE plan_unit = 'on-demand') AS on_demand,
+          count(*) FILTER (WHERE plan_unit = 'contract') AS contract
+        FROM clients
+      `,
+      this.sql`
+        SELECT plan_currency AS currency, sum(plan_fee_minor * greatest(cardinality(courses), 1))::bigint AS total
+        FROM clients
+        WHERE plan_unit = 'month' AND plan_fee_minor IS NOT NULL
+        GROUP BY plan_currency
+        ORDER BY plan_currency
+      `,
+    ]);
+    const c = counts as Record<string, string>;
+    return {
+      total: Number(c.total),
+      newThisMonth: Number(c.new_this_month),
+      byPlan: { hour: Number(c.hour), month: Number(c.month), "on-demand": Number(c.on_demand), contract: Number(c.contract) },
+      expectedMonthly: (expected as Record<string, string>[]).map((row) => ({ currency: row.currency as Currency, totalMinor: Number(row.total) })),
+    };
   }
 
   /** The oldest client saved with this email, if any. */

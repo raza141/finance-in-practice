@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { Database, type Sql } from "@/core/db/Database";
 
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { BankDetails, Currency, EmailKind, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoiceStatus, InvoiceSummary } from "../types";
+import type { BankDetails, Currency, CurrencyStats, EmailKind, InvoiceDashboard, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoiceStatus, InvoiceSummary } from "../types";
 
 interface InvoiceRow {
   id: string;
@@ -85,18 +85,73 @@ export class InvoiceRepository {
       ORDER BY i.created_at DESC
       LIMIT 300
     `) as SummaryRow[];
-    return rows.map((row) => ({
-      id: row.id,
-      number: InvoiceRepository.number(row),
-      status: row.status,
-      clientName: row.client_name,
-      currency: row.currency,
-      totalMinor: row.total_minor,
-      issueDate: row.issue_date,
-      dueDate: row.due_date,
-      createdAt: row.created_at,
-      lastEmailedAt: row.last_emailed_at,
-    }));
+    return rows.map(InvoiceRepository.toSummary);
+  }
+
+  /** Issued, unpaid invoices, the longest overdue first. */
+  async awaitingPayment(limit = 6): Promise<InvoiceSummary[]> {
+    const rows = (await this.sql`
+      SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
+             i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at,
+             (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
+      FROM invoices i
+      WHERE i.status = 'sent'
+      ORDER BY i.due_date, i.created_at
+      LIMIT ${limit}
+    `) as SummaryRow[];
+    return rows.map(InvoiceRepository.toSummary);
+  }
+
+  /**
+   * Money figures for the admin dashboard, per currency (amounts in different
+   * currencies are never added together). "This month" is the Dubai calendar
+   * month; income counts when an invoice is marked paid.
+   */
+  async dashboard(): Promise<InvoiceDashboard> {
+    const [currencies, [counts], months] = await Promise.all([
+      this.sql`
+        WITH bounds AS (
+          SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') AT TIME ZONE 'Asia/Dubai' AS this_month,
+                 (date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') - interval '1 month') AT TIME ZONE 'Asia/Dubai' AS last_month,
+                 (now() AT TIME ZONE 'Asia/Dubai')::date AS today
+        )
+        SELECT i.currency,
+          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'paid' AND i.paid_at >= b.this_month), 0)::bigint AS paid_this_month,
+          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'paid' AND i.paid_at >= b.last_month AND i.paid_at < b.this_month), 0)::bigint AS paid_last_month,
+          count(*) FILTER (WHERE i.status = 'sent') AS pending_count,
+          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'sent'), 0)::bigint AS pending_minor,
+          count(*) FILTER (WHERE i.status = 'sent' AND i.due_date < b.today) AS overdue_count,
+          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'sent' AND i.due_date < b.today), 0)::bigint AS overdue_minor
+        FROM invoices i CROSS JOIN bounds b
+        WHERE i.status <> 'draft'
+        GROUP BY i.currency
+        ORDER BY i.currency
+      `,
+      this.sql`SELECT count(*) FILTER (WHERE status = 'draft') AS drafts FROM invoices`,
+      this.sql`
+        SELECT to_char(paid_at AT TIME ZONE 'Asia/Dubai', 'YYYY-MM') AS month, currency, sum(total_minor)::bigint AS total
+        FROM invoices
+        WHERE status = 'paid'
+          AND paid_at >= (date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') - interval '5 months') AT TIME ZONE 'Asia/Dubai'
+        GROUP BY 1, 2
+      `,
+    ]);
+    // count/sum come back as strings (bigint).
+    return {
+      currencies: (currencies as Record<string, string>[]).map(
+        (row): CurrencyStats => ({
+          currency: row.currency as Currency,
+          paidThisMonthMinor: Number(row.paid_this_month),
+          paidLastMonthMinor: Number(row.paid_last_month),
+          pendingCount: Number(row.pending_count),
+          pendingMinor: Number(row.pending_minor),
+          overdueCount: Number(row.overdue_count),
+          overdueMinor: Number(row.overdue_minor),
+        }),
+      ),
+      drafts: Number((counts as { drafts: string }).drafts),
+      paidByMonth: (months as Record<string, string>[]).map((row) => ({ month: row.month, currency: row.currency as Currency, totalMinor: Number(row.total) })),
+    };
   }
 
   async byId(id: string): Promise<Invoice | null> {
@@ -235,6 +290,21 @@ export class InvoiceRepository {
 
   private static number(row: Pick<InvoiceRow, "number_seq" | "issue_date">): string | null {
     return row.number_seq !== null && row.issue_date ? InvoiceMath.number(row.issue_date, row.number_seq) : null;
+  }
+
+  private static toSummary(row: SummaryRow): InvoiceSummary {
+    return {
+      id: row.id,
+      number: InvoiceRepository.number(row),
+      status: row.status,
+      clientName: row.client_name,
+      currency: row.currency,
+      totalMinor: row.total_minor,
+      issueDate: row.issue_date,
+      dueDate: row.due_date,
+      createdAt: row.created_at,
+      lastEmailedAt: row.last_emailed_at,
+    };
   }
 
   private static toInvoice(row: InvoiceRow): Invoice {

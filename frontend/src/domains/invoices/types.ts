@@ -119,6 +119,36 @@ export interface BookingPrefill {
   location: string;
 }
 
+/** Invoice money for one currency, for the admin dashboard. Months are Dubai calendar months. */
+export interface CurrencyStats {
+  currency: Currency;
+  paidThisMonthMinor: number;
+  paidLastMonthMinor: number;
+  /** Issued and unpaid. */
+  pendingCount: number;
+  pendingMinor: number;
+  /** Unpaid past the due date (a subset of pending). */
+  overdueCount: number;
+  overdueMinor: number;
+}
+
+export interface InvoiceDashboard {
+  /** Only currencies that have invoices. */
+  currencies: CurrencyStats[];
+  drafts: number;
+  /** Paid totals for the last six months (current included), "YYYY-MM" in Dubai. */
+  paidByMonth: { month: string; currency: Currency; totalMinor: number }[];
+}
+
+export interface ClientDashboard {
+  total: number;
+  newThisMonth: number;
+  /** Clients on each payment-plan basis. */
+  byPlan: Record<ItemUnit, number>;
+  /** Monthly plans: fee x courses (at least one), per currency. */
+  expectedMonthly: { currency: Currency; totalMinor: number }[];
+}
+
 export interface ClientInput {
   name: string;
   email: string;

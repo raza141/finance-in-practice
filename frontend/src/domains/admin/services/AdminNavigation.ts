@@ -8,7 +8,7 @@ export interface AdminModule {
 /** Sections of the admin panel. Add a module here when its pages exist. */
 export class AdminNavigation {
   private static readonly MODULES: readonly AdminModule[] = [
-    { href: "/admin", label: "Overview" },
+    { href: "/admin", label: "Dashboard" },
     { href: "/admin/schedule", label: "Schedule" },
     { href: "/admin/invoices", label: "Invoices" },
     { href: "/admin/clients", label: "Clients" },
