@@ -48,6 +48,13 @@ export class InvoiceMath {
     return first.toISOString().slice(0, 10);
   }
 
+  /** A line's period one month on: "2026-10" -> "2026-11", "2026-10-14" -> "2026-11-14", typed text via nextMonthText. */
+  static nextPeriod(period: string): string {
+    if (/^\d{4}-\d{2}$/.test(period)) return InvoiceMath.addMonths(`${period}-01`, 1).slice(0, 7);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return InvoiceMath.addMonths(period, 1);
+    return InvoiceMath.nextMonthText(period);
+  }
+
   /**
    * Moves capitalised month names in text one month on, keeping the style
    * ("October" -> "November", "Dec 2026" -> "Jan 2027"). For copying a

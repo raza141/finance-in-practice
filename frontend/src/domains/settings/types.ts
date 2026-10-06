@@ -1,4 +1,4 @@
-import type { Currency } from "@/domains/invoices/types";
+import type { Currency, DocumentLayout, ItemUnit } from "@/domains/invoices/types";
 
 /** Documents the billing engine issues. Statements are generated, not stored, so they have no number. */
 export type DocumentType = "invoice" | "receipt" | "quote" | "credit_note";
@@ -12,6 +12,15 @@ export interface DocumentTexts {
   whatsapp: string;
   /** The opening line of the email. */
   email: string;
+}
+
+/** How one billing unit prints and prefills: "2 sessions", default AED 450, standard layout. */
+export interface UnitConfig {
+  /** Singular word printed after the quantity, e.g. "session". */
+  label: string;
+  /** Prefilled unit price, in minor units; null leaves it empty. */
+  rateMinor: number | null;
+  layout: DocumentLayout;
 }
 
 /** Business-wide billing settings, edited in /admin/settings. */
@@ -33,6 +42,7 @@ export interface BillingSettings {
     rateBp: number;
   };
   currency: Currency;
+  units: Record<ItemUnit, UnitConfig>;
   prefixes: Record<DocumentType, string>;
   documents: Record<DocumentType, DocumentTexts>;
   card: {

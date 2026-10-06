@@ -52,7 +52,7 @@ export default async function AdminDashboardPage() {
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
 
   const [money, awaiting, people, recentClients, sessions, testimonials, articleCounts, inReview] = await Promise.all([
-    safely(invoices.dashboard(), { currencies: [], drafts: 0, paidByMonth: [] }, "Invoice totals"),
+    safely(invoices.dashboard(), { currencies: [], drafts: 0, quotesAwaiting: 0, recurringDue: 0, paidByMonth: [] }, "Invoice totals"),
     safely(invoices.awaitingPayment(), [], "Awaiting payment"),
     safely(clients?.dashboard(), null, "Client totals"),
     safely(clients?.recent(), [], "Recent clients"),
@@ -148,20 +148,36 @@ export default async function AdminDashboardPage() {
           <ul className="mt-5 grid gap-2 border-t border-line pt-4 text-sm">
             {(Object.entries(InvoiceContract.UNITS) as [keyof typeof InvoiceContract.UNITS, string][]).map(([unit, label]) => (
               <li key={unit} className="flex justify-between">
-                <span className="text-muted">{unit === "contract" ? "Contracts" : `${label} plans`}</span>
+                <span className="text-muted">{label} plans</span>
                 <span className="tabular-data">{people?.byPlan[unit] ?? 0}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-muted">
-            {money.drafts > 0 ? (
-              <Link href="/admin/invoices" className="text-gold hover:underline">
-                {money.drafts} draft invoice{money.drafts === 1 ? "" : "s"} not issued yet
-              </Link>
-            ) : (
-              "No draft invoices waiting."
+          <ul className="mt-4 grid gap-1 text-xs text-muted">
+            <li>
+              {money.drafts > 0 ? (
+                <Link href="/admin/invoices" className="text-gold hover:underline">
+                  {money.drafts} draft{money.drafts === 1 ? "" : "s"} not issued yet
+                </Link>
+              ) : (
+                "No drafts waiting."
+              )}
+            </li>
+            {money.recurringDue > 0 && (
+              <li>
+                <Link href="/admin/invoices" className="text-gold hover:underline">
+                  {money.recurringDue} recurring draft{money.recurringDue === 1 ? "" : "s"} due this month
+                </Link>
+              </li>
             )}
-          </p>
+            {money.quotesAwaiting > 0 && (
+              <li>
+                <Link href="/admin/invoices?type=quote" className="text-quant hover:underline">
+                  {money.quotesAwaiting} quote{money.quotesAwaiting === 1 ? "" : "s"} awaiting a reply
+                </Link>
+              </li>
+            )}
+          </ul>
         </Panel>
       </div>
 

@@ -18,6 +18,11 @@ const formFields = (overrides: Record<string, string> = {}) => {
     currency: "AED",
     "card.note": D.card.note,
   };
+  for (const [unit, config] of Object.entries(D.units)) {
+    fields[`unit.${unit}.label`] = config.label;
+    fields[`unit.${unit}.rate`] = "";
+    fields[`unit.${unit}.layout`] = config.layout;
+  }
   for (const [type, texts] of Object.entries(D.documents)) {
     fields[`prefix.${type}`] = D.prefixes[type as keyof typeof D.prefixes];
     for (const [key, value] of Object.entries(texts)) fields[`doc.${type}.${key}`] = value;

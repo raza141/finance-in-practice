@@ -13,12 +13,13 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import type { InvoiceInput } from "@/domains/invoices/types";
 
-export const metadata: Metadata = { title: "New invoice" };
+export const metadata: Metadata = { title: "New document" };
 
 /**
- * Blank for an offline client, for a saved client (`?client=<id>`), or
- * prefilled from a Cal.com booking (`?booking=<uid>`, linked from Schedule).
- * The default bank account is preselected.
+ * A new invoice, or a quote with `?type=quote`. Blank for an offline client,
+ * for a saved client (`?client=<id>`), or prefilled from a Cal.com booking
+ * (`?booking=<uid>`, linked from Schedule). The default bank account, the
+ * Settings currency and the type's default notes are preselected.
  */
 export default async function NewInvoicePage({ searchParams }: PageProps<"/admin/invoices/new">) {
   await AdminAuth.require();
@@ -32,14 +33,18 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     null;
 
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
+  const docType = query.type === "quote" ? "quote" : "invoice";
+  const { settings } = options;
   const initial: InvoiceInput = {
+    docType,
+    relatedId: null,
     bookingUid: prefill?.bookingUid ?? null,
     clientId: client?.id ?? null,
     clientName: client?.name ?? prefill?.clientName ?? "",
     clientEmail: client?.email ?? prefill?.clientEmail ?? "",
     clientPhone: client?.phone ?? "",
     clientAddress: client?.address ?? "",
-    currency: client?.planCurrency ?? "AED",
+    currency: client?.planCurrency ?? settings.currency,
     items: client?.courses.length
       ? InvoiceContract.planItems(client)
       : prefill
@@ -47,7 +52,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
           {
             description: prefill.topic.slice(0, InvoiceContract.LIMITS.description),
             detail: `${prefill.durationMinutes}-minute session, ${InvoiceEmails.day(prefill.date)}`,
-            unit: "hour",
+            unit: "session",
             quantity: Math.round((prefill.durationMinutes / 60) * 100) / 100,
             unitMinor: 0,
             amountMinor: 0,
@@ -55,12 +60,17 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
         ]
       : [],
     discountMinor: 0,
-    taxRateBp: 0,
+    taxRateBp: settings.vat.registered ? settings.vat.rateBp : 0,
     trn: "",
-    dueDate: ZonedCalendar.addDays(today, 7),
-    notes: "",
+    dueDate: docType === "quote" ? ZonedCalendar.addDays(today, 14) : InvoiceContract.dueDate("net7", today),
+    notes: settings.documents[docType].notes,
     paymentInstructions: "",
-    bankAccountId: options.banks.find((bank) => bank.isDefault)?.id ?? null,
+    bankAccountId: docType === "invoice" ? (options.banks.find((bank) => bank.isDefault)?.id ?? null) : null,
+    paymentTerms: client?.planUnit === "month" ? "monthly" : "net7",
+    paymentLink: "",
+    layout: "standard",
+    sections: { scope: "", deliverables: "", expenses: "", assumptions: "" },
+    recurring: client?.planUnit === "month",
   };
 
   return (
@@ -68,7 +78,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
       <Link href="/admin/invoices" className="text-sm text-muted hover:text-ink">
         ← Invoices
       </Link>
-      <h1 className="mt-3 text-3xl font-normal tracking-tight italic">New invoice</h1>
+      <h1 className="mt-3 text-3xl font-normal tracking-tight italic">{docType === "quote" ? "New quote" : "New invoice"}</h1>
       <p className="mt-2 mb-6 text-sm text-muted">
         {prefill ? `Prefilled from the Cal.com booking with ${prefill.clientName || "this client"}.` : "Saved as a draft until you issue it."}
       </p>

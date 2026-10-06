@@ -1,11 +1,14 @@
 import { siteConfig } from "@/core/config/site";
 import { EmailHtml, type EmailMessage } from "@/core/email/EmailHtml";
 
+import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+import type { BillingSettings } from "@/domains/settings/types";
+
 import type { BankDetails, ConfirmationInput, Invoice } from "../types";
 import { InvoiceContract } from "./InvoiceContract";
 import { InvoiceMath } from "./InvoiceMath";
 
-/** The two emails the admin panel sends: booking confirmation and invoice. Pure. */
+/** The emails and WhatsApp messages the admin panel sends: booking confirmation and billing documents. Pure. */
 export class InvoiceEmails {
   static readonly HOME_ZONE = InvoiceContract.DEFAULT_TIME_ZONE;
   /** The name emails and invoices are signed with. */
@@ -109,68 +112,105 @@ export class InvoiceEmails {
     return digits.length >= 8 ? digits : "";
   }
 
-  /**
-   * A wa.me link that opens a chat with the client, the message prefilled with the
-   * invoice link. Without a usable phone number WhatsApp asks which chat to send it to.
-   */
-  static whatsapp(invoice: Invoice, url: string): string {
-    const amount = InvoiceMath.money(invoice.totalMinor, invoice.currency);
-    const text = [
-      `Hi ${InvoiceEmails.firstName(invoice.clientName)}, invoice ${invoice.number ?? ""} for ${amount} is ready, due ${InvoiceEmails.day(invoice.dueDate)}.`,
-      ...(invoice.paidMinor > 0 && invoice.paidMinor < invoice.totalMinor
-        ? [`Received so far: ${InvoiceMath.money(invoice.paidMinor, invoice.currency)}. Balance due: ${InvoiceMath.money(invoice.totalMinor - invoice.paidMinor, invoice.currency)}.`]
-        : []),
-      "",
-      `View or download: ${url}`,
-      "",
-      `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
-    ].join("\n");
-    return `https://wa.me/${InvoiceEmails.whatsappNumber(invoice.clientPhone)}?text=${encodeURIComponent(text)}`;
+  /** Placeholder values for a document's message templates (Settings). */
+  static placeholders(doc: Invoice, url: string, settings: BillingSettings): Record<(typeof SettingsContract.PLACEHOLDERS)[number], string> {
+    const money = (minor: number) => InvoiceMath.money(minor, doc.currency);
+    const amount = doc.docType === "receipt" && doc.receiptPayment ? doc.receiptPayment.amountMinor : doc.totalMinor;
+    return {
+      firstName: InvoiceEmails.firstName(doc.clientName),
+      number: doc.number ?? "",
+      amount: money(amount),
+      balance: money(doc.totalMinor - doc.paidMinor - doc.creditedMinor),
+      dueDate: InvoiceEmails.day(doc.dueDate),
+      link: url,
+      sender: settings.business.sender,
+      business: settings.business.name,
+    };
   }
 
-  /** Summary plus a link to the printable invoice page. Only for issued invoices. */
-  static invoice(invoice: Invoice, url: string): EmailMessage {
-    const number = invoice.number ?? "";
-    const amount = InvoiceMath.money(invoice.totalMinor, invoice.currency);
-    const rows: [string, string][] = [
-      ["Invoice", number],
-      ["Issued", invoice.issueDate ? InvoiceEmails.day(invoice.issueDate) : ""],
-      ["Due", InvoiceEmails.day(invoice.dueDate)],
-      ["Amount due", amount],
+  /**
+   * The WhatsApp message for a document, from its Settings template. A part-paid
+   * invoice adds what is still due; a pasted payment link adds a "Pay online" line.
+   */
+  static whatsappText(doc: Invoice, url: string, settings: BillingSettings): string {
+    const values = InvoiceEmails.placeholders(doc, url, settings);
+    const extra = [
+      ...(doc.docType === "invoice" && doc.paidMinor + doc.creditedMinor > 0 && doc.status === "sent"
+        ? [`Received so far: ${InvoiceMath.money(doc.paidMinor + doc.creditedMinor, doc.currency)}. Balance due: ${values.balance}.`]
+        : []),
+      ...(InvoiceEmails.payOnline(doc, settings) ? [`Pay online: ${doc.paymentLink}`] : []),
     ];
-    const subject = `Invoice ${number} from ${siteConfig.name}`;
-    const bankRows = invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
-    const hasPayment = bankRows.length > 0 || invoice.paymentInstructions !== "";
+    const text = SettingsContract.fill(settings.documents[doc.docType].whatsapp, values);
+    if (extra.length === 0) return text;
+    // Before the sign-off when the template ends with one, else at the end.
+    const [body, ...signOff] = text.split(/\n\n(?=Thank you,)/);
+    return [body, ...extra.map((line) => `\n${line}`), ...signOff.map((part) => `\n\n${part}`)].join("");
+  }
+
+  /** A wa.me link with the message prefilled. Without a usable phone number WhatsApp asks which chat to send it to. */
+  static whatsapp(doc: Invoice, url: string, settings: BillingSettings): string {
+    return `https://wa.me/${InvoiceEmails.whatsappNumber(doc.clientPhone)}?text=${encodeURIComponent(InvoiceEmails.whatsappText(doc, url, settings))}`;
+  }
+
+  /** The card / online payment link shows only when card payments are on in Settings. */
+  static payOnline(doc: Pick<Invoice, "paymentLink" | "docType" | "status">, settings: BillingSettings): boolean {
+    return settings.card.show && doc.paymentLink !== "" && doc.docType === "invoice" && doc.status === "sent";
+  }
+
+  /** Summary plus a link to the printable document page. Only for issued documents. */
+  static document(doc: Invoice, url: string, settings: BillingSettings): EmailMessage {
+    const label = SettingsContract.DOCUMENT_TYPES[doc.docType];
+    const values = InvoiceEmails.placeholders(doc, url, settings);
+    const number = values.number;
+    const isInvoice = doc.docType === "invoice";
+    const rows: [string, string][] = [
+      [label, number],
+      ["Issued", doc.issueDate ? InvoiceEmails.day(doc.issueDate) : ""],
+      ...(isInvoice ? ([["Due", values.dueDate]] as [string, string][]) : []),
+      ...(doc.docType === "quote" ? ([["Valid until", values.dueDate]] as [string, string][]) : []),
+      [isInvoice ? "Amount due" : doc.docType === "receipt" ? "Amount received" : "Amount", isInvoice ? values.balance : values.amount],
+    ];
+    const subject = `${label} ${number} from ${settings.business.name}`;
+    const bankRows = isInvoice && doc.bank ? InvoiceEmails.bankRows(doc.bank) : [];
+    const instructions = isInvoice ? doc.paymentInstructions : "";
+    const payOnline = InvoiceEmails.payOnline(doc, settings);
+    const hasPayment = bankRows.length > 0 || instructions !== "" || payOnline;
+    const opening = SettingsContract.fill(settings.documents[doc.docType].email, values);
+    const closing = `Questions about this ${label.toLowerCase()} can be sent as a reply to this email.`;
+    const signOff = `Thank you,\n${settings.business.sender}\n${settings.business.name}`;
+    const paymentRows: [string, string][] = [...bankRows, ...(bankRows.length > 0 ? ([["Reference", number]] as [string, string][]) : [])];
 
     const html = EmailHtml.document(
       subject,
       [
-        EmailHtml.paragraph(`Hi ${InvoiceEmails.firstName(invoice.clientName)},`),
-        EmailHtml.paragraph(`Invoice ${number} for ${amount} is ready.`),
+        EmailHtml.paragraph(`Hi ${values.firstName},`),
+        EmailHtml.paragraph(opening),
         EmailHtml.table(rows),
-        EmailHtml.button(url, "View and print invoice"),
+        EmailHtml.button(url, `View and print ${label.toLowerCase()}`),
         hasPayment ? '<p style="margin:0 0 6px;font-weight:600">Payment details</p>' : "",
-        bankRows.length > 0 ? EmailHtml.table([...bankRows, ["Reference", number]]) : "",
-        invoice.paymentInstructions ? EmailHtml.paragraph(invoice.paymentInstructions) : "",
-        EmailHtml.paragraph("Questions about this invoice can be sent as a reply to this email."),
-        EmailHtml.paragraph(`Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`),
+        paymentRows.length > 0 ? EmailHtml.table(paymentRows) : "",
+        payOnline ? EmailHtml.paragraph(`Pay online: ${doc.paymentLink}${settings.card.note ? ` (${settings.card.note})` : ""}`) : "",
+        instructions ? EmailHtml.paragraph(instructions) : "",
+        EmailHtml.paragraph(closing),
+        EmailHtml.paragraph(signOff),
       ].join(""),
     );
     const text = [
-      `Hi ${InvoiceEmails.firstName(invoice.clientName)},`,
+      `Hi ${values.firstName},`,
       "",
-      `Invoice ${number} for ${amount} is ready.`,
+      opening,
       "",
-      ...rows.map(([label, value]) => `${label}: ${value}`),
+      ...rows.map(([key, value]) => `${key}: ${value}`),
       "",
-      `View and print the invoice: ${url}`,
+      `View and print the ${label.toLowerCase()}: ${url}`,
       ...(hasPayment ? ["", "Payment details:"] : []),
-      ...(bankRows.length > 0 ? [...bankRows, ["Reference", number]].map(([label, value]) => `${label}: ${value}`) : []),
-      ...(invoice.paymentInstructions ? [invoice.paymentInstructions] : []),
+      ...paymentRows.map(([key, value]) => `${key}: ${value}`),
+      ...(payOnline ? [`Pay online: ${doc.paymentLink}${settings.card.note ? ` (${settings.card.note})` : ""}`] : []),
+      ...(instructions ? [instructions] : []),
       "",
-      "Questions about this invoice can be sent as a reply to this email.",
+      closing,
       "",
-      `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
+      signOff,
     ].join("\n");
     return { subject, html, text };
   }

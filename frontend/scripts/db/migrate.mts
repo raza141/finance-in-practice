@@ -551,6 +551,74 @@ const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    // One document engine: invoices, receipts, quotes and credit notes share the
+    // invoices table. Numbers are frozen as text at issue (FIP-INV-2026-0002), one
+    // sequence per type; numbers already issued (FIP-2026-0001) are copied as they are.
+    id: "028_documents",
+    statements: [
+      `ALTER TABLE invoices DROP CONSTRAINT invoices_status_check`,
+      `ALTER TABLE invoices ADD CONSTRAINT invoices_status_check CHECK (status IN ('draft', 'sent', 'paid', 'void', 'accepted', 'declined'))`,
+      `ALTER TABLE invoices
+        ADD COLUMN doc_type         text NOT NULL DEFAULT 'invoice' CHECK (doc_type IN ('invoice', 'receipt', 'quote', 'credit_note')),
+        ADD COLUMN number           text UNIQUE CHECK (char_length(number) <= 40),
+        ADD COLUMN related_id       uuid REFERENCES invoices (id) ON DELETE SET NULL,
+        ADD COLUMN payment_id       uuid REFERENCES invoice_payments (id) ON DELETE SET NULL,
+        ADD COLUMN payment_terms    text NOT NULL DEFAULT 'net7'
+          CHECK (payment_terms IN ('upfront', 'on_receipt', 'net7', 'net14', 'monthly', 'after_delivery')),
+        ADD COLUMN payment_link     text NOT NULL DEFAULT '' CHECK (char_length(payment_link) <= 500),
+        ADD COLUMN layout           text NOT NULL DEFAULT 'standard' CHECK (layout IN ('standard', 'consultancy')),
+        ADD COLUMN sections         jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(sections) = 'object'),
+        ADD COLUMN recurring        boolean NOT NULL DEFAULT false,
+        ADD COLUMN recurs_from      uuid REFERENCES invoices (id) ON DELETE SET NULL,
+        ADD COLUMN link_valid_until timestamptz`,
+      `UPDATE invoices SET number = 'FIP-' || to_char(issue_date, 'YYYY') || '-' || lpad(number_seq::text, 4, '0') WHERE number_seq IS NOT NULL`,
+      `ALTER TABLE invoices DROP CONSTRAINT invoices_number_seq_key`,
+      `ALTER TABLE invoices ADD CONSTRAINT invoices_doc_number_seq_key UNIQUE (doc_type, number_seq)`,
+      `ALTER TABLE invoices ADD CONSTRAINT invoices_number_issued_check CHECK ((status = 'draft') = (number IS NULL))`,
+      `CREATE INDEX invoices_related_idx ON invoices (related_id)`,
+      `CREATE SEQUENCE receipt_number_seq`,
+      `CREATE SEQUENCE quote_number_seq`,
+      `CREATE SEQUENCE credit_note_number_seq`,
+      `ALTER TABLE invoice_payments
+        ADD COLUMN method    text NOT NULL DEFAULT 'bank' CHECK (method IN ('bank', 'cash', 'card')),
+        ADD COLUMN reference text NOT NULL DEFAULT '' CHECK (char_length(reference) <= 80),
+        ADD COLUMN proof_url text CHECK (char_length(proof_url) <= 500)`,
+      // Audit trail and share log: who or what did what to a document, and when.
+      `CREATE TABLE document_events (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        document_id uuid NOT NULL REFERENCES invoices (id) ON DELETE CASCADE,
+        at          timestamptz NOT NULL DEFAULT now(),
+        actor       text NOT NULL CHECK (char_length(actor) <= 120),
+        event       text NOT NULL CHECK (char_length(event) <= 40),
+        detail      text NOT NULL DEFAULT '' CHECK (char_length(detail) <= 300)
+      )`,
+      `CREATE INDEX document_events_document_idx ON document_events (document_id, at)`,
+      // History so far, from the timestamps and the email log.
+      `INSERT INTO document_events (document_id, at, actor, event) SELECT id, created_at, 'system', 'created' FROM invoices`,
+      `INSERT INTO document_events (document_id, at, actor, event) SELECT id, sent_at, 'system', 'issued' FROM invoices WHERE sent_at IS NOT NULL`,
+      `INSERT INTO document_events (document_id, at, actor, event) SELECT id, paid_at, 'system', 'paid' FROM invoices WHERE paid_at IS NOT NULL`,
+      `INSERT INTO document_events (document_id, at, actor, event) SELECT id, voided_at, 'system', 'voided' FROM invoices WHERE voided_at IS NOT NULL`,
+      `INSERT INTO document_events (document_id, at, actor, event, detail)
+         SELECT invoice_id, sent_at, 'system', 'shared', left('email to ' || to_email, 300) FROM email_log WHERE invoice_id IS NOT NULL`,
+    ],
+  },
+  {
+    // Billing units are now month / session / hour / milestone / fee. Drafts and
+    // client plans move over; issued documents keep the unit they were issued with.
+    id: "029_billing_units",
+    statements: [
+      `ALTER TABLE clients DROP CONSTRAINT clients_plan_unit_check`,
+      `UPDATE clients SET plan_unit = CASE plan_unit WHEN 'on-demand' THEN 'session' WHEN 'contract' THEN 'fee' ELSE plan_unit END
+         WHERE plan_unit IN ('on-demand', 'contract')`,
+      `ALTER TABLE clients ADD CONSTRAINT clients_plan_unit_check CHECK (plan_unit IN ('month', 'session', 'hour', 'milestone', 'fee'))`,
+      `UPDATE invoices SET items = (
+         SELECT jsonb_agg(CASE e->>'unit' WHEN 'on-demand' THEN jsonb_set(e, '{unit}', '"session"')
+                                          WHEN 'contract' THEN jsonb_set(e, '{unit}', '"fee"') ELSE e END ORDER BY o)
+         FROM jsonb_array_elements(items) WITH ORDINALITY AS t (e, o))
+       WHERE status = 'draft' AND jsonb_array_length(items) > 0`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

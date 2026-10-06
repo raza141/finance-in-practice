@@ -1,8 +1,27 @@
-export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+import type { DocumentType } from "@/domains/settings/types";
+
+export type { DocumentType };
+
+/** "sent" is shown as Issued. Quotes also end as accepted or declined; "expired" and "overdue" are derived from dates. */
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void" | "accepted" | "declined";
 export type Currency = "AED" | "USD" | "PKR" | "GBP" | "EUR";
 
-/** How a line is billed: per hour, per month, on demand, or a fixed contract. */
-export type ItemUnit = "hour" | "month" | "on-demand" | "contract";
+/** How a line is billed (labels, default rates and layouts in Settings). Milestones belong to consultancy layouts. */
+export type ItemUnit = "month" | "session" | "hour" | "milestone" | "fee";
+/** Units on documents issued before migration 029; shown as issued, never offered for new lines. */
+export type LegacyUnit = "on-demand" | "contract";
+
+export type PaymentTerms = "upfront" | "on_receipt" | "net7" | "net14" | "monthly" | "after_delivery";
+export type PaymentMethod = "bank" | "cash" | "card";
+export type DocumentLayout = "standard" | "consultancy";
+
+/** The extra sections of a consultancy document; the line items are its Fees. */
+export interface ConsultancySections {
+  scope: string;
+  deliverables: string;
+  expenses: string;
+  assumptions: string;
+}
 
 export interface InvoiceItem {
   /** Usually a course title. */
@@ -12,7 +31,7 @@ export interface InvoiceItem {
   /** Which month or session this line pays for, e.g. "October 2026" or "Session · 14 Oct 2026". */
   period?: string;
   /** Absent on invoices issued before 013. */
-  unit?: ItemUnit;
+  unit?: ItemUnit | LegacyUnit;
   /** Up to two decimals (e.g. 1.5 hours). */
   quantity: number;
   unitMinor: number;
@@ -28,6 +47,9 @@ export interface InvoiceTotals {
 
 /** What the invoice form saves (validated). Totals are derived from it server-side. */
 export interface InvoiceInput {
+  docType: DocumentType;
+  /** Receipt -> the invoice it pays; credit note -> the invoice it credits; invoice -> the quote it came from. */
+  relatedId: string | null;
   bookingUid: string | null;
   /** The saved client this bills, if any; the contact fields below are the snapshot printed. */
   clientId: string | null;
@@ -47,14 +69,29 @@ export interface InvoiceInput {
   paymentInstructions: string;
   /** The bank shown under "Payment information"; its details are snapshotted on save. */
   bankAccountId: string | null;
+  paymentTerms: PaymentTerms;
+  /** A pasted card / online payment URL; printed as "Pay online" when card payments are on in Settings. */
+  paymentLink: string;
+  layout: DocumentLayout;
+  sections: ConsultancySections;
+  /** Repeats monthly: "Create this month's drafts" copies it forward. */
+  recurring: boolean;
 }
 
 export interface Invoice extends InvoiceInput, InvoiceTotals {
   id: string;
   /** Snapshot of the bank when last saved; null on older invoices or when none was chosen. */
   bank: BankDetails | null;
-  /** Null for drafts; e.g. "FIP-2026-0001" once issued. */
+  /** Null for drafts; frozen at issue, e.g. "FIP-INV-2026-0002" (older: "FIP-2026-0001"). */
   number: string | null;
+  /** The related document's number, for display ("Payment for FIP-INV-…"). */
+  relatedNumber: string | null;
+  /** On a payment receipt: the payment it confirms. */
+  paymentId: string | null;
+  /** On a recurring copy: the document it was copied from. */
+  recursFrom: string | null;
+  /** Manual extension of the client link ("Resend link"). */
+  linkValidUntil: Date | null;
   token: string;
   status: InvoiceStatus;
   /** YYYY-MM-DD in Dubai, set when issued. */
@@ -63,10 +100,14 @@ export interface Invoice extends InvoiceInput, InvoiceTotals {
   sentAt: Date | null;
   paidAt: Date | null;
   voidedAt: Date | null;
-  /** Sum of `payments`; the balance due is totalMinor - paidMinor. */
+  /** Sum of `payments`. */
   paidMinor: number;
+  /** Sum of issued credit notes against this invoice. Balance due = total - paid - credited. */
+  creditedMinor: number;
   /** Oldest first. */
   payments: InvoicePayment[];
+  /** On a receipt: the payment it confirms (date, amount, method, reference). */
+  receiptPayment: InvoicePayment | null;
   /** Times the client opened the invoice link (admin views excluded). */
   viewCount: number;
   firstViewedAt: Date | null;
@@ -80,10 +121,27 @@ export interface InvoicePayment {
   /** YYYY-MM-DD, the day the money arrived. */
   paidOn: string;
   note: string;
+  method: PaymentMethod;
+  /** Bank transfer or provider reference. */
+  reference: string;
+  /** Uploaded proof (receipt screenshot), if any. */
+  proofUrl: string | null;
+  /** The payment receipt issued for it. */
+  receiptId: string | null;
+}
+
+/** One line of a document's history: created, issued, shared, paid… */
+export interface DocumentEvent {
+  at: Date;
+  actor: string;
+  event: string;
+  detail: string;
 }
 
 export interface InvoiceSummary {
   id: string;
+  docType: DocumentType;
+  creditedMinor: number;
   number: string | null;
   status: InvoiceStatus;
   clientName: string;
@@ -157,8 +215,24 @@ export interface InvoiceDashboard {
   /** Only currencies that have invoices. */
   currencies: CurrencyStats[];
   drafts: number;
+  /** Sent quotes still within their valid-until date. */
+  quotesAwaiting: number;
+  /** Recurring invoices whose next month has no draft yet. */
+  recurringDue: number;
   /** Paid totals for the last six months (current included), "YYYY-MM" in Dubai. */
   paidByMonth: { month: string; currency: Currency; totalMinor: number }[];
+}
+
+/** One line of a client's account: a charge (debit) or what reduces it (credit). */
+export interface LedgerEntry {
+  /** YYYY-MM-DD. */
+  date: string;
+  kind: "invoice" | "receipt" | "credit_note" | "payment";
+  documentId: string;
+  number: string | null;
+  currency: Currency;
+  debitMinor: number;
+  creditMinor: number;
 }
 
 export interface ClientDashboard {

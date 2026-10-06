@@ -4,18 +4,19 @@ import Link from "next/link";
 import { startTransition, useActionState, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
+import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
 import { saveInvoice, type InvoiceFormState } from "../actions/invoices";
 import { InvoiceContract, type DraftItem, type InvoiceFieldErrors } from "../services/InvoiceContract";
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { BankAccount, Client, Currency, Invoice, InvoiceInput, ItemUnit } from "../types";
-import { InvoiceDocument } from "./InvoiceDocument";
+import type { BankAccount, Client, ConsultancySections, Currency, DocumentLayout, Invoice, InvoiceInput, ItemUnit, PaymentTerms } from "../types";
+import { DocumentView } from "./DocumentView";
 
 const noSubscribe = () => () => {};
 const SMALL_BUTTON = "rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-raised hover:text-ink disabled:opacity-30";
 const CUSTOM = "__custom";
-const ISSUE_PROMPT = "Issue this invoice? It gets its number and can no longer be edited (void and duplicate it to change it).";
+const issuePrompt = (label: string) => `Issue this ${label}? It gets its number and can no longer be edited (void and duplicate it to change it).`;
 
 /** A course offered in the line-item dropdown. */
 export interface CourseOption {
@@ -63,7 +64,7 @@ const row = (courses: readonly CourseOption[], item?: Partial<DraftItem>): Row =
   };
 };
 
-/** Create or edit a draft invoice; preview it, and issue (and email) it from the same form. */
+/** Create or edit a draft invoice, quote or credit note; preview it, and issue (and email) it from the same form. */
 export function InvoiceForm({
   id,
   initial,
@@ -76,7 +77,11 @@ export function InvoiceForm({
   options: InvoiceFormOptions;
   emailEnabled: boolean;
 }) {
-  const { clients, banks, courses } = options;
+  const { clients, banks, courses, settings } = options;
+  const { docType } = initial;
+  const label = SettingsContract.DOCUMENT_TYPES[docType].toLowerCase();
+  const isInvoice = docType === "invoice";
+  const isCredit = docType === "credit_note";
   const [state, action, saving] = useActionState<InvoiceFormState, FormData>(saveInvoice, {});
   // Disabled until hydrated, or text typed before hydration is overwritten by the initial state.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
@@ -105,7 +110,11 @@ export function InvoiceForm({
   const [bankAccountId, setBankAccountId] = useState(initial.bankAccountId ?? "");
   const [currency, setCurrency] = useState<Currency>(initial.currency);
   const [discount, setDiscount] = useState(initial.discountMinor ? InvoiceMath.majorInput(initial.discountMinor) : "");
-  const [taxRate, setTaxRate] = useState(initial.taxRateBp ? InvoiceMath.percent(initial.taxRateBp) : "");
+  const vatOn = settings.vat.registered;
+  const [taxRate, setTaxRate] = useState(vatOn ? InvoiceMath.percent(initial.taxRateBp || settings.vat.rateBp) : "");
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(initial.paymentTerms);
+  const [dueDate, setDueDate] = useState(initial.dueDate);
+  const [layout, setLayout] = useState<DocumentLayout>(initial.layout);
   const [preview, setPreview] = useState<Invoice | null>(null);
   const [previewErrors, setPreviewErrors] = useState<InvoiceFieldErrors | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -114,6 +123,17 @@ export function InvoiceForm({
   const errors = previewErrors ?? state.errors ?? {};
   const message = previewErrors ? "Fix the highlighted fields to preview." : state.message;
   const update = (key: number, patch: Partial<Row>) => setRows((list) => list.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  /** A unit's default rate (Settings) fills an empty price; milestones switch to the consultancy layout. */
+  const pickUnit = (r: Row, unit: ItemUnit) => {
+    const rate = settings.units[unit].rateMinor;
+    update(r.key, { unit, ...(rate !== null && !r.unitPrice && { unitPrice: InvoiceMath.majorInput(rate) }) });
+    if (unit === "milestone") setLayout("consultancy");
+  };
+  /** Terms set the due date from today; the date stays editable. */
+  const pickTerms = (terms: PaymentTerms) => {
+    setPaymentTerms(terms);
+    setDueDate(InvoiceContract.dueDate(terms, new Date().toISOString().slice(0, 10)));
+  };
   const bank = banks.find((b) => b.id === bankAccountId);
 
   // Running totals only: the server recomputes every amount.
@@ -150,7 +170,7 @@ export function InvoiceForm({
     // Prefill the course fee (a whole-course price, so billed as a contract) only when it
     // is in the invoice currency and no price is typed yet.
     if (course?.priceMinor && course.currency === currency && !r.unitPrice) {
-      return update(r.key, { custom: false, description: value, unitPrice: InvoiceMath.majorInput(course.priceMinor), unit: "contract", quantity: "1" });
+      return update(r.key, { custom: false, description: value, unitPrice: InvoiceMath.majorInput(course.priceMinor), unit: "fee", quantity: "1" });
     }
     update(r.key, { custom: false, description: value });
   };
@@ -167,9 +187,17 @@ export function InvoiceForm({
     const { input } = parsed;
     setPreview({
       ...input,
+      trn: vatOn ? settings.vat.trn : "",
+      taxRateBp: vatOn ? input.taxRateBp : 0,
       ...InvoiceMath.totals(input.items.map((item) => item.amountMinor), input.discountMinor, input.taxRateBp),
       id: id ?? "",
       number: null,
+      relatedNumber: null,
+      paymentId: null,
+      recursFrom: null,
+      linkValidUntil: null,
+      creditedMinor: 0,
+      receiptPayment: null,
       token: "",
       status: "draft",
       issueDate: null,
@@ -193,7 +221,7 @@ export function InvoiceForm({
     event.preventDefault();
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const intent = submitter?.getAttribute("value");
-    if ((intent === "issue" || intent === "send") && !window.confirm(ISSUE_PROMPT)) return;
+    if ((intent === "issue" || intent === "send") && !window.confirm(issuePrompt(label))) return;
     const data = new FormData(event.currentTarget, submitter);
     dialogRef.current?.close();
     setPreviewErrors(null);
@@ -210,7 +238,7 @@ export function InvoiceForm({
         title={!emailEnabled ? "Email is not configured" : client.clientEmail.trim() ? undefined : "Add the client's email to send it, or issue and share on WhatsApp"}
         className="h-10 rounded-md bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
-        Issue &amp; email to client
+        Issue &amp; email {label}
       </button>
       <button type="submit" name="intent" value="issue" disabled={pending} className="h-10 rounded-md border border-line px-4 text-sm text-muted transition-colors hover:text-ink disabled:opacity-60">
         Issue without emailing
@@ -222,6 +250,9 @@ export function InvoiceForm({
     <form ref={formRef} onSubmit={submit} className="grid gap-8">
       {id && <input type="hidden" name="id" value={id} />}
       {initial.bookingUid && <input type="hidden" name="bookingUid" value={initial.bookingUid} />}
+      <input type="hidden" name="docType" value={docType} />
+      {initial.relatedId && <input type="hidden" name="relatedId" value={initial.relatedId} />}
+      <input type="hidden" name="layout" value={layout} />
 
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
         <legend className="mb-4 text-sm text-quant">Bill to</legend>
@@ -230,7 +261,7 @@ export function InvoiceForm({
             <option value="">New client (type the details below)</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} · {c.email}
+                {[c.name, c.email || c.phone].filter(Boolean).join(" · ")}
               </option>
             ))}
           </select>
@@ -250,13 +281,25 @@ export function InvoiceForm({
         {!client.clientId && (
           <label className="flex items-center gap-2 text-sm text-muted sm:col-span-2">
             <input type="checkbox" name="saveClient" defaultChecked className="accent-quant" />
-            Save to my clients when I save this invoice
+            Save to my clients when I save this {label}
           </label>
         )}
       </fieldset>
 
       <fieldset disabled={pending}>
-        <legend className="mb-4 text-sm text-quant">Line items</legend>
+        <legend className="mb-4 flex w-full flex-wrap items-center justify-between gap-3 text-sm text-quant">
+          {layout === "consultancy" ? "Fees" : "Line items"}
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Layout
+            <select value={layout} onChange={(e) => setLayout(e.target.value as DocumentLayout)} className="rounded-md border border-line bg-canvas/70 px-2 py-1 text-ink">
+              {Object.entries(InvoiceContract.LAYOUTS).map(([value, name]) => (
+                <option key={value} value={value}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </legend>
         <input type="hidden" name="items" value={JSON.stringify(rows.map(({ description, detail, period, unit, quantity, unitPrice }) => ({ description, detail, period, unit, quantity, unitPrice })))} />
         <div className="hidden grid-cols-[1fr_8rem_5rem_8rem_8rem_4rem] gap-3 px-1 text-[11px] tracking-[0.18em] text-muted uppercase sm:grid">
           <span>Course</span>
@@ -285,12 +328,14 @@ export function InvoiceForm({
                   <input aria-label={`Line ${index + 1} description`} placeholder="Description" maxLength={200} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} className={`${FIELD} mt-0`} />
                 )}
               </div>
-              <select aria-label={`Line ${index + 1} billing basis`} value={r.unit} onChange={(e) => update(r.key, { unit: e.target.value as ItemUnit })} className={`${FIELD} mt-0`}>
-                {Object.entries(InvoiceContract.UNITS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+              <select aria-label={`Line ${index + 1} billing basis`} value={r.unit} onChange={(e) => pickUnit(r, e.target.value as ItemUnit)} className={`${FIELD} mt-0`}>
+                {(Object.entries(InvoiceContract.UNITS) as [ItemUnit, string][])
+                  .filter(([value]) => value !== "milestone" || layout === "consultancy" || r.unit === "milestone")
+                  .map(([value, name]) => (
+                    <option key={value} value={value}>
+                      {name}
+                    </option>
+                  ))}
               </select>
               <input aria-label={`Line ${index + 1} quantity`} inputMode="decimal" value={r.quantity} onChange={(e) => update(r.key, { quantity: e.target.value })} className={`${FIELD} mt-0`} />
               <input aria-label={`Line ${index + 1} unit price`} inputMode="decimal" placeholder="0.00" value={r.unitPrice} onChange={(e) => update(r.key, { unitPrice: e.target.value })} className={`${FIELD} mt-0`} />
@@ -342,6 +387,22 @@ export function InvoiceForm({
         </button>
       </fieldset>
 
+      {layout === "consultancy" && (
+        <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
+          <legend className="mb-4 text-sm text-quant">Consultancy sections</legend>
+          {(Object.entries(InvoiceContract.SECTIONS) as [keyof ConsultancySections, string][]).map(([key, name]) => (
+            <Field key={key} label={name} hint={key === "scope" || key === "deliverables" ? "Printed before the fees" : "Printed after the fees"}>
+              <textarea name={`section.${key}`} rows={4} maxLength={2000} defaultValue={initial.sections[key]} className={`${FIELD} resize-y`} />
+            </Field>
+          ))}
+          {errors.sections && (
+            <p role="alert" className="text-xs text-gold sm:col-span-2">
+              {errors.sections}
+            </p>
+          )}
+        </fieldset>
+      )}
+
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-3">
         <legend className="mb-4 text-sm text-quant">Amounts</legend>
         <Field label="Currency" error={errors.currency}>
@@ -351,17 +412,30 @@ export function InvoiceForm({
             ))}
           </select>
         </Field>
-        <Field label="Discount (amount)" error={errors.discountMinor} hint="Optional, taken off before tax">
+        <Field label="Discount (amount)" error={errors.discountMinor} hint="Optional, taken off before VAT">
           <input name="discount" inputMode="decimal" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} aria-invalid={errors.discountMinor ? true : undefined} className={FIELD} />
         </Field>
-        <Field label="VAT / tax %" error={errors.taxRateBp} hint="Leave empty if not VAT-registered">
-          <input name="taxRate" inputMode="decimal" placeholder="0" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} aria-invalid={errors.taxRateBp ? true : undefined} className={FIELD} />
-        </Field>
-        <Field label="TRN" error={errors.trn} hint="Your tax registration number, if any">
-          <input name="trn" maxLength={30} defaultValue={initial.trn} className={FIELD} />
-        </Field>
-        <Field label="Due date" error={errors.dueDate}>
-          <input name="dueDate" type="date" required defaultValue={initial.dueDate} aria-invalid={errors.dueDate ? true : undefined} className={FIELD} />
+        {vatOn ? (
+          <Field label="VAT %" error={errors.taxRateBp} hint={`TRN ${settings.vat.trn} is printed from Settings`}>
+            <input name="taxRate" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} aria-invalid={errors.taxRateBp ? true : undefined} className={FIELD} />
+          </Field>
+        ) : (
+          <input type="hidden" name="taxRate" value="" />
+        )}
+        {isInvoice && (
+          <Field label="Payment terms" error={errors.paymentTerms} hint="Sets the due date from today">
+            <select name="paymentTerms" value={paymentTerms} onChange={(e) => pickTerms(e.target.value as PaymentTerms)} className={FIELD}>
+              {Object.entries(InvoiceContract.PAYMENT_TERMS).map(([value, name]) => (
+                <option key={value} value={value}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {!isInvoice && <input type="hidden" name="paymentTerms" value={paymentTerms} />}
+        <Field label={docType === "quote" ? "Valid until" : isCredit ? "Credit date" : "Due date"} error={errors.dueDate}>
+          <input name="dueDate" type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-invalid={errors.dueDate ? true : undefined} className={FIELD} />
         </Field>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 self-end rounded-md border border-line p-3 font-mono text-sm tabular-nums">
           <dt className="text-muted">Subtotal</dt>
@@ -374,47 +448,64 @@ export function InvoiceForm({
           )}
           {taxBp > 0 && (
             <>
-              <dt className="text-muted">Tax {taxRate}%</dt>
+              <dt className="text-muted">VAT {taxRate}%</dt>
               <dd className="text-right">{money(totals.taxMinor)}</dd>
             </>
           )}
           <dt className="text-ink">Total</dt>
           <dd className="text-right text-gold">{money(totals.totalMinor)}</dd>
         </dl>
+        {isInvoice && (
+          <label className="flex items-center gap-2 self-center text-sm text-muted">
+            <input type="checkbox" name="recurring" defaultChecked={initial.recurring} className="accent-quant" />
+            Repeats monthly (offered under “Create this month’s drafts”)
+          </label>
+        )}
       </fieldset>
 
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
-        <legend className="mb-4 text-sm text-quant">How to pay</legend>
-        <Field
-          label="Bank account"
-          error={errors.bankAccountId}
-          hint={
-            <Link href="/admin/invoices/banks" className="hover:text-ink">
-              {banks.length === 0 ? "Add your bank details →" : "Manage bank accounts →"}
-            </Link>
-          }
-        >
-          <select name="bankAccountId" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className={FIELD}>
-            <option value="">No bank details</option>
-            {banks.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.bankName} {b.iban ? `· ${b.iban}` : b.accountNumber && `· ${b.accountNumber}`}
-                {b.isDefault ? " (default)" : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Other payment instructions" error={errors.paymentInstructions} hint="Optional, e.g. a card payment link. Printed under the bank details.">
-          <textarea name="paymentInstructions" rows={3} maxLength={2000} defaultValue={initial.paymentInstructions} className={`${FIELD} resize-y`} />
-        </Field>
-        <Field label="Terms & notes" error={errors.notes} hint="Optional, e.g. payment due within 7 days." className="sm:col-span-2">
+        <legend className="mb-4 text-sm text-quant">{isInvoice ? "Payment details" : "Notes"}</legend>
+        {isInvoice && (
+          <>
+            <Field
+              label="Bank account"
+              error={errors.bankAccountId}
+              hint={
+                <Link href="/admin/invoices/banks" className="hover:text-ink">
+                  {banks.length === 0 ? "Add your bank details →" : "Manage bank accounts →"}
+                </Link>
+              }
+            >
+              <select name="bankAccountId" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className={FIELD}>
+                <option value="">No bank details</option>
+                {banks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.bankName} {b.iban ? `· ${b.iban}` : b.accountNumber && `· ${b.accountNumber}`}
+                    {b.isDefault ? " (default)" : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {settings.card.show ? (
+              <Field label="Payment link (optional)" error={errors.paymentLink} hint="A card / online link from any provider. Printed as “Pay online”.">
+                <input name="paymentLink" type="url" maxLength={500} placeholder="https://" defaultValue={initial.paymentLink} className={FIELD} />
+              </Field>
+            ) : (
+              <input type="hidden" name="paymentLink" value={initial.paymentLink} />
+            )}
+            <Field label="Other payment instructions" error={errors.paymentInstructions} hint="Optional. Printed under the bank details." className="sm:col-span-2">
+              <textarea name="paymentInstructions" rows={2} maxLength={2000} defaultValue={initial.paymentInstructions} className={`${FIELD} resize-y`} />
+            </Field>
+          </>
+        )}
+        <Field label="Notes" error={errors.notes} hint="Optional. The terms come from Settings." className="sm:col-span-2">
           <textarea name="notes" rows={3} maxLength={2000} defaultValue={initial.notes} className={`${FIELD} resize-y`} />
         </Field>
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <button type="button" onClick={openPreview} disabled={pending} className="h-10 rounded-md border border-quant/50 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/10 disabled:opacity-60">
-          Preview invoice
+          Preview {label}
         </button>
         <button type="submit" name="intent" value="save" disabled={pending} className="h-10 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/25 disabled:opacity-60">
           {saving ? "Saving…" : "Save draft"}
@@ -427,7 +518,7 @@ export function InvoiceForm({
         )}
       </div>
 
-      <dialog ref={dialogRef} onClose={() => setPreview(null)} aria-label="Invoice preview" className="m-auto max-h-[94vh] w-[96vw] max-w-[52rem] rounded-lg bg-slate-200 p-0 backdrop:bg-black/70">
+      <dialog ref={dialogRef} onClose={() => setPreview(null)} aria-label="Preview" className="m-auto max-h-[94vh] w-[96vw] max-w-[52rem] rounded-lg bg-slate-200 p-0 backdrop:bg-black/70">
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-line bg-canvas px-4 py-3">
           <p className="mr-auto text-sm text-muted">Preview: this is how the client will see it.</p>
           <button type="button" onClick={() => dialogRef.current?.close()} className="h-10 rounded-md border border-line px-4 text-sm text-ink hover:border-quant">
@@ -435,7 +526,7 @@ export function InvoiceForm({
           </button>
           {issueButtons}
         </div>
-        <div className="p-3 sm:p-6">{preview && <InvoiceDocument invoice={preview} settings={options.settings} />}</div>
+        <div className="p-3 sm:p-6">{preview && <DocumentView doc={preview} settings={settings} />}</div>
       </dialog>
     </form>
   );

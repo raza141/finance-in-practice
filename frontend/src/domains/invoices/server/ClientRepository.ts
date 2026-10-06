@@ -58,10 +58,11 @@ export class ClientRepository {
       this.sql`
         SELECT count(*) AS total,
           count(*) FILTER (WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') AT TIME ZONE 'Asia/Dubai') AS new_this_month,
-          count(*) FILTER (WHERE plan_unit = 'hour') AS hour,
           count(*) FILTER (WHERE plan_unit = 'month') AS month,
-          count(*) FILTER (WHERE plan_unit = 'on-demand') AS on_demand,
-          count(*) FILTER (WHERE plan_unit = 'contract') AS contract
+          count(*) FILTER (WHERE plan_unit = 'session') AS session,
+          count(*) FILTER (WHERE plan_unit = 'hour') AS hour,
+          count(*) FILTER (WHERE plan_unit = 'milestone') AS milestone,
+          count(*) FILTER (WHERE plan_unit = 'fee') AS fee
         FROM clients
       `,
       this.sql`
@@ -76,7 +77,7 @@ export class ClientRepository {
     return {
       total: Number(c.total),
       newThisMonth: Number(c.new_this_month),
-      byPlan: { hour: Number(c.hour), month: Number(c.month), "on-demand": Number(c.on_demand), contract: Number(c.contract) },
+      byPlan: { month: Number(c.month), session: Number(c.session), hour: Number(c.hour), milestone: Number(c.milestone), fee: Number(c.fee) },
       expectedMonthly: (expected as Record<string, string>[]).map((row) => ({ currency: row.currency as Currency, totalMinor: Number(row.total) })),
     };
   }

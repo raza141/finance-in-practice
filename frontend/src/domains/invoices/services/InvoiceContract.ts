@@ -1,6 +1,21 @@
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
-import type { BankDetails, Client, ClientInput, ConfirmationInput, Currency, InvoiceInput, InvoiceItem, ItemUnit } from "../types";
+import type {
+  BankDetails,
+  Client,
+  ClientInput,
+  ConfirmationInput,
+  ConsultancySections,
+  Currency,
+  DocumentLayout,
+  DocumentType,
+  InvoiceInput,
+  InvoiceItem,
+  ItemUnit,
+  LegacyUnit,
+  PaymentMethod,
+  PaymentTerms,
+} from "../types";
 import { InvoiceMath } from "./InvoiceMath";
 
 export type InvoiceField = keyof InvoiceInput;
@@ -11,6 +26,23 @@ export type ClientFieldErrors = Partial<Record<keyof ClientInput, string>>;
 export type BankFieldErrors = Partial<Record<keyof BankDetails, string>>;
 
 type Parsed<T, E> = { ok: true; input: T } | { ok: false; errors: E };
+
+/** A payment as the admin form submits it, validated. */
+export interface PaymentInput {
+  amountMinor: number;
+  paidOn: string;
+  note: string;
+  method: PaymentMethod;
+  reference: string;
+}
+
+/** A Quick Receipt as the form submits it, validated. */
+export interface QuickReceiptInput {
+  client: Pick<InvoiceInput, "clientId" | "clientName" | "clientEmail" | "clientPhone">;
+  currency: Currency;
+  service: string;
+  payment: PaymentInput;
+}
 
 /** A line item as the form submits it (JSON in the hidden `items` field). */
 export interface DraftItem {
@@ -29,12 +61,32 @@ export interface DraftItem {
 export class InvoiceContract {
   static readonly CURRENCIES: readonly Currency[] = ["AED", "USD", "PKR", "GBP", "EUR"];
   static readonly DEFAULT_TIME_ZONE = "Asia/Dubai";
-  /** Billing basis of a line, as labelled on the form and the invoice. */
+  /** Billing basis of a line, as named on the form. The word printed after a quantity comes from Settings. */
   static readonly UNITS: Readonly<Record<ItemUnit, string>> = {
-    hour: "Hourly",
     month: "Monthly",
-    "on-demand": "On demand",
-    contract: "Contract",
+    session: "Per session",
+    hour: "Hourly",
+    milestone: "Milestone",
+    fee: "Fixed fee",
+  };
+  /** Units on documents issued before migration 029, printed as issued. */
+  static readonly LEGACY_UNITS: Readonly<Record<LegacyUnit, string>> = { "on-demand": "on demand", contract: "contract" };
+  static readonly DOC_TYPES: readonly DocumentType[] = ["invoice", "receipt", "quote", "credit_note"];
+  static readonly PAYMENT_TERMS: Readonly<Record<PaymentTerms, string>> = {
+    upfront: "Paid upfront",
+    on_receipt: "Due on receipt",
+    net7: "Net 7 days",
+    net14: "Net 14 days",
+    monthly: "Monthly",
+    after_delivery: "Pay after delivery",
+  };
+  static readonly PAYMENT_METHODS: Readonly<Record<PaymentMethod, string>> = { bank: "Bank transfer", cash: "Cash", card: "Card / online link" };
+  static readonly LAYOUTS: Readonly<Record<DocumentLayout, string>> = { standard: "Standard", consultancy: "Consultancy" };
+  static readonly SECTIONS: Readonly<Record<keyof ConsultancySections, string>> = {
+    scope: "Scope",
+    deliverables: "Deliverables",
+    expenses: "Expenses",
+    assumptions: "Assumptions",
   };
   static readonly LIMITS = {
     name: 120,
@@ -127,12 +179,30 @@ export class InvoiceContract {
     const bookingUid = text("bookingUid");
     if (bookingUid && !InvoiceContract.isBookingUid(bookingUid)) errors.bookingUid = "Invalid booking reference.";
 
+    const docType = (text("docType") || "invoice") as DocumentType;
+    if (!InvoiceContract.DOC_TYPES.includes(docType)) errors.docType = "Unknown document type.";
+    const relatedId = text("relatedId");
+    if (relatedId && !InvoiceContract.UUID.test(relatedId)) errors.relatedId = "Invalid linked document.";
+    const paymentTerms = (text("paymentTerms") || "net7") as PaymentTerms;
+    if (!Object.hasOwn(InvoiceContract.PAYMENT_TERMS, paymentTerms)) errors.paymentTerms = "Choose payment terms.";
+    const paymentLink = text("paymentLink");
+    if (paymentLink && (!/^https:\/\/\S+$/i.test(paymentLink) || paymentLink.length > 500)) errors.paymentLink = "Paste a full https:// link, or leave it empty.";
+    const layout = (text("layout") || "standard") as DocumentLayout;
+    if (!Object.hasOwn(InvoiceContract.LAYOUTS, layout)) errors.layout = "Choose a layout.";
+    const sections = Object.fromEntries(Object.keys(InvoiceContract.SECTIONS).map((key) => [key, text(`section.${key}`)])) as unknown as ConsultancySections;
+    if (Object.values(sections).some((value) => value.length > LIMITS.longText)) errors.sections = `Each section up to ${LIMITS.longText} characters.`;
+    if (typeof items !== "string" && layout !== "consultancy" && items.some((item) => item.unit === "milestone")) {
+      errors.items = "Milestones belong to the consultancy layout: switch the layout, or bill the line another way.";
+    }
+
     if (Object.keys(errors).length > 0 || typeof items === "string" || discount === null || taxRateBp === null) {
       return { ok: false, errors };
     }
     return {
       ok: true,
       input: {
+        docType,
+        relatedId: relatedId || null,
         bookingUid: bookingUid || null,
         clientId: clientId || null,
         clientName,
@@ -148,6 +218,11 @@ export class InvoiceContract {
         notes,
         paymentInstructions,
         bankAccountId: bankAccountId || null,
+        paymentTerms,
+        paymentLink,
+        layout,
+        sections: layout === "consultancy" ? sections : { scope: "", deliverables: "", expenses: "", assumptions: "" },
+        recurring: fields.recurring === "on",
       },
     };
   }
@@ -303,16 +378,55 @@ export class InvoiceContract {
     return wall - Math.floor(instant / 1000) * 1000;
   }
 
-  /** A payment from the admin form: amount (major units), the day it arrived, an optional note. */
-  static parsePayment(fields: Record<string, unknown>): { amountMinor: number; paidOn: string; note: string } | string {
+  /** A payment from the admin form: amount (major units), the day it arrived, method, reference and an optional note. */
+  static parsePayment(fields: Record<string, unknown>): PaymentInput | string {
     const text = InvoiceContract.text(fields);
     const amountMinor = InvoiceMath.parseMajor(text("amount"));
     if (!amountMinor) return "Enter the amount received, e.g. 1500.";
     const paidOn = text("paidOn");
     if (!InvoiceContract.isIsoDate(paidOn)) return "Choose the date the payment arrived.";
+    const method = (text("method") || "bank") as PaymentMethod;
+    if (!Object.hasOwn(InvoiceContract.PAYMENT_METHODS, method)) return "Choose how it was paid.";
+    const reference = text("reference");
+    if (reference.length > 80) return "Keep the reference under 80 characters.";
     const note = text("note");
     if (note.length > 80) return "Keep the note under 80 characters.";
-    return { amountMinor, paidOn, note };
+    return { amountMinor, paidOn, note, method, reference };
+  }
+
+  /**
+   * A Quick Receipt: one session paid on the spot. Becomes a one-line receipt
+   * document plus its payment; no invoice.
+   */
+  static parseQuickReceipt(fields: Record<string, unknown>): Parsed<QuickReceiptInput, Partial<Record<string, string>>> {
+    const text = InvoiceContract.text(fields);
+    const { LIMITS } = InvoiceContract;
+    const errors: Partial<Record<string, string>> = {};
+    const clientName = text("clientName");
+    if (!clientName || clientName.length > LIMITS.name) errors.clientName = `Enter the client's name (up to ${LIMITS.name} characters).`;
+    const clientEmail = text("clientEmail").toLowerCase();
+    if (clientEmail && (!InvoiceContract.EMAIL.test(clientEmail) || clientEmail.length > LIMITS.email)) errors.clientEmail = "Enter a valid email address, or leave it empty.";
+    const clientPhone = text("clientPhone");
+    if (clientPhone.length > LIMITS.phone) errors.clientPhone = `Up to ${LIMITS.phone} characters.`;
+    const clientId = text("clientId");
+    if (clientId && !InvoiceContract.UUID.test(clientId)) errors.clientId = "Invalid client.";
+    const service = text("service");
+    if (!service || service.length > LIMITS.description) errors.service = `Describe the service (up to ${LIMITS.description} characters).`;
+    const currency = text("currency") as Currency;
+    if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
+    const payment = InvoiceContract.parsePayment(fields);
+    if (typeof payment === "string") errors.payment = payment;
+    else if (payment.amountMinor > LIMITS.maxMinor) errors.payment = "The amount is too large.";
+    if (Object.keys(errors).length > 0 || typeof payment === "string") return { ok: false, errors };
+    return { ok: true, input: { client: { clientId: clientId || null, clientName, clientEmail, clientPhone }, currency, service, payment } };
+  }
+
+  /** The due date a payment term implies, counted from `from` (YYYY-MM-DD). */
+  static dueDate(terms: PaymentTerms, from: string): string {
+    const days: Record<PaymentTerms, number> = { upfront: 0, on_receipt: 0, net7: 7, net14: 14, monthly: 7, after_delivery: 30 };
+    const date = new Date(`${from}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days[terms]);
+    return date.toISOString().slice(0, 10);
   }
 
   private static text(fields: Record<string, unknown>) {
@@ -350,7 +464,7 @@ export class InvoiceContract {
       const period = typeof d.period === "string" ? d.period.trim() : "";
       if (period.length > LIMITS.period) return `${row}period up to ${LIMITS.period} characters.`;
       const unit = d.unit as ItemUnit;
-      if (typeof unit !== "string" || !Object.hasOwn(InvoiceContract.UNITS, unit)) return `${row}choose hourly, monthly, on demand or contract.`;
+      if (typeof unit !== "string" || !Object.hasOwn(InvoiceContract.UNITS, unit)) return `${row}choose how the line is billed.`;
       const quantityText = typeof d.quantity === "string" ? d.quantity.trim() : "";
       const quantity = Number(quantityText);
       if (!InvoiceContract.QUANTITY.test(quantityText) || quantity <= 0 || quantity > LIMITS.maxQuantity) {

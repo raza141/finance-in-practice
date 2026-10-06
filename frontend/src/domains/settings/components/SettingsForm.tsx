@@ -5,6 +5,7 @@ import { startTransition, useActionState, useSyncExternalStore, type FormEvent, 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
+import type { ItemUnit } from "@/domains/invoices/types";
 
 import { saveSettings, type SettingsFormState } from "../actions/settings";
 import { SettingsContract } from "../services/SettingsContract";
@@ -61,7 +62,7 @@ export function SettingsForm({ settings }: { settings: BillingSettings }) {
           {input("business.website", "Website", business.website, LIMITS.website)}
         </Section>
 
-        <Section title="VAT" hint="Off while not VAT-registered: no VAT lines and the title stays “Invoice”. Turning it on is wired in a later step.">
+        <Section title="VAT" hint="Off while not VAT-registered: no VAT lines and the title stays “Invoice”. On: new documents carry the TRN and VAT, and print as Tax invoice / Tax credit note; issued ones never change.">
           <label className="flex items-center gap-3 text-sm sm:col-span-2">
             <input name="vat.registered" type="checkbox" defaultChecked={vat.registered} className="size-4 accent-[var(--color-quant)]" />
             VAT registered
@@ -83,6 +84,44 @@ export function SettingsForm({ settings }: { settings: BillingSettings }) {
             <div key={type}>{input(`prefix.${type}`, `${label} prefix`, settings.prefixes[type], 16, { required: true, hint: `${settings.prefixes[type]}-2026-0001` })}</div>
           ))}
         </Section>
+
+        <fieldset className="grid gap-3 rounded-lg border border-line p-5">
+          <legend className="px-1 text-sm text-quant">Billing units</legend>
+          <p className="-mt-1 text-xs text-muted">The word printed after a quantity (“2 sessions”), the price prefilled when a line uses it, and its layout. Milestones are consultancy only.</p>
+          <div className="hidden grid-cols-[8rem_1fr_9rem_10rem] gap-3 text-[11px] tracking-[0.18em] text-muted uppercase sm:grid">
+            <span>Basis</span>
+            <span>Printed as</span>
+            <span>Default rate</span>
+            <span>Layout</span>
+          </div>
+          {(Object.entries(InvoiceContract.UNITS) as [ItemUnit, string][]).map(([unit, name]) => (
+            <div key={unit} className="grid items-center gap-3 sm:grid-cols-[8rem_1fr_9rem_10rem]">
+              <span className="text-sm">{name}</span>
+              <input name={`unit.${unit}.label`} aria-label={`${name}: printed as`} required maxLength={30} defaultValue={settings.units[unit].label} className={`${FIELD} mt-0`} />
+              <input
+                name={`unit.${unit}.rate`}
+                aria-label={`${name}: default rate`}
+                inputMode="decimal"
+                placeholder="No default"
+                defaultValue={settings.units[unit].rateMinor === null ? "" : InvoiceMath.majorInput(settings.units[unit].rateMinor)}
+                aria-invalid={errors[`unit.${unit}.rate`] ? true : undefined}
+                className={`${FIELD} mt-0`}
+              />
+              <select name={`unit.${unit}.layout`} aria-label={`${name}: layout`} defaultValue={settings.units[unit].layout} className={`${FIELD} mt-0`}>
+                {Object.entries(InvoiceContract.LAYOUTS).map(([value, layout]) => (
+                  <option key={value} value={value} disabled={unit === "milestone" && value !== "consultancy"}>
+                    {layout}
+                  </option>
+                ))}
+              </select>
+              {(errors[`unit.${unit}.rate`] || errors[`unit.${unit}.layout`] || errors[`unit.${unit}.label`]) && (
+                <p role="alert" className="text-xs text-gold sm:col-span-4">
+                  {errors[`unit.${unit}.rate`] ?? errors[`unit.${unit}.layout`] ?? errors[`unit.${unit}.label`]}
+                </p>
+              )}
+            </div>
+          ))}
+        </fieldset>
 
         <section className="grid gap-3">
           <h2 className="text-sm text-quant">Document texts</h2>

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { EmailHtml } from "@/core/email/EmailHtml";
 import { ResendClient } from "@/core/email/ResendClient";
 
+import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+
 import type { Invoice } from "../types";
 import { InvoiceContract } from "./InvoiceContract";
 import { InvoiceEmails } from "./InvoiceEmails";
@@ -16,7 +18,7 @@ const invoiceFields = (overrides: Record<string, string> = {}) => ({
   currency: "AED",
   items: JSON.stringify([
     { description: "CFA Level I session", detail: " 6-30 Oct ", period: " October 2026 ", unit: "hour", quantity: "1.5", unitPrice: "333.33" },
-    { description: "Mock exam review", detail: "", unit: "contract", quantity: "2", unitPrice: "100" },
+    { description: "Mock exam review", detail: "", unit: "fee", quantity: "2", unitPrice: "100" },
   ]),
   discount: "",
   taxRate: "",
@@ -26,6 +28,11 @@ const invoiceFields = (overrides: Record<string, string> = {}) => ({
   paymentInstructions: "IBAN AE00 0000",
   ...overrides,
 });
+
+const SETTINGS = SettingsContract.DEFAULTS;
+/** An issued invoice with no payments, for the message builders. */
+const issued = (fields: Partial<Invoice>) =>
+  ({ docType: "invoice", status: "sent", paidMinor: 0, creditedMinor: 0, paymentLink: "", receiptPayment: null, paymentInstructions: "", bank: null, ...fields }) as Invoice;
 
 describe("InvoiceMath", () => {
   it("computes line amounts and totals in integer minor units, rounding half-up", () => {
@@ -95,7 +102,7 @@ describe("InvoiceContract.parseInvoice", () => {
     for (const unit of ["weekly", "toString", undefined]) {
       expect(InvoiceContract.parseInvoice(invoiceFields({ items: JSON.stringify([{ description: "x", unit, quantity: "1", unitPrice: "1" }]) }))).toMatchObject({
         ok: false,
-        errors: { items: expect.stringContaining("hourly") },
+        errors: { items: expect.stringContaining("how the line is billed") },
       });
     }
     expect(InvoiceContract.parseInvoice(invoiceFields({ clientId: "1; DROP", bankAccountId: "x" }))).toMatchObject({
@@ -207,8 +214,8 @@ describe("emails", () => {
   });
 
   it("links the invoice email to the public page", () => {
-    const invoice = { number: "FIP-2026-0007", clientName: "Sara Khan", totalMinor: 68_240, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "IBAN" } as Invoice;
-    const message = InvoiceEmails.invoice(invoice, "https://financeinpractice.me/invoice/tok");
+    const invoice = issued({ number: "FIP-2026-0007", clientName: "Sara Khan", totalMinor: 68_240, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "IBAN" });
+    const message = InvoiceEmails.document(invoice, "https://financeinpractice.me/invoice/tok", SETTINGS);
     expect(message.subject).toBe("Invoice FIP-2026-0007 from Finance in Practice");
     expect(message.html).toContain('href="https://financeinpractice.me/invoice/tok"');
     expect(message.text).toContain("AED 682.40");
@@ -219,8 +226,8 @@ describe("emails", () => {
 
   it("puts the bank details in the invoice email, skipping empty fields", () => {
     const bank = { bankName: "Emirates NBD", accountTitle: "M A Raza", accountNumber: "", iban: "AE07 0331", branch: "", swift: "" };
-    const invoice = { number: "FIP-2026-0008", clientName: "Sara", totalMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "", bank } as Invoice;
-    const message = InvoiceEmails.invoice(invoice, "https://x.test/invoice/tok");
+    const invoice = issued({ number: "FIP-2026-0008", clientName: "Sara", totalMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", bank });
+    const message = InvoiceEmails.document(invoice, "https://x.test/invoice/tok", SETTINGS);
     expect(message.text).toContain("IBAN: AE07 0331");
     expect(message.text).toContain("Reference: FIP-2026-0008");
     expect(message.text).not.toContain("Branch");
@@ -266,19 +273,19 @@ describe("InvoiceEmails.whatsapp", () => {
     expect(InvoiceEmails.whatsappNumber("+971 50 230 4045")).toBe("971502304045");
     expect(InvoiceEmails.whatsappNumber("0097150 230 4045")).toBe("971502304045");
     expect(InvoiceEmails.whatsappNumber("")).toBe("");
-    const invoice = { number: "FIP-2026-0007", clientName: "Sara Khan", clientPhone: "050 230 4045", totalMinor: 400000, currency: "AED", dueDate: "2026-10-13" } as Invoice;
-    const href = InvoiceEmails.whatsapp(invoice, "https://financeinpractice.me/invoice/tok");
+    const invoice = issued({ number: "FIP-2026-0007", clientName: "Sara Khan", clientPhone: "050 230 4045", totalMinor: 400000, currency: "AED", dueDate: "2026-10-13" });
+    const href = InvoiceEmails.whatsapp(invoice, "https://financeinpractice.me/invoice/tok", SETTINGS);
     expect(href.startsWith("https://wa.me/971502304045?text=")).toBe(true);
     const text = decodeURIComponent(href.split("?text=")[1]);
     expect(text).toContain("Hi Sara, invoice FIP-2026-0007 for AED 4,000.00 is ready, due 13 Oct 2026.");
     expect(text).toContain("https://financeinpractice.me/invoice/tok");
-    expect(InvoiceEmails.whatsapp({ ...invoice, clientPhone: "" }, "u").startsWith("https://wa.me/?text=")).toBe(true);
+    expect(InvoiceEmails.whatsapp({ ...invoice, clientPhone: "" }, "u", SETTINGS).startsWith("https://wa.me/?text=")).toBe(true);
   });
 });
 
 describe("InvoiceContract payments and optional email", () => {
   it("parses a payment and rejects a bad amount or date", () => {
-    expect(InvoiceContract.parsePayment({ amount: "1,500", paidOn: "2026-10-06", note: " Advance " })).toEqual({ amountMinor: 150000, paidOn: "2026-10-06", note: "Advance" });
+    expect(InvoiceContract.parsePayment({ amount: "1,500", paidOn: "2026-10-06", note: " Advance " })).toEqual({ amountMinor: 150000, paidOn: "2026-10-06", note: "Advance", method: "bank", reference: "" });
     expect(typeof InvoiceContract.parsePayment({ amount: "0", paidOn: "2026-10-06" })).toBe("string");
     expect(typeof InvoiceContract.parsePayment({ amount: "100", paidOn: "06/10/2026" })).toBe("string");
   });

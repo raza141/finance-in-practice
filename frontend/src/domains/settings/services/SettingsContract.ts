@@ -1,8 +1,9 @@
 import { siteConfig } from "@/core/config/site";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
-import type { Currency } from "@/domains/invoices/types";
+import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
+import type { Currency, DocumentLayout, ItemUnit } from "@/domains/invoices/types";
 
-import type { BillingSettings, DocumentTexts, DocumentType } from "../types";
+import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig } from "../types";
 
 export type SettingsFieldErrors = Partial<Record<string, string>>;
 
@@ -37,6 +38,13 @@ export class SettingsContract {
     },
     vat: { registered: false, trn: "", rateBp: 500 },
     currency: "AED",
+    units: {
+      month: { label: "month", rateMinor: null, layout: "standard" },
+      session: { label: "session", rateMinor: null, layout: "standard" },
+      hour: { label: "hour", rateMinor: null, layout: "standard" },
+      milestone: { label: "milestone", rateMinor: null, layout: "consultancy" },
+      fee: { label: "fee", rateMinor: null, layout: "consultancy" },
+    },
     prefixes: { invoice: "FIP-INV", receipt: "FIP-REC", quote: "FIP-QUO", credit_note: "FIP-CN" },
     documents: {
       invoice: {
@@ -89,10 +97,25 @@ export class SettingsContract {
     const documents = Object.fromEntries(
       (Object.keys(d.documents) as DocumentType[]).map((type) => [type, pick(d.documents[type], (s.documents as Record<string, unknown> | undefined)?.[type])]),
     ) as Record<DocumentType, DocumentTexts>;
+    const storedUnits = (s.units ?? {}) as Record<string, Partial<UnitConfig> | undefined>;
+    const units = Object.fromEntries(
+      (Object.keys(d.units) as ItemUnit[]).map((unit) => {
+        const v = storedUnits[unit] ?? {};
+        return [
+          unit,
+          {
+            label: typeof v.label === "string" && v.label ? v.label : d.units[unit].label,
+            rateMinor: typeof v.rateMinor === "number" ? v.rateMinor : null,
+            layout: v.layout === "consultancy" || v.layout === "standard" ? v.layout : d.units[unit].layout,
+          },
+        ];
+      }),
+    ) as Record<ItemUnit, UnitConfig>;
     return {
       business: pick(d.business, s.business),
       vat: pick(d.vat, s.vat),
       currency: InvoiceContract.CURRENCIES.includes(s.currency as Currency) ? (s.currency as Currency) : d.currency,
+      units,
       prefixes: pick(d.prefixes, s.prefixes),
       documents,
       card: pick(d.card, s.card),
@@ -132,6 +155,19 @@ export class SettingsContract {
     const currency = text("currency") as Currency;
     if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
 
+    const units = Object.fromEntries(
+      (Object.keys(SettingsContract.DEFAULTS.units) as ItemUnit[]).map((unit) => {
+        const label = bounded(`unit.${unit}.label`, 30, true).toLowerCase();
+        const rate = text(`unit.${unit}.rate`);
+        const rateMinor = rate === "" ? null : InvoiceMath.parseMajor(rate);
+        if (rate !== "" && rateMinor === null) errors[`unit.${unit}.rate`] = "Enter a price such as 450, or leave it empty.";
+        const layout = text(`unit.${unit}.layout`) as DocumentLayout;
+        if (layout !== "standard" && layout !== "consultancy") errors[`unit.${unit}.layout`] = "Choose a layout.";
+        return [unit, { label, rateMinor, layout }];
+      }),
+    ) as Record<ItemUnit, UnitConfig>;
+    if (units.milestone.layout !== "consultancy") errors["unit.milestone.layout"] = "Milestones are for consultancy layouts only.";
+
     const types = Object.keys(SettingsContract.DOCUMENT_TYPES) as DocumentType[];
     const prefixes = Object.fromEntries(types.map((type) => [type, text(`prefix.${type}`).toUpperCase()])) as Record<DocumentType, string>;
     for (const type of types) {
@@ -155,7 +191,20 @@ export class SettingsContract {
     const card = { show: fields["card.show"] === "on", note: bounded("card.note", LIMITS.cardNote) };
 
     if (Object.keys(errors).length > 0) return { ok: false, errors };
-    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, prefixes, documents, card } };
+    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, units, prefixes, documents, card } };
+  }
+
+  /** Fills {placeholders} in a message template; unknown ones are left as typed. */
+  static fill(template: string, values: Partial<Record<(typeof SettingsContract.PLACEHOLDERS)[number], string>>): string {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key as keyof typeof values] ?? match);
+  }
+
+  /** "1 month", "2 sessions", "1 fee": the unit word after a quantity, from Settings (legacy units as issued). */
+  static unitLabel(settings: BillingSettings, unit: string | undefined, quantity: number): string {
+    if (!unit) return "";
+    const config = settings.units[unit as ItemUnit];
+    if (!config) return InvoiceContract.LEGACY_UNITS[unit as keyof typeof InvoiceContract.LEGACY_UNITS] ?? "";
+    return quantity === 1 || unit === "fee" ? config.label : `${config.label}s`;
   }
 
   /** "Payment: Due within 7 days…" lines -> [title, text] pairs; a line without a colon has no title. */
