@@ -7,7 +7,7 @@ import type { BillingSettings, DocumentTexts, DocumentType } from "../types";
 export type SettingsFieldErrors = Partial<Record<string, string>>;
 
 const INVOICE_TERMS = [
-  "Payment: Due within 7 days of issue. Sessions are confirmed once payment is received. Please quote the invoice number as the transfer reference.",
+  "Payment: Due within 7 days of issue. Sessions are confirmed once payment is received. The invoice number is to be quoted as the transfer reference.",
   "Rescheduling: Sessions can be moved with at least 24 hours’ notice. Later changes may count as delivered.",
   "Scope: Fees cover the coaching period stated on this invoice and are non-transferable. No exam result is guaranteed.",
 ].join("\n");
@@ -42,14 +42,14 @@ export class SettingsContract {
       invoice: {
         terms: INVOICE_TERMS,
         notes: "",
-        whatsapp: `Hi {firstName}, here is your invoice {number} for {amount}, due {dueDate}.\n\nView or download it here: {link}\n\n${SIGN_OFF}`,
-        email: "Please find your invoice {number} for {amount}.",
+        whatsapp: `Hi {firstName}, invoice {number} for {amount} is ready, due {dueDate}.\n\nView or download: {link}\n\n${SIGN_OFF}`,
+        email: "Invoice {number} for {amount} is ready.",
       },
       receipt: {
         terms: "",
         notes: "",
         whatsapp: `Hi {firstName}, payment of {amount} has been received. Receipt {number}: {link}\n\n${SIGN_OFF}`,
-        email: "Payment of {amount} has been received. Receipt {number} is attached below.",
+        email: "Payment of {amount} has been received. Receipt {number} is linked below.",
       },
       quote: {
         terms: "Validity: This quote is valid until the date shown.\nAcceptance: Work is scheduled once the quote is accepted in writing.",

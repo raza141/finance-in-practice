@@ -202,7 +202,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           <div className="border-l-4 border-gold pl-5">
             <h2 className="font-serif text-xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">
-              Thank you for choosing {business.name}. For invoice queries or to book the next session, a single message is all it takes.
+              Thank you for choosing {business.name}. Questions about this invoice and bookings for the next session are handled by WhatsApp or email.
             </p>
           </div>
           <dl className="grid h-fit grid-cols-[1.25rem_auto_1fr] items-center gap-x-4 gap-y-3 text-sm">

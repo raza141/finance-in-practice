@@ -72,7 +72,7 @@ export class InvoiceEmails {
     if (input.location) rows.push(["Where", { html: EmailHtml.link(input.location) }]);
 
     const { whatsapp } = siteConfig.contact;
-    const contact = `Need to reschedule or have a question? Reply to this email or message us on WhatsApp at ${whatsapp.display}.`;
+    const contact = `Rescheduling requests and questions can be sent as a reply to this email or by WhatsApp to ${whatsapp.display}.`;
     const day = new Intl.DateTimeFormat("en-GB", { timeZone: input.clientTimeZone, weekday: "short", day: "numeric", month: "short" }).format(start);
     const subject = `Session confirmed: ${input.topic}, ${day}`;
 
@@ -80,7 +80,7 @@ export class InvoiceEmails {
       subject,
       [
         EmailHtml.paragraph(`Hi ${InvoiceEmails.firstName(input.clientName)},`),
-        EmailHtml.paragraph("Your session is confirmed. Here are the details:"),
+        EmailHtml.paragraph("The session is confirmed. Details:"),
         EmailHtml.table(rows),
         input.note ? EmailHtml.paragraph(input.note) : "",
         EmailHtml.paragraph(contact),
@@ -90,7 +90,7 @@ export class InvoiceEmails {
     const text = [
       `Hi ${InvoiceEmails.firstName(input.clientName)},`,
       "",
-      "Your session is confirmed. Here are the details:",
+      "The session is confirmed. Details:",
       "",
       ...rows.map(([label, value]) => `${label}: ${typeof value === "string" ? value : input.location}`),
       ...(input.note ? ["", input.note] : []),
@@ -116,12 +116,12 @@ export class InvoiceEmails {
   static whatsapp(invoice: Invoice, url: string): string {
     const amount = InvoiceMath.money(invoice.totalMinor, invoice.currency);
     const text = [
-      `Hi ${InvoiceEmails.firstName(invoice.clientName)}, here is your invoice ${invoice.number ?? ""} for ${amount}, due ${InvoiceEmails.day(invoice.dueDate)}.`,
+      `Hi ${InvoiceEmails.firstName(invoice.clientName)}, invoice ${invoice.number ?? ""} for ${amount} is ready, due ${InvoiceEmails.day(invoice.dueDate)}.`,
       ...(invoice.paidMinor > 0 && invoice.paidMinor < invoice.totalMinor
         ? [`Received so far: ${InvoiceMath.money(invoice.paidMinor, invoice.currency)}. Balance due: ${InvoiceMath.money(invoice.totalMinor - invoice.paidMinor, invoice.currency)}.`]
         : []),
       "",
-      `View or download it here: ${url}`,
+      `View or download: ${url}`,
       "",
       `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
     ].join("\n");
@@ -146,29 +146,29 @@ export class InvoiceEmails {
       subject,
       [
         EmailHtml.paragraph(`Hi ${InvoiceEmails.firstName(invoice.clientName)},`),
-        EmailHtml.paragraph(`Please find your invoice ${number} for ${amount}.`),
+        EmailHtml.paragraph(`Invoice ${number} for ${amount} is ready.`),
         EmailHtml.table(rows),
         EmailHtml.button(url, "View and print invoice"),
-        hasPayment ? '<p style="margin:0 0 6px;font-weight:600">How to pay</p>' : "",
+        hasPayment ? '<p style="margin:0 0 6px;font-weight:600">Payment details</p>' : "",
         bankRows.length > 0 ? EmailHtml.table([...bankRows, ["Reference", number]]) : "",
         invoice.paymentInstructions ? EmailHtml.paragraph(invoice.paymentInstructions) : "",
-        EmailHtml.paragraph("Questions about this invoice? Just reply to this email."),
+        EmailHtml.paragraph("Questions about this invoice can be sent as a reply to this email."),
         EmailHtml.paragraph(`Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`),
       ].join(""),
     );
     const text = [
       `Hi ${InvoiceEmails.firstName(invoice.clientName)},`,
       "",
-      `Please find your invoice ${number} for ${amount}.`,
+      `Invoice ${number} for ${amount} is ready.`,
       "",
       ...rows.map(([label, value]) => `${label}: ${value}`),
       "",
       `View and print the invoice: ${url}`,
-      ...(hasPayment ? ["", "How to pay:"] : []),
+      ...(hasPayment ? ["", "Payment details:"] : []),
       ...(bankRows.length > 0 ? [...bankRows, ["Reference", number]].map(([label, value]) => `${label}: ${value}`) : []),
       ...(invoice.paymentInstructions ? [invoice.paymentInstructions] : []),
       "",
-      "Questions about this invoice? Just reply to this email.",
+      "Questions about this invoice can be sent as a reply to this email.",
       "",
       `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
     ].join("\n");
