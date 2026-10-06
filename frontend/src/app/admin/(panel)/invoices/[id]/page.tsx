@@ -135,6 +135,11 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
             {reason && ` ${reason}`}
           </p>
         )}
+        {query.proof === "lost" && (
+          <p role="alert" className="text-sm text-gold">
+            The proof file was not kept: payment proofs need a private Vercel Blob store (the current one is public). The payment itself is recorded.
+          </p>
+        )}
         {!emailEnabled && doc.status !== "void" && <EmailNotConfigured />}
       </div>
 

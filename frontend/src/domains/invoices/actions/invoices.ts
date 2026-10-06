@@ -250,17 +250,21 @@ async function paymentReceipt(repo: InvoiceRepository, invoice: Invoice, payment
   await repo.completeReceipt(id, paymentId);
 }
 
-/** The uploaded proof file, stored privately; null when none was chosen, or an error message. */
-async function storeProof(formData: FormData, invoiceId: string): Promise<{ url: string | null } | string> {
+/**
+ * The uploaded proof file, stored privately. A wrong file type or size is an
+ * error; a storage failure (e.g. a public-only Blob store) is not: the payment
+ * is still recorded, without proof, and `lost` says so.
+ */
+async function storeProof(formData: FormData, invoiceId: string): Promise<{ url: string | null; lost: boolean } | string> {
   const file = formData.get("proof");
-  if (!(file instanceof File) || file.size === 0) return { url: null };
+  if (!(file instanceof File) || file.size === 0) return { url: null, lost: false };
   const problem = ProofStorage.verify(file);
   if (problem) return problem;
   try {
-    return { url: await ProofStorage.upload(file, invoiceId) };
+    return { url: await ProofStorage.upload(file, invoiceId), lost: false };
   } catch (error) {
     console.error("Payment proof upload failed", error);
-    return "The proof could not be stored (check that the Blob store allows private files), so the payment was not recorded. Try again without the proof.";
+    return { url: null, lost: true };
   }
 }
 
@@ -278,7 +282,7 @@ export async function recordInvoicePayment(formData: FormData): Promise<void> {
   if (!result) redirect(withReason(path, "payment-refused"));
   const invoice = await repo.byId(id);
   if (invoice) await paymentReceipt(repo, invoice, result.paymentId, payment.amountMinor, payment.paidOn, await SettingsRepository.load());
-  redirect(`${path}?notice=${result.settled ? "paid" : "payment"}`);
+  redirect(`${path}?notice=${result.settled ? "paid" : "payment"}${proof.lost ? "&proof=lost" : ""}`);
 }
 
 /** "Mark as paid": records the balance as received today by bank transfer, with its receipt. */
