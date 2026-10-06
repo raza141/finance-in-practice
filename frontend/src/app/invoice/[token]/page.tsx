@@ -7,6 +7,7 @@ import { OnePagePrint } from "@/domains/invoices/components/OnePagePrint";
 import { PrintButton } from "@/domains/invoices/components/PrintButton";
 import { ViewBeacon } from "@/domains/invoices/components/ViewBeacon";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 
 // Holds a client's personal data: never indexed, and the secret URL never leaks as a referrer.
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 /** Client-facing invoice, keyed by an unguessable token (not the sequential number). */
 export default async function PublicInvoicePage({ params }: PageProps<"/invoice/[token]">) {
   await connection(); // per request: status changes (paid, void) show immediately
-  const invoice = await InvoiceRepository.fromEnv()?.byToken((await params).token);
+  const [invoice, settings] = await Promise.all([InvoiceRepository.fromEnv()?.byToken((await params).token), SettingsRepository.load()]);
   if (!invoice) notFound();
 
   return (
@@ -28,7 +29,7 @@ export default async function PublicInvoicePage({ params }: PageProps<"/invoice/
       <div className="mx-auto mb-4 flex max-w-3xl justify-end">
         <PrintButton className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-700" />
       </div>
-      <InvoiceDocument invoice={invoice} />
+      <InvoiceDocument invoice={invoice} settings={settings} />
       <ViewBeacon token={invoice.token} />
     </div>
   );

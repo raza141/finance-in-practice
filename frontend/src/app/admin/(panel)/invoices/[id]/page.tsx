@@ -26,6 +26,7 @@ import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
+import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -53,7 +54,11 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
   const emailEnabled = ResendClient.fromEnv() !== null;
   const money = (minor: number) => InvoiceMath.money(minor, invoice.currency);
   const balance = invoice.totalMinor - invoice.paidMinor;
-  const [emails, options] = await Promise.all([repo.emails(invoice.id), invoice.status === "draft" ? InvoiceFormLoader.options() : null]);
+  const [emails, options, settings] = await Promise.all([
+    repo.emails(invoice.id),
+    invoice.status === "draft" ? InvoiceFormLoader.options() : null,
+    SettingsRepository.load(),
+  ]);
 
   return (
     <div className="max-w-4xl">
@@ -201,7 +206,7 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
           )}
 
           <div className="mt-8 rounded-lg bg-slate-200 p-4 sm:p-6">
-            <InvoiceDocument invoice={invoice} />
+            <InvoiceDocument invoice={invoice} settings={settings} />
           </div>
 
           {invoice.status === "sent" && invoice.paidMinor > 0 && (

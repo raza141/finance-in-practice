@@ -17,6 +17,7 @@ export class AdminNavigation {
     { href: "/admin/instructors", label: "Instructors" },
     { href: "/admin/courses", label: "Courses" },
     { href: "/admin/pricing", label: "Pricing", comingSoon: true },
+    { href: "/admin/settings", label: "Settings" },
     { href: "/admin/account", label: "Account" },
   ];
 

@@ -1,5 +1,6 @@
-import { siteConfig } from "@/core/config/site";
 import { Logo } from "@/core/components/layout/Logo";
+import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+import type { BillingSettings } from "@/domains/settings/types";
 import { WHATSAPP_GLYPH } from "@/core/components/ui/WhatsAppButton";
 
 import { InvoiceEmails } from "../services/InvoiceEmails";
@@ -14,16 +15,6 @@ const STAMP: Partial<Record<Invoice["status"], string>> = {
 
 /** The tagline from the logo artwork. */
 const TAGLINE = "Learn Finance the way it is practiced.";
-
-/** The standard terms on every invoice; per-invoice notes print above them. */
-const TERMS = [
-  [
-    "Payment",
-    "Due within 7 days of issue. Sessions are confirmed once payment is received. Please quote the invoice number as the transfer reference.",
-  ],
-  ["Rescheduling", "Sessions can be moved with at least 24 hours’ notice. Later changes may count as delivered."],
-  ["Scope", "Fees cover the coaching period stated on this invoice and are non-transferable. No exam result is guaranteed."],
-] as const;
 
 /** Gold, letter-spaced section label: From, Bill to, Details, Payment desk, Terms. */
 const LABEL = "font-mono text-[11px] font-semibold tracking-[0.25em] text-gold uppercase";
@@ -45,10 +36,11 @@ const CODE_ROWS = new Set(["Account number", "IBAN", "SWIFT / BIC"]);
  * preview. Site palette (navy canvas, gold) on white paper; the navy bands
  * force background printing so the light logo stays visible on paper.
  */
-export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
+export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; settings: BillingSettings }) {
   const money = (minor: number) => InvoiceMath.money(minor, invoice.currency);
   const stamp = STAMP[invoice.status];
-  const { whatsapp } = siteConfig.contact;
+  const { business } = settings;
+  const terms = SettingsContract.terms(settings.documents.invoice.terms);
   const bankRows = invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
   const hasPeriod = invoice.items.some((item) => item.period);
   const firstName = InvoiceEmails.firstName(invoice.clientName);
@@ -76,27 +68,15 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
         <section className="grid gap-8 text-sm leading-relaxed sm:grid-cols-[1fr_1fr_auto] print:grid-cols-[1fr_1fr_auto]">
           <div>
             <h2 className={LABEL}>From</h2>
-            <p className="mt-3 font-serif text-lg font-bold text-canvas">{siteConfig.name}</p>
+            <p className="mt-3 font-serif text-lg font-bold text-canvas">{business.name}</p>
             <p className="mt-1 text-slate-500">
-              {InvoiceEmails.SENDER}
-              <br />
-              Abu Dhabi, UAE
-              <br />
-              {whatsapp.display}
-              {siteConfig.contact.email && (
-                <>
-                  <br />
-                  {siteConfig.contact.email}
-                </>
-              )}
-              <br />
-              {siteConfig.domain}
-              {invoice.trn && (
-                <>
-                  <br />
-                  TRN: {invoice.trn}
-                </>
-              )}
+              {[business.sender, business.address, business.phone, business.email, business.website, invoice.trn && `TRN: ${invoice.trn}`]
+                .filter(Boolean)
+                .map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
             </p>
           </div>
           <div>
@@ -222,35 +202,37 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           <div className="border-l-4 border-gold pl-5">
             <h2 className="font-serif text-xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">
-              Thank you for choosing {siteConfig.name}. For invoice queries or to book the next session, a single message is all it takes.
+              Thank you for choosing {business.name}. For invoice queries or to book the next session, a single message is all it takes.
             </p>
           </div>
           <dl className="grid h-fit grid-cols-[1.25rem_auto_1fr] items-center gap-x-4 gap-y-3 text-sm">
             <Icon path={WHATSAPP_GLYPH} fill />
             <dt className={ROW_LABEL}>WhatsApp</dt>
-            <dd className="font-semibold text-slate-900">{whatsapp.display}</dd>
+            <dd className="font-semibold text-slate-900">{business.phone}</dd>
             <Icon path="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
             <dt className={ROW_LABEL}>Book</dt>
-            <dd className="font-semibold text-slate-900">{siteConfig.domain}</dd>
+            <dd className="font-semibold text-slate-900">{business.website}</dd>
           </dl>
         </section>
 
-        <section className="mt-10 break-inside-avoid">
-          <h2 className={LABEL}>Terms</h2>
-          <ol className="mt-3 grid list-decimal gap-1.5 pl-5 text-xs leading-relaxed text-slate-500 marker:text-slate-500">
-            {TERMS.map(([title, text]) => (
-              <li key={title}>
-                <span className="font-semibold text-slate-900">{title}:</span> {text}
-              </li>
-            ))}
-          </ol>
-        </section>
+        {terms.length > 0 && (
+          <section className="mt-10 break-inside-avoid">
+            <h2 className={LABEL}>Terms</h2>
+            <ol className="mt-3 grid list-decimal gap-1.5 pl-5 text-xs leading-relaxed text-slate-500 marker:text-slate-500">
+              {terms.map(([title, text], index) => (
+                <li key={index}>
+                  {title && <span className="font-semibold text-slate-900">{title}:</span>} {text}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
       </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 sm:px-12">
         <p className="font-mono text-xs font-semibold tracking-[0.25em] text-gold uppercase">{TAGLINE}</p>
         <p className="text-xs text-slate-300">
-          {siteConfig.domain} · {whatsapp.display}
+          {[business.website, business.phone].filter(Boolean).join(" · ")}
         </p>
       </footer>
     </article>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
+import type { BillingSettings } from "@/domains/settings/types";
 
 import { saveInvoice, type InvoiceFormState } from "../actions/invoices";
 import { InvoiceContract, type DraftItem, type InvoiceFieldErrors } from "../services/InvoiceContract";
@@ -28,6 +29,7 @@ export interface InvoiceFormOptions {
   clients: Client[];
   banks: BankAccount[];
   courses: CourseOption[];
+  settings: BillingSettings;
 }
 
 /** How a line's period is entered: a month picker, a date picker, or typed text. */
@@ -433,7 +435,7 @@ export function InvoiceForm({
           </button>
           {issueButtons}
         </div>
-        <div className="p-3 sm:p-6">{preview && <InvoiceDocument invoice={preview} />}</div>
+        <div className="p-3 sm:p-6">{preview && <InvoiceDocument invoice={preview} settings={options.settings} />}</div>
       </dialog>
     </form>
   );

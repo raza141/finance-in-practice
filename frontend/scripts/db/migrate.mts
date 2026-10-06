@@ -538,6 +538,19 @@ const MIGRATIONS: Migration[] = [
          FROM invoices WHERE status = 'paid' AND total_minor > 0 AND paid_at IS NOT NULL`,
     ],
   },
+  {
+    // One row of billing settings (business details, VAT, prefixes, document texts).
+    // Read over code defaults, so the app works before anything is saved.
+    id: "027_settings",
+    statements: [
+      `CREATE TABLE settings (
+        id         boolean PRIMARY KEY DEFAULT true CHECK (id),
+        data       jsonb NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        updated_by uuid REFERENCES admin_users (id) ON DELETE SET NULL
+      )`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
