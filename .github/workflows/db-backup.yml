@@ -1,0 +1,63 @@
+# Weekly encrypted export of the production database, kept as a workflow artifact.
+#
+# The repository is public, so its artifacts can be downloaded by any signed-in
+# GitHub user: the dump is encrypted with BACKUP_PASSPHRASE before upload.
+#
+# Repository secrets to add (Settings -> Secrets and variables -> Actions):
+#   BACKUP_DATABASE_URL  Neon connection string (a read-only role is enough)
+#   BACKUP_PASSPHRASE    long random passphrase; keep a copy outside GitHub
+#
+# Restore:
+#   gpg --decrypt fip-db-YYYY-MM-DD.dump.gpg > fip.dump
+#   pg_restore --no-owner --no-privileges -d "<target connection string>" fip.dump
+name: Weekly database backup
+
+on:
+  schedule:
+    - cron: "0 1 * * 0" # Sundays 01:00 UTC (05:00 Dubai)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check secrets
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "::error::Add the BACKUP_DATABASE_URL and BACKUP_PASSPHRASE repository secrets."
+            exit 1
+          fi
+
+      # Neon runs Postgres 18; pg_dump must be at least the server's version.
+      - name: Install pg_dump 18
+        run: |
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-18
+
+      - name: Dump and encrypt
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          file="fip-db-$(date -u +%Y-%m-%d).dump.gpg"
+          /usr/lib/postgresql/18/bin/pg_dump --format=custom --no-owner --no-privileges "$DB" \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase-fd 3 --output "$file" 3<<<"$PASS"
+          test -s "$file"
+          echo "FILE=$file" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ${{ env.FILE }}
+          retention-days: 90
+          if-no-files-found: error
