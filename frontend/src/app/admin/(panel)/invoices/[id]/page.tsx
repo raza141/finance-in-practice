@@ -151,10 +151,10 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
         <>
           <div className="mt-6 flex flex-wrap items-center gap-2">
             {isInvoice && doc.status === "sent" && (
-              <>
-                <Action action={markInvoicePaid} extra={id} label={settledLabel(doc.paidMinor + doc.creditedMinor > 0, money(balance))} pending="Saving…" className={PRIMARY} />
-                <Action action={createCreditNote} extra={id} label="Credit note" pending="Drafting…" />
-              </>
+              <Action action={markInvoicePaid} extra={id} label={settledLabel(doc.paidMinor + doc.creditedMinor > 0, money(balance))} pending="Saving…" className={PRIMARY} />
+            )}
+            {isInvoice && (doc.status === "sent" || doc.status === "paid") && DocumentFormat.creditable(doc) > 0 && (
+              <Action action={createCreditNote} extra={id} label="Credit note" pending="Drafting…" />
             )}
             {doc.docType === "quote" && (doc.status === "sent" || doc.status === "accepted") && (
               <Action action={convertQuote} extra={id} label="Convert to invoice" pending="Converting…" className={PRIMARY} />
@@ -287,7 +287,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
           </div>
 
           {doc.status === "sent" && doc.paidMinor > 0 && !isQuickReceipt && (
-            <p className="mt-10 text-xs text-muted">This document has payments, so it can’t be voided. Remove the payments, or issue a credit note.</p>
+            <p className="mt-10 text-xs text-muted">This document has payments, so it can’t be voided. Correct it with a credit note.</p>
           )}
           {(doc.status === "sent" || doc.status === "accepted" || (isQuickReceipt && doc.status === "paid")) && (doc.paidMinor === 0 || isQuickReceipt) && (
             <details className="mt-10 rounded-lg border border-red-400/30 p-5">

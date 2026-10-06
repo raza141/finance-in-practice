@@ -29,6 +29,11 @@ export class DocumentFormat {
     return Math.max(0, doc.totalMinor - doc.paidMinor - doc.creditedMinor);
   }
 
+  /** How much of an invoice can still be credited: its total less earlier credit notes. */
+  static creditable(doc: Pick<Invoice, "totalMinor" | "creditedMinor">): number {
+    return Math.max(0, doc.totalMinor - doc.creditedMinor);
+  }
+
   /** "Invoice-FIP-INV-2026-0002-Khawla-Abdullah", the saved PDF's name (the page title). */
   static filename(doc: Pick<Invoice, "docType" | "number" | "clientName">): string {
     const type = SettingsContract.DOCUMENT_TYPES[doc.docType].replace(/\s+/g, "-");

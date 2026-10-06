@@ -1,10 +1,11 @@
 import type { DocumentType, EmailLogEntry, InvoiceStatus } from "../types";
 
-type Badge = InvoiceStatus | "overdue" | "part paid" | "expired";
+type Badge = InvoiceStatus | "overdue" | "part paid" | "expired" | "quote sent";
 
 const STATUS_STYLE: Record<Badge, string> = {
   draft: "border-line text-muted",
   sent: "border-quant/40 text-quant",
+  "quote sent": "border-quant/40 text-quant",
   accepted: "border-emerald-400/40 text-emerald-300",
   declined: "border-red-400/40 text-red-300",
   expired: "border-gold/50 text-gold",
@@ -17,16 +18,16 @@ const STATUS_STYLE: Record<Badge, string> = {
 /** Overdue beats part paid: an unpaid balance past its due date is the thing to chase. Quotes expire instead. */
 export function badgeFor(doc: { docType: DocumentType; status: InvoiceStatus; dueDate: string; paidMinor: number; creditedMinor: number }, today: string): Badge {
   if (doc.status !== "sent") return doc.status;
-  if (doc.docType === "quote") return doc.dueDate < today ? "expired" : "sent";
+  if (doc.docType === "quote") return doc.dueDate < today ? "expired" : "quote sent";
   if (doc.docType !== "invoice") return "sent";
   if (doc.dueDate < today) return "overdue";
   return doc.paidMinor + doc.creditedMinor > 0 ? "part paid" : "sent";
 }
 
-/** "sent" reads as Issued. */
+/** "sent" reads as Issued; a sent quote reads as Sent (its own status list). */
 export function StatusBadge({ status }: { status: Badge }) {
   return (
-    <span className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-wider uppercase ${STATUS_STYLE[status]}`}>{status === "sent" ? "issued" : status}</span>
+    <span className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-wider uppercase ${STATUS_STYLE[status]}`}>{status === "sent" ? "issued" : status === "quote sent" ? "sent" : status}</span>
   );
 }
 

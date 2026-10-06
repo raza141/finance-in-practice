@@ -35,6 +35,8 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   const taxDoc = invoice.trn !== "" && invoice.taxRateBp > 0;
   const consultancy = invoice.layout === "consultancy";
   const settled = invoice.paidMinor + invoice.creditedMinor;
+  /** Negative when a credit note on a paid invoice leaves money owed back to the client. */
+  const remaining = invoice.totalMinor - settled;
   const number = invoice.number ?? "Assigned on issue";
   const related =
     invoice.relatedNumber &&
@@ -194,9 +196,9 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           )}
           <div className="col-span-2 mt-1 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
             <dt className="font-mono text-[11px] font-semibold tracking-[0.2em] whitespace-nowrap text-slate-900 uppercase">
-              {isInvoice ? (settled > 0 ? "Balance due" : "Total due") : docType === "quote" ? "Quote total" : "Credit total"}
+              {isInvoice ? (remaining < 0 ? "Credit owed" : settled > 0 ? "Balance due" : "Total due") : docType === "quote" ? "Quote total" : "Credit total"}
             </dt>
-            <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">{money(isInvoice ? DocumentFormat.balance(invoice) : invoice.totalMinor)}</dd>
+            <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">{money(isInvoice ? Math.abs(remaining) : invoice.totalMinor)}</dd>
           </div>
         </dl>
       </section>

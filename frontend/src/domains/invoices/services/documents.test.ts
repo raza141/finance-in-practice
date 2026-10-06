@@ -153,6 +153,9 @@ describe("DocumentFormat", () => {
     expect(DocumentFormat.filename(doc({ docType: "credit_note", number: "FIP-CN-2026-0001", clientName: " Khawla  Abdullah " }))).toBe("Credit-note-FIP-CN-2026-0001-Khawla-Abdullah");
     expect(DocumentFormat.stamp(doc({ docType: "quote", dueDate: "2026-10-01" }), "2026-10-06")).toBe("expired");
     expect(DocumentFormat.balance(doc({ paidMinor: 100000, creditedMinor: 50000 }))).toBe(250000);
+    // A paid invoice can still be credited, up to what hasn't been credited yet.
+    expect(DocumentFormat.creditable(doc({ status: "paid", paidMinor: 400000, creditedMinor: 50000 }))).toBe(350000);
+    expect(DocumentFormat.balance(doc({ status: "paid", paidMinor: 400000, creditedMinor: 50000 }))).toBe(0);
   });
   it("prints unit words from Settings, legacy units as issued", () => {
     expect(SettingsContract.unitLabel(SETTINGS, "session", 2)).toBe("sessions");

@@ -116,10 +116,11 @@ async function issueDocument(repo: InvoiceRepository, id: string, settings: Bill
   if (problem) return problem;
   if (doc.docType === "credit_note") {
     const invoice = doc.relatedId ? await repo.byId(doc.relatedId) : null;
-    if (!invoice || invoice.status !== "sent") return "A credit note needs an issued invoice that is still open.";
+    if (!invoice || (invoice.status !== "sent" && invoice.status !== "paid")) return "A credit note needs an issued invoice (open or paid).";
     if (doc.currency !== invoice.currency) return "A credit note must be in the invoice's currency.";
-    const open = DocumentFormat.balance(invoice);
-    if (doc.totalMinor > open) return `The credit is larger than the invoice's open balance (${InvoiceMath.money(open, invoice.currency)}).`;
+    // Up to what hasn't been credited yet. On a paid invoice the credit is owed back (the account shows it as in credit).
+    const creditable = DocumentFormat.creditable(invoice);
+    if (doc.totalMinor > creditable) return `The credit is larger than what is left to credit on the invoice (${InvoiceMath.money(creditable, invoice.currency)}).`;
   }
   if (!(await repo.issue(id, settings.prefixes[doc.docType], actor))) return "This document was already issued.";
   if (doc.docType === "credit_note" && doc.relatedId) await repo.settleIfCovered(doc.relatedId, actor);
@@ -395,11 +396,11 @@ export async function convertQuote(formData: FormData): Promise<void> {
   redirect(`/admin/invoices/${await copyAsDraft(repo, quote, "invoice-from-quote", actor)}?notice=from-quote`);
 }
 
-/** A draft credit note against an issued, open invoice, prefilled with its lines (edit them down to the amount credited). */
+/** A draft credit note against an issued invoice (open or paid), prefilled with its lines (edit them down to the amount credited). */
 export async function createCreditNote(formData: FormData): Promise<void> {
   const { repo, actor } = await session();
   const invoice = await repo.byId(String(formData.get("id")));
-  if (!invoice || invoice.docType !== "invoice" || invoice.status !== "sent") return;
+  if (!invoice || invoice.docType !== "invoice" || (invoice.status !== "sent" && invoice.status !== "paid")) return;
   redirect(`/admin/invoices/${await copyAsDraft(repo, invoice, "credit-note", actor)}?notice=credit-draft`);
 }
 
