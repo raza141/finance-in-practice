@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { siteConfig } from "@/core/config/site";
 import { ResendClient } from "@/core/email/ResendClient";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
@@ -11,6 +12,7 @@ import { InvoiceDocument } from "@/domains/invoices/components/InvoiceDocument";
 import { InvoiceForm } from "@/domains/invoices/components/InvoiceForm";
 import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -48,6 +50,10 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
         {invoice.sentAt && ` · issued ${formatDubai(invoice.sentAt)}`}
         {invoice.paidAt && ` · paid ${formatDubai(invoice.paidAt)}`}
         {invoice.voidedAt && ` · voided ${formatDubai(invoice.voidedAt)}`}
+        {invoice.status !== "draft" &&
+          (invoice.firstViewedAt && invoice.lastViewedAt
+            ? ` · viewed by client ${invoice.viewCount}× (first ${formatDubai(invoice.firstViewedAt)}, last ${formatDubai(invoice.lastViewedAt)})`
+            : " · not opened by the client yet")}
       </p>
 
       <div className="mt-6 grid gap-3">
@@ -104,6 +110,20 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
                 Duplicate as draft
               </PendingButton>
             </form>
+            {invoice.status !== "void" && (
+              <a
+                href={InvoiceEmails.whatsapp(invoice, `${siteConfig.url}/invoice/${invoice.token}`)}
+                target="_blank"
+                rel="noreferrer"
+                title={invoice.clientPhone ? `Opens a chat with ${invoice.clientPhone}` : "No phone on this invoice: WhatsApp will ask which chat"}
+                className="inline-flex h-9 items-center rounded-md bg-emerald-500/15 px-3 text-sm font-medium text-emerald-300 hover:bg-emerald-500/25"
+              >
+                Send on WhatsApp
+              </a>
+            )}
+            <Link href={`/admin/invoice-pdf/${invoice.id}`} target="_blank" className={`${BUTTON} inline-flex items-center`}>
+              Download PDF ↓
+            </Link>
             <Link href={`/invoice/${invoice.token}`} target="_blank" rel="noreferrer" className="px-2 text-sm text-quant hover:underline">
               Client view ↗
             </Link>

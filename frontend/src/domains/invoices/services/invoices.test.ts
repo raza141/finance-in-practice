@@ -207,11 +207,14 @@ describe("emails", () => {
   });
 
   it("links the invoice email to the public page", () => {
-    const invoice = { number: "FIP-2026-0007", clientName: "Sara", totalMinor: 68_240, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "IBAN" } as Invoice;
+    const invoice = { number: "FIP-2026-0007", clientName: "Sara Khan", totalMinor: 68_240, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", paymentInstructions: "IBAN" } as Invoice;
     const message = InvoiceEmails.invoice(invoice, "https://financeinpractice.me/invoice/tok");
     expect(message.subject).toBe("Invoice FIP-2026-0007 from Finance in Practice");
     expect(message.html).toContain('href="https://financeinpractice.me/invoice/tok"');
     expect(message.text).toContain("AED 682.40");
+    expect(message.text).toMatch(/^Hi Sara,/);
+    expect(message.text).toContain("Please find your invoice FIP-2026-0007 for AED 682.40.");
+    expect(message.text).toContain("Thank you,\nAhmed Raza\n");
   });
 
   it("puts the bank details in the invoice email, skipping empty fields", () => {
@@ -254,5 +257,21 @@ describe("InvoiceEmails.period", () => {
     expect(InvoiceEmails.period("2026-10")).toBe("October 2026");
     expect(InvoiceEmails.period("2026-10-14")).toBe("14 Oct 2026");
     expect(InvoiceEmails.period("6–30 Oct")).toBe("6–30 Oct");
+  });
+});
+
+describe("InvoiceEmails.whatsapp", () => {
+  it("normalises UAE numbers and prefills the invoice link", () => {
+    expect(InvoiceEmails.whatsappNumber("050 230 4045")).toBe("971502304045");
+    expect(InvoiceEmails.whatsappNumber("+971 50 230 4045")).toBe("971502304045");
+    expect(InvoiceEmails.whatsappNumber("0097150 230 4045")).toBe("971502304045");
+    expect(InvoiceEmails.whatsappNumber("")).toBe("");
+    const invoice = { number: "FIP-2026-0007", clientName: "Sara Khan", clientPhone: "050 230 4045", totalMinor: 400000, currency: "AED", dueDate: "2026-10-13" } as Invoice;
+    const href = InvoiceEmails.whatsapp(invoice, "https://financeinpractice.me/invoice/tok");
+    expect(href.startsWith("https://wa.me/971502304045?text=")).toBe(true);
+    const text = decodeURIComponent(href.split("?text=")[1]);
+    expect(text).toContain("Hi Sara, here is your invoice FIP-2026-0007 for AED 4,000.00, due 13 Oct 2026.");
+    expect(text).toContain("https://financeinpractice.me/invoice/tok");
+    expect(InvoiceEmails.whatsapp({ ...invoice, clientPhone: "" }, "u").startsWith("https://wa.me/?text=")).toBe(true);
   });
 });

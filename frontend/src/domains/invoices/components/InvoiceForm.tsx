@@ -175,6 +175,9 @@ export function InvoiceForm({
       sentAt: null,
       paidAt: null,
       voidedAt: null,
+      viewCount: 0,
+      firstViewedAt: null,
+      lastViewedAt: null,
       bank: bank ?? null,
     });
     dialogRef.current?.showModal();

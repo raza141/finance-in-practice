@@ -8,6 +8,13 @@ import { InvoiceMath } from "./InvoiceMath";
 /** The two emails the admin panel sends: booking confirmation and invoice. Pure. */
 export class InvoiceEmails {
   static readonly HOME_ZONE = InvoiceContract.DEFAULT_TIME_ZONE;
+  /** The name emails and invoices are signed with. */
+  static readonly SENDER = "Ahmed Raza";
+
+  /** "Khawla Abdullah" -> "Khawla", for greetings. */
+  static firstName(fullName: string): string {
+    return fullName.trim().split(/\s+/)[0];
+  }
 
   /** "Tuesday, 6 October 2026 at 14:00 GMT+4". */
   static when(instant: Date, timeZone: string): string {
@@ -72,16 +79,16 @@ export class InvoiceEmails {
     const html = EmailHtml.document(
       subject,
       [
-        EmailHtml.paragraph(`Hi ${input.clientName},`),
+        EmailHtml.paragraph(`Hi ${InvoiceEmails.firstName(input.clientName)},`),
         EmailHtml.paragraph("Your session is confirmed. Here are the details:"),
         EmailHtml.table(rows),
         input.note ? EmailHtml.paragraph(input.note) : "",
         EmailHtml.paragraph(contact),
-        EmailHtml.paragraph(`Best regards,\n${whatsapp.owner}\n${siteConfig.name}`),
+        EmailHtml.paragraph(`Best regards,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`),
       ].join(""),
     );
     const text = [
-      `Hi ${input.clientName},`,
+      `Hi ${InvoiceEmails.firstName(input.clientName)},`,
       "",
       "Your session is confirmed. Here are the details:",
       "",
@@ -90,9 +97,32 @@ export class InvoiceEmails {
       "",
       contact,
       "",
-      `Best regards,\n${whatsapp.owner}\n${siteConfig.name}`,
+      `Best regards,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
     ].join("\n");
     return { subject, html, text };
+  }
+
+  /** "+971 50 230 4045" / "050 230 4045" / "00971…" -> "971502304045"; empty when there's no usable number. */
+  static whatsappNumber(phone: string): string {
+    const digits = phone.replace(/\D/g, "").replace(/^00/, "");
+    if (/^0\d{8,9}$/.test(digits)) return `971${digits.slice(1)}`; // UAE local format
+    return digits.length >= 8 ? digits : "";
+  }
+
+  /**
+   * A wa.me link that opens a chat with the client, the message prefilled with the
+   * invoice link. Without a usable phone number WhatsApp asks which chat to send it to.
+   */
+  static whatsapp(invoice: Invoice, url: string): string {
+    const amount = InvoiceMath.money(invoice.totalMinor, invoice.currency);
+    const text = [
+      `Hi ${InvoiceEmails.firstName(invoice.clientName)}, here is your invoice ${invoice.number ?? ""} for ${amount}, due ${InvoiceEmails.day(invoice.dueDate)}.`,
+      "",
+      `View or download it here: ${url}`,
+      "",
+      `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
+    ].join("\n");
+    return `https://wa.me/${InvoiceEmails.whatsappNumber(invoice.clientPhone)}?text=${encodeURIComponent(text)}`;
   }
 
   /** Summary plus a link to the printable invoice page. Only for issued invoices. */
@@ -106,28 +136,27 @@ export class InvoiceEmails {
       ["Amount due", amount],
     ];
     const subject = `Invoice ${number} from ${siteConfig.name}`;
-    const owner = siteConfig.contact.whatsapp.owner;
     const bankRows = invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
     const hasPayment = bankRows.length > 0 || invoice.paymentInstructions !== "";
 
     const html = EmailHtml.document(
       subject,
       [
-        EmailHtml.paragraph(`Hi ${invoice.clientName},`),
-        EmailHtml.paragraph(`Please find invoice ${number} for ${amount} below.`),
+        EmailHtml.paragraph(`Hi ${InvoiceEmails.firstName(invoice.clientName)},`),
+        EmailHtml.paragraph(`Please find your invoice ${number} for ${amount}.`),
         EmailHtml.table(rows),
         EmailHtml.button(url, "View and print invoice"),
         hasPayment ? '<p style="margin:0 0 6px;font-weight:600">How to pay</p>' : "",
         bankRows.length > 0 ? EmailHtml.table([...bankRows, ["Reference", number]]) : "",
         invoice.paymentInstructions ? EmailHtml.paragraph(invoice.paymentInstructions) : "",
         EmailHtml.paragraph("Questions about this invoice? Just reply to this email."),
-        EmailHtml.paragraph(`Thank you,\n${owner}\n${siteConfig.name}`),
+        EmailHtml.paragraph(`Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`),
       ].join(""),
     );
     const text = [
-      `Hi ${invoice.clientName},`,
+      `Hi ${InvoiceEmails.firstName(invoice.clientName)},`,
       "",
-      `Please find invoice ${number} for ${amount} below.`,
+      `Please find your invoice ${number} for ${amount}.`,
       "",
       ...rows.map(([label, value]) => `${label}: ${value}`),
       "",
@@ -138,7 +167,7 @@ export class InvoiceEmails {
       "",
       "Questions about this invoice? Just reply to this email.",
       "",
-      `Thank you,\n${owner}\n${siteConfig.name}`,
+      `Thank you,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
     ].join("\n");
     return { subject, html, text };
   }

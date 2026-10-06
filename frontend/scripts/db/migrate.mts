@@ -511,6 +511,13 @@ const MIGRATIONS: Migration[] = [
       `UPDATE courses SET practice_label = 'Live case' WHERE practice_label = 'In practice'`,
     ],
   },
+  {
+    id: "025_invoice_views",
+    statements: [
+      `ALTER TABLE invoices ADD COLUMN view_count integer NOT NULL DEFAULT 0,
+         ADD COLUMN first_viewed_at timestamptz, ADD COLUMN last_viewed_at timestamptz`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

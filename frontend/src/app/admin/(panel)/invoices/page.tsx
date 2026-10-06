@@ -54,7 +54,7 @@ export default async function AdminInvoicesPage() {
         <p className="mt-10 text-muted">No invoices yet.</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] tracking-[0.18em] text-muted uppercase">
                 <th className="py-2 pr-4 font-normal">Number</th>
@@ -62,7 +62,8 @@ export default async function AdminInvoicesPage() {
                 <th className="py-2 pr-4 text-right font-normal">Total</th>
                 <th className="py-2 pr-4 font-normal">Due</th>
                 <th className="py-2 pr-4 font-normal">Status</th>
-                <th className="py-2 font-normal">Emailed</th>
+                <th className="py-2 pr-4 font-normal">Emailed</th>
+                <th className="py-2 font-normal">Viewed</th>
               </tr>
             </thead>
             <tbody>
@@ -79,7 +80,8 @@ export default async function AdminInvoicesPage() {
                   <td className="py-2.5 pr-4">
                     <StatusBadge status={invoice.status === "sent" && invoice.dueDate < today ? "overdue" : invoice.status} />
                   </td>
-                  <td className="py-2.5 text-muted">{invoice.lastEmailedAt ? formatDubai(invoice.lastEmailedAt) : "—"}</td>
+                  <td className="py-2.5 pr-4 text-muted">{invoice.lastEmailedAt ? formatDubai(invoice.lastEmailedAt) : "—"}</td>
+                  <td className="py-2.5 text-muted">{invoice.firstViewedAt ? formatDubai(invoice.firstViewedAt) : "—"}</td>
                 </tr>
               ))}
             </tbody>

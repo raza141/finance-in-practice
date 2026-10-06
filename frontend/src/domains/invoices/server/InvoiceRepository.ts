@@ -36,6 +36,9 @@ interface InvoiceRow {
   sent_at: Date | null;
   paid_at: Date | null;
   voided_at: Date | null;
+  view_count: number;
+  first_viewed_at: Date | null;
+  last_viewed_at: Date | null;
 }
 
 interface EmailLogRow {
@@ -49,7 +52,7 @@ interface EmailLogRow {
   sent_at: Date;
 }
 
-type SummaryRow = Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at"> & {
+type SummaryRow = Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at" | "first_viewed_at"> & {
   last_emailed_at: Date | null;
 };
 
@@ -78,7 +81,7 @@ export class InvoiceRepository {
     if (clientId !== undefined && !UUID.test(clientId)) return [];
     const rows = (await this.sql`
       SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
-             i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at,
+             i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at, i.first_viewed_at,
              (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
       FROM invoices i
       WHERE ${clientId ?? null}::uuid IS NULL OR i.client_id = ${clientId ?? null}::uuid
@@ -92,7 +95,7 @@ export class InvoiceRepository {
   async awaitingPayment(limit = 6): Promise<InvoiceSummary[]> {
     const rows = (await this.sql`
       SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
-             i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at,
+             i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at, i.first_viewed_at,
              (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
       FROM invoices i
       WHERE i.status = 'sent'
@@ -167,6 +170,15 @@ export class InvoiceRepository {
       SELECT ${this.sql.unsafe(InvoiceRepository.COLUMNS)} FROM invoices WHERE token = ${token} AND status <> 'draft'
     `) as InvoiceRow[];
     return row ? InvoiceRepository.toInvoice(row) : null;
+  }
+
+  /** Counts a client opening the invoice link. Drafts have no public page, so they never count. */
+  async recordView(token: string): Promise<void> {
+    if (!TOKEN.test(token)) return;
+    await this.sql`
+      UPDATE invoices SET view_count = view_count + 1, first_viewed_at = coalesce(first_viewed_at, now()), last_viewed_at = now()
+      WHERE token = ${token} AND status <> 'draft'
+    `;
   }
 
   /** `bank` is the snapshot of input.bankAccountId, looked up by the caller. */
@@ -278,7 +290,8 @@ export class InvoiceRepository {
   // Dates as text so they stay YYYY-MM-DD regardless of the server's timezone.
   private static readonly COLUMNS = `id, number_seq, token, status, booking_uid, client_id, client_name, client_email,
     client_phone, client_address, currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor,
-    trn, due_date::text AS due_date, notes, payment_instructions, bank_account_id, bank, issue_date::text AS issue_date, created_at, sent_at, paid_at, voided_at`;
+    trn, due_date::text AS due_date, notes, payment_instructions, bank_account_id, bank, issue_date::text AS issue_date, created_at, sent_at, paid_at, voided_at,
+    view_count, first_viewed_at, last_viewed_at`;
 
   private static totals(input: InvoiceInput) {
     return InvoiceMath.totals(
@@ -304,6 +317,7 @@ export class InvoiceRepository {
       dueDate: row.due_date,
       createdAt: row.created_at,
       lastEmailedAt: row.last_emailed_at,
+      firstViewedAt: row.first_viewed_at,
     };
   }
 
@@ -337,6 +351,9 @@ export class InvoiceRepository {
       sentAt: row.sent_at,
       paidAt: row.paid_at,
       voidedAt: row.voided_at,
+      viewCount: row.view_count,
+      firstViewedAt: row.first_viewed_at,
+      lastViewedAt: row.last_viewed_at,
     };
   }
 }

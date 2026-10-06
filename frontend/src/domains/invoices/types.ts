@@ -63,6 +63,10 @@ export interface Invoice extends InvoiceInput, InvoiceTotals {
   sentAt: Date | null;
   paidAt: Date | null;
   voidedAt: Date | null;
+  /** Times the client opened the invoice link (admin views excluded). */
+  viewCount: number;
+  firstViewedAt: Date | null;
+  lastViewedAt: Date | null;
 }
 
 export interface InvoiceSummary {
@@ -76,6 +80,7 @@ export interface InvoiceSummary {
   dueDate: string;
   createdAt: Date;
   lastEmailedAt: Date | null;
+  firstViewedAt: Date | null;
 }
 
 export type EmailKind = "invoice" | "confirmation";
