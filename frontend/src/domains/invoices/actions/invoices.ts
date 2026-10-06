@@ -63,7 +63,7 @@ async function resolveLinks(input: InvoiceInput, saveClient: boolean): Promise<{
   // An email already on file links to that client instead of saving a duplicate.
   if (!clientId && saveClient) {
     clientId =
-      (await clients.byEmail(input.clientEmail))?.id ??
+      (input.clientEmail ? (await clients.byEmail(input.clientEmail))?.id : undefined) ??
       (await clients.create({ name: input.clientName, email: input.clientEmail, phone: input.clientPhone, address: input.clientAddress }));
   }
 
@@ -80,6 +80,7 @@ async function resolveLinks(input: InvoiceInput, saveClient: boolean): Promise<{
 async function emailInvoice(repo: InvoiceRepository, invoice: Invoice): Promise<string | null> {
   const resend = ResendClient.fromEnv();
   if (!resend) return NO_EMAIL;
+  if (!invoice.clientEmail) return "This invoice has no client email. Share it on WhatsApp instead.";
   const message = InvoiceEmails.invoice(invoice, `${await origin()}/invoice/${invoice.token}`);
   let providerId: string;
   try {
@@ -111,6 +112,7 @@ export async function saveInvoice(_state: InvoiceFormState, formData: FormData):
 
   const intent = formData.get("intent");
   if (intent === "send" && !ResendClient.fromEnv()) return { message: NO_EMAIL };
+  if (intent === "send" && !parsed.input.clientEmail) return { message: "Add the client's email to send it, or issue it and share it on WhatsApp." };
 
   const resolved = await resolveLinks(parsed.input, formData.get("saveClient") === "on");
   if (typeof resolved === "string") return { message: resolved };
@@ -150,6 +152,22 @@ export async function markInvoicePaid(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
   await repo.markPaid(id);
   redirect(`/admin/invoices/${id}`);
+}
+
+/** An advance or part payment; the one that clears the balance marks the invoice paid. */
+export async function recordInvoicePayment(formData: FormData): Promise<void> {
+  const repo = await repository();
+  const id = String(formData.get("id"));
+  const payment = InvoiceContract.parsePayment(Object.fromEntries(formData));
+  const result = typeof payment === "string" ? null : await repo.addPayment(id, payment);
+  redirect(`/admin/invoices/${id}?notice=${result === "settled" ? "paid" : result ? "payment" : "payment-refused"}`);
+}
+
+export async function removeInvoicePayment(formData: FormData): Promise<void> {
+  const repo = await repository();
+  const id = String(formData.get("id"));
+  await repo.removePayment(id, String(formData.get("paymentId")));
+  redirect(`/admin/invoices/${id}?notice=payment-removed`);
 }
 
 export async function voidInvoice(formData: FormData): Promise<void> {

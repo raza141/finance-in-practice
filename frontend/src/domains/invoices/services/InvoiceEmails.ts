@@ -117,6 +117,9 @@ export class InvoiceEmails {
     const amount = InvoiceMath.money(invoice.totalMinor, invoice.currency);
     const text = [
       `Hi ${InvoiceEmails.firstName(invoice.clientName)}, here is your invoice ${invoice.number ?? ""} for ${amount}, due ${InvoiceEmails.day(invoice.dueDate)}.`,
+      ...(invoice.paidMinor > 0 && invoice.paidMinor < invoice.totalMinor
+        ? [`Received so far: ${InvoiceMath.money(invoice.paidMinor, invoice.currency)}. Balance due: ${InvoiceMath.money(invoice.totalMinor - invoice.paidMinor, invoice.currency)}.`]
+        : []),
       "",
       `View or download it here: ${url}`,
       "",

@@ -275,3 +275,19 @@ describe("InvoiceEmails.whatsapp", () => {
     expect(InvoiceEmails.whatsapp({ ...invoice, clientPhone: "" }, "u").startsWith("https://wa.me/?text=")).toBe(true);
   });
 });
+
+describe("InvoiceContract payments and optional email", () => {
+  it("parses a payment and rejects a bad amount or date", () => {
+    expect(InvoiceContract.parsePayment({ amount: "1,500", paidOn: "2026-10-06", note: " Advance " })).toEqual({ amountMinor: 150000, paidOn: "2026-10-06", note: "Advance" });
+    expect(typeof InvoiceContract.parsePayment({ amount: "0", paidOn: "2026-10-06" })).toBe("string");
+    expect(typeof InvoiceContract.parsePayment({ amount: "100", paidOn: "06/10/2026" })).toBe("string");
+  });
+
+  it("accepts an invoice without a client email, but not a malformed one", () => {
+    const fields = invoiceFields({ clientEmail: "" });
+    const parsed = InvoiceContract.parseInvoice(fields);
+    expect(parsed.ok && parsed.input.clientEmail).toBe("");
+    const bad = InvoiceContract.parseInvoice({ ...fields, clientEmail: "not-an-email" });
+    expect(bad.ok ? null : bad.errors.clientEmail).toBeTruthy();
+  });
+});

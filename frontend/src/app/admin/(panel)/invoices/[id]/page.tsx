@@ -4,15 +4,28 @@ import { notFound } from "next/navigation";
 
 import { siteConfig } from "@/core/config/site";
 import { ResendClient } from "@/core/email/ResendClient";
+import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
-import { copyInvoiceForNextMonth, deleteDraftInvoice, duplicateInvoice, markInvoicePaid, resendInvoice, voidInvoice } from "@/domains/invoices/actions/invoices";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import {
+  copyInvoiceForNextMonth,
+  deleteDraftInvoice,
+  duplicateInvoice,
+  markInvoicePaid,
+  recordInvoicePayment,
+  removeInvoicePayment,
+  resendInvoice,
+  voidInvoice,
+} from "@/domains/invoices/actions/invoices";
 import { EmailHistory, EmailNotConfigured, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { InvoiceDocument } from "@/domains/invoices/components/InvoiceDocument";
 import { InvoiceForm } from "@/domains/invoices/components/InvoiceForm";
 import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
+import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -22,6 +35,10 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   emailed: { text: "Invoice emailed to the client.", tone: "ok" },
   "email-failed": { text: "The invoice is issued, but the email could not be sent. Check the email settings and use “Email again”.", tone: "warn" },
   duplicated: { text: "Copied into a new draft. Edit it and issue it when ready.", tone: "ok" },
+  payment: { text: "Payment recorded. The invoice stays open until the balance is paid.", tone: "ok" },
+  paid: { text: "Payment recorded: the invoice is now paid in full.", tone: "ok" },
+  "payment-refused": { text: "Payment not recorded: enter an amount up to the balance due, and the date it arrived.", tone: "warn" },
+  "payment-removed": { text: "Payment removed.", tone: "ok" },
   "next-month": { text: "Next month’s draft is ready: due date moved a month on, and month names in the lines updated. Check it, then issue it.", tone: "ok" },
 };
 
@@ -34,6 +51,8 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
   if (!repo || !invoice) notFound();
   const notice = NOTICES[String((await searchParams).notice)];
   const emailEnabled = ResendClient.fromEnv() !== null;
+  const money = (minor: number) => InvoiceMath.money(minor, invoice.currency);
+  const balance = invoice.totalMinor - invoice.paidMinor;
   const [emails, options] = await Promise.all([repo.emails(invoice.id), invoice.status === "draft" ? InvoiceFormLoader.options() : null]);
 
   return (
@@ -85,10 +104,10 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
                 <form action={markInvoicePaid}>
                   <input type="hidden" name="id" value={invoice.id} />
                   <PendingButton pendingLabel="Saving…" className="h-9 rounded-md bg-quant/15 px-3 text-sm font-medium text-quant hover:bg-quant/25">
-                    Mark as paid
+                    {invoice.paidMinor > 0 ? `Mark fully paid (${money(balance)})` : "Mark as paid"}
                   </PendingButton>
                 </form>
-                {emailEnabled && (
+                {emailEnabled && invoice.clientEmail && (
                   <form action={resendInvoice}>
                     <input type="hidden" name="id" value={invoice.id} />
                     <PendingButton pendingLabel="Sending…" className={BUTTON}>
@@ -129,14 +148,66 @@ export default async function InvoicePage({ params, searchParams }: PageProps<"/
             </Link>
           </div>
           <p className="mt-3 text-xs text-muted">
-            Client link (private, share only with {invoice.clientEmail}): <code className="break-all text-ink/80">/invoice/{invoice.token}</code>
+            Client link (private, share only with {invoice.clientEmail || invoice.clientName}): <code className="break-all text-ink/80">/invoice/{invoice.token}</code>
           </p>
+
+          {invoice.status !== "void" && (
+            <section className="mt-8 rounded-lg border border-line p-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-lg">Payments</h2>
+                <p className="font-mono text-sm text-muted">
+                  Paid {money(invoice.paidMinor)} of {money(invoice.totalMinor)} · <span className="text-ink">Balance {money(balance)}</span>
+                </p>
+              </div>
+              {invoice.payments.length > 0 && (
+                <ul className="mt-4 divide-y divide-line/60 text-sm">
+                  {invoice.payments.map((payment) => (
+                    <li key={payment.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+                      <span className="w-28 text-muted">{InvoiceEmails.day(payment.paidOn)}</span>
+                      <span className="flex-1">{payment.note || "Payment"}</span>
+                      <span className="font-mono tabular-nums">{money(payment.amountMinor)}</span>
+                      <form action={removeInvoicePayment}>
+                        <input type="hidden" name="id" value={invoice.id} />
+                        <input type="hidden" name="paymentId" value={payment.id} />
+                        <PendingButton pendingLabel="Removing…" className="text-xs text-red-300/90 hover:underline">
+                          Remove
+                        </PendingButton>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {invoice.status === "sent" && balance > 0 && (
+                <form action={recordInvoicePayment} className="mt-4 grid items-end gap-3 sm:grid-cols-[9rem_10rem_1fr_auto]">
+                  <input type="hidden" name="id" value={invoice.id} />
+                  <label className="text-xs text-muted">
+                    Amount ({invoice.currency})
+                    <input name="amount" inputMode="decimal" required defaultValue={InvoiceMath.majorInput(balance)} className={`${FIELD} mt-1`} />
+                  </label>
+                  <label className="text-xs text-muted">
+                    Received on
+                    <input name="paidOn" type="date" required defaultValue={new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today()} className={`${FIELD} mt-1`} />
+                  </label>
+                  <label className="text-xs text-muted">
+                    Note (optional)
+                    <input name="note" maxLength={80} placeholder="Advance, or Balance at session end" className={`${FIELD} mt-1`} />
+                  </label>
+                  <PendingButton pendingLabel="Saving…" className={BUTTON}>
+                    Record payment
+                  </PendingButton>
+                </form>
+              )}
+            </section>
+          )}
 
           <div className="mt-8 rounded-lg bg-slate-200 p-4 sm:p-6">
             <InvoiceDocument invoice={invoice} />
           </div>
 
-          {invoice.status === "sent" && (
+          {invoice.status === "sent" && invoice.paidMinor > 0 && (
+            <p className="mt-10 text-xs text-muted">This invoice has payments, so it can’t be voided. Remove the payments first if it was issued by mistake.</p>
+          )}
+          {invoice.status === "sent" && invoice.paidMinor === 0 && (
             <details className="mt-10 rounded-lg border border-red-400/30 p-5">
               <summary className="text-sm text-red-300/90">Void this invoice…</summary>
               <p className="mt-3 text-sm text-muted">

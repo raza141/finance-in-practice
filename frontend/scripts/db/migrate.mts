@@ -518,6 +518,26 @@ const MIGRATIONS: Migration[] = [
          ADD COLUMN first_viewed_at timestamptz, ADD COLUMN last_viewed_at timestamptz`,
     ],
   },
+  {
+    // Payments against an invoice (an advance, the balance at session end). The
+    // invoice stays 'sent' until they cover the total, then turns 'paid'.
+    id: "026_invoice_payments",
+    statements: [
+      `CREATE TABLE invoice_payments (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        invoice_id   uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        amount_minor integer NOT NULL CHECK (amount_minor > 0),
+        paid_on      date NOT NULL,
+        note         text NOT NULL DEFAULT '' CHECK (char_length(note) <= 80),
+        created_at   timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX invoice_payments_invoice_idx ON invoice_payments (invoice_id)`,
+      // Invoices already marked paid keep their income on the dashboard.
+      `INSERT INTO invoice_payments (invoice_id, amount_minor, paid_on, note)
+         SELECT id, total_minor, (paid_at AT TIME ZONE 'Asia/Dubai')::date, 'Paid in full'
+         FROM invoices WHERE status = 'paid' AND total_minor > 0 AND paid_at IS NOT NULL`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

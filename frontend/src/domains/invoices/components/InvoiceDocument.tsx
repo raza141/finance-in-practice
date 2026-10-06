@@ -103,19 +103,9 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <h2 className={LABEL}>Bill to</h2>
             <p className="mt-3 font-serif text-lg font-bold text-canvas">{invoice.clientName}</p>
             <p className="mt-1 text-slate-500">
-              {invoice.clientAddress && (
-                <>
-                  <span className="whitespace-pre-line">{invoice.clientAddress}</span>
-                  <br />
-                </>
-              )}
-              <span className="break-all">{invoice.clientEmail}</span>
-              {invoice.clientPhone && (
-                <>
-                  <br />
-                  {invoice.clientPhone}
-                </>
-              )}
+              {invoice.clientAddress && <span className="block whitespace-pre-line">{invoice.clientAddress}</span>}
+              {invoice.clientEmail && <span className="block break-all">{invoice.clientEmail}</span>}
+              {invoice.clientPhone && <span className="block">{invoice.clientPhone}</span>}
             </p>
           </div>
           <div>
@@ -204,9 +194,19 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
                 <dd className="text-right text-slate-500">{money(invoice.taxMinor)}</dd>
               </>
             )}
+            {invoice.paidMinor > 0 && (
+              <>
+                <dt className="text-slate-500">Total</dt>
+                <dd className="text-right text-slate-500">{money(invoice.totalMinor)}</dd>
+                <dt className="text-emerald-700">Paid to date</dt>
+                <dd className="text-right text-emerald-700">−{money(invoice.paidMinor)}</dd>
+              </>
+            )}
             <div className="col-span-2 mt-1 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
-              <dt className="font-mono text-[11px] font-semibold tracking-[0.2em] whitespace-nowrap text-slate-900 uppercase">Total due</dt>
-              <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">{money(invoice.totalMinor)}</dd>
+              <dt className="font-mono text-[11px] font-semibold tracking-[0.2em] whitespace-nowrap text-slate-900 uppercase">
+                {invoice.paidMinor > 0 ? "Balance due" : "Total due"}
+              </dt>
+              <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">{money(invoice.totalMinor - invoice.paidMinor)}</dd>
             </div>
           </dl>
         </section>

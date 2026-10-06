@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ResendClient } from "@/core/email/ResendClient";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
-import { EmailHistory, EmailNotConfigured, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
+import { badgeFor, EmailHistory, EmailNotConfigured, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
@@ -78,7 +78,7 @@ export default async function AdminInvoicesPage() {
                   <td className="py-2.5 pr-4 text-right font-mono tabular-nums">{InvoiceMath.money(invoice.totalMinor, invoice.currency)}</td>
                   <td className="py-2.5 pr-4 text-muted">{InvoiceEmails.day(invoice.dueDate)}</td>
                   <td className="py-2.5 pr-4">
-                    <StatusBadge status={invoice.status === "sent" && invoice.dueDate < today ? "overdue" : invoice.status} />
+                    <StatusBadge status={badgeFor(invoice, today)} />
                   </td>
                   <td className="py-2.5 pr-4 text-muted">{invoice.lastEmailedAt ? formatDubai(invoice.lastEmailedAt) : "—"}</td>
                   <td className="py-2.5 text-muted">{invoice.firstViewedAt ? formatDubai(invoice.firstViewedAt) : "—"}</td>

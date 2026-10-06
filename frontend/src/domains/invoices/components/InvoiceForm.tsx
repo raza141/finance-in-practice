@@ -175,6 +175,8 @@ export function InvoiceForm({
       sentAt: null,
       paidAt: null,
       voidedAt: null,
+      paidMinor: 0,
+      payments: [],
       viewCount: 0,
       firstViewedAt: null,
       lastViewedAt: null,
@@ -202,8 +204,8 @@ export function InvoiceForm({
         type="submit"
         name="intent"
         value="send"
-        disabled={pending || !emailEnabled}
-        title={emailEnabled ? undefined : "Email is not configured"}
+        disabled={pending || !emailEnabled || !client.clientEmail.trim()}
+        title={!emailEnabled ? "Email is not configured" : client.clientEmail.trim() ? undefined : "Add the client's email to send it, or issue and share on WhatsApp"}
         className="h-10 rounded-md bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
         Issue &amp; email to client
@@ -234,8 +236,8 @@ export function InvoiceForm({
         <Field label="Client name" error={errors.clientName}>
           <input name="clientName" required maxLength={120} value={client.clientName} onChange={(e) => setClient({ ...client, clientName: e.target.value })} aria-invalid={errors.clientName ? true : undefined} className={FIELD} />
         </Field>
-        <Field label="Client email" error={errors.clientEmail}>
-          <input name="clientEmail" type="email" required maxLength={254} value={client.clientEmail} onChange={(e) => setClient({ ...client, clientEmail: e.target.value })} aria-invalid={errors.clientEmail ? true : undefined} className={FIELD} />
+        <Field label="Client email (optional)" error={errors.clientEmail}>
+          <input name="clientEmail" type="email" maxLength={254} value={client.clientEmail} onChange={(e) => setClient({ ...client, clientEmail: e.target.value })} aria-invalid={errors.clientEmail ? true : undefined} className={FIELD} />
         </Field>
         <Field label="Phone" error={errors.clientPhone}>
           <input name="clientPhone" type="tel" maxLength={40} value={client.clientPhone} onChange={(e) => setClient({ ...client, clientPhone: e.target.value })} className={FIELD} />

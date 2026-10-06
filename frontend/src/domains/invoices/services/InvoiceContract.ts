@@ -85,8 +85,9 @@ export class InvoiceContract {
 
     const clientName = text("clientName");
     if (!clientName || clientName.length > LIMITS.name) errors.clientName = `Enter the client's name (up to ${LIMITS.name} characters).`;
+    // Optional: a client reached only on WhatsApp has none.
     const clientEmail = text("clientEmail").toLowerCase();
-    if (!InvoiceContract.EMAIL.test(clientEmail) || clientEmail.length > LIMITS.email) errors.clientEmail = "Enter a valid email address.";
+    if (clientEmail && (!InvoiceContract.EMAIL.test(clientEmail) || clientEmail.length > LIMITS.email)) errors.clientEmail = "Enter a valid email address, or leave it empty.";
     const clientPhone = text("clientPhone");
     if (clientPhone.length > LIMITS.phone) errors.clientPhone = `Up to ${LIMITS.phone} characters.`;
     const clientAddress = text("clientAddress");
@@ -180,7 +181,7 @@ export class InvoiceContract {
     const name = text("name");
     if (!name || name.length > LIMITS.name) errors.name = `Enter the client's name (up to ${LIMITS.name} characters).`;
     const email = text("email").toLowerCase();
-    if (!InvoiceContract.EMAIL.test(email) || email.length > LIMITS.email) errors.email = "Enter a valid email address.";
+    if (email && (!InvoiceContract.EMAIL.test(email) || email.length > LIMITS.email)) errors.email = "Enter a valid email address, or leave it empty.";
     const phone = text("phone");
     if (phone.length > LIMITS.phone) errors.phone = `Up to ${LIMITS.phone} characters.`;
     const address = text("address");
@@ -300,6 +301,18 @@ export class InvoiceContract {
     const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
     const wall = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
     return wall - Math.floor(instant / 1000) * 1000;
+  }
+
+  /** A payment from the admin form: amount (major units), the day it arrived, an optional note. */
+  static parsePayment(fields: Record<string, unknown>): { amountMinor: number; paidOn: string; note: string } | string {
+    const text = InvoiceContract.text(fields);
+    const amountMinor = InvoiceMath.parseMajor(text("amount"));
+    if (!amountMinor) return "Enter the amount received, e.g. 1500.";
+    const paidOn = text("paidOn");
+    if (!InvoiceContract.isIsoDate(paidOn)) return "Choose the date the payment arrived.";
+    const note = text("note");
+    if (note.length > 80) return "Keep the note under 80 characters.";
+    return { amountMinor, paidOn, note };
   }
 
   private static text(fields: Record<string, unknown>) {

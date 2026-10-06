@@ -6,7 +6,7 @@ import { IncomeChart, Panel, StatCard } from "@/domains/admin/components/Dashboa
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
-import { formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
+import { badgeFor, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
@@ -179,7 +179,7 @@ export default async function AdminDashboardPage() {
                   <span className="min-w-0 flex-1 truncate">{invoice.clientName}</span>
                   <span className="text-xs text-muted">due {InvoiceEmails.day(invoice.dueDate)}</span>
                   <span className="font-mono tabular-nums">{InvoiceMath.money(invoice.totalMinor, invoice.currency)}</span>
-                  <StatusBadge status={invoice.dueDate < today ? "overdue" : "sent"} />
+                  <StatusBadge status={badgeFor(invoice, today)} />
                 </li>
               ))}
             </ul>

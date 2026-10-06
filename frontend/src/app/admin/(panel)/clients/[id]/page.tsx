@@ -6,10 +6,12 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { deleteClient } from "@/domains/invoices/actions/billing";
-import { StatusBadge } from "@/domains/invoices/components/AdminBits";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { badgeFor, StatusBadge } from "@/domains/invoices/components/AdminBits";
 import { ClientForm } from "@/domains/invoices/components/BillingForms";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 
@@ -21,6 +23,7 @@ export default async function ClientPage({ params }: PageProps<"/admin/clients/[
   const { id } = await params;
   const client = await ClientRepository.fromEnv()?.byId(id);
   if (!client) notFound();
+  const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const [invoices, courses] = await Promise.all([InvoiceRepository.fromEnv()?.list(client.id) ?? [], CourseRepository.fromEnv()?.all() ?? []]);
 
   return (
@@ -51,7 +54,7 @@ export default async function ClientPage({ params }: PageProps<"/admin/clients/[
               </Link>
               <span className="text-muted">{InvoiceEmails.day(invoice.issueDate ?? invoice.dueDate)}</span>
               <span className="flex-1 text-right font-mono tabular-nums">{InvoiceMath.money(invoice.totalMinor, invoice.currency)}</span>
-              <StatusBadge status={invoice.status} />
+              <StatusBadge status={badgeFor(invoice, today)} />
             </li>
           ))}
         </ul>

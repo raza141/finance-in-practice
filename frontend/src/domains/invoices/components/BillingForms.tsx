@@ -94,7 +94,7 @@ const { LIMITS } = InvoiceContract;
 
 const CLIENT_FIELDS: readonly FieldSpec[] = [
   { name: "name", label: "Name", maxLength: LIMITS.name, required: true, hint: "Person or company" },
-  { name: "email", label: "Email", maxLength: LIMITS.email, required: true, type: "email" },
+  { name: "email", label: "Email (optional)", maxLength: LIMITS.email, required: false, type: "email" },
   { name: "phone", label: "Phone", maxLength: LIMITS.phone, type: "tel" },
   { name: "address", label: "Address", maxLength: LIMITS.address, multiline: true },
 ];

@@ -1,14 +1,24 @@
 import type { EmailLogEntry, InvoiceStatus } from "../types";
 
-const STATUS_STYLE: Record<InvoiceStatus | "overdue", string> = {
+type Badge = InvoiceStatus | "overdue" | "part paid";
+
+const STATUS_STYLE: Record<Badge, string> = {
   draft: "border-line text-muted",
   sent: "border-quant/40 text-quant",
   overdue: "border-gold/50 text-gold",
+  "part paid": "border-emerald-400/40 text-emerald-200",
   paid: "border-emerald-400/40 text-emerald-300",
   void: "border-red-400/40 text-red-300",
 };
 
-export function StatusBadge({ status }: { status: InvoiceStatus | "overdue" }) {
+/** Overdue beats part paid: an unpaid balance past its due date is the thing to chase. */
+export function badgeFor(invoice: { status: InvoiceStatus; dueDate: string; paidMinor: number }, today: string): Badge {
+  if (invoice.status !== "sent") return invoice.status;
+  if (invoice.dueDate < today) return "overdue";
+  return invoice.paidMinor > 0 ? "part paid" : "sent";
+}
+
+export function StatusBadge({ status }: { status: Badge }) {
   return <span className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-wider uppercase ${STATUS_STYLE[status]}`}>{status}</span>;
 }
 

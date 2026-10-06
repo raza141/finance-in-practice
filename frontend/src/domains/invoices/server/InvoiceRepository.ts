@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { Database, type Sql } from "@/core/db/Database";
 
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { BankDetails, Currency, CurrencyStats, EmailKind, InvoiceDashboard, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoiceStatus, InvoiceSummary } from "../types";
+import type { BankDetails, Currency, CurrencyStats, EmailKind, InvoiceDashboard, EmailLogEntry, Invoice, InvoiceInput, InvoiceItem, InvoicePayment, InvoiceStatus, InvoiceSummary } from "../types";
 
 interface InvoiceRow {
   id: string;
@@ -36,6 +36,8 @@ interface InvoiceRow {
   sent_at: Date | null;
   paid_at: Date | null;
   voided_at: Date | null;
+  paid_minor: number;
+  payments: InvoicePayment[];
   view_count: number;
   first_viewed_at: Date | null;
   last_viewed_at: Date | null;
@@ -52,7 +54,7 @@ interface EmailLogRow {
   sent_at: Date;
 }
 
-type SummaryRow = Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at" | "first_viewed_at"> & {
+type SummaryRow = Pick<InvoiceRow, "id" | "number_seq" | "status" | "client_name" | "currency" | "total_minor" | "issue_date" | "due_date" | "created_at" | "first_viewed_at" | "paid_minor"> & {
   last_emailed_at: Date | null;
 };
 
@@ -82,6 +84,7 @@ export class InvoiceRepository {
     const rows = (await this.sql`
       SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
              i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at, i.first_viewed_at,
+             (SELECT coalesce(sum(amount_minor), 0)::int FROM invoice_payments p WHERE p.invoice_id = i.id) AS paid_minor,
              (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
       FROM invoices i
       WHERE ${clientId ?? null}::uuid IS NULL OR i.client_id = ${clientId ?? null}::uuid
@@ -96,6 +99,7 @@ export class InvoiceRepository {
     const rows = (await this.sql`
       SELECT i.id, i.number_seq, i.status, i.client_name, i.currency, i.total_minor,
              i.issue_date::text AS issue_date, i.due_date::text AS due_date, i.created_at, i.first_viewed_at,
+             (SELECT coalesce(sum(amount_minor), 0)::int FROM invoice_payments p WHERE p.invoice_id = i.id) AS paid_minor,
              (SELECT max(sent_at) FROM email_log e WHERE e.invoice_id = i.id) AS last_emailed_at
       FROM invoices i
       WHERE i.status = 'sent'
@@ -108,34 +112,37 @@ export class InvoiceRepository {
   /**
    * Money figures for the admin dashboard, per currency (amounts in different
    * currencies are never added together). "This month" is the Dubai calendar
-   * month; income counts when an invoice is marked paid.
+   * month; income counts on the day each payment arrived, so an advance and
+   * the balance land in their own months.
    */
   async dashboard(): Promise<InvoiceDashboard> {
     const [currencies, [counts], months] = await Promise.all([
       this.sql`
-        WITH bounds AS (
-          SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') AT TIME ZONE 'Asia/Dubai' AS this_month,
-                 (date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') - interval '1 month') AT TIME ZONE 'Asia/Dubai' AS last_month,
-                 (now() AT TIME ZONE 'Asia/Dubai')::date AS today
+        WITH b AS (
+          SELECT (now() AT TIME ZONE 'Asia/Dubai')::date AS today, date_trunc('month', now() AT TIME ZONE 'Asia/Dubai')::date AS this_month
+        ), paid AS (
+          SELECT i.currency, p.amount_minor, p.paid_on FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id
+        ), open AS (
+          SELECT i.currency, i.due_date,
+                 i.total_minor - coalesce((SELECT sum(amount_minor) FROM invoice_payments p WHERE p.invoice_id = i.id), 0) AS balance
+          FROM invoices i WHERE i.status = 'sent'
         )
-        SELECT i.currency,
-          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'paid' AND i.paid_at >= b.this_month), 0)::bigint AS paid_this_month,
-          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'paid' AND i.paid_at >= b.last_month AND i.paid_at < b.this_month), 0)::bigint AS paid_last_month,
-          count(*) FILTER (WHERE i.status = 'sent') AS pending_count,
-          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'sent'), 0)::bigint AS pending_minor,
-          count(*) FILTER (WHERE i.status = 'sent' AND i.due_date < b.today) AS overdue_count,
-          coalesce(sum(i.total_minor) FILTER (WHERE i.status = 'sent' AND i.due_date < b.today), 0)::bigint AS overdue_minor
-        FROM invoices i CROSS JOIN bounds b
-        WHERE i.status <> 'draft'
-        GROUP BY i.currency
-        ORDER BY i.currency
+        SELECT c.currency,
+          coalesce((SELECT sum(amount_minor) FROM paid, b WHERE paid.currency = c.currency AND paid_on >= b.this_month), 0)::bigint AS paid_this_month,
+          coalesce((SELECT sum(amount_minor) FROM paid, b
+                    WHERE paid.currency = c.currency AND paid_on >= (b.this_month - interval '1 month')::date AND paid_on < b.this_month), 0)::bigint AS paid_last_month,
+          (SELECT count(*) FROM open WHERE open.currency = c.currency) AS pending_count,
+          coalesce((SELECT sum(balance) FROM open WHERE open.currency = c.currency), 0)::bigint AS pending_minor,
+          (SELECT count(*) FROM open, b WHERE open.currency = c.currency AND due_date < b.today) AS overdue_count,
+          coalesce((SELECT sum(balance) FROM open, b WHERE open.currency = c.currency AND due_date < b.today), 0)::bigint AS overdue_minor
+        FROM (SELECT DISTINCT currency FROM invoices WHERE status <> 'draft') c
+        ORDER BY c.currency
       `,
       this.sql`SELECT count(*) FILTER (WHERE status = 'draft') AS drafts FROM invoices`,
       this.sql`
-        SELECT to_char(paid_at AT TIME ZONE 'Asia/Dubai', 'YYYY-MM') AS month, currency, sum(total_minor)::bigint AS total
-        FROM invoices
-        WHERE status = 'paid'
-          AND paid_at >= (date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') - interval '5 months') AT TIME ZONE 'Asia/Dubai'
+        SELECT to_char(p.paid_on, 'YYYY-MM') AS month, i.currency, sum(p.amount_minor)::bigint AS total
+        FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id
+        WHERE p.paid_on >= (date_trunc('month', now() AT TIME ZONE 'Asia/Dubai') - interval '5 months')::date
         GROUP BY 1, 2
       `,
     ]);
@@ -235,20 +242,73 @@ export class InvoiceRepository {
     return rows.length > 0;
   }
 
+  /**
+   * Records money received. Refuses more than the balance; the payment that
+   * clears it marks the invoice paid. Returns null when refused.
+   * ponytail: the balance is read once per statement, so two admins paying the same invoice at the same instant could overpay; fine for one admin.
+   */
+  async addPayment(id: string, payment: Omit<InvoicePayment, "id">): Promise<"recorded" | "settled" | null> {
+    if (!UUID.test(id)) return null;
+    const [row] = (await this.sql`
+      WITH inv AS (
+        SELECT i.id, i.total_minor - coalesce((SELECT sum(amount_minor) FROM invoice_payments p WHERE p.invoice_id = i.id), 0) AS balance
+        FROM invoices i WHERE i.id = ${id} AND i.status = 'sent' FOR UPDATE
+      ), ins AS (
+        INSERT INTO invoice_payments (invoice_id, amount_minor, paid_on, note)
+        SELECT id, ${payment.amountMinor}::int, ${payment.paidOn}::date, ${payment.note}::text FROM inv WHERE ${payment.amountMinor}::int <= balance
+        RETURNING invoice_id
+      ), settle AS (
+        UPDATE invoices SET status = 'paid', paid_at = now(), updated_at = now()
+        WHERE id IN (SELECT invoice_id FROM ins) AND (SELECT balance FROM inv) = ${payment.amountMinor}::int
+        RETURNING id
+      )
+      SELECT (SELECT count(*) FROM ins)::int AS recorded, (SELECT count(*) FROM settle)::int AS settled
+    `) as { recorded: number; settled: number }[];
+    return row.settled ? "settled" : row.recorded ? "recorded" : null;
+  }
+
+  /** "Mark as paid": records whatever is still due as received today (Dubai), and marks the invoice paid. */
   async markPaid(id: string): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const rows = await this.sql`
-      UPDATE invoices SET status = 'paid', paid_at = now(), updated_at = now()
-      WHERE id = ${id} AND status = 'sent' RETURNING id
+      WITH inv AS (
+        SELECT i.id, i.total_minor,
+               i.total_minor - coalesce((SELECT sum(amount_minor) FROM invoice_payments p WHERE p.invoice_id = i.id), 0) AS balance
+        FROM invoices i WHERE i.id = ${id} AND i.status = 'sent' FOR UPDATE
+      ), ins AS (
+        INSERT INTO invoice_payments (invoice_id, amount_minor, paid_on, note)
+        SELECT id, balance, (now() AT TIME ZONE 'Asia/Dubai')::date, CASE WHEN balance = total_minor THEN 'Paid in full' ELSE 'Balance' END
+        FROM inv WHERE balance > 0
+      )
+      UPDATE invoices SET status = 'paid', paid_at = now(), updated_at = now() WHERE id IN (SELECT id FROM inv) RETURNING id
     `;
     return rows.length > 0;
+  }
+
+  /** Undoes a payment recorded by mistake; a paid invoice goes back to awaiting payment. */
+  async removePayment(invoiceId: string, paymentId: string): Promise<boolean> {
+    if (!UUID.test(invoiceId) || !UUID.test(paymentId)) return false;
+    const [row] = (await this.sql`
+      WITH del AS (
+        DELETE FROM invoice_payments p USING invoices i
+        WHERE p.id = ${paymentId} AND p.invoice_id = ${invoiceId} AND i.id = p.invoice_id AND i.status IN ('sent', 'paid')
+        RETURNING p.invoice_id
+      ), reopen AS (
+        UPDATE invoices SET status = 'sent', paid_at = NULL, updated_at = now()
+        WHERE id IN (SELECT invoice_id FROM del) AND status = 'paid'
+        RETURNING id
+      )
+      SELECT (SELECT count(*) FROM del)::int AS removed
+    `) as { removed: number }[];
+    return row.removed > 0;
   }
 
   async void(id: string): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const rows = await this.sql`
       UPDATE invoices SET status = 'void', voided_at = now(), updated_at = now()
-      WHERE id = ${id} AND status = 'sent' RETURNING id
+      WHERE id = ${id} AND status = 'sent' AND NOT EXISTS (SELECT 1 FROM invoice_payments WHERE invoice_id = ${id})
+      RETURNING id
     `;
     return rows.length > 0;
   }
@@ -291,7 +351,10 @@ export class InvoiceRepository {
   private static readonly COLUMNS = `id, number_seq, token, status, booking_uid, client_id, client_name, client_email,
     client_phone, client_address, currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor,
     trn, due_date::text AS due_date, notes, payment_instructions, bank_account_id, bank, issue_date::text AS issue_date, created_at, sent_at, paid_at, voided_at,
-    view_count, first_viewed_at, last_viewed_at`;
+    view_count, first_viewed_at, last_viewed_at,
+    (SELECT coalesce(sum(amount_minor), 0)::int FROM invoice_payments p WHERE p.invoice_id = invoices.id) AS paid_minor,
+    (SELECT coalesce(json_agg(json_build_object('id', p.id, 'amountMinor', p.amount_minor, 'paidOn', p.paid_on::text, 'note', p.note)
+       ORDER BY p.paid_on, p.created_at), '[]') FROM invoice_payments p WHERE p.invoice_id = invoices.id) AS payments`;
 
   private static totals(input: InvoiceInput) {
     return InvoiceMath.totals(
@@ -318,6 +381,7 @@ export class InvoiceRepository {
       createdAt: row.created_at,
       lastEmailedAt: row.last_emailed_at,
       firstViewedAt: row.first_viewed_at,
+      paidMinor: row.paid_minor,
     };
   }
 
@@ -351,6 +415,8 @@ export class InvoiceRepository {
       sentAt: row.sent_at,
       paidAt: row.paid_at,
       voidedAt: row.voided_at,
+      paidMinor: row.paid_minor,
+      payments: row.payments,
       viewCount: row.view_count,
       firstViewedAt: row.first_viewed_at,
       lastViewedAt: row.last_viewed_at,

@@ -63,10 +63,23 @@ export interface Invoice extends InvoiceInput, InvoiceTotals {
   sentAt: Date | null;
   paidAt: Date | null;
   voidedAt: Date | null;
+  /** Sum of `payments`; the balance due is totalMinor - paidMinor. */
+  paidMinor: number;
+  /** Oldest first. */
+  payments: InvoicePayment[];
   /** Times the client opened the invoice link (admin views excluded). */
   viewCount: number;
   firstViewedAt: Date | null;
   lastViewedAt: Date | null;
+}
+
+/** Money received against an invoice, e.g. an advance or the balance. */
+export interface InvoicePayment {
+  id: string;
+  amountMinor: number;
+  /** YYYY-MM-DD, the day the money arrived. */
+  paidOn: string;
+  note: string;
 }
 
 export interface InvoiceSummary {
@@ -81,6 +94,7 @@ export interface InvoiceSummary {
   createdAt: Date;
   lastEmailedAt: Date | null;
   firstViewedAt: Date | null;
+  paidMinor: number;
 }
 
 export type EmailKind = "invoice" | "confirmation";
