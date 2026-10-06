@@ -41,7 +41,7 @@ export function ReceiptDocument({ receipt, settings }: { receipt: Invoice; setti
         </div>
       </section>
 
-      <section className="mt-10 grid gap-8 border-t-2 border-canvas pt-8 sm:grid-cols-[1fr_17rem] print:grid-cols-[1fr_17rem]">
+      <section className="mt-10 grid gap-8 border-t-2 border-canvas pt-8 print:mt-6 print:pt-6 sm:grid-cols-[1fr_17rem] print:grid-cols-[1fr_17rem]">
         <dl className="grid h-fit grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-2 text-sm">
           {rows.map(([label, value]) => (
             <div key={label} className="contents">

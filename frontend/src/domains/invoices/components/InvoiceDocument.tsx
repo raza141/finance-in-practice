@@ -9,7 +9,7 @@ import { InvoiceMath } from "../services/InvoiceMath";
 import type { Invoice } from "../types";
 import { DocumentFrame, FromBlock, LABEL, ROW_LABEL, TermsBlock, TextBlock, ThankYou } from "./DocumentParts";
 
-const TH = "px-3 py-3 font-mono text-[11px] font-semibold tracking-[0.2em] text-slate-900 uppercase";
+const TH = "px-3 py-3 print:py-2 font-mono text-[11px] font-semibold tracking-[0.2em] text-slate-900 uppercase";
 /** Bank rows whose values are codes, set in mono. */
 const CODE_ROWS = new Set(["Account number", "IBAN", "SWIFT / BIC"]);
 
@@ -88,12 +88,12 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
 
       {consultancy && (
         <>
-          <TextBlock title="Scope" text={invoice.sections.scope} className="mt-10" />
+          <TextBlock title="Scope" text={invoice.sections.scope} className="mt-10 print:mt-6" />
           <TextBlock title="Deliverables" text={invoice.sections.deliverables} />
         </>
       )}
 
-      <div className="mt-10 overflow-x-auto print:overflow-visible">
+      <div className="mt-10 overflow-x-auto print:mt-6 print:overflow-visible">
         {consultancy && <h2 className={`${LABEL} mb-3`}>Fees</h2>}
         <table className="w-full min-w-[540px] border-t-2 border-canvas text-sm">
           <thead>
@@ -110,26 +110,26 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           <tbody>
             {invoice.items.map((item, index) => (
               <tr key={index} className="border-b border-slate-200 align-top">
-                <td className="px-3 py-4 font-mono text-slate-500">{String(index + 1).padStart(2, "0")}</td>
-                <td className="px-3 py-4">
+                <td className="px-3 py-4 print:py-2.5 font-mono text-slate-500">{String(index + 1).padStart(2, "0")}</td>
+                <td className="px-3 py-4 print:py-2.5">
                   <p className="font-semibold text-slate-900">{item.description}</p>
                   {item.detail && <p className="mt-0.5 text-slate-500">{item.detail}</p>}
                 </td>
-                {hasPeriod && <td className="px-3 py-4 whitespace-nowrap text-slate-900">{item.period ? InvoiceEmails.period(item.period) : "—"}</td>}
-                <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">
+                {hasPeriod && <td className="px-3 py-4 print:py-2.5 whitespace-nowrap text-slate-900">{item.period ? InvoiceEmails.period(item.period) : "—"}</td>}
+                <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">
                   {item.quantity}
                   {item.unit && <span className="ml-1 text-xs text-slate-500">{SettingsContract.unitLabel(settings, item.unit, item.quantity)}</span>}
                 </td>
-                <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">{money(item.unitMinor)}</td>
-                {taxDoc && <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">{InvoiceMath.percent(invoice.taxRateBp)}%</td>}
-                <td className="px-3 py-4 text-right font-bold whitespace-nowrap text-slate-900 tabular-nums">{money(item.amountMinor)}</td>
+                <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">{money(item.unitMinor)}</td>
+                {taxDoc && <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">{InvoiceMath.percent(invoice.taxRateBp)}%</td>}
+                <td className="px-3 py-4 print:py-2.5 text-right font-bold whitespace-nowrap text-slate-900 tabular-nums">{money(item.amountMinor)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <section className="mt-10 grid gap-8 sm:grid-cols-[1fr_19rem] sm:gap-16 print:grid-cols-[1fr_19rem] print:gap-16">
+      <section className="mt-10 grid gap-8 print:mt-6 sm:grid-cols-[1fr_19rem] sm:gap-16 print:grid-cols-[1fr_19rem] print:gap-16">
         <div className="break-inside-avoid">
           {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && (
             <>

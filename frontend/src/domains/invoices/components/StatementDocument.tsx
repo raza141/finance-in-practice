@@ -36,7 +36,7 @@ export function StatementDocument({ client, month, sections, settings }: { clien
       {sections.map((section) => {
         const money = (minor: number) => InvoiceMath.money(minor, section.currency);
         return (
-          <section key={section.currency} className="mt-10 break-inside-avoid">
+          <section key={section.currency} className="mt-10 break-inside-avoid print:mt-6">
             <table className="w-full border-t-2 border-canvas text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left">
