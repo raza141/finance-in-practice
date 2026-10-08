@@ -24,7 +24,9 @@ const STAMP: Record<string, string> = {
 
 /**
  * The paper every billing document prints on: navy header with the logo, the
- * title and number, and the navy tagline footer. Site palette on white; the
+ * title and number, and the navy tagline footer. In print it fills the A4 page
+ * (just under 297mm, so rounding never adds a blank page) and the footer sits
+ * at the bottom edge. Site palette on white; the
  * navy bands force background printing so the light logo stays visible.
  */
 export function DocumentFrame({
@@ -45,7 +47,7 @@ export function DocumentFrame({
   return (
     <article
       data-invoice
-      className="mx-auto w-full max-w-3xl overflow-hidden bg-white font-sans text-slate-800 shadow-xl [-webkit-print-color-adjust:exact] [print-color-adjust:exact] print:max-w-none print:shadow-none"
+      className="mx-auto w-full max-w-3xl overflow-hidden bg-white font-sans text-slate-800 shadow-xl [-webkit-print-color-adjust:exact] [print-color-adjust:exact] print:flex print:min-h-[296mm] print:max-w-none print:flex-col print:shadow-none"
     >
       <header className="flex flex-wrap items-center justify-between gap-6 border-b-4 border-gold bg-canvas bg-grid-lines px-8 py-7 sm:px-12 print:py-5">
         <Logo height={44} />
@@ -59,7 +61,7 @@ export function DocumentFrame({
           </div>
         </div>
       </header>
-      <div className="px-8 py-10 sm:px-12 print:py-6">{children}</div>
+      <div className="px-8 py-10 sm:px-12 print:flex-1 print:py-6">{children}</div>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 sm:px-12 print:py-4">
         <p className="font-mono text-xs font-semibold tracking-[0.25em] text-gold uppercase">{TAGLINE}</p>
         <p className="text-xs text-slate-300">{[business.website, business.phone].filter(Boolean).join(" · ")}</p>
