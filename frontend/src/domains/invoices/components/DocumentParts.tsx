@@ -61,7 +61,7 @@ export function DocumentFrame({
           </div>
         </div>
       </header>
-      <div className="px-8 py-10 sm:px-12 print:flex-1 print:py-6">{children}</div>
+      <div className="px-8 py-10 sm:px-12 print:flex print:flex-1 print:flex-col print:py-6">{children}</div>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 sm:px-12 print:py-4">
         <p className="font-mono text-xs font-semibold tracking-[0.25em] text-gold uppercase">{TAGLINE}</p>
         <p className="text-xs text-slate-300">{[business.website, business.phone].filter(Boolean).join(" · ")}</p>
@@ -91,7 +91,7 @@ export function FromBlock({ settings, trn }: { settings: BillingSettings; trn: s
 /** "Thank you, Khawla." callout beside the WhatsApp and booking rows. */
 export function ThankYou({ firstName, message, settings }: { firstName: string; message: string; settings: BillingSettings }) {
   return (
-    <section className="mt-10 grid break-inside-avoid gap-8 border-t border-slate-200 pt-8 print:mt-6 print:pt-5 sm:grid-cols-[1fr_auto] print:grid-cols-[1fr_auto]">
+    <section className="mt-10 grid break-inside-avoid gap-8 border-t border-slate-200 pt-8 print:mt-5 print:pt-4 sm:grid-cols-[1fr_auto] print:grid-cols-[1fr_auto]">
       <div className="border-l-4 border-gold pl-5">
         <h2 className="font-serif text-xl font-bold text-canvas">Thank you{firstName ? `, ${firstName}` : ""}.</h2>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">{message}</p>
@@ -115,7 +115,7 @@ export function TermsBlock({ text }: { text: string }) {
   return (
     <section className="mt-10 break-inside-avoid print:mt-6">
       <h2 className={LABEL}>Terms</h2>
-      <ol className="mt-3 grid list-decimal gap-1.5 pl-5 text-xs leading-relaxed text-slate-500 marker:text-slate-500">
+      <ol className="mt-3 grid list-decimal gap-1.5 pl-5 print:mt-2 print:gap-1 text-xs leading-relaxed text-slate-500 marker:text-slate-500">
         {terms.map(([title, body], index) => (
           <li key={index}>
             {title && <span className="font-semibold text-slate-900">{title}:</span>} {body}

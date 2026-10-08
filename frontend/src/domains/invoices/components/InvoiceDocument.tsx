@@ -14,7 +14,8 @@ const TH = "px-3 py-3 print:py-2 font-mono text-[11px] font-semibold tracking-[0
 const CODE_ROWS = new Set(["Account number", "IBAN", "SWIFT / BIC"]);
 
 const THANKS: Record<"invoice" | "quote" | "credit_note", (business: string) => string> = {
-  invoice: (business) => `Thank you for choosing ${business}. Questions about this invoice and bookings for the next session are handled by WhatsApp or email.`,
+  invoice: (business) =>
+    `Thank you for choosing ${business}. Questions about this invoice and bookings for the next session are handled by WhatsApp or email.`,
   quote: (business) => `Thank you for considering ${business}. Questions about this quote are handled by WhatsApp or email.`,
   credit_note: () => "This credit note reduces the balance of the invoice shown in the details. Questions are handled by WhatsApp or email.",
 };
@@ -43,7 +44,11 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   const paidOn = invoice.payments.at(-1)?.paidOn ?? invoice.paidAt?.toISOString().slice(0, 10) ?? invoice.dueDate;
   const related =
     invoice.relatedNumber &&
-    (docType === "credit_note" ? (["Against invoice", invoice.relatedNumber] as const) : docType === "invoice" ? (["From quote", invoice.relatedNumber] as const) : null);
+    (docType === "credit_note"
+      ? (["Against invoice", invoice.relatedNumber] as const)
+      : docType === "invoice"
+        ? (["From quote", invoice.relatedNumber] as const)
+        : null);
 
   return (
     <DocumentFrame title={DocumentFormat.title(invoice)} number={invoice.number} stamp={DocumentFormat.stamp(invoice, today)} settings={settings}>
@@ -113,58 +118,34 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           <tbody>
             {invoice.items.map((item, index) => (
               <tr key={index} className="border-b border-slate-200 align-top">
-                <td className="px-3 py-4 print:py-2.5 font-mono text-slate-500">{String(index + 1).padStart(2, "0")}</td>
-                <td className="px-3 py-4 print:py-2.5">
+                <td className="px-3 py-4 print:py-2 font-mono text-slate-500">{String(index + 1).padStart(2, "0")}</td>
+                <td className="px-3 py-4 print:py-2">
                   <p className="font-semibold text-slate-900">{item.description}</p>
                   {item.detail && <p className="mt-0.5 text-slate-500">{item.detail}</p>}
                 </td>
-                {hasPeriod && <td className="px-3 py-4 print:py-2.5 whitespace-nowrap text-slate-900">{item.period ? InvoiceEmails.period(item.period) : "—"}</td>}
-                <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">
+                {hasPeriod && (
+                  <td className="px-3 py-4 print:py-2 whitespace-nowrap text-slate-900">{item.period ? InvoiceEmails.period(item.period) : "—"}</td>
+                )}
+                <td className="px-3 py-4 print:py-2 text-right whitespace-nowrap tabular-nums">
                   {item.quantity}
                   {item.unit && <span className="ml-1 text-xs text-slate-500">{SettingsContract.unitLabel(settings, item.unit, item.quantity)}</span>}
                 </td>
-                <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">{money(item.unitMinor)}</td>
-                {taxDoc && <td className="px-3 py-4 print:py-2.5 text-right whitespace-nowrap tabular-nums">{InvoiceMath.percent(invoice.taxRateBp)}%</td>}
-                <td className="px-3 py-4 print:py-2.5 text-right font-bold whitespace-nowrap text-slate-900 tabular-nums">{money(item.amountMinor)}</td>
+                <td className="px-3 py-4 print:py-2 text-right whitespace-nowrap tabular-nums">{money(item.unitMinor)}</td>
+                {taxDoc && (
+                  <td className="px-3 py-4 print:py-2 text-right whitespace-nowrap tabular-nums">{InvoiceMath.percent(invoice.taxRateBp)}%</td>
+                )}
+                <td className="px-3 py-4 print:py-2 text-right font-bold whitespace-nowrap text-slate-900 tabular-nums">
+                  {money(item.amountMinor)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <section className="mt-10 grid gap-8 print:mt-6 sm:grid-cols-[1fr_19rem] sm:gap-16 print:grid-cols-[1fr_19rem] print:gap-16">
-        <div className="break-inside-avoid">
-          {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && (
-            <>
-              <h2 className={LABEL}>Payment desk</h2>
-              {bankRows.length > 0 && (
-                <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-0.5 text-sm">
-                  {bankRows.map(([label, value]) => (
-                    <div key={label} className="contents">
-                      <dt className={ROW_LABEL}>{label === "Bank name" ? "Bank" : label === "Account number" ? "Account no." : label}</dt>
-                      <dd className={`break-words text-slate-900 ${CODE_ROWS.has(label) ? "font-mono" : "font-semibold"}`}>{value}</dd>
-                    </div>
-                  ))}
-                  <dt className={ROW_LABEL}>Reference</dt>
-                  <dd className="font-mono text-slate-900">{invoice.number ?? "Invoice number"}</dd>
-                </dl>
-              )}
-              {payOnline && (
-                <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 text-sm">
-                  <dt className={ROW_LABEL}>Pay online</dt>
-                  <dd className="break-all">
-                    <a href={invoice.paymentLink} className="text-xs font-semibold text-canvas underline">
-                      {invoice.paymentLink}
-                    </a>
-                    {settings.card.note && <span className="mt-0.5 block text-xs text-slate-500">{settings.card.note}</span>}
-                  </dd>
-                </dl>
-              )}
-              {invoice.paymentInstructions && <p className="mt-3 text-sm whitespace-pre-line text-slate-500">{invoice.paymentInstructions}</p>}
-            </>
-          )}
-        </div>
-        <dl className="grid h-fit break-inside-avoid grid-cols-[1fr_auto] gap-x-6 gap-y-3 rounded-md border border-slate-200 border-l-4 border-l-gold bg-slate-50 p-6 text-sm tabular-nums">
+      {/* Totals stay with the lines; everything after them sits on the footer when printed, so extra lines grow into the gap. */}
+      <div className="mt-8 flex justify-end print:mt-4">
+        <dl className="grid w-full break-inside-avoid grid-cols-[1fr_auto] sm:w-[19rem] print:w-[19rem] gap-x-6 gap-y-3 rounded-md border border-slate-200 border-l-4 border-l-gold bg-slate-50 p-6 text-sm tabular-nums print:gap-y-2 print:p-4">
           <dt className="text-slate-500">Subtotal</dt>
           <dd className="text-right text-slate-500">{money(invoice.subtotalMinor)}</dd>
           {invoice.discountMinor > 0 && (
@@ -197,14 +178,24 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
               )}
             </>
           )}
-          <div className="col-span-2 mt-1 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
+          <div className="col-span-2 mt-1 flex items-center justify-between gap-4 border-t border-slate-200 pt-4 print:pt-3">
             <dt className="font-mono text-[11px] font-semibold tracking-[0.2em] whitespace-nowrap text-slate-900 uppercase">
-              {isInvoice ? (remaining < 0 ? "Credit owed" : settled > 0 ? "Balance due" : "Total due") : docType === "quote" ? "Quote total" : "Credit total"}
+              {isInvoice
+                ? remaining < 0
+                  ? "Credit owed"
+                  : settled > 0
+                    ? "Balance due"
+                    : "Total due"
+                : docType === "quote"
+                  ? "Quote total"
+                  : "Credit total"}
             </dt>
-            <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">{money(isInvoice ? Math.abs(remaining) : invoice.totalMinor)}</dd>
+            <dd className="font-serif text-2xl font-bold whitespace-nowrap text-canvas">
+              {money(isInvoice ? Math.abs(remaining) : invoice.totalMinor)}
+            </dd>
           </div>
         </dl>
-      </section>
+      </div>
 
       {consultancy && (
         <>
@@ -212,9 +203,41 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           <TextBlock title="Assumptions" text={invoice.sections.assumptions} />
         </>
       )}
-      <TextBlock title="Notes" text={invoice.notes} />
-      <ThankYou firstName={InvoiceEmails.firstName(invoice.clientName)} message={THANKS[docType](settings.business.name)} settings={settings} />
-      <TermsBlock text={settings.documents[docType].terms} />
+
+      <div className="print:mt-auto">
+        {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && (
+          <section className="mt-10 break-inside-avoid print:mt-4">
+            <h2 className={LABEL}>Payment desk</h2>
+            {bankRows.length > 0 && (
+              <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-0.5 text-sm sm:grid-cols-[auto_1fr_auto_1fr] print:grid-cols-[auto_1fr_auto_1fr]">
+                {bankRows.map(([label, value]) => (
+                  <div key={label} className="contents">
+                    <dt className={ROW_LABEL}>{label === "Bank name" ? "Bank" : label === "Account number" ? "Account no." : label}</dt>
+                    <dd className={`break-words text-slate-900 ${CODE_ROWS.has(label) ? "font-mono" : "font-semibold"}`}>{value}</dd>
+                  </div>
+                ))}
+                <dt className={ROW_LABEL}>Reference</dt>
+                <dd className="font-mono text-slate-900">{invoice.number ?? "Invoice number"}</dd>
+              </dl>
+            )}
+            {payOnline && (
+              <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 text-sm">
+                <dt className={ROW_LABEL}>Pay online</dt>
+                <dd className="break-all">
+                  <a href={invoice.paymentLink} className="text-xs font-semibold text-canvas underline">
+                    {invoice.paymentLink}
+                  </a>
+                  {settings.card.note && <span className="mt-0.5 block text-xs text-slate-500">{settings.card.note}</span>}
+                </dd>
+              </dl>
+            )}
+            {invoice.paymentInstructions && <p className="mt-3 text-sm whitespace-pre-line text-slate-500">{invoice.paymentInstructions}</p>}
+          </section>
+        )}
+        <TextBlock title="Notes" text={invoice.notes} />
+        <ThankYou firstName={InvoiceEmails.firstName(invoice.clientName)} message={THANKS[docType](settings.business.name)} settings={settings} />
+        <TermsBlock text={settings.documents[docType].terms} />
+      </div>
     </DocumentFrame>
   );
 }

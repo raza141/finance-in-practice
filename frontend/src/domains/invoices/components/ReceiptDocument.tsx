@@ -24,7 +24,12 @@ export function ReceiptDocument({ receipt, settings }: { receipt: Invoice; setti
     ...(receipt.relatedNumber ? ([["For invoice", receipt.relatedNumber]] as [string, string][]) : []),
     ["Method", payment ? InvoiceContract.PAYMENT_METHODS[payment.method] : "—"],
     ...(payment?.reference ? ([["Reference", payment.reference]] as [string, string][]) : []),
-    ...(receipt.trn && receipt.taxRateBp > 0 ? ([["VAT included", `${InvoiceMath.money(receipt.taxMinor, receipt.currency)} (${InvoiceMath.percent(receipt.taxRateBp)}%)`]] as [string, string][]) : []),
+    ...(receipt.trn && receipt.taxRateBp > 0
+      ? ([["VAT included", `${InvoiceMath.money(receipt.taxMinor, receipt.currency)} (${InvoiceMath.percent(receipt.taxRateBp)}%)`]] as [
+          string,
+          string,
+        ][])
+      : []),
   ];
 
   return (
@@ -56,16 +61,18 @@ export function ReceiptDocument({ receipt, settings }: { receipt: Invoice; setti
         </div>
       </section>
 
-      <ThankYou
-        firstName={InvoiceEmails.firstName(receipt.clientName)}
-        message={
-          receipt.relatedNumber
-            ? `Payment received with thanks. ${settings.business.name} confirms the amount above as received against invoice ${receipt.relatedNumber}.`
-            : `Payment received with thanks. ${settings.business.name} confirms the amount above as paid for the service listed.`
-        }
-        settings={settings}
-      />
-      <TermsBlock text={settings.documents.receipt.terms} />
+      <div className="print:mt-auto">
+        <ThankYou
+          firstName={InvoiceEmails.firstName(receipt.clientName)}
+          message={
+            receipt.relatedNumber
+              ? `Payment received with thanks. ${settings.business.name} confirms the amount above as received against invoice ${receipt.relatedNumber}.`
+              : `Payment received with thanks. ${settings.business.name} confirms the amount above as paid for the service listed.`
+          }
+          settings={settings}
+        />
+        <TermsBlock text={settings.documents.receipt.terms} />
+      </div>
     </DocumentFrame>
   );
 }
