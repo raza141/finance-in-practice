@@ -38,6 +38,9 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   /** Negative when a credit note on a paid invoice leaves money owed back to the client. */
   const remaining = invoice.totalMinor - settled;
   const number = invoice.number ?? "Assigned on issue";
+  // A paid invoice shows when it was settled (the last payment's date) and no outstanding terms.
+  const paid = isInvoice && invoice.status === "paid";
+  const paidOn = invoice.payments.at(-1)?.paidOn ?? invoice.paidAt?.toISOString().slice(0, 10) ?? invoice.dueDate;
   const related =
     invoice.relatedNumber &&
     (docType === "credit_note" ? (["Against invoice", invoice.relatedNumber] as const) : docType === "invoice" ? (["From quote", invoice.relatedNumber] as const) : null);
@@ -64,14 +67,14 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
             <dd className="font-semibold text-slate-900">{invoice.issueDate ? InvoiceEmails.day(invoice.issueDate) : "On issue"}</dd>
             {docType !== "credit_note" && (
               <>
-                <dt className={ROW_LABEL}>{docType === "quote" ? "Valid until" : "Due"}</dt>
-                <dd className="font-semibold text-slate-900">{InvoiceEmails.day(invoice.dueDate)}</dd>
+                <dt className={ROW_LABEL}>{docType === "quote" ? "Valid until" : paid ? "Paid on" : "Due"}</dt>
+                <dd className="font-semibold text-slate-900">{InvoiceEmails.day(paid ? paidOn : invoice.dueDate)}</dd>
               </>
             )}
             {isInvoice && (
               <>
                 <dt className={ROW_LABEL}>Terms</dt>
-                <dd className="font-semibold text-slate-900">{InvoiceContract.PAYMENT_TERMS[invoice.paymentTerms]}</dd>
+                <dd className="font-semibold text-slate-900">{paid ? "Nil" : InvoiceContract.PAYMENT_TERMS[invoice.paymentTerms]}</dd>
               </>
             )}
             {related && (
