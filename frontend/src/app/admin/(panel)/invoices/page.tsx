@@ -38,7 +38,15 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps<"/ad
   }
   const query = await searchParams;
   const type = InvoiceContract.DOC_TYPES.find((t) => t === query.type) ?? null;
-  const [documents, emails, recurring] = await Promise.all([repo.list({ docType: type ?? undefined }), repo.emails(), repo.recurringDue()]);
+  const search = typeof query.q === "string" ? query.q : "";
+  const before = typeof query.before === "string" ? query.before : undefined;
+  const [documents, emails, recurring] = await Promise.all([
+    repo.list({ docType: type ?? undefined, search, before }),
+    repo.emails(),
+    repo.recurringDue(),
+  ]);
+  const last = documents.at(-1);
+  const older = documents.length === InvoiceRepository.PAGE && last ? `?${new URLSearchParams({ ...(type && { type }), ...(search && { q: search }), before: InvoiceRepository.cursor(last) })}` : null;
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
 
   return (
@@ -102,8 +110,27 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps<"/ad
         ))}
       </nav>
 
+      <form className="mt-4 flex gap-2">
+        {type && <input type="hidden" name="type" value={type} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={search}
+          aria-label="Search documents"
+          placeholder="Search number, client name or email"
+          maxLength={100}
+          className="h-10 w-full max-w-sm rounded-md border border-line bg-canvas/70 px-3 text-sm"
+        />
+        <button className={LINK}>Search</button>
+        {(search || before) && (
+          <Link href={type ? `/admin/invoices?type=${type}` : "/admin/invoices"} className={LINK}>
+            Clear
+          </Link>
+        )}
+      </form>
+
       {documents.length === 0 ? (
-        <p className="mt-10 text-muted">Nothing here yet.</p>
+        <p className="mt-10 text-muted">{search ? `Nothing matches “${search}”.` : "Nothing here yet."}</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
@@ -140,6 +167,11 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps<"/ad
               ))}
             </tbody>
           </table>
+          {older && (
+            <Link href={`/admin/invoices${older}`} className={`${LINK} mt-4 inline-block`}>
+              Older →
+            </Link>
+          )}
         </div>
       )}
 

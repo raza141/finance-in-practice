@@ -2,10 +2,14 @@ import type { NextRequest } from "next/server";
 
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
 
 const NO_STORE = { "Cache-Control": "no-store" };
+
+// Each call reaches Cal.com: 60 per client IP per 10 minutes (per warm instance), far above a visitor browsing weeks.
+const limiter = new SlidingWindowRateLimiter(60, 10 * 60_000);
 
 /**
  * GET /api/booking/slots?date=YYYY-MM-DD&timeZone=Area/City
@@ -16,6 +20,10 @@ const NO_STORE = { "Cache-Control": "no-store" };
  * Dates are calendar days in `timeZone`; times are always returned in UTC.
  */
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!limiter.allow(ip)) {
+    return Response.json({ error: "RATE_LIMITED", message: "Too many requests. Please wait a few minutes." }, { status: 429, headers: NO_STORE });
+  }
   const cal = CalComClient.fromEnv();
   if (!cal) {
     return Response.json(

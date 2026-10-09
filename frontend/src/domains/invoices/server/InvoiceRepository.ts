@@ -131,14 +131,31 @@ export class InvoiceRepository {
     return typeof value === "string" && UUID.test(value);
   }
 
-  /** Newest first; optionally one saved client's, or one type's. */
-  async list(filter: { clientId?: string; docType?: DocumentType } = {}): Promise<InvoiceSummary[]> {
+  static readonly PAGE = 100;
+
+  /** Where the next page of `list` starts: after this row. Millisecond time plus id, so rows created together aren't skipped. */
+  static cursor(row: Pick<InvoiceSummary, "createdAt" | "id">): string {
+    return `${row.createdAt.toISOString()}_${row.id}`;
+  }
+
+  /**
+   * Newest first, a page at a time; optionally one saved client's, one type's,
+   * or those whose number, client name or email contains `search`. `before`
+   * (InvoiceRepository.cursor of the previous page's last row) continues to older documents.
+   */
+  async list(filter: { clientId?: string; docType?: DocumentType; search?: string; before?: string } = {}): Promise<InvoiceSummary[]> {
     if (filter.clientId !== undefined && !UUID.test(filter.clientId)) return [];
+    const [at, id] = filter.before?.split("_") ?? [];
+    const before = at && !Number.isNaN(Date.parse(at)) && UUID.test(id ?? "") ? [at, id] : [null, null];
+    // LIKE wildcards in the search are matched literally.
+    const search = filter.search?.trim().slice(0, 100).replace(/[\\%_]/g, (c) => `\\${c}`) || null;
     const rows = (await this.sql.query(
       `SELECT ${InvoiceRepository.SUMMARY} FROM invoices d
        WHERE ($1::uuid IS NULL OR d.client_id = $1::uuid) AND ($2::text IS NULL OR d.doc_type = $2)
-       ORDER BY d.created_at DESC LIMIT 300`,
-      [filter.clientId ?? null, filter.docType ?? null],
+         AND ($3::text IS NULL OR d.number ILIKE '%' || $3 || '%' OR d.client_name ILIKE '%' || $3 || '%' OR d.client_email ILIKE '%' || $3 || '%')
+         AND ($4::timestamptz IS NULL OR (date_trunc('milliseconds', d.created_at), d.id) < ($4::timestamptz, $5::uuid))
+       ORDER BY date_trunc('milliseconds', d.created_at) DESC, d.id DESC LIMIT ${InvoiceRepository.PAGE}`,
+      [filter.clientId ?? null, filter.docType ?? null, search, ...before],
     )) as SummaryRow[];
     return rows.map(InvoiceRepository.toSummary);
   }
