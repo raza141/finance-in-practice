@@ -87,12 +87,13 @@
     background-image: none;
   }
 
-  /* CustomCursor replaces the native pointer for mouse users; links, buttons
-   * and inputs would otherwise re-assert their own pointer / text cursors. */
+  /* CustomCursor replaces the native pointer for mouse users, only while it is
+   * rendered; links, buttons and inputs would otherwise re-assert their own. */
   @media (pointer: fine) {
-    body *,
-    body *::before,
-    body *::after {
+    body:has([data-custom-cursor]),
+    body:has([data-custom-cursor]) *,
+    body:has([data-custom-cursor]) *::before,
+    body:has([data-custom-cursor]) *::after {
       cursor: none !important;
     }
   }

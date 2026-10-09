@@ -85,7 +85,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="flex min-h-screen flex-col pointer-fine:cursor-none">
+      <body className="flex min-h-screen flex-col">
         <JsonLd data={StructuredData.site()} />
         <Script id="animation-prepaint" strategy="beforeInteractive">
           {ANIMATION_PREPAINT}
