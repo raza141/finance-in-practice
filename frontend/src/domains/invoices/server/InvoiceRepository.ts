@@ -24,6 +24,8 @@ import type {
   InvoiceSummary,
   LedgerEntry,
   PaymentTerms,
+  QuoteAcceptance,
+  QuoteAcceptanceInput,
 } from "../types";
 
 interface InvoiceRow {
@@ -62,6 +64,9 @@ interface InvoiceRow {
   sections: Partial<ConsultancySections>;
   recurring: boolean;
   recurs_from: string | null;
+  supersedes_id: string | null;
+  supersedes_number: string | null;
+  acceptance: (Omit<QuoteAcceptance, "acceptedAt" | "recordedAt"> & { acceptedAt: string; recordedAt: string }) | null;
   link_valid_until: Date | null;
   issue_date: string | null;
   created_at: Date;
@@ -240,20 +245,26 @@ export class InvoiceRepository {
     `;
   }
 
-  /** `bank` is the snapshot of input.bankAccountId, looked up by the caller. */
-  async createDraft(input: InvoiceInput, bank: BankDetails | null, actor: string, recursFrom: string | null = null): Promise<string> {
+  /** `bank` is the snapshot of input.bankAccountId, looked up by the caller. `supersedesId`: the quote a revision replaces. */
+  async createDraft(
+    input: InvoiceInput,
+    bank: BankDetails | null,
+    actor: string,
+    links: { recursFrom?: string | null; supersedesId?: string | null } = {},
+  ): Promise<string> {
     const t = InvoiceRepository.totals(input);
     const [row] = (await this.sql`
       INSERT INTO invoices (token, doc_type, related_id, booking_uid, client_id, client_name, client_email, client_phone, client_address,
                             currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor, trn,
                             due_date, notes, payment_instructions, bank_account_id, bank, payment_terms, terms_days, payment_link, layout,
-                            sections, recurring, recurs_from)
+                            sections, recurring, recurs_from, supersedes_id)
       VALUES (${randomBytes(32).toString("base64url")}, ${input.docType}, ${input.relatedId}, ${input.bookingUid}, ${input.clientId},
               ${input.clientName}, ${input.clientEmail}, ${input.clientPhone}, ${input.clientAddress}, ${input.currency},
               ${JSON.stringify(input.items)}::jsonb, ${t.subtotalMinor}, ${t.discountMinor}, ${input.taxRateBp},
               ${t.taxMinor}, ${t.totalMinor}, ${input.trn}, ${input.dueDate}, ${input.notes},
               ${input.paymentInstructions}, ${input.bankAccountId}, ${bank && JSON.stringify(bank)}::jsonb, ${input.paymentTerms},
-              ${input.termsDays}, ${input.paymentLink}, ${input.layout}, ${JSON.stringify(input.sections)}::jsonb, ${input.recurring}, ${recursFrom})
+              ${input.termsDays}, ${input.paymentLink}, ${input.layout}, ${JSON.stringify(input.sections)}::jsonb, ${input.recurring}, ${links.recursFrom ?? null},
+              ${links.supersedesId ?? null})
       RETURNING id
     `) as { id: string }[];
     await this.logEvent(row.id, actor, "created");
@@ -429,19 +440,94 @@ export class InvoiceRepository {
   }
 
   /**
-   * A sent quote's answer, given once. An expired quote (past its valid-until
-   * date, Dubai) can be declined but not accepted: issue a new one instead.
+   * Records how a sent quote was accepted, and marks it accepted, in one
+   * statement. The acceptance must fall between the quote's issue and its
+   * valid-until date (Dubai), so it belongs to exactly this issued revision.
    */
-  async answerQuote(id: string, answer: "accepted" | "declined", actor: string): Promise<boolean> {
+  async acceptQuote(id: string, acceptance: QuoteAcceptanceInput, actor: string): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const rows = await this.sql`
-      UPDATE invoices SET status = ${answer}, updated_at = now()
-      WHERE id = ${id} AND doc_type = 'quote' AND status = 'sent'
-        AND (${answer} = 'declined' OR due_date >= (now() AT TIME ZONE 'Asia/Dubai')::date)
-      RETURNING id
+      WITH q AS (
+        UPDATE invoices SET status = 'accepted', updated_at = now()
+        WHERE id = ${id} AND doc_type = 'quote' AND status = 'sent'
+          AND ${acceptance.acceptedAt}::timestamptz >= sent_at AND (${acceptance.acceptedAt}::timestamptz AT TIME ZONE 'Asia/Dubai')::date <= due_date
+        RETURNING id
+      )
+      INSERT INTO quote_acceptances (quote_id, accepted_at, approver, method, notes, evidence_url, recorded_by)
+      SELECT id, ${acceptance.acceptedAt}, ${acceptance.approver}, ${acceptance.method}, ${acceptance.notes}, ${acceptance.evidenceUrl}, ${actor.slice(0, 120)}
+      FROM q RETURNING quote_id
     `;
-    if (rows.length > 0) await this.logEvent(id, actor, answer);
+    if (rows.length > 0) await this.logEvent(id, actor, "accepted", `${acceptance.method}, by ${acceptance.approver}`);
     return rows.length > 0;
+  }
+
+  /** A sent quote declined, with the reason in its history. */
+  async declineQuote(id: string, reason: string, actor: string): Promise<boolean> {
+    if (!UUID.test(id)) return false;
+    const rows = await this.sql`
+      UPDATE invoices SET status = 'declined', updated_at = now() WHERE id = ${id} AND doc_type = 'quote' AND status = 'sent' RETURNING id
+    `;
+    if (rows.length > 0) await this.logEvent(id, actor, "declined", reason);
+    return rows.length > 0;
+  }
+
+  /**
+   * An acceptance recorded by mistake: the quote goes back to sent and its
+   * acceptance record is removed (the history keeps both). Refused once an
+   * invoice was made from it.
+   */
+  async withdrawAcceptance(id: string, reason: string, actor: string): Promise<boolean> {
+    if (!UUID.test(id)) return false;
+    const [row] = (await this.sql`
+      WITH q AS (
+        UPDATE invoices d SET status = 'sent', updated_at = now()
+        WHERE d.id = ${id} AND d.doc_type = 'quote' AND d.status = 'accepted'
+          AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.related_id = d.id AND i.doc_type = 'invoice' AND i.status <> 'void')
+        RETURNING d.id
+      ), gone AS (
+        DELETE FROM quote_acceptances WHERE quote_id IN (SELECT id FROM q) RETURNING approver, method
+      )
+      SELECT (SELECT count(*) FROM q)::int AS reopened, (SELECT approver || ' by ' || method FROM gone) AS was
+    `) as { reopened: number; was: string | null }[];
+    if (row.reopened > 0) await this.logEvent(id, actor, "acceptance withdrawn", `${reason} (was: ${row.was ?? "no record"})`);
+    return row.reopened > 0;
+  }
+
+  /** The live revision (draft or issued) of a quote, if any. A unique index allows one. */
+  async revisionOf(quoteId: string): Promise<string | null> {
+    if (!UUID.test(quoteId)) return null;
+    const [row] = (await this.sql`SELECT id FROM invoices WHERE supersedes_id = ${quoteId} AND status <> 'void'`) as { id: string }[];
+    return row?.id ?? null;
+  }
+
+  /** When a revision is issued, the quote it replaces is superseded (unless an invoice was already made from it). */
+  async supersede(quoteId: string, byNumber: string, actor: string): Promise<void> {
+    if (!UUID.test(quoteId)) return;
+    const rows = await this.sql`
+      UPDATE invoices d SET status = 'superseded', updated_at = now()
+      WHERE d.id = ${quoteId} AND d.doc_type = 'quote' AND d.status IN ('sent', 'accepted', 'declined')
+        AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.related_id = d.id AND i.doc_type = 'invoice' AND i.status <> 'void')
+      RETURNING d.id
+    `;
+    if (rows.length > 0) await this.logEvent(quoteId, actor, "superseded", `by ${byNumber}`);
+  }
+
+  /**
+   * Issued invoices to the same client that already bill one of these
+   * service + period pairs: possible double billing, shown before issuing.
+   */
+  async alreadyBilled(clientId: string, excludeId: string, lines: readonly { serviceId: string; period: string }[]): Promise<{ number: string; code: string; period: string }[]> {
+    if (!UUID.test(clientId) || !UUID.test(excludeId) || lines.length === 0) return [];
+    const rows = (await this.sql.query(
+      `SELECT DISTINCT d.number, coalesce(e->>'code', '') AS code, l.period
+       FROM unnest($3::text[], $4::text[]) AS l (service_id, period)
+       JOIN invoices d ON d.client_id = $1::uuid AND d.id <> $2::uuid AND d.doc_type = 'invoice' AND d.status IN ('sent', 'paid')
+       CROSS JOIN LATERAL jsonb_array_elements(d.items) e
+       WHERE e->>'serviceId' = l.service_id AND e->>'period' = l.period
+       ORDER BY d.number LIMIT 10`,
+      [clientId, excludeId, lines.map((l) => l.serviceId), lines.map((l) => l.period)],
+    )) as { number: string; code: string; period: string }[];
+    return rows;
   }
 
   /** The live (not void) invoice made from a quote, if any. A unique index allows at most one. */
@@ -590,7 +676,11 @@ export class InvoiceRepository {
   private static readonly COLUMNS = `d.id, d.doc_type, d.number_seq, d.number, d.related_id, d.payment_id, d.token, d.status, d.booking_uid,
     d.client_id, d.client_name, d.client_email, d.client_phone, d.client_address, d.currency, d.items, d.subtotal_minor, d.discount_minor,
     d.tax_rate_bp, d.tax_minor, d.total_minor, d.trn, d.due_date::text AS due_date, d.notes, d.payment_instructions, d.bank_account_id,
-    d.bank, d.payment_terms, d.terms_days, d.payment_link, d.layout, d.sections, d.recurring, d.recurs_from, d.link_valid_until,
+    d.bank, d.payment_terms, d.terms_days, d.payment_link, d.layout, d.sections, d.recurring, d.recurs_from, d.supersedes_id, d.link_valid_until,
+    (SELECT r.number FROM invoices r WHERE r.id = d.supersedes_id) AS supersedes_number,
+    (SELECT json_build_object('acceptedAt', a.accepted_at, 'approver', a.approver, 'method', a.method, 'notes', a.notes,
+       'evidenceUrl', a.evidence_url, 'recordedBy', a.recorded_by, 'recordedAt', a.recorded_at)
+     FROM quote_acceptances a WHERE a.quote_id = d.id) AS acceptance,
     d.issue_date::text AS issue_date, d.created_at, d.sent_at, d.paid_at, d.voided_at, d.view_count, d.first_viewed_at, d.last_viewed_at,
     (SELECT r.number FROM invoices r WHERE r.id = d.related_id) AS related_number,
     ${PAID}::int AS paid_minor, ${CREDITED}::int AS credited_minor,
@@ -670,6 +760,9 @@ export class InvoiceRepository {
       sections: { scope: "", deliverables: "", expenses: "", assumptions: "", ...row.sections },
       recurring: row.recurring,
       recursFrom: row.recurs_from,
+      supersedesId: row.supersedes_id,
+      supersedesNumber: row.supersedes_number,
+      acceptance: row.acceptance && { ...row.acceptance, acceptedAt: new Date(row.acceptance.acceptedAt), recordedAt: new Date(row.acceptance.recordedAt) },
       linkValidUntil: row.link_valid_until,
       issueDate: row.issue_date,
       createdAt: row.created_at,

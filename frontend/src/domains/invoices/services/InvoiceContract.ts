@@ -1,6 +1,8 @@
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
 import type {
+  AgreementInput,
+  ApprovalMethod,
   BankDetails,
   Client,
   ClientInput,
@@ -15,6 +17,8 @@ import type {
   LegacyUnit,
   PaymentMethod,
   PaymentTerms,
+  PricingSource,
+  QuoteAcceptanceInput,
 } from "../types";
 import { InvoiceMath } from "./InvoiceMath";
 
@@ -54,6 +58,20 @@ export interface DraftItem {
   unit: string;
   quantity: string;
   unitPrice: string;
+  /** Catalogue link and price source, as the form tracked them; the server re-checks them. */
+  serviceId?: string;
+  pricingSource?: string;
+  agreementId?: string;
+  sourceLine?: number;
+}
+
+export type AgreementFieldErrors = Partial<Record<keyof AgreementInput, string>>;
+export type AcceptanceFieldErrors = Partial<Record<keyof QuoteAcceptanceInput, string>>;
+
+/** Terms with their day count, as the priority chain resolves them. */
+export interface TermsChoice {
+  terms: PaymentTerms;
+  days: number | null;
 }
 
 /**
@@ -99,6 +117,18 @@ export class InvoiceContract {
     after_delivery: 30,
   };
   static readonly PAYMENT_METHODS: Readonly<Record<PaymentMethod, string>> = { bank: "Bank transfer", cash: "Cash", card: "Card / online link" };
+  static readonly PRICING_SOURCES: Readonly<Record<PricingSource, string>> = { agreement: "Agreement", catalogue: "Catalogue", manual: "Manual" };
+  static readonly APPROVAL_METHODS: Readonly<Record<ApprovalMethod, string>> = {
+    email: "Email",
+    whatsapp: "WhatsApp",
+    signed: "Signed quote",
+    verbal: "Verbal / call",
+    other: "Other",
+  };
+  /** Bases billed as one fixed amount: the quantity is always 1 and the form hides it. */
+  static readonly FIXED_UNITS: readonly ItemUnit[] = ["fee", "milestone"];
+  /** A quote line's period when the timing is still open. Not allowed on invoices. */
+  static readonly TO_BE_AGREED = "To be agreed";
   static readonly LAYOUTS: Readonly<Record<DocumentLayout, string>> = { standard: "Standard", consultancy: "Consultancy" };
   static readonly SECTIONS: Readonly<Record<keyof ConsultancySections, string>> = {
     scope: "Scope",
@@ -132,6 +162,7 @@ export class InvoiceContract {
   private static readonly BOOKING_UID = /^[A-Za-z0-9_-]{1,100}$/;
   private static readonly DATE = /^\d{4}-\d{2}-\d{2}$/;
   private static readonly TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+  private static readonly CODE = /^[A-Z0-9][A-Z0-9-]{1,19}$/;
   private static readonly QUANTITY = /^\d+(\.\d{1,2})?$/;
   private static readonly SCHEME = /^[a-z][a-z0-9+.-]*:/i;
   private static readonly UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -170,7 +201,9 @@ export class InvoiceContract {
     const currency = text("currency") as Currency;
     if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
 
-    const items = InvoiceContract.items(text("items"));
+    const docType = (text("docType") || "invoice") as DocumentType;
+    if (!InvoiceContract.DOC_TYPES.includes(docType)) errors.docType = "Unknown document type.";
+    const items = InvoiceContract.items(text("items"), docType);
     if (typeof items === "string") errors.items = items;
 
     const discount = text("discount") === "" ? 0 : InvoiceMath.parseMajor(text("discount"));
@@ -197,8 +230,6 @@ export class InvoiceContract {
     const bookingUid = text("bookingUid");
     if (bookingUid && !InvoiceContract.isBookingUid(bookingUid)) errors.bookingUid = "Invalid booking reference.";
 
-    const docType = (text("docType") || "invoice") as DocumentType;
-    if (!InvoiceContract.DOC_TYPES.includes(docType)) errors.docType = "Unknown document type.";
     const relatedId = text("relatedId");
     if (relatedId && !InvoiceContract.UUID.test(relatedId)) errors.relatedId = "Invalid linked document.";
     const paymentTerms = (text("paymentTerms") || "net7") as PaymentTerms;
@@ -302,9 +333,85 @@ export class InvoiceContract {
     if (!InvoiceContract.CURRENCIES.includes(planCurrency)) errors.planCurrency = "Choose a currency.";
     const planNotes = text("planNotes");
     if (planNotes.length > LIMITS.planNotes) errors.planNotes = `Up to ${LIMITS.planNotes} characters.`;
+    const terms = InvoiceContract.agreedTerms(text("paymentTerms"), text("termsDays"));
+    if (typeof terms === "string") errors.paymentTerms = terms;
 
-    if (Object.keys(errors).length > 0) return { ok: false, errors };
-    return { ok: true, input: { name, email, phone, address, courses, planUnit, planFeeMinor, planCurrency, planNotes } };
+    if (Object.keys(errors).length > 0 || typeof terms === "string") return { ok: false, errors };
+    return { ok: true, input: { name, email, phone, address, courses, planUnit, planFeeMinor, planCurrency, planNotes, paymentTerms: terms.terms, termsDays: terms.days } };
+  }
+
+  /** An agreement from the client page's form, or the field errors. */
+  static parseAgreement(fields: Record<string, unknown>): Parsed<AgreementInput, AgreementFieldErrors> {
+    const text = InvoiceContract.text(fields);
+    const errors: AgreementFieldErrors = {};
+    const serviceId = text("serviceId");
+    if (!InvoiceContract.UUID.test(serviceId)) errors.serviceId = "Choose a service.";
+    const unit = text("unit") as ItemUnit;
+    if (!Object.hasOwn(InvoiceContract.UNITS, unit)) errors.unit = "Choose how it is billed.";
+    const currency = text("currency") as Currency;
+    if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
+    // A missing price is not a zero price.
+    const rateMinor = InvoiceMath.parseMajor(text("rate"));
+    if (!rateMinor || rateMinor > InvoiceContract.LIMITS.maxMinor) errors.rateMinor = "Enter the agreed rate or fee, above 0.";
+    const startsOn = text("startsOn");
+    if (!InvoiceContract.isIsoDate(startsOn)) errors.startsOn = "Choose the start date.";
+    const endsOn = text("endsOn");
+    if (endsOn && (!InvoiceContract.isIsoDate(endsOn) || endsOn < startsOn)) errors.endsOn = "On or after the start, or empty.";
+    const terms = InvoiceContract.agreedTerms(text("paymentTerms"), text("termsDays"));
+    if (typeof terms === "string") errors.paymentTerms = terms;
+    const schedule = text("schedule");
+    if (schedule.length > 200) errors.schedule = "Up to 200 characters.";
+    const scope = text("scope");
+    if (scope.length > 500) errors.scope = "Up to 500 characters.";
+    if (Object.keys(errors).length > 0 || typeof terms === "string" || !rateMinor) return { ok: false, errors };
+    return {
+      ok: true,
+      input: { serviceId, unit, currency, rateMinor, startsOn, endsOn: endsOn || null, paymentTerms: terms.terms, termsDays: terms.days, schedule, scope },
+    };
+  }
+
+  /**
+   * A quote acceptance recorded by hand. `acceptedAt` is a wall-clock
+   * date-time in Dubai. The evidence link must be https and is stored, never fetched.
+   */
+  static parseAcceptance(fields: Record<string, unknown>, now = new Date()): Parsed<QuoteAcceptanceInput, AcceptanceFieldErrors> {
+    const text = InvoiceContract.text(fields);
+    const errors: AcceptanceFieldErrors = {};
+    const [date, time] = text("acceptedAt").split("T");
+    const acceptedAt = InvoiceContract.isIsoDate(date) && InvoiceContract.TIME.test(time ?? "") ? InvoiceContract.zonedInstant(date, time, InvoiceContract.DEFAULT_TIME_ZONE) : null;
+    if (!acceptedAt || acceptedAt > now) errors.acceptedAt = "Enter when the client accepted (not in the future).";
+    const approver = text("approver");
+    if (!approver || approver.length > InvoiceContract.LIMITS.name) errors.approver = "Who accepted it (name or contact).";
+    const method = text("method") as ApprovalMethod;
+    if (!Object.hasOwn(InvoiceContract.APPROVAL_METHODS, method)) errors.method = "Choose how it was accepted.";
+    const notes = text("notes");
+    if (notes.length > 1000) errors.notes = "Up to 1000 characters.";
+    const evidenceUrl = text("evidenceUrl");
+    if (evidenceUrl && (!/^https:\/\/[^\s]+$/i.test(evidenceUrl) || evidenceUrl.length > 500)) errors.evidenceUrl = "Paste a full https:// link, or leave it empty.";
+    if (Object.keys(errors).length > 0 || !acceptedAt) return { ok: false, errors };
+    return { ok: true, input: { acceptedAt, approver, method, notes, evidenceUrl: evidenceUrl || null } };
+  }
+
+  /**
+   * Terms a new document starts with: an agreement's, else the client's, else
+   * the business default. The document can still override them.
+   */
+  static resolveTerms(
+    agreement: Pick<AgreementInput, "paymentTerms" | "termsDays"> | null,
+    client: Pick<ClientInput, "paymentTerms" | "termsDays"> | null,
+    fallback: TermsChoice,
+  ): TermsChoice {
+    if (agreement?.paymentTerms) return { terms: agreement.paymentTerms, days: agreement.termsDays };
+    if (client?.paymentTerms) return { terms: client.paymentTerms, days: client.termsDays };
+    return fallback;
+  }
+
+  /** Optional agreed terms (no fixed date): "" = none; custom needs its days. */
+  private static agreedTerms(terms: string, days: string): { terms: AgreementInput["paymentTerms"]; days: number | null } | string {
+    if (terms === "") return { terms: null, days: null };
+    if (terms === "date" || !InvoiceContract.OFFERED_TERMS.includes(terms as PaymentTerms)) return "Choose day-count terms, or none.";
+    if (terms !== "custom") return { terms: terms as AgreementInput["paymentTerms"], days: null };
+    return /^\d{1,3}$/.test(days) && Number(days) <= 365 ? { terms: "custom", days: Number(days) } : "Enter the days to pay, 0 to 365.";
   }
 
   static parseBank(fields: Record<string, unknown>): Parsed<BankDetails, BankFieldErrors> {
@@ -477,8 +584,22 @@ export class InvoiceContract {
     return bp <= 10_000 ? bp : null;
   }
 
-  /** Items from the hidden JSON field, or an error message. */
-  private static items(raw: string): InvoiceItem[] | string {
+  /**
+   * Whether a line's period is well formed: a month, a day, a range "from/to"
+   * (to not before from), or text. Returns an error message, or null.
+   */
+  static periodProblem(period: string, docType: DocumentType): string | null {
+    const range = /^(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(period);
+    if (range) return InvoiceContract.isIsoDate(range[1]) && InvoiceContract.isIsoDate(range[2]) && range[1] <= range[2] ? null : "the period must end on or after it starts.";
+    if (/^\d{4}-\d{2}$/.test(period)) return InvoiceContract.isIsoDate(`${period}-01`) ? null : "choose a valid month.";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return InvoiceContract.isIsoDate(period) ? null : "choose a valid date.";
+    // An invoice states what it bills for: never "to be agreed", and never left out.
+    if (docType === "invoice" && (!period || period.toLowerCase() === InvoiceContract.TO_BE_AGREED.toLowerCase())) return "confirm the service period (month, date or dates).";
+    return null;
+  }
+
+  /** Items from the hidden JSON field, or an error message. Catalogue links are checked again server-side. */
+  private static items(raw: string, docType: DocumentType): InvoiceItem[] | string {
     const { LIMITS } = InvoiceContract;
     let drafts: unknown;
     try {
@@ -499,6 +620,8 @@ export class InvoiceContract {
       if (detail.length > LIMITS.description) return `${row}details up to ${LIMITS.description} characters.`;
       const period = typeof d.period === "string" ? d.period.trim() : "";
       if (period.length > LIMITS.period) return `${row}period up to ${LIMITS.period} characters.`;
+      const periodProblem = InvoiceContract.periodProblem(period, docType);
+      if (periodProblem) return `${row}${periodProblem}`;
       const unit = d.unit as ItemUnit;
       if (typeof unit !== "string" || !Object.hasOwn(InvoiceContract.UNITS, unit)) return `${row}choose how the line is billed.`;
       const quantityText = typeof d.quantity === "string" ? d.quantity.trim() : "";
@@ -506,9 +629,29 @@ export class InvoiceContract {
       if (!InvoiceContract.QUANTITY.test(quantityText) || quantity <= 0 || quantity > LIMITS.maxQuantity) {
         return `${row}quantity must be a number above 0 (up to 2 decimals).`;
       }
+      if (InvoiceContract.FIXED_UNITS.includes(unit) && quantity !== 1) return `${row}a ${InvoiceContract.UNITS[unit].toLowerCase()} is billed once: quantity 1.`;
+      // Empty is a missing price, not zero: it must be typed (0 is allowed only when typed).
       const unitMinor = typeof d.unitPrice === "string" ? InvoiceMath.parseMajor(d.unitPrice) : null;
       if (unitMinor === null || unitMinor > LIMITS.maxMinor) return `${row}enter a unit price, e.g. 450 or 450.50.`;
-      items.push({ description, ...(detail && { detail }), ...(period && { period }), unit, quantity, unitMinor, amountMinor: InvoiceMath.lineAmount(quantity, unitMinor) });
+      const serviceId = typeof d.serviceId === "string" && InvoiceContract.UUID.test(d.serviceId) ? d.serviceId : undefined;
+      if (d.serviceId && !serviceId) return `${row}unknown service.`;
+      const pricingSource = (typeof d.pricingSource === "string" && Object.hasOwn(InvoiceContract.PRICING_SOURCES, d.pricingSource) ? d.pricingSource : "manual") as PricingSource;
+      const agreementId = typeof d.agreementId === "string" && InvoiceContract.UUID.test(d.agreementId) ? d.agreementId : undefined;
+      if (pricingSource === "agreement" && !agreementId) return `${row}unknown agreement.`;
+      const sourceLine = Number.isInteger(d.sourceLine) && (d.sourceLine as number) >= 0 && (d.sourceLine as number) < LIMITS.items ? (d.sourceLine as number) : undefined;
+      items.push({
+        description,
+        ...(detail && { detail }),
+        ...(period && { period }),
+        unit,
+        quantity,
+        unitMinor,
+        amountMinor: InvoiceMath.lineAmount(quantity, unitMinor),
+        ...(serviceId && { serviceId }),
+        pricingSource,
+        ...(pricingSource === "agreement" && { agreementId }),
+        ...(sourceLine !== undefined && { sourceLine }),
+      });
     }
     return items;
   }

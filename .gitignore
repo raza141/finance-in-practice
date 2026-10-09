@@ -45,4 +45,4 @@ graphify-out/
 skills-lock.json
 
 # --- Client documents (local exports, never committed) ----------------
-Invoices/
+/Invoices/

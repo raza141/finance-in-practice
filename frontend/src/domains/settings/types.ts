@@ -1,4 +1,4 @@
-import type { Currency, DocumentLayout, ItemUnit } from "@/domains/invoices/types";
+import type { Currency, DocumentLayout, ItemUnit, PaymentTerms } from "@/domains/invoices/types";
 
 /** Documents the billing engine issues. Statements are generated, not stored, so they have no number. */
 export type DocumentType = "invoice" | "receipt" | "quote" | "credit_note";
@@ -42,6 +42,8 @@ export interface BillingSettings {
     rateBp: number;
   };
   currency: Currency;
+  /** Terms a new invoice starts with when neither an agreement nor the client sets them. */
+  terms: { default: PaymentTerms; days: number | null };
   units: Record<ItemUnit, UnitConfig>;
   prefixes: Record<DocumentType, string>;
   documents: Record<DocumentType, DocumentTexts>;

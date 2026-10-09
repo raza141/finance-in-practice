@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -10,7 +12,6 @@ import { BookingPrefillLoader } from "@/domains/invoices/server/BookingPrefillLo
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
-import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import type { InvoiceInput } from "@/domains/invoices/types";
 
 export const metadata: Metadata = { title: "New document" };
@@ -35,6 +36,8 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const docType = query.type === "quote" ? "quote" : "invoice";
   const { settings } = options;
+  // The client's usual terms, else the business default (an agreement picked on a line can set them).
+  const terms = InvoiceContract.resolveTerms(null, client || null, { terms: settings.terms.default, days: settings.terms.days });
   const initial: InvoiceInput = {
     docType,
     relatedId: null,
@@ -51,7 +54,8 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
       ? [
           {
             description: prefill.topic.slice(0, InvoiceContract.LIMITS.description),
-            detail: `${prefill.durationMinutes}-minute session, ${InvoiceEmails.day(prefill.date)}`,
+            detail: `${prefill.durationMinutes}-minute session`,
+            period: prefill.date,
             unit: "session",
             quantity: Math.round((prefill.durationMinutes / 60) * 100) / 100,
             unitMinor: 0,
@@ -62,12 +66,12 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     discountMinor: 0,
     taxRateBp: settings.vat.registered ? settings.vat.rateBp : 0,
     trn: "",
-    dueDate: docType === "quote" ? ZonedCalendar.addDays(today, 14) : InvoiceContract.dueDate("net7", today),
+    dueDate: docType === "quote" ? ZonedCalendar.addDays(today, 14) : today,
     notes: settings.documents[docType].notes,
     paymentInstructions: "",
     bankAccountId: docType === "invoice" ? (options.banks.find((bank) => bank.isDefault)?.id ?? null) : null,
-    paymentTerms: "net7",
-    termsDays: null,
+    paymentTerms: terms.terms,
+    termsDays: terms.days,
     paymentLink: "",
     layout: "standard",
     sections: { scope: "", deliverables: "", expenses: "", assumptions: "" },
@@ -91,7 +95,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
         )}
         {!ResendClient.fromEnv() && <EmailNotConfigured />}
       </div>
-      <InvoiceForm initial={initial} options={options} emailEnabled={ResendClient.fromEnv() !== null} />
+      <InvoiceForm initial={initial} options={options} emailEnabled={ResendClient.fromEnv() !== null} submissionKey={randomUUID()} />
     </div>
   );
 }

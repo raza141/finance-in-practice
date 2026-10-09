@@ -15,13 +15,15 @@ interface ClientRow {
   plan_fee_minor: number | null;
   plan_currency: Currency;
   plan_notes: string;
+  payment_terms: Client["paymentTerms"];
+  terms_days: number | null;
 }
 
 /** Contact details only: what the invoice form and website bookings know about a new client. */
 type NewClient = Pick<ClientInput, "name" | "email" | "phone" | "address">;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLUMNS = "id, name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes";
+const COLUMNS = "id, name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes, payment_terms, terms_days";
 
 /**
  * Saved clients, with their courses and payment plan (migrations 013, 014).
@@ -94,9 +96,10 @@ export class ClientRepository {
   /** Courses and plan default to none when only contact details are given. */
   async create(input: NewClient & Partial<ClientInput>): Promise<string> {
     const [row] = (await this.sql`
-      INSERT INTO clients (name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes)
+      INSERT INTO clients (name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes, payment_terms, terms_days)
       VALUES (${input.name}, ${input.email}, ${input.phone}, ${input.address}, ${input.courses ?? []}::text[],
-              ${input.planUnit ?? null}, ${input.planFeeMinor ?? null}, ${input.planCurrency ?? "AED"}, ${input.planNotes ?? ""})
+              ${input.planUnit ?? null}, ${input.planFeeMinor ?? null}, ${input.planCurrency ?? "AED"}, ${input.planNotes ?? ""},
+              ${input.paymentTerms ?? null}, ${input.termsDays ?? null})
       RETURNING id
     `) as { id: string }[];
     return row.id;
@@ -122,7 +125,8 @@ export class ClientRepository {
     const rows = await this.sql`
       UPDATE clients SET name = ${input.name}, email = ${input.email}, phone = ${input.phone}, address = ${input.address},
         courses = ${input.courses}::text[], plan_unit = ${input.planUnit}, plan_fee_minor = ${input.planFeeMinor},
-        plan_currency = ${input.planCurrency}, plan_notes = ${input.planNotes}, updated_at = now()
+        plan_currency = ${input.planCurrency}, plan_notes = ${input.planNotes}, payment_terms = ${input.paymentTerms},
+        terms_days = ${input.termsDays}, updated_at = now()
       WHERE id = ${id} RETURNING id
     `;
     return rows.length > 0;
@@ -145,6 +149,8 @@ export class ClientRepository {
       planFeeMinor: row.plan_fee_minor,
       planCurrency: row.plan_currency,
       planNotes: row.plan_notes,
+      paymentTerms: row.payment_terms,
+      termsDays: row.terms_days,
     };
   }
 }

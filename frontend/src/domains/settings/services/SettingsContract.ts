@@ -1,7 +1,7 @@
 import { siteConfig } from "@/core/config/site";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
-import type { Currency, DocumentLayout, ItemUnit } from "@/domains/invoices/types";
+import type { Currency, DocumentLayout, ItemUnit, PaymentTerms } from "@/domains/invoices/types";
 
 import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig } from "../types";
 
@@ -38,6 +38,7 @@ export class SettingsContract {
     },
     vat: { registered: false, trn: "", rateBp: 500 },
     currency: "AED",
+    terms: { default: "net7", days: null },
     units: {
       month: { label: "month", rateMinor: null, layout: "standard" },
       session: { label: "session", rateMinor: null, layout: "standard" },
@@ -116,6 +117,7 @@ export class SettingsContract {
       business: pick(d.business, s.business),
       vat: pick(d.vat, s.vat),
       currency: InvoiceContract.CURRENCIES.includes(s.currency as Currency) ? (s.currency as Currency) : d.currency,
+      terms: SettingsContract.mergeTerms(s.terms) ?? d.terms,
       units,
       prefixes: pick(d.prefixes, s.prefixes),
       documents,
@@ -155,6 +157,8 @@ export class SettingsContract {
 
     const currency = text("currency") as Currency;
     if (!InvoiceContract.CURRENCIES.includes(currency)) errors.currency = "Choose a currency.";
+    const terms = SettingsContract.mergeTerms({ default: text("terms.default"), days: text("terms.days") === "" ? null : Number(text("terms.days")) });
+    if (!terms || (terms.default === "custom" && !/^\d{1,3}$/.test(text("terms.days")))) errors["terms.default"] = "Choose terms; custom terms need 0 to 365 days.";
 
     const units = Object.fromEntries(
       (Object.keys(SettingsContract.DEFAULTS.units) as ItemUnit[]).map((unit) => {
@@ -192,8 +196,20 @@ export class SettingsContract {
     const card = { show: fields["card.show"] === "on", note: bounded("card.note", LIMITS.cardNote) };
 
     if (Object.keys(errors).length > 0) return { ok: false, errors };
-    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, units, prefixes, documents, card } };
+    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, terms: terms!, units, prefixes, documents, card } };
   }
+
+  /** Default terms from stored or submitted values: day-count terms only; days only with "custom". Null when invalid. */
+  private static mergeTerms(value: unknown): BillingSettings["terms"] | null {
+    const v = (value && typeof value === "object" ? value : {}) as { default?: unknown; days?: unknown };
+    const terms = v.default as BillingSettings["terms"]["default"];
+    if (!SettingsContract.DEFAULT_TERMS.includes(terms)) return null;
+    if (terms !== "custom") return { default: terms, days: null };
+    return Number.isInteger(v.days) && (v.days as number) >= 0 && (v.days as number) <= 365 ? { default: terms, days: v.days as number } : null;
+  }
+
+  /** Terms that can be a default (a default can't be a fixed date). */
+  static readonly DEFAULT_TERMS: readonly PaymentTerms[] = InvoiceContract.OFFERED_TERMS.filter((t) => t !== "date");
 
   /** Fills {placeholders} in a message template; unknown ones are left as typed. */
   static fill(template: string, values: Partial<Record<(typeof SettingsContract.PLACEHOLDERS)[number], string>>): string {

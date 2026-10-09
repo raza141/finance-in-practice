@@ -103,7 +103,7 @@ describe("terms, periods and new document fields", () => {
     clientName: "Sara",
     clientEmail: "",
     currency: "AED",
-    items: JSON.stringify([{ description: "Phase 1", detail: "", unit: "milestone", quantity: "1", unitPrice: "5000" }]),
+    items: JSON.stringify([{ description: "Phase 1", detail: "", period: "2026-10-20", unit: "milestone", quantity: "1", unitPrice: "5000" }]),
     dueDate: "2026-10-20",
     ...overrides,
   });

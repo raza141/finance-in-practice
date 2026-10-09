@@ -8,6 +8,7 @@ const STATUS_STYLE: Record<Badge, string> = {
   "quote sent": "border-quant/40 text-quant",
   accepted: "border-emerald-400/40 text-emerald-300",
   declined: "border-red-400/40 text-red-300",
+  superseded: "border-line text-muted",
   expired: "border-gold/50 text-gold",
   overdue: "border-gold/50 text-gold",
   "part paid": "border-emerald-400/40 text-emerald-200",

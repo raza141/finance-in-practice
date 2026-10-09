@@ -57,6 +57,14 @@ export class ServiceRepository {
     return row ? ServiceRepository.toService(row) : null;
   }
 
+  /** Services by id, archived or not (documents may still use an archived one). */
+  async byIds(ids: readonly string[]): Promise<Service[]> {
+    const valid = [...new Set(ids.filter((id) => UUID.test(id)))];
+    if (valid.length === 0) return [];
+    const rows = (await this.sql.query(`${SELECT} WHERE s.id = ANY ($1::uuid[])`, [valid])) as ServiceRow[];
+    return rows.map(ServiceRepository.toService);
+  }
+
   /** The new id, or why it was refused. */
   async create(input: ServiceInput): Promise<{ id: string } | CatalogueError> {
     try {

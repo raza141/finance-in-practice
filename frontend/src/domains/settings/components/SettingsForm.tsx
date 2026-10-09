@@ -79,7 +79,18 @@ export function SettingsForm({ settings }: { settings: BillingSettings }) {
               ))}
             </select>
           </Field>
-          <span className="hidden sm:block" />
+          <Field label="Default payment terms" error={errors["terms.default"]} hint="Used when neither an agreement nor the client sets terms">
+            <div className="mt-1 flex gap-2">
+              <select name="terms.default" defaultValue={settings.terms.default} className={`${FIELD} mt-0`}>
+                {SettingsContract.DEFAULT_TERMS.map((t) => (
+                  <option key={t} value={t}>
+                    {InvoiceContract.PAYMENT_TERMS[t]}
+                  </option>
+                ))}
+              </select>
+              <input name="terms.days" aria-label="Days, for custom terms" inputMode="numeric" placeholder="days" defaultValue={settings.terms.days ?? ""} className={`${FIELD} mt-0 w-20`} />
+            </div>
+          </Field>
           {TYPES.map(([type, label]) => (
             <div key={type}>{input(`prefix.${type}`, `${label} prefix`, settings.prefixes[type], 16, { required: true, hint: `${settings.prefixes[type]}-2026-0001` })}</div>
           ))}

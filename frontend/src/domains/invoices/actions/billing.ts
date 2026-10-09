@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 
+import { AgreementRepository } from "../server/AgreementRepository";
 import { BankAccountRepository } from "../server/BankAccountRepository";
 import { ClientRepository } from "../server/ClientRepository";
 import { InvoiceContract, type BankFieldErrors, type ClientFieldErrors } from "../services/InvoiceContract";
@@ -79,4 +80,25 @@ export async function deleteBank(formData: FormData): Promise<void> {
   const repo = await banks();
   await repo.remove(String(formData.get("id")));
   redirect("/admin/invoices/banks");
+}
+
+/** An agreed rate for one of the client's services. The basis must be one the service offers. */
+export async function addAgreement(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const repo = AgreementRepository.fromEnv();
+  if (!repo) throw new Error("DATABASE_URL is not configured");
+  const clientId = String(formData.get("clientId"));
+  const path = `/admin/clients/${clientId}`;
+  const parsed = InvoiceContract.parseAgreement(Object.fromEntries(formData));
+  if (!parsed.ok) redirect(`${path}?notice=agreement-refused&reason=${encodeURIComponent(Object.values(parsed.errors).join(" "))}#agreements`);
+  const id = await repo.create(clientId, parsed.input);
+  redirect(id ? `${path}?notice=agreement-added#agreements` : `${path}?notice=agreement-refused&reason=${encodeURIComponent("That service is not billed on that basis.")}#agreements`);
+}
+
+/** Ends an agreement: it is no longer offered on new documents; documents that used it keep their rates. */
+export async function endAgreement(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const clientId = String(formData.get("clientId"));
+  await AgreementRepository.fromEnv()?.archive(clientId, String(formData.get("agreementId")));
+  redirect(`/admin/clients/${clientId}?notice=agreement-ended#agreements`);
 }

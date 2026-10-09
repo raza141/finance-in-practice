@@ -2,8 +2,8 @@ import type { DocumentType } from "@/domains/settings/types";
 
 export type { DocumentType };
 
-/** "sent" is shown as Issued. Quotes also end as accepted or declined; "expired" and "overdue" are derived from dates. */
-export type InvoiceStatus = "draft" | "sent" | "paid" | "void" | "accepted" | "declined";
+/** "sent" is shown as Issued. Quotes also end as accepted, declined or superseded (by a revision); "expired" and "overdue" are derived from dates. */
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void" | "accepted" | "declined" | "superseded";
 export type Currency = "AED" | "USD" | "PKR" | "GBP" | "EUR";
 
 /** How a line is billed (labels, default rates and layouts in Settings). Milestones belong to consultancy layouts; "fee" is a fixed project fee. */
@@ -24,13 +24,27 @@ export interface ConsultancySections {
   assumptions: string;
 }
 
+/** Where a line's price came from, recorded when the line is saved. */
+export type PricingSource = "agreement" | "catalogue" | "manual";
+
 export interface InvoiceItem {
-  /** Usually a course title. */
+  /** A service or course title, or a one-off description. */
   description: string;
   /** Optional second line under the title. Absent on invoices issued before 013. */
   detail?: string;
-  /** Which month or session this line pays for, e.g. "October 2026" or "Session · 14 Oct 2026". */
+  /**
+   * What the line is for: "2026-10" (a month), "2026-10-09" (a day), "2026-10-01/2026-11-30"
+   * (a range), or text ("To be agreed" on quotes; older documents have free text).
+   */
   period?: string;
+  /** The catalogue service, with its code copied at the time (absent on custom and older lines). */
+  serviceId?: string;
+  code?: string;
+  /** Absent on lines saved before migration 032. */
+  pricingSource?: PricingSource;
+  agreementId?: string;
+  /** On an invoice made from a quote: the quote line (0-based) this line came from. */
+  sourceLine?: number;
   /** Absent on invoices issued before 013. */
   unit?: ItemUnit | LegacyUnit;
   /** Up to two decimals (e.g. 1.5 hours). */
@@ -81,6 +95,49 @@ export interface InvoiceInput {
   recurring: boolean;
 }
 
+/** An agreed rate for one client, service, basis and currency over dates (migration 032). */
+export interface AgreementInput {
+  serviceId: string;
+  unit: ItemUnit;
+  currency: Currency;
+  rateMinor: number;
+  /** YYYY-MM-DD; no end = open. */
+  startsOn: string;
+  endsOn: string | null;
+  /** Agreed terms, or null to use the client's or the business default. */
+  paymentTerms: Extract<PaymentTerms, "on_receipt" | "net7" | "net14" | "net30" | "custom"> | null;
+  termsDays: number | null;
+  /** e.g. "Billed on the 1st". */
+  schedule: string;
+  /** Scope or included services. */
+  scope: string;
+}
+
+export interface Agreement extends AgreementInput {
+  id: string;
+  clientId: string;
+  serviceCode: string;
+  serviceName: string;
+  archivedAt: Date | null;
+}
+
+export type ApprovalMethod = "email" | "whatsapp" | "signed" | "verbal" | "other";
+
+/** How a quote was accepted, recorded by hand. A link is a pointer to evidence, never proof by itself. */
+export interface QuoteAcceptanceInput {
+  acceptedAt: Date;
+  approver: string;
+  method: ApprovalMethod;
+  notes: string;
+  /** https only; never fetched. */
+  evidenceUrl: string | null;
+}
+
+export interface QuoteAcceptance extends QuoteAcceptanceInput {
+  recordedBy: string;
+  recordedAt: Date;
+}
+
 export interface Invoice extends InvoiceInput, InvoiceTotals {
   id: string;
   /** Snapshot of the bank when last saved; null on older invoices or when none was chosen. */
@@ -93,6 +150,11 @@ export interface Invoice extends InvoiceInput, InvoiceTotals {
   paymentId: string | null;
   /** On a recurring copy: the document it was copied from. */
   recursFrom: string | null;
+  /** On a quote revision: the quote it replaces, and that quote's number. */
+  supersedesId: string | null;
+  supersedesNumber: string | null;
+  /** On an accepted quote: how it was accepted. */
+  acceptance: QuoteAcceptance | null;
   /** Manual extension of the client link ("Resend link"). */
   linkValidUntil: Date | null;
   token: string;
@@ -260,6 +322,9 @@ export interface ClientInput {
   planCurrency: Currency;
   /** e.g. "3 instalments", "due on the 1st". */
   planNotes: string;
+  /** The client's usual terms; null = the business default from Settings. */
+  paymentTerms: AgreementInput["paymentTerms"];
+  termsDays: number | null;
 }
 
 export interface Client extends ClientInput {

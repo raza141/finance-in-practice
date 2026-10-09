@@ -5,22 +5,25 @@ import { startTransition, useActionState, useRef, useState, useSyncExternalStore
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { CatalogueContract } from "@/domains/catalogue/services/CatalogueContract";
+import type { Service } from "@/domains/catalogue/types";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
 import { saveInvoice, type InvoiceFormState } from "../actions/invoices";
-import { InvoiceContract, type DraftItem, type InvoiceFieldErrors } from "../services/InvoiceContract";
+import type { IssueWarnings } from "../server/IssueChecks";
+import { InvoiceContract, type InvoiceFieldErrors } from "../services/InvoiceContract";
 import { InvoiceEmails } from "../services/InvoiceEmails";
 import { InvoiceMath } from "../services/InvoiceMath";
-import type { BankAccount, Client, ConsultancySections, Currency, DocumentLayout, Invoice, InvoiceInput, ItemUnit, PaymentTerms } from "../types";
+import { LinePricing } from "../services/LinePricing";
+import type { Agreement, BankAccount, Client, ConsultancySections, Currency, DocumentLayout, Invoice, InvoiceInput, ItemUnit, PaymentTerms } from "../types";
 import { DocumentView } from "./DocumentView";
+import { BASIS, LineEditor, periodKind, toDraft, toRow, type Row } from "./LineEditor";
 
 const noSubscribe = () => () => {};
-const SMALL_BUTTON = "rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-raised hover:text-ink disabled:opacity-30";
-const CUSTOM = "__custom";
 const issuePrompt = (label: string) => `Issue this ${label}? It gets its number and can no longer be edited (void and duplicate it to change it).`;
 
-/** A course offered in the line-item dropdown. */
+/** A course offered in the line search, with its whole-course fee. */
 export interface CourseOption {
   title: string;
   priceMinor: number | null;
@@ -32,54 +35,38 @@ export interface InvoiceFormOptions {
   clients: Client[];
   banks: BankAccount[];
   courses: CourseOption[];
+  /** Active services, plus archived ones the document already uses. */
+  services: Service[];
+  /** Live client agreements (all clients; filtered per line). */
+  agreements: Agreement[];
   settings: BillingSettings;
 }
 
-/** How a line's period is entered: a month picker, a date picker, or typed text. */
-type PeriodKind = "month" | "date" | "text";
-const PERIOD_KINDS: Record<PeriodKind, string> = { month: "Month", date: "Session date", text: "Free text" };
-const periodKind = (period: string, unit: string): PeriodKind =>
-  /^\d{4}-\d{2}-\d{2}$/.test(period) ? "date" : /^\d{4}-\d{2}$/.test(period) ? "month" : period ? "text" : unit === "month" ? "month" : "date";
-
-interface Row extends DraftItem {
-  key: number;
-  /** Typed description rather than a course from the list. */
-  custom: boolean;
-  periodKind: PeriodKind;
-}
-
-let nextKey = 0;
-const row = (courses: readonly CourseOption[], item?: Partial<DraftItem>): Row => {
-  const description = item?.description ?? "";
-  const period = item?.period ?? "";
-  const unit = item?.unit ?? "hour";
-  return {
-    key: nextKey++,
-    description,
-    detail: item?.detail ?? "",
-    period,
-    periodKind: periodKind(period, unit),
-    unit,
-    quantity: item?.quantity ?? "1",
-    unitPrice: item?.unitPrice ?? "",
-    custom: description !== "" && !courses.some((c) => c.title === description),
-  };
-};
-
-/** Create or edit a draft invoice, quote or credit note; preview it, and issue (and email) it from the same form. */
+/**
+ * Create or edit a draft invoice, quote or credit note; preview it, and issue
+ * (and email, or record its payment) from the same form. Prices come from an
+ * agreement the user picks, else the catalogue, else they are typed; the source
+ * shows on each line and the server re-checks it.
+ */
 export function InvoiceForm({
   id,
   initial,
   options,
   emailEnabled,
+  submissionKey,
+  warnings,
 }: {
   /** Set when editing an existing draft. */
   id?: string;
   initial: InvoiceInput;
   options: InvoiceFormOptions;
   emailEnabled: boolean;
+  /** One per page load: "Issue & record payment" sent twice records one payment. */
+  submissionKey: string;
+  /** Possible double billing and changes from the accepted quote, to confirm before issuing. */
+  warnings?: IssueWarnings;
 }) {
-  const { clients, banks, courses, settings } = options;
+  const { clients, banks, courses, services, agreements, settings } = options;
   const { docType } = initial;
   const label = SettingsContract.DOCUMENT_TYPES[docType].toLowerCase();
   const isInvoice = docType === "invoice";
@@ -89,20 +76,7 @@ export function InvoiceForm({
   // Disabled until hydrated, or text typed before hydration is overwritten by the initial state.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const pending = saving || !hydrated;
-  const [rows, setRows] = useState<Row[]>(() =>
-    initial.items.length > 0
-      ? initial.items.map((item) =>
-          row(courses, {
-            description: item.description,
-            detail: item.detail,
-            period: item.period,
-            unit: item.unit,
-            quantity: String(item.quantity),
-            unitPrice: item.unitMinor ? InvoiceMath.majorInput(item.unitMinor) : "",
-          }),
-        )
-      : [row(courses)],
-  );
+  const [rows, setRows] = useState<Row[]>(() => (initial.items.length > 0 ? initial.items.map((item) => toRow(item)) : [toRow()]));
   const [client, setClient] = useState({
     clientId: initial.clientId ?? "",
     clientName: initial.clientName,
@@ -117,8 +91,11 @@ export function InvoiceForm({
   const [taxRate, setTaxRate] = useState(vatOn ? InvoiceMath.percent(initial.taxRateBp || settings.vat.rateBp) : "");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(initial.paymentTerms);
   const [termsDays, setTermsDays] = useState(initial.termsDays === null ? "" : String(initial.termsDays));
+  /** Terms changed by hand: picking a client or an agreement no longer resets them. */
+  const [termsTouched, setTermsTouched] = useState(Boolean(id));
   const [dueDate, setDueDate] = useState(initial.dueDate);
   const [layout, setLayout] = useState<DocumentLayout>(initial.layout);
+  const [paying, setPaying] = useState(false);
   const [preview, setPreview] = useState<Invoice | null>(null);
   const [previewErrors, setPreviewErrors] = useState<InvoiceFieldErrors | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -126,22 +103,86 @@ export function InvoiceForm({
 
   const errors = previewErrors ?? state.errors ?? {};
   const message = previewErrors ? "Fix the highlighted fields to preview." : state.message;
+  const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const update = (key: number, patch: Partial<Row>) => setRows((list) => list.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  /** A unit's default rate (Settings) fills an empty price; milestones switch to the consultancy layout. */
-  const pickUnit = (r: Row, unit: ItemUnit) => {
+  const serviceOf = (r: Row) => services.find((s) => s.id === r.serviceId);
+  const lineDate = (r: Row) => LinePricing.periodStart(r.period) ?? today;
+  const setTerms = (choice: { terms: PaymentTerms; days: number | null }) => {
+    setPaymentTerms(choice.terms);
+    setTermsDays(choice.days === null ? "" : String(choice.days));
+  };
+
+  /**
+   * The price a line gets for a basis and currency: the catalogue's for a
+   * service line (else empty, never another basis's rate), the Settings rate
+   * for a custom line in the default currency. Agreements are only applied by
+   * picking one.
+   */
+  const priced = (r: Row, unit: ItemUnit, cur: Currency): Partial<Row> => {
+    const fixed = BASIS[unit].quantity === null ? { quantity: "1" } : {};
+    const service = serviceOf(r);
+    if (service) {
+      const price = LinePricing.cataloguePrice(service, unit, cur, lineDate(r));
+      return { unit, ...fixed, unitPrice: price ? InvoiceMath.majorInput(price.rateMinor) : "", pricingSource: price ? "catalogue" : "manual", agreementId: "" };
+    }
     const rate = settings.units[unit].rateMinor;
-    update(r.key, { unit, ...(rate !== null && !r.unitPrice && { unitPrice: InvoiceMath.majorInput(rate) }) });
+    return { unit, ...fixed, unitPrice: rate !== null && cur === settings.currency ? InvoiceMath.majorInput(rate) : "", pricingSource: "manual", agreementId: "" };
+  };
+
+  const pickUnit = (r: Row, unit: ItemUnit) => {
+    update(r.key, { ...priced(r, unit, currency), ...(!r.period && { periodKind: BASIS[unit].period }) });
     if (unit === "milestone") setLayout("consultancy");
   };
+
+  /** Text in a line's service box: a catalogue label links the service; a course title fills its fee; anything else is the description. */
+  const typeLine = (r: Row, text: string) => {
+    const service = services.find((s) => !s.archivedAt && CatalogueContract.label(s) === text);
+    if (service) {
+      const unit = service.defaultUnit ?? (service.units.includes(r.unit as ItemUnit) ? (r.unit as ItemUnit) : service.units[0]);
+      const linked = { ...r, serviceId: service.id };
+      return update(r.key, {
+        serviceId: service.id,
+        description: service.name,
+        detail: r.detail || service.description,
+        ...priced(linked, unit, currency),
+        ...(!r.period && { periodKind: BASIS[unit].period }),
+      });
+    }
+    const course = courses.find((c) => c.title === text);
+    // A course fee is a whole-course price, so billed as a fixed fee; only in the document's currency and into an empty price.
+    if (course?.priceMinor && course.currency === currency && !r.unitPrice && !r.serviceId) {
+      return update(r.key, { description: text, unit: "fee", quantity: "1", unitPrice: InvoiceMath.majorInput(course.priceMinor), periodKind: periodKind(r.period, "fee") });
+    }
+    update(r.key, { description: text });
+  };
+
+  const pickAgreement = (r: Row, agreement: Agreement | null) => {
+    if (!agreement) return update(r.key, priced(r, r.unit as ItemUnit, currency));
+    update(r.key, {
+      unit: agreement.unit,
+      ...(BASIS[agreement.unit].quantity === null && { quantity: "1" }),
+      unitPrice: InvoiceMath.majorInput(agreement.rateMinor),
+      pricingSource: "agreement",
+      agreementId: agreement.id,
+    });
+    if (agreement.paymentTerms && !termsTouched && (isInvoice || isQuote)) setTerms({ terms: agreement.paymentTerms, days: agreement.termsDays });
+  };
+
+  /** A new currency re-prices catalogue and agreement lines (a rate in another currency is never kept); typed prices stay. */
+  const pickCurrency = (cur: Currency) => {
+    setCurrency(cur);
+    setRows((list) => list.map((r) => (r.pricingSource === "manual" ? r : { ...r, ...priced(r, r.unit as ItemUnit, cur) })));
+  };
+
   // An invoice with day-count terms is re-dated from its issue date when issued; this
   // shows the date it would get today. Only "Due by date" keeps a typed date.
-  const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const datedOnIssue = isInvoice && paymentTerms !== "date";
   const dueOnIssue = InvoiceContract.dueDate(paymentTerms, today, Number(termsDays) || 0);
   // Legacy terms stay selectable on documents that already use them.
   const termOptions = InvoiceContract.OFFERED_TERMS.filter((t) => !(isQuote && t === "date"));
   if (!termOptions.includes(paymentTerms)) termOptions.push(paymentTerms);
   const bank = banks.find((b) => b.id === bankAccountId);
+  const activeServices = services.filter((s) => !s.archivedAt);
 
   // Running totals only: the server recomputes every amount.
   const amounts = rows.map((r) => {
@@ -158,28 +199,17 @@ export function InvoiceForm({
     // Start from the client's courses and payment plan, unless lines were already filled in.
     if (saved && saved.courses.length > 0 && rows.every((r) => !r.description && !r.unitPrice)) {
       setCurrency(saved.planCurrency);
-      setRows(
-        InvoiceContract.planItems(saved).map((item) =>
-          row(courses, { description: item.description, unit: item.unit, quantity: "1", unitPrice: item.unitMinor ? InvoiceMath.majorInput(item.unitMinor) : "" }),
-        ),
-      );
+      setRows(InvoiceContract.planItems(saved).map((item) => toRow(item)));
+    } else {
+      // Another client's agreement never carries over.
+      setRows((list) => list.map((r) => (r.pricingSource === "agreement" ? { ...r, ...priced(r, r.unit as ItemUnit, currency) } : r)));
     }
+    if (!termsTouched && (isInvoice || isQuote)) setTerms(InvoiceContract.resolveTerms(null, saved ?? null, { terms: settings.terms.default, days: settings.terms.days }));
     setClient(
       saved
         ? { clientId, clientName: saved.name, clientEmail: saved.email, clientPhone: saved.phone, clientAddress: saved.address }
         : { ...client, clientId: "" },
     );
-  };
-
-  const pickCourse = (r: Row, value: string) => {
-    if (value === CUSTOM) return update(r.key, { custom: true, description: "" });
-    const course = courses.find((c) => c.title === value);
-    // Prefill the course fee (a whole-course price, so billed as a contract) only when it
-    // is in the invoice currency and no price is typed yet.
-    if (course?.priceMinor && course.currency === currency && !r.unitPrice) {
-      return update(r.key, { custom: false, description: value, unitPrice: InvoiceMath.majorInput(course.priceMinor), unit: "fee", quantity: "1" });
-    }
-    update(r.key, { custom: false, description: value });
   };
 
   /** Validates with the server's own rules, then shows the invoice exactly as it would be issued. */
@@ -202,6 +232,9 @@ export function InvoiceForm({
       relatedNumber: null,
       paymentId: null,
       recursFrom: null,
+      supersedesId: null,
+      supersedesNumber: null,
+      acceptance: null,
       linkValidUntil: null,
       creditedMinor: 0,
       receiptPayment: null,
@@ -228,7 +261,7 @@ export function InvoiceForm({
     event.preventDefault();
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const intent = submitter?.getAttribute("value");
-    if ((intent === "issue" || intent === "send") && !window.confirm(issuePrompt(label))) return;
+    if ((intent === "issue" || intent === "send" || intent === "issue-paid") && !window.confirm(issuePrompt(label))) return;
     const data = new FormData(event.currentTarget, submitter);
     dialogRef.current?.close();
     setPreviewErrors(null);
@@ -307,89 +340,39 @@ export function InvoiceForm({
             </select>
           </label>
         </legend>
-        <input type="hidden" name="items" value={JSON.stringify(rows.map(({ description, detail, period, unit, quantity, unitPrice }) => ({ description, detail, period, unit, quantity, unitPrice })))} />
-        <div className="hidden grid-cols-[1fr_8rem_5rem_8rem_8rem_4rem] gap-3 px-1 text-[11px] tracking-[0.18em] text-muted uppercase sm:grid">
-          <span>Course</span>
-          <span>Basis</span>
-          <span>Qty</span>
-          <span>Unit price</span>
-          <span className="text-right">Amount</span>
-          <span />
-        </div>
+        <input type="hidden" name="items" value={JSON.stringify(rows.map(toDraft))} />
         <ol className="mt-2 grid gap-4">
-          {rows.map((r, index) => (
-            <li key={r.key} className="grid gap-2 border-b border-line/60 pb-4 sm:grid-cols-[1fr_8rem_5rem_8rem_8rem_4rem] sm:items-center sm:gap-3">
-              <div className="grid gap-2">
-                <select aria-label={`Line ${index + 1} course`} value={r.custom ? CUSTOM : r.description} onChange={(e) => pickCourse(r, e.target.value)} className={`${FIELD} mt-0`}>
-                  <option value="" disabled>
-                    Choose a course…
-                  </option>
-                  {courses.map((c, i) => (
-                    <option key={i} value={c.title}>
-                      {c.title}
-                    </option>
-                  ))}
-                  <option value={CUSTOM}>Other (type a description)</option>
-                </select>
-                {r.custom && (
-                  <input aria-label={`Line ${index + 1} description`} placeholder="Description" maxLength={200} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} className={`${FIELD} mt-0`} />
-                )}
-              </div>
-              <select aria-label={`Line ${index + 1} billing basis`} value={r.unit} onChange={(e) => pickUnit(r, e.target.value as ItemUnit)} className={`${FIELD} mt-0`}>
-                {(Object.entries(InvoiceContract.UNITS) as [ItemUnit, string][])
-                  .filter(([value]) => value !== "milestone" || layout === "consultancy" || r.unit === "milestone")
-                  .map(([value, name]) => (
-                    <option key={value} value={value}>
-                      {name}
-                    </option>
-                  ))}
-              </select>
-              <input aria-label={`Line ${index + 1} quantity`} inputMode="decimal" value={r.quantity} onChange={(e) => update(r.key, { quantity: e.target.value })} className={`${FIELD} mt-0`} />
-              <input aria-label={`Line ${index + 1} unit price`} inputMode="decimal" placeholder="0.00" value={r.unitPrice} onChange={(e) => update(r.key, { unitPrice: e.target.value })} className={`${FIELD} mt-0`} />
-              <span className="text-right font-mono text-sm tabular-nums">{money(amounts[index])}</span>
-              <button type="button" disabled={rows.length === 1} onClick={() => setRows((list) => list.filter((x) => x.key !== r.key))} className={SMALL_BUTTON}>
-                Remove
-              </button>
-              <input
-                aria-label={`Line ${index + 1} details`}
-                placeholder="Details shown under the course (optional), e.g. 8 sessions, 6–30 Oct"
-                maxLength={200}
-                value={r.detail}
-                onChange={(e) => update(r.key, { detail: e.target.value })}
-                className={`${FIELD} mt-0 text-sm sm:col-span-3`}
+          {rows.map((r, index) => {
+            const service = serviceOf(r);
+            return (
+              <LineEditor
+                key={r.key}
+                row={r}
+                index={index}
+                docType={docType}
+                layout={layout}
+                currency={currency}
+                service={service}
+                services={activeServices}
+                courses={courses.map((c) => c.title)}
+                agreements={service && client.clientId ? LinePricing.agreementsFor(agreements, client.clientId, service.id, lineDate(r)) : []}
+                amount={money(amounts[index])}
+                canRemove={rows.length > 1}
+                onChange={(patch) => update(r.key, patch)}
+                onText={(text) => typeLine(r, text)}
+                onUnit={(unit) => pickUnit(r, unit)}
+                onAgreement={(agreement) => pickAgreement(r, agreement)}
+                onRemove={() => setRows((list) => list.filter((x) => x.key !== r.key))}
               />
-              <div className="grid grid-cols-[8rem_1fr] gap-2 sm:col-span-2">
-                <select
-                  aria-label={`Line ${index + 1} period type`}
-                  value={r.periodKind}
-                  onChange={(e) => update(r.key, { periodKind: e.target.value as PeriodKind, period: "" })}
-                  className={`${FIELD} mt-0 text-sm`}
-                >
-                  {Object.entries(PERIOD_KINDS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  aria-label={`Line ${index + 1} period`}
-                  type={r.periodKind === "text" ? "text" : r.periodKind}
-                  placeholder={r.periodKind === "text" ? "e.g. 6–30 Oct 2026" : undefined}
-                  maxLength={60}
-                  value={r.period}
-                  onChange={(e) => update(r.key, { period: e.target.value })}
-                  className={`${FIELD} mt-0 text-sm`}
-                />
-              </div>
-            </li>
-          ))}
+            );
+          })}
         </ol>
         {errors.items && (
           <p role="alert" className="mt-2 text-xs text-gold">
             {errors.items}
           </p>
         )}
-        <button type="button" disabled={rows.length >= InvoiceContract.LIMITS.items} onClick={() => setRows((list) => [...list, row(courses)])} className="mt-3 text-sm text-quant hover:underline disabled:opacity-40">
+        <button type="button" disabled={rows.length >= InvoiceContract.LIMITS.items} onClick={() => setRows((list) => [...list, toRow()])} className="mt-3 text-sm text-quant hover:underline disabled:opacity-40">
           + Add line
         </button>
       </fieldset>
@@ -411,28 +394,26 @@ export function InvoiceForm({
       )}
 
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-3">
-        <legend className="mb-4 text-sm text-quant">Amounts</legend>
-        <Field label="Currency" error={errors.currency}>
-          <select name="currency" value={currency} onChange={(e) => setCurrency(e.target.value as Currency)} className={FIELD}>
+        <legend className="mb-4 text-sm text-quant">Totals and terms</legend>
+        <Field label="Currency" error={errors.currency} hint="Catalogue and agreement prices follow it">
+          <select name="currency" value={currency} onChange={(e) => pickCurrency(e.target.value as Currency)} className={FIELD}>
             {InvoiceContract.CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
         </Field>
-        <Field label="Discount (amount)" error={errors.discountMinor} hint="Optional, taken off before VAT">
-          <input name="discount" inputMode="decimal" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} aria-invalid={errors.discountMinor ? true : undefined} className={FIELD} />
-        </Field>
-        {vatOn ? (
-          <Field label="VAT %" error={errors.taxRateBp} hint={`TRN ${settings.vat.trn} is printed from Settings`}>
-            <input name="taxRate" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} aria-invalid={errors.taxRateBp ? true : undefined} className={FIELD} />
-          </Field>
-        ) : (
-          <input type="hidden" name="taxRate" value="" />
-        )}
         {isInvoice || isQuote ? (
           <Field label={isQuote ? "Proposed payment terms" : "Payment terms"} error={errors.paymentTerms} hint={isQuote ? "Copied to the invoice" : "Counted from the issue date"}>
             <div className="mt-1 flex gap-2">
-              <select name="paymentTerms" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value as PaymentTerms)} className={`${FIELD} mt-0`}>
+              <select
+                name="paymentTerms"
+                value={paymentTerms}
+                onChange={(e) => {
+                  setPaymentTerms(e.target.value as PaymentTerms);
+                  setTermsTouched(true);
+                }}
+                className={`${FIELD} mt-0`}
+              >
                 {termOptions.map((value) => (
                   <option key={value} value={value}>
                     {InvoiceContract.PAYMENT_TERMS[value]}
@@ -440,7 +421,19 @@ export function InvoiceForm({
                 ))}
               </select>
               {paymentTerms === "custom" && (
-                <input name="termsDays" aria-label="Days to pay" inputMode="numeric" required placeholder="days" value={termsDays} onChange={(e) => setTermsDays(e.target.value)} className={`${FIELD} mt-0 w-20`} />
+                <input
+                  name="termsDays"
+                  aria-label="Days to pay"
+                  inputMode="numeric"
+                  required
+                  placeholder="days"
+                  value={termsDays}
+                  onChange={(e) => {
+                    setTermsDays(e.target.value);
+                    setTermsTouched(true);
+                  }}
+                  className={`${FIELD} mt-0 w-20`}
+                />
               )}
             </div>
           </Field>
@@ -460,7 +453,7 @@ export function InvoiceForm({
             <input name="dueDate" type="date" required min={isCredit ? undefined : today} value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-invalid={errors.dueDate ? true : undefined} className={FIELD} />
           </Field>
         )}
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 self-end rounded-md border border-line p-3 font-mono text-sm tabular-nums">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 self-end rounded-md border border-line p-3 font-mono text-sm tabular-nums sm:col-start-3">
           <dt className="text-muted">Subtotal</dt>
           <dd className="text-right">{money(totals.subtotalMinor)}</dd>
           {totals.discountMinor > 0 && (
@@ -478,53 +471,100 @@ export function InvoiceForm({
           <dt className="text-ink">Total</dt>
           <dd className="text-right text-gold">{money(totals.totalMinor)}</dd>
         </dl>
-        {isInvoice && (
-          <label className="flex items-center gap-2 self-center text-sm text-muted">
-            <input type="checkbox" name="recurring" defaultChecked={initial.recurring} className="accent-quant" />
-            Repeats monthly (offered under “Create this month’s drafts”)
-          </label>
-        )}
       </fieldset>
 
-      <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
-        <legend className="mb-4 text-sm text-quant">{isInvoice ? "Payment details" : "Notes"}</legend>
-        {isInvoice && (
-          <>
-            <Field
-              label="Bank account"
-              error={errors.bankAccountId}
-              hint={
-                <Link href="/admin/invoices/banks" className="hover:text-ink">
-                  {banks.length === 0 ? "Add your bank details →" : "Manage bank accounts →"}
-                </Link>
-              }
-            >
-              <select name="bankAccountId" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className={FIELD}>
-                <option value="">No bank details</option>
-                {banks.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.bankName} {b.iban ? `· ${b.iban}` : b.accountNumber && `· ${b.accountNumber}`}
-                    {b.isDefault ? " (default)" : ""}
-                  </option>
-                ))}
-              </select>
+      {/* Infrequent fields: closed by default, still submitted. */}
+      <details className="rounded-lg border border-line p-5" open={Boolean(errors.discountMinor || errors.taxRateBp || errors.bankAccountId || errors.paymentLink || errors.notes || errors.paymentInstructions)}>
+        <summary className="cursor-pointer text-sm text-quant">More options: discount{vatOn ? ", VAT" : ""}{isInvoice ? ", bank, payment link, recurring" : ""}, notes</summary>
+        <fieldset disabled={pending} className="mt-5 grid gap-5 sm:grid-cols-2">
+          <Field label="Discount (amount)" error={errors.discountMinor} hint="Optional, taken off before VAT">
+            <input name="discount" inputMode="decimal" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} aria-invalid={errors.discountMinor ? true : undefined} className={FIELD} />
+          </Field>
+          {vatOn ? (
+            <Field label="VAT %" error={errors.taxRateBp} hint={`TRN ${settings.vat.trn} is printed from Settings`}>
+              <input name="taxRate" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} aria-invalid={errors.taxRateBp ? true : undefined} className={FIELD} />
             </Field>
-            {settings.card.show ? (
-              <Field label="Payment link (optional)" error={errors.paymentLink} hint="A card / online link from any provider. Printed as “Pay online”.">
-                <input name="paymentLink" type="url" maxLength={500} placeholder="https://" defaultValue={initial.paymentLink} className={FIELD} />
+          ) : (
+            <input type="hidden" name="taxRate" value="" />
+          )}
+          {isInvoice && (
+            <>
+              <Field
+                label="Bank account"
+                error={errors.bankAccountId}
+                hint={
+                  <Link href="/admin/invoices/banks" className="hover:text-ink">
+                    {banks.length === 0 ? "Add your bank details →" : "Manage bank accounts →"}
+                  </Link>
+                }
+              >
+                <select name="bankAccountId" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} className={FIELD}>
+                  <option value="">No bank details</option>
+                  {banks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.bankName} {b.iban ? `· ${b.iban}` : b.accountNumber && `· ${b.accountNumber}`}
+                      {b.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
               </Field>
-            ) : (
-              <input type="hidden" name="paymentLink" value={initial.paymentLink} />
-            )}
-            <Field label="Other payment instructions" error={errors.paymentInstructions} hint="Optional. Printed under the bank details." className="sm:col-span-2">
-              <textarea name="paymentInstructions" rows={2} maxLength={2000} defaultValue={initial.paymentInstructions} className={`${FIELD} resize-y`} />
-            </Field>
-          </>
-        )}
-        <Field label="Notes" error={errors.notes} hint="Optional. The terms come from Settings." className="sm:col-span-2">
-          <textarea name="notes" rows={3} maxLength={2000} defaultValue={initial.notes} className={`${FIELD} resize-y`} />
-        </Field>
-      </fieldset>
+              {settings.card.show ? (
+                <Field label="Payment link (optional)" error={errors.paymentLink} hint="A card / online link from any provider. Printed as “Pay online”.">
+                  <input name="paymentLink" type="url" maxLength={500} placeholder="https://" defaultValue={initial.paymentLink} className={FIELD} />
+                </Field>
+              ) : (
+                <input type="hidden" name="paymentLink" value={initial.paymentLink} />
+              )}
+              <Field label="Other payment instructions" error={errors.paymentInstructions} hint="Optional. Printed under the bank details." className="sm:col-span-2">
+                <textarea name="paymentInstructions" rows={2} maxLength={2000} defaultValue={initial.paymentInstructions} className={`${FIELD} resize-y`} />
+              </Field>
+              <label className="flex items-center gap-2 text-sm text-muted sm:col-span-2">
+                <input type="checkbox" name="recurring" defaultChecked={initial.recurring} className="accent-quant" />
+                Repeats monthly (offered under “Create this month’s drafts”)
+              </label>
+            </>
+          )}
+          <Field label="Notes" error={errors.notes} hint="Optional. The terms come from Settings." className="sm:col-span-2">
+            <textarea name="notes" rows={3} maxLength={2000} defaultValue={initial.notes} className={`${FIELD} resize-y`} />
+          </Field>
+        </fieldset>
+      </details>
+
+      {warnings && (warnings.duplicates.length > 0 || warnings.deviations.length > 0) && (
+        <fieldset disabled={pending} className="grid gap-4 rounded-lg border border-gold/50 bg-gold/5 p-5 text-sm">
+          <legend className="px-1 text-gold">Check before issuing</legend>
+          {warnings.duplicates.length > 0 && (
+            <div>
+              <p>Already invoiced to this client for the same service and period:</p>
+              <ul className="mt-1 list-disc pl-5 text-muted">
+                {warnings.duplicates.map((d) => (
+                  <li key={`${d.number}-${d.code}-${d.period}`}>
+                    {d.number}: {d.code} · {InvoiceEmails.period(d.period)}
+                  </li>
+                ))}
+              </ul>
+              <label className="mt-2 block text-xs text-muted">
+                Reason to bill it again (needed to issue)
+                <input name="duplicateReason" maxLength={200} placeholder="e.g. Extra sessions agreed on 12 Oct" className={`${FIELD} mt-1`} />
+              </label>
+            </div>
+          )}
+          {warnings.deviations.length > 0 && (
+            <div>
+              <p>Differs from accepted quote {warnings.quoteNumber}: these changes were not approved by the client.</p>
+              <ul className="mt-1 list-disc pl-5 text-muted">
+                {warnings.deviations.map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+              </ul>
+              <label className="mt-2 flex items-center gap-2">
+                <input type="checkbox" name="confirmDeviations" className="accent-quant" />
+                Issue with these changes (they are recorded in the history)
+              </label>
+            </div>
+          )}
+        </fieldset>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <button type="button" onClick={openPreview} disabled={pending} className="h-10 rounded-md border border-quant/50 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/10 disabled:opacity-60">
@@ -534,12 +574,49 @@ export function InvoiceForm({
           {saving ? "Saving…" : "Save draft"}
         </button>
         {issueButtons}
+        {isInvoice && (
+          <button type="button" onClick={() => setPaying(!paying)} disabled={pending} aria-expanded={paying} className="h-10 rounded-md border border-emerald-400/40 px-4 text-sm text-emerald-300 transition-colors hover:bg-emerald-400/10 disabled:opacity-60">
+            Issue &amp; record payment…
+          </button>
+        )}
         {message && (
           <p role="alert" className="text-sm text-gold">
             {message}
           </p>
         )}
       </div>
+      {isInvoice && paying && (
+        <fieldset disabled={pending} className="grid items-end gap-3 rounded-lg border border-emerald-400/30 p-5 sm:grid-cols-4">
+          <legend className="px-1 text-sm text-emerald-300">Paid now: issue it with the payment received</legend>
+          <input type="hidden" name="submissionKey" value={submissionKey} />
+          <label className="text-xs text-muted">
+            Amount ({currency})
+            <input name="amount" inputMode="decimal" required defaultValue={InvoiceMath.majorInput(totals.totalMinor)} key={totals.totalMinor} className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted">
+            Received on
+            <input name="paidOn" type="date" required defaultValue={today} max={today} className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted">
+            Method
+            <select name="method" defaultValue="cash" className={`${FIELD} mt-1`}>
+              {Object.entries(InvoiceContract.PAYMENT_METHODS).map(([value, name]) => (
+                <option key={value} value={value}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs text-muted">
+            Reference (optional)
+            <input name="reference" maxLength={80} className={`${FIELD} mt-1`} />
+          </label>
+          <button type="submit" name="intent" value="issue-paid" className="h-10 rounded-md bg-emerald-400/15 px-4 text-sm font-medium text-emerald-300 hover:bg-emerald-400/25 sm:col-span-4 sm:justify-self-start">
+            Issue and record payment
+          </button>
+          <p className="text-xs text-muted sm:col-span-4">The invoice shows as paid only once this payment covers it. A receipt is issued for the payment.</p>
+        </fieldset>
+      )}
 
       <dialog ref={dialogRef} onClose={() => setPreview(null)} aria-label="Preview" className="m-auto max-h-[94vh] w-[96vw] max-w-[52rem] rounded-lg bg-slate-200 p-0 backdrop:bg-black/70">
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-line bg-canvas px-4 py-3">

@@ -8,17 +8,21 @@ import { ApiError } from "@/core/http/ApiError";
 import { ResendClient } from "@/core/email/ResendClient";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { ServiceRepository } from "@/domains/catalogue/server/ServiceRepository";
 import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 import type { BillingSettings } from "@/domains/settings/types";
 
+import { AgreementRepository } from "../server/AgreementRepository";
 import { BankAccountRepository } from "../server/BankAccountRepository";
 import { ClientRepository } from "../server/ClientRepository";
 import { InvoiceRepository, type PaymentRecord } from "../server/InvoiceRepository";
+import { IssueChecks } from "../server/IssueChecks";
 import { ProofStorage } from "../server/ProofStorage";
 import { DocumentFormat } from "../services/DocumentFormat";
 import { InvoiceContract, type ConfirmationFieldErrors, type InvoiceFieldErrors } from "../services/InvoiceContract";
 import { InvoiceEmails } from "../services/InvoiceEmails";
 import { InvoiceMath } from "../services/InvoiceMath";
+import { LinePricing } from "../services/LinePricing";
 import type { BankDetails, DocumentType, Invoice, InvoiceInput } from "../types";
 
 /**
@@ -133,6 +137,7 @@ async function issueDocument(repo: InvoiceRepository, id: string, settings: Bill
   }
   if (!(await repo.issue(id, settings.prefixes[doc.docType], actor, dueDays))) return "This document was already issued.";
   if (doc.docType === "credit_note" && doc.relatedId) await repo.settleIfCovered(doc.relatedId, actor);
+  if (doc.docType === "quote" && doc.supersedesId) await repo.supersede(doc.supersedesId, (await repo.byId(id))?.number ?? "a revision", actor);
   return null;
 }
 
@@ -156,22 +161,50 @@ async function emailDocument(repo: InvoiceRepository, doc: Invoice, settings: Bi
 
 const withReason = (path: string, notice: string, reason?: string) => `${path}?notice=${notice}${reason ? `&reason=${encodeURIComponent(reason)}` : ""}`;
 
+/** Catalogue links and price sources re-checked against the database: what the form claims is kept only when true. */
+async function verifyLines(input: InvoiceInput): Promise<InvoiceInput | string> {
+  const serviceIds = input.items.flatMap((item) => (item.serviceId ? [item.serviceId] : []));
+  const agreementIds = input.items.flatMap((item) => (item.agreementId ? [item.agreementId] : []));
+  const [services, agreements] = await Promise.all([
+    serviceIds.length ? (ServiceRepository.fromEnv()?.byIds(serviceIds) ?? []) : [],
+    agreementIds.length ? (AgreementRepository.fromEnv()?.byIds(agreementIds) ?? []) : [],
+  ]);
+  const items = LinePricing.verify(input.items, services, agreements, { clientId: input.clientId, currency: input.currency, today: today() });
+  return typeof items === "string" ? items : { ...input, items };
+}
+
 /**
  * Save a draft invoice, quote or credit note; with intent "issue" also number
- * and freeze it, and with "send" email it too. A failed email leaves it
- * issued: the detail page offers to resend.
+ * and freeze it, with "send" email it too, and with "issue-paid" record the
+ * payment received for it at once (a lesson paid on the spot). A failed email
+ * leaves it issued: the detail page offers to resend. An invoice that may
+ * double-charge, or that differs from its accepted quote, waits on the draft
+ * page until that is confirmed.
  */
 export async function saveInvoice(_state: InvoiceFormState, formData: FormData): Promise<InvoiceFormState> {
   const { repo, actor } = await session();
-  const parsed = InvoiceContract.parseInvoice(Object.fromEntries(formData));
+  const fields = Object.fromEntries(formData);
+  const parsed = InvoiceContract.parseInvoice(fields);
   if (!parsed.ok) return { errors: parsed.errors, message: "Please fix the highlighted fields." };
 
   const intent = formData.get("intent");
   if (intent === "send" && !ResendClient.fromEnv()) return { message: NO_EMAIL };
   if (intent === "send" && !parsed.input.clientEmail) return { message: "Add the client's email to send it, or issue it and share it on WhatsApp." };
+  let payment: PaymentRecord | null = null;
+  if (intent === "issue-paid") {
+    if (parsed.input.docType !== "invoice") return { message: "Only an invoice can be issued with a payment." };
+    const parsedPayment = InvoiceContract.parsePayment(fields);
+    if (typeof parsedPayment === "string") return { message: parsedPayment };
+    // The same form sent twice: the first one already issued it and recorded the payment.
+    const recorded = parsedPayment.submissionKey && (await repo.paymentByKey(parsedPayment.submissionKey));
+    if (recorded) redirect(`/admin/invoices/${recorded}?notice=payment-duplicate`);
+    payment = { ...parsedPayment, proofUrl: null };
+  }
 
   const settings = await SettingsRepository.load();
-  const resolved = await resolveLinks(applyVat(parsed.input, settings), formData.get("saveClient") === "on");
+  const verified = await verifyLines(applyVat(parsed.input, settings));
+  if (typeof verified === "string") return { message: verified };
+  const resolved = await resolveLinks(verified, formData.get("saveClient") === "on");
   if (typeof resolved === "string") return { message: resolved };
 
   let id = formData.get("id");
@@ -180,20 +213,39 @@ export async function saveInvoice(_state: InvoiceFormState, formData: FormData):
   } else {
     id = await repo.createDraft(resolved.input, resolved.bank, actor);
   }
+  const path = `/admin/invoices/${id}`;
+  if (intent !== "issue" && intent !== "send" && intent !== "issue-paid") redirect(`${path}?notice=saved`);
 
-  let notice = "saved";
-  if (intent === "issue" || intent === "send") {
-    const error = await issueDocument(repo, id, settings, actor);
-    if (error) redirect(withReason(`/admin/invoices/${id}`, "issue-failed", error));
-    notice = "issued";
-    if (intent === "send") {
-      const doc = await repo.byId(id);
-      const failed = doc && (await emailDocument(repo, doc, settings, actor));
-      notice = failed ? "email-failed" : "emailed";
-      if (failed) console.error(`Document email failed for ${id}: ${failed}`);
+  const duplicateReason = String(formData.get("duplicateReason") ?? "").trim().slice(0, 200);
+  const warnings = await IssueChecks.for(repo, id, resolved.input);
+  const blocked = IssueChecks.blocked(warnings, duplicateReason, formData.get("confirmDeviations") === "on");
+  if (blocked) redirect(withReason(path, "confirm-needed", blocked));
+  const error = await issueDocument(repo, id, settings, actor);
+  if (error) redirect(withReason(path, "issue-failed", error));
+  if (warnings.duplicates.length > 0) await repo.logEvent(id, actor, "billed again", duplicateReason);
+  if (warnings.deviations.length > 0) await repo.logEvent(id, actor, "quote changes confirmed", warnings.deviations.join("; "));
+
+  if (payment) {
+    const result = await repo.addPayment(id, payment, actor);
+    // Lost a race with the same form sent twice: void this copy (no payment on it) and open the first.
+    const first = !result && payment.submissionKey ? await repo.paymentByKey(payment.submissionKey) : null;
+    if (first && first !== id) {
+      await repo.void(id, actor);
+      redirect(`/admin/invoices/${first}?notice=payment-duplicate`);
     }
+    const invoice = result && (await repo.byId(id));
+    if (!result || !invoice) redirect(withReason(path, "payment-refused", "The invoice is issued; record the payment below."));
+    await paymentReceipt(repo, invoice, result.paymentId, payment.amountMinor, payment.paidOn, settings);
+    redirect(`${path}?notice=${result.settled ? "paid" : "payment"}`);
   }
-  redirect(`/admin/invoices/${id}?notice=${notice}`);
+  let notice = "issued";
+  if (intent === "send") {
+    const doc = await repo.byId(id);
+    const failed = doc && (await emailDocument(repo, doc, settings, actor));
+    notice = failed ? "email-failed" : "emailed";
+    if (failed) console.error(`Document email failed for ${id}: ${failed}`);
+  }
+  redirect(`${path}?notice=${notice}`);
 }
 
 export async function resendInvoice(formData: FormData): Promise<void> {
@@ -325,9 +377,13 @@ export async function voidInvoice(formData: FormData): Promise<void> {
   redirect(`/admin/invoices/${id}`);
 }
 
-type CopyMode = "duplicate" | "next-month" | "invoice-from-quote" | "credit-note";
+type CopyMode = "duplicate" | "next-month" | "invoice-from-quote" | "credit-note" | "revise";
 
-/** A new draft from an existing document. The bank snapshot is copied as is; saving the draft refreshes it from the account. */
+/**
+ * A new draft from an existing document. The bank snapshot is copied as is;
+ * saving the draft refreshes it from the account. An invoice from a quote
+ * keeps each line's quote line, so changes can be shown before it is issued.
+ */
 async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyMode, actor: string, recursFrom: string | null = null): Promise<string> {
   const nextMonth = mode === "next-month";
   const roll = (text: string) => (nextMonth ? InvoiceMath.nextMonthText(text) : text);
@@ -339,7 +395,9 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
       ? InvoiceContract.dueDate(source.paymentTerms, today(), source.termsDays)
       : mode === "credit-note"
         ? today()
-        : source.dueDate;
+        : mode === "revise" && source.dueDate < today()
+          ? ZonedCalendar.addDays(today(), 14)
+          : source.dueDate;
   const input: InvoiceInput = {
     docType,
     relatedId: mode === "invoice-from-quote" || mode === "credit-note" ? source.id : null,
@@ -350,11 +408,13 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
     clientPhone: source.clientPhone,
     clientAddress: source.clientAddress,
     currency: source.currency,
-    items: source.items.map((item) => ({
+    items: source.items.map((item, index) => ({
       ...item,
       description: roll(item.description),
       ...(item.detail && { detail: roll(item.detail) }),
       ...(item.period && { period: nextMonth ? InvoiceMath.nextPeriod(item.period) : item.period }),
+      // Only an invoice made from a quote points at quote lines (undefined is dropped when stored).
+      sourceLine: mode === "invoice-from-quote" ? index : undefined,
     })),
     discountMinor: source.discountMinor,
     taxRateBp: source.taxRateBp,
@@ -370,7 +430,10 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
     sections: source.sections,
     recurring: billable && (nextMonth || mode === "duplicate") ? source.recurring : false,
   };
-  return repo.createDraft(applyVat(input, await SettingsRepository.load()), billable || docType === "quote" ? source.bank : null, actor, recursFrom);
+  return repo.createDraft(applyVat(input, await SettingsRepository.load()), billable || docType === "quote" ? source.bank : null, actor, {
+    recursFrom,
+    supersedesId: mode === "revise" ? source.id : null,
+  });
 }
 
 /** New draft with the same client, items and terms (the way to "edit" an issued document). */
@@ -397,12 +460,62 @@ export async function createRecurringDrafts(): Promise<void> {
   redirect(`/admin/invoices?notice=recurring&count=${due.length}`);
 }
 
-/** Accept or decline a sent quote. */
-export async function answerQuote(formData: FormData): Promise<void> {
+/** Records a sent quote's acceptance: when, who, how, and optional evidence (a link is stored, never fetched). */
+export async function acceptQuote(formData: FormData): Promise<void> {
   const { repo, actor } = await session();
   const id = String(formData.get("id"));
-  await repo.answerQuote(id, formData.get("answer") === "declined" ? "declined" : "accepted", actor);
+  const path = `/admin/invoices/${id}`;
+  const parsed = InvoiceContract.parseAcceptance(Object.fromEntries(formData));
+  if (!parsed.ok) redirect(withReason(path, "accept-refused", Object.values(parsed.errors).join(" ")));
+  if (!(await repo.acceptQuote(id, parsed.input, actor))) {
+    redirect(withReason(path, "accept-refused", "The acceptance must fall between the quote's issue and its valid-until date. Otherwise revise and re-issue the quote."));
+  }
+  redirect(`${path}?notice=accepted`);
+}
+
+const reasonOf = (formData: FormData) => String(formData.get("reason") ?? "").trim().slice(0, 300);
+
+/** A sent quote declined, with the reason. */
+export async function declineQuote(formData: FormData): Promise<void> {
+  const { repo, actor } = await session();
+  const id = String(formData.get("id"));
+  const reason = reasonOf(formData);
+  if (!reason) redirect(withReason(`/admin/invoices/${id}`, "answer-refused", "Give a reason."));
+  await repo.declineQuote(id, reason, actor);
   redirect(`/admin/invoices/${id}`);
+}
+
+/** Undo an acceptance recorded by mistake (only before an invoice is made from the quote). */
+export async function withdrawAcceptance(formData: FormData): Promise<void> {
+  const { repo, actor } = await session();
+  const id = String(formData.get("id"));
+  const reason = reasonOf(formData);
+  if (!reason) redirect(withReason(`/admin/invoices/${id}`, "answer-refused", "Give a reason."));
+  const done = await repo.withdrawAcceptance(id, reason, actor);
+  redirect(done ? `/admin/invoices/${id}?notice=withdrawn` : withReason(`/admin/invoices/${id}`, "answer-refused", "An invoice was already made from this quote."));
+}
+
+/**
+ * Changed scope or prices after a quote was issued (or accepted): a new quote
+ * draft that replaces it once issued. The old acceptance stays with the old
+ * quote; the revision needs its own. One live revision per quote.
+ */
+export async function reviseQuote(formData: FormData): Promise<void> {
+  const { repo, actor } = await session();
+  const quote = await repo.byId(String(formData.get("id")));
+  if (!quote || quote.docType !== "quote" || !["sent", "accepted", "declined"].includes(quote.status)) return;
+  if (await repo.invoiceFromQuote(quote.id)) redirect(withReason(`/admin/invoices/${quote.id}`, "answer-refused", "An invoice was already made from this quote."));
+  const existing = await repo.revisionOf(quote.id);
+  if (existing) redirect(`/admin/invoices/${existing}?notice=revision-exists`);
+  let id: string;
+  try {
+    id = await copyAsDraft(repo, quote, "revise", actor);
+  } catch (error) {
+    const raced = Database.isUniqueViolation(error) ? await repo.revisionOf(quote.id) : null;
+    if (!raced) throw error;
+    redirect(`/admin/invoices/${raced}?notice=revision-exists`);
+  }
+  redirect(`/admin/invoices/${id}?notice=revision`);
 }
 
 /**

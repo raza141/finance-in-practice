@@ -16,6 +16,8 @@ const formFields = (overrides: Record<string, string> = {}) => {
     "vat.trn": "",
     "vat.rate": "5",
     currency: "AED",
+    "terms.default": "net7",
+    "terms.days": "",
     "card.note": D.card.note,
   };
   for (const [unit, config] of Object.entries(D.units)) {

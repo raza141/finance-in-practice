@@ -89,6 +89,19 @@ export function ClientForm({ client, courses }: { client?: Client; courses: read
                 ))}
               </select>
             </Field>
+            <Field label="Usual payment terms" error={errors.paymentTerms} hint="Used on new invoices unless an agreement sets terms" className="sm:col-span-3">
+              <div className="mt-1 flex gap-2">
+                <select name="paymentTerms" defaultValue={client?.paymentTerms ?? ""} className={`${FIELD} mt-0 sm:w-64`}>
+                  <option value="">Business default (Settings)</option>
+                  {InvoiceContract.OFFERED_TERMS.filter((t) => t !== "date").map((t) => (
+                    <option key={t} value={t}>
+                      {InvoiceContract.PAYMENT_TERMS[t]}
+                    </option>
+                  ))}
+                </select>
+                <input name="termsDays" aria-label="Days, for custom terms" inputMode="numeric" placeholder="days" defaultValue={client?.termsDays ?? ""} className={`${FIELD} mt-0 w-20`} />
+              </div>
+            </Field>
             <Field label="Plan notes" error={errors.planNotes} hint="e.g. 3 instalments, due on the 1st of each month" className="sm:col-span-3">
               <textarea name="planNotes" rows={2} maxLength={InvoiceContract.LIMITS.planNotes} defaultValue={client?.planNotes} className={`${FIELD} resize-y`} />
             </Field>

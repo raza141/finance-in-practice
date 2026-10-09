@@ -18,7 +18,7 @@ const invoiceFields = (overrides: Record<string, string> = {}) => ({
   currency: "AED",
   items: JSON.stringify([
     { description: "CFA Level I session", detail: " 6-30 Oct ", period: " October 2026 ", unit: "hour", quantity: "1.5", unitPrice: "333.33" },
-    { description: "Mock exam review", detail: "", unit: "fee", quantity: "2", unitPrice: "100" },
+    { description: "Mock exam review", detail: "", period: "2026-10-15", unit: "session", quantity: "2", unitPrice: "100" },
   ]),
   discount: "",
   taxRate: "",
@@ -100,7 +100,7 @@ describe("InvoiceContract.parseInvoice", () => {
       errors: { items: expect.stringContaining("Line 1") },
     });
     for (const unit of ["weekly", "toString", undefined]) {
-      expect(InvoiceContract.parseInvoice(invoiceFields({ items: JSON.stringify([{ description: "x", unit, quantity: "1", unitPrice: "1" }]) }))).toMatchObject({
+      expect(InvoiceContract.parseInvoice(invoiceFields({ items: JSON.stringify([{ description: "x", period: "2026-10", unit, quantity: "1", unitPrice: "1" }]) }))).toMatchObject({
         ok: false,
         errors: { items: expect.stringContaining("how the line is billed") },
       });
@@ -116,7 +116,7 @@ describe("InvoiceContract.parseClient / parseBank", () => {
   it("validates a saved client", () => {
     expect(InvoiceContract.parseClient({ name: " Sara ", email: "SARA@x.co", phone: "", address: "Dubai", planUnit: "", planFee: "", planCurrency: "AED" })).toEqual({
       ok: true,
-      input: { name: "Sara", email: "sara@x.co", phone: "", address: "Dubai", courses: [], planUnit: null, planFeeMinor: null, planCurrency: "AED", planNotes: "" },
+      input: { name: "Sara", email: "sara@x.co", phone: "", address: "Dubai", courses: [], planUnit: null, planFeeMinor: null, planCurrency: "AED", planNotes: "", paymentTerms: null, termsDays: null },
     });
     const withPlan = InvoiceContract.parseClient({
       name: "Sara",

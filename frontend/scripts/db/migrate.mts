@@ -675,6 +675,53 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE clients ADD CONSTRAINT clients_plan_unit_check CHECK (plan_unit IN ('month', 'session', 'hour', 'package', 'milestone', 'fee'))`,
     ],
   },
+  {
+    // Client agreements (an agreed rate for one service, basis and currency over dates,
+    // with optional terms), client default terms, quote acceptance evidence and quote
+    // revisions. Acceptance belongs to one issued quote row: a revision is a new row.
+    id: "032_agreements_quotes",
+    statements: [
+      `CREATE TABLE client_agreements (
+        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id     uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        service_id    uuid NOT NULL REFERENCES services (id) ON DELETE RESTRICT,
+        unit          text NOT NULL CHECK (unit IN ('month', 'session', 'hour', 'package', 'fee', 'milestone')),
+        currency      text NOT NULL CHECK (currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')),
+        rate_minor    integer NOT NULL CHECK (rate_minor > 0 AND rate_minor <= 1000000000),
+        starts_on     date NOT NULL,
+        ends_on       date CHECK (ends_on IS NULL OR ends_on >= starts_on),
+        payment_terms text CHECK (payment_terms IN ('on_receipt', 'net7', 'net14', 'net30', 'custom')),
+        terms_days    integer CHECK (terms_days BETWEEN 0 AND 365),
+        schedule      text NOT NULL DEFAULT '' CHECK (char_length(schedule) <= 200),
+        scope         text NOT NULL DEFAULT '' CHECK (char_length(scope) <= 500),
+        archived_at   timestamptz,
+        created_at    timestamptz NOT NULL DEFAULT now(),
+        CHECK ((payment_terms = 'custom') = (terms_days IS NOT NULL) OR (payment_terms IS NULL AND terms_days IS NULL))
+      )`,
+      `CREATE INDEX client_agreements_client_idx ON client_agreements (client_id)`,
+      `ALTER TABLE clients
+        ADD COLUMN payment_terms text CHECK (payment_terms IN ('on_receipt', 'net7', 'net14', 'net30', 'custom')),
+        ADD COLUMN terms_days integer CHECK (terms_days BETWEEN 0 AND 365),
+        ADD CONSTRAINT clients_custom_terms_check CHECK ((payment_terms = 'custom') = (terms_days IS NOT NULL) OR (payment_terms IS NULL AND terms_days IS NULL))`,
+      `ALTER TABLE invoices DROP CONSTRAINT invoices_status_check`,
+      `ALTER TABLE invoices
+        ADD CONSTRAINT invoices_status_check CHECK (status IN ('draft', 'sent', 'paid', 'void', 'accepted', 'declined', 'superseded')),
+        ADD COLUMN supersedes_id uuid REFERENCES invoices (id) ON DELETE SET NULL`,
+      // One live revision per quote, so "Revise" pressed twice opens the same draft.
+      `CREATE UNIQUE INDEX invoices_one_revision ON invoices (supersedes_id) WHERE status <> 'void'`,
+      `CREATE TABLE quote_acceptances (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        quote_id     uuid NOT NULL UNIQUE REFERENCES invoices (id) ON DELETE CASCADE,
+        accepted_at  timestamptz NOT NULL,
+        approver     text NOT NULL CHECK (char_length(approver) BETWEEN 1 AND 120),
+        method       text NOT NULL CHECK (method IN ('email', 'whatsapp', 'signed', 'verbal', 'other')),
+        notes        text NOT NULL DEFAULT '' CHECK (char_length(notes) <= 1000),
+        evidence_url text CHECK (evidence_url ~ '^https://' AND char_length(evidence_url) <= 500),
+        recorded_by  text NOT NULL CHECK (char_length(recorded_by) <= 120),
+        recorded_at  timestamptz NOT NULL DEFAULT now()
+      )`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

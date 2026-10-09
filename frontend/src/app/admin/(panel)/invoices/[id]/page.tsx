@@ -11,8 +11,11 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import {
-  answerQuote,
+  acceptQuote,
   convertQuote,
+  declineQuote,
+  reviseQuote,
+  withdrawAcceptance,
   copyInvoiceForNextMonth,
   createCreditNote,
   deleteDraftInvoice,
@@ -30,6 +33,7 @@ import { InvoiceForm } from "@/domains/invoices/components/InvoiceForm";
 import { SharePanel } from "@/domains/invoices/components/SharePanel";
 import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { IssueChecks } from "@/domains/invoices/server/IssueChecks";
 import { DocumentAccess } from "@/domains/invoices/services/DocumentAccess";
 import { DocumentFormat } from "@/domains/invoices/services/DocumentFormat";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
@@ -54,6 +58,13 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   receipt: { text: "Receipt issued and payment recorded. Share it below.", tone: "ok" },
   payment: { text: "Payment recorded and a receipt issued. The invoice stays open until the balance is paid.", tone: "ok" },
   paid: { text: "Payment recorded and a receipt issued: the invoice is now paid in full.", tone: "ok" },
+  "confirm-needed": { text: "Not issued yet.", tone: "warn" },
+  accepted: { text: "Acceptance recorded. Convert it to an invoice when ready.", tone: "ok" },
+  "accept-refused": { text: "Acceptance not recorded.", tone: "warn" },
+  "answer-refused": { text: "Not changed.", tone: "warn" },
+  withdrawn: { text: "Acceptance withdrawn: the quote is open again.", tone: "ok" },
+  revision: { text: "Revision drafted. Issuing it supersedes the earlier quote; it needs its own acceptance.", tone: "ok" },
+  "revision-exists": { text: "This quote already has a revision: here it is.", tone: "warn" },
   "payment-duplicate": { text: "That payment was already recorded (the form was sent twice): nothing was added.", tone: "warn" },
   "payment-refused": { text: "Payment not recorded: enter an amount up to the balance due, and the date it arrived.", tone: "warn" },
   "payment-removed": { text: "Payment removed and its receipt voided.", tone: "ok" },
@@ -78,6 +89,11 @@ function Action({ action, label, pending, className = BUTTON, extra }: { action:
   );
 }
 
+/** Now in Dubai as a datetime-local value, "YYYY-MM-DDTHH:mm". */
+function dubaiNow(): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: InvoiceContract.DEFAULT_TIME_ZONE, dateStyle: "short", timeStyle: "short" }).format(new Date()).replace(" ", "T");
+}
+
 export default async function DocumentPage({ params, searchParams }: PageProps<"/admin/invoices/[id]">) {
   await AdminAuth.requireOwner();
   const repo = InvoiceRepository.fromEnv();
@@ -87,11 +103,13 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
   const notice = NOTICES[String(query.notice)];
   const reason = typeof query.reason === "string" ? query.reason : null;
   const emailEnabled = ResendClient.fromEnv() !== null;
-  const [events, related, options, settings] = await Promise.all([
+  const [events, related, options, settings, warnings, revisionId] = await Promise.all([
     repo.events(doc.id),
     repo.related(doc.id),
-    doc.status === "draft" ? InvoiceFormLoader.options() : null,
+    doc.status === "draft" ? InvoiceFormLoader.options(doc.items) : null,
     SettingsRepository.load(),
+    doc.status === "draft" ? IssueChecks.for(repo, doc.id, doc) : IssueChecks.NONE,
+    doc.docType === "quote" && doc.status !== "draft" ? repo.revisionOf(doc.id) : null,
   ]);
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const money = (minor: number) => InvoiceMath.money(minor, doc.currency);
@@ -124,6 +142,22 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
             ? ` · viewed by client ${doc.viewCount}× (first ${formatDubai(doc.firstViewedAt)}, last ${formatDubai(doc.lastViewedAt)})`
             : " · not opened by the client yet")}
       </p>
+      {doc.supersedesId && (
+        <p className="mt-1 text-sm text-muted">
+          Revision of{" "}
+          <Link href={`/admin/invoices/${doc.supersedesId}`} className="font-mono text-quant hover:underline">
+            {doc.supersedesNumber ?? "an earlier quote"}
+          </Link>
+        </p>
+      )}
+      {revisionId && (
+        <p className="mt-1 text-sm text-muted">
+          Revised:{" "}
+          <Link href={`/admin/invoices/${revisionId}`} className="text-quant hover:underline">
+            open the revision
+          </Link>
+        </p>
+      )}
       {doc.relatedId && doc.relatedNumber && (
         <p className="mt-1 text-sm text-muted">
           {doc.docType === "credit_note" ? "Credits invoice" : doc.docType === "receipt" ? "Receipt for invoice" : "From quote"}{" "}
@@ -151,7 +185,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
       {doc.status === "draft" && options ? (
         <>
           <div className="mt-8">
-            <InvoiceForm key={doc.id} id={doc.id} initial={doc} options={options} emailEnabled={emailEnabled} />
+            <InvoiceForm key={doc.id} id={doc.id} initial={doc} options={options} emailEnabled={emailEnabled} submissionKey={randomUUID()} warnings={warnings} />
           </div>
           <div className="mt-10">
             <Action action={deleteDraftInvoice} extra={id} label="Delete this draft" pending="Deleting…" className="text-sm text-red-300/90 hover:underline" />
@@ -174,11 +208,8 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
                 Open invoice {quoteInvoice.number ?? "draft"}
               </Link>
             )}
-            {doc.docType === "quote" && doc.status === "sent" && (
-              <>
-                {!DocumentFormat.isExpired(doc, today) && <Action action={answerQuote} extra={{ ...id, answer: "accepted" }} label="Mark accepted" pending="Saving…" />}
-                <Action action={answerQuote} extra={{ ...id, answer: "declined" }} label="Mark declined" pending="Saving…" />
-              </>
+            {doc.docType === "quote" && ["sent", "accepted", "declined"].includes(doc.status) && !quoteInvoice && !revisionId && (
+              <Action action={reviseQuote} extra={id} label="Revise quote" pending="Drafting…" />
             )}
             {isInvoice && <Action action={copyInvoiceForNextMonth} extra={id} label="Copy for next month" pending="Copying…" />}
             {(isInvoice || doc.docType === "quote") && <Action action={duplicateInvoice} extra={id} label="Duplicate as draft" pending="Copying…" />}
@@ -276,6 +307,94 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
                     Record payment and issue receipt
                   </PendingButton>
                 </form>
+              )}
+            </section>
+          )}
+
+          {doc.docType === "quote" && (doc.status === "sent" || doc.acceptance) && (
+            <section className="mt-8 rounded-lg border border-line p-5">
+              <h2 className="text-lg">Client approval</h2>
+              {doc.acceptance ? (
+                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+                  <dt className="text-muted">Accepted</dt>
+                  <dd>{formatDubai(doc.acceptance.acceptedAt)}</dd>
+                  <dt className="text-muted">By</dt>
+                  <dd>{doc.acceptance.approver}</dd>
+                  <dt className="text-muted">How</dt>
+                  <dd>{InvoiceContract.APPROVAL_METHODS[doc.acceptance.method]}</dd>
+                  {doc.acceptance.notes && (
+                    <>
+                      <dt className="text-muted">Notes</dt>
+                      <dd className="whitespace-pre-line">{doc.acceptance.notes}</dd>
+                    </>
+                  )}
+                  {doc.acceptance.evidenceUrl && (
+                    <>
+                      <dt className="text-muted">Evidence</dt>
+                      <dd className="break-all">
+                        {/* A pointer to the evidence, never fetched or previewed here. */}
+                        <a href={doc.acceptance.evidenceUrl} target="_blank" rel="noopener noreferrer nofollow" className="text-quant hover:underline">
+                          {doc.acceptance.evidenceUrl}
+                        </a>
+                      </dd>
+                    </>
+                  )}
+                  <dt className="text-muted">Recorded</dt>
+                  <dd className="text-muted">
+                    {doc.acceptance.recordedBy}, {formatDubai(doc.acceptance.recordedAt)}
+                  </dd>
+                </dl>
+              ) : DocumentFormat.isExpired(doc, today) ? (
+                <p className="mt-2 text-sm text-muted">Expired on {InvoiceEmails.day(doc.dueDate)}. Revise it to send an updated quote, or record that it was declined.</p>
+              ) : (
+                <form action={acceptQuote} className="mt-4 grid items-end gap-3 sm:grid-cols-3">
+                  <input type="hidden" name="id" value={doc.id} />
+                  <label className="text-xs text-muted">
+                    Accepted on (Dubai time)
+                    <input name="acceptedAt" type="datetime-local" required defaultValue={dubaiNow()} max={dubaiNow()} className={`${FIELD} mt-1`} />
+                  </label>
+                  <label className="text-xs text-muted">
+                    Accepted by
+                    <input name="approver" required maxLength={120} defaultValue={doc.clientName} className={`${FIELD} mt-1`} />
+                  </label>
+                  <label className="text-xs text-muted">
+                    How
+                    <select name="method" defaultValue="whatsapp" className={`${FIELD} mt-1`}>
+                      {Object.entries(InvoiceContract.APPROVAL_METHODS).map(([value, name]) => (
+                        <option key={value} value={value}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs text-muted sm:col-span-3">
+                    Evidence link (optional)
+                    <input name="evidenceUrl" type="url" maxLength={500} placeholder="https:// link to the email, signed copy or chat export" className={`${FIELD} mt-1`} />
+                  </label>
+                  <label className="text-xs text-muted sm:col-span-3">
+                    Notes (optional)
+                    <textarea name="notes" rows={2} maxLength={1000} placeholder="e.g. Confirmed on WhatsApp, screenshot saved" className={`${FIELD} mt-1 resize-y`} />
+                  </label>
+                  <PendingButton pendingLabel="Saving…" className={`${PRIMARY} sm:col-span-3 sm:justify-self-start`}>
+                    Record acceptance
+                  </PendingButton>
+                  <p className="text-xs text-muted sm:col-span-3">A link is a pointer to your evidence, not proof by itself. The acceptance applies to this quote exactly as issued.</p>
+                </form>
+              )}
+              {(doc.status === "sent" || (doc.status === "accepted" && !quoteInvoice)) && (
+                <details className="mt-5">
+                  <summary className="cursor-pointer text-sm text-muted">{doc.status === "sent" ? "Client declined…" : "Withdraw this acceptance…"}</summary>
+                  <form action={doc.status === "sent" ? declineQuote : withdrawAcceptance} className="mt-3 flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="id" value={doc.id} />
+                    <label className="flex-1 text-xs text-muted">
+                      Reason (kept in the history)
+                      <input name="reason" required maxLength={300} className={`${FIELD} mt-1`} />
+                    </label>
+                    <PendingButton pendingLabel="Saving…" className={BUTTON}>
+                      {doc.status === "sent" ? "Mark declined" : "Withdraw acceptance"}
+                    </PendingButton>
+                  </form>
+                </details>
               )}
             </section>
           )}

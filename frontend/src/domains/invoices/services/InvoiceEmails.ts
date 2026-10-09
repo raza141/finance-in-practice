@@ -43,6 +43,16 @@ export class InvoiceEmails {
 
   /** A line's period: "2026-10" -> "October 2026", "2026-10-14" -> "14 Oct 2026"; anything else as typed. */
   static period(value: string): string {
+    // A range: "1–15 October 2026", "1 October–30 November 2026", "1 December 2026–31 January 2027".
+    const range = /^(\d{4})-(\d{2})-(\d{2})\/(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (range) {
+      const long = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
+      const [from, to] = [value.slice(0, 10), value.slice(11)];
+      if (from === to) return long(from);
+      const sameYear = range[1] === range[4];
+      const start = sameYear && range[2] === range[5] ? String(Number(range[3])) : long(from).replace(sameYear ? ` ${range[1]}` : "", "");
+      return `${start}–${long(to)}`;
+    }
     if (/^\d{4}-\d{2}$/.test(value)) {
       return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "long", year: "numeric" }).format(new Date(`${value}-01T00:00:00Z`));
     }
