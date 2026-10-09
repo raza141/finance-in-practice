@@ -143,16 +143,13 @@ export function InvoiceForm({
   const typeLine = (r: Row, text: string) => {
     const service = services.find((s) => !s.archivedAt && CatalogueContract.label(s) === text);
     if (service) {
-      const unit = service.defaultUnit ?? (service.units.includes(r.unit as ItemUnit) ? (r.unit as ItemUnit) : service.units[0]);
+      // No catalogue default and a choice of bases: the user picks one (the server refuses a line without one).
+      const unit = service.defaultUnit ?? (service.units.length === 1 ? service.units[0] : null);
       const linked = { ...r, serviceId: service.id };
+      const base = { serviceId: service.id, description: service.name, detail: r.detail || service.description };
+      if (!unit) return update(r.key, { ...base, unit: "", unitPrice: "", pricingSource: "manual", agreementId: "" });
       layoutFor(unit);
-      return update(r.key, {
-        serviceId: service.id,
-        description: service.name,
-        detail: r.detail || service.description,
-        ...priced(linked, unit, currency),
-        ...(!r.period && { periodKind: BASIS[unit].period }),
-      });
+      return update(r.key, { ...base, ...priced(linked, unit, currency), ...(!r.period && { periodKind: BASIS[unit].period }) });
     }
     const course = courses.find((c) => c.title === text);
     // A course fee is a whole-course price, so billed as a fixed fee; only in the document's currency and into an empty price.

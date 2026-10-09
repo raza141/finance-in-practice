@@ -117,7 +117,8 @@ export function LineEditor({
 }) {
   const n = index + 1;
   const unit = row.unit as ItemUnit;
-  const basis = BASIS[unit] ?? BASIS.hour;
+  // No basis yet (a service with no default): ask for one before anything else.
+  const basis = BASIS[unit] ?? { quantity: "Quantity", price: "Price", period: "date" };
   const units = (service ? service.units : CatalogueContract.UNIT_ORDER).filter((u) => u !== "milestone" || layout === "consultancy" || row.unit === "milestone");
   const kinds = (Object.keys(PERIOD_KINDS) as PeriodKind[]).filter((k) => k !== "tba" || docType === "quote" || row.periodKind === "tba");
   const [from, to] = RANGE.exec(row.period)?.slice(1) ?? ["", ""];
@@ -153,6 +154,7 @@ export function LineEditor({
       <label className="grid gap-1">
         <span className={SMALL}>Basis</span>
         <select aria-label={`Line ${n} billing basis`} value={row.unit} onChange={(e) => onUnit(e.target.value as ItemUnit)} className={`${FIELD} mt-0`}>
+          {!row.unit && <option value="">Choose basis</option>}
           {units.map((value) => (
             <option key={value} value={value}>
               {InvoiceContract.UNITS[value]}

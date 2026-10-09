@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ServicePrice } from "../types";
+import { SERVICE_SEEDS, serviceSeedStatement } from "../../../../scripts/db/service-seeds.mts";
 import { CatalogueContract } from "./CatalogueContract";
 
 const price = (fields: Partial<ServicePrice>): ServicePrice => ({
@@ -67,5 +68,24 @@ describe("CatalogueContract.priceOn", () => {
     expect(CatalogueContract.matches(service, "level i")).toBe(true);
     expect(CatalogueContract.matches(service, "FRM")).toBe(false);
     expect(CatalogueContract.matches(service, " ")).toBe(true);
+  });
+});
+
+describe("recommended catalogue (scripts/db/service-seeds.mts)", () => {
+  it("passes the same validation as the admin form, with unique codes and no regulated services", () => {
+    for (const seed of SERVICE_SEEDS) {
+      const parsed = CatalogueContract.parseService({ ...seed, defaultUnit: seed.defaultUnit ?? "" });
+      expect(parsed, seed.code).toMatchObject({ ok: true, input: { code: seed.code, units: CatalogueContract.UNIT_ORDER.filter((u) => seed.units.includes(u)) } });
+    }
+    expect(new Set(SERVICE_SEEDS.map((s) => s.code)).size).toBe(SERVICE_SEEDS.length);
+    expect(SERVICE_SEEDS.some((s) => /invest/i.test(`${s.name} ${s.description}`))).toBe(false);
+    expect(SERVICE_SEEDS.find((s) => s.code === "CF001")).toMatchObject({ units: ["hour", "month", "session", "package"], defaultUnit: null });
+  });
+  it("inserts archived, never overwrites, and escapes quotes", () => {
+    const sql = serviceSeedStatement();
+    expect(sql).toContain("ON CONFLICT (code) DO NOTHING");
+    expect(sql).toContain("now() FROM v");
+    expect(sql).toContain("the student''s own work");
+    expect(sql).not.toMatch(/UPDATE|DELETE/);
   });
 });

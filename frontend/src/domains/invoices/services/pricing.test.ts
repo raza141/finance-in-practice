@@ -171,3 +171,36 @@ describe("QuoteDiff", () => {
     expect(QuoteDiff.changes(quote, { ...quote, items: [] })).toEqual(["Line “Valuation project” removed"]);
   });
 });
+
+describe("one service, several bases on one document", () => {
+  const parse = (items: object[]) =>
+    InvoiceContract.parseInvoice({ clientName: "Co", currency: "AED", items: JSON.stringify(items), dueDate: "2026-11-15", issueDate: "2026-11-05" });
+  const cf = { serviceId: SERVICE_ID, pricingSource: "catalogue" };
+
+  it("bills CF001 hourly and monthly under the same service, a fee without hours, and keeps each period", () => {
+    const parsed = parse([
+      { ...cf, description: "CFA Level I tutoring", period: "2026-10", unit: "month", quantity: "2", unitPrice: "1500" },
+      { ...cf, description: "CFA Level I tutoring", period: "2026-10-09", unit: "hour", quantity: "1.5", unitPrice: "500" },
+      { description: "Valuation review", period: "2026-10-01/2026-11-30", unit: "fee", quantity: "1", unitPrice: "5000" },
+    ]);
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
+    const verified = LinePricing.verify(parsed.input.items, [service], [], context);
+    if (typeof verified === "string") throw new Error(verified);
+    expect(verified.map((i) => [i.serviceId, i.unit, i.quantity, i.amountMinor, i.pricingSource, i.period])).toEqual([
+      [SERVICE_ID, "month", 2, 300_000, "catalogue", "2026-10"],
+      [SERVICE_ID, "hour", 1.5, 75_000, "catalogue", "2026-10-09"],
+      [undefined, "fee", 1, 500_000, "manual", "2026-10-01/2026-11-30"],
+    ]);
+    // October's work invoiced on 5 November still prints October.
+    expect(InvoiceEmails.period(verified[0].period!)).toBe("October 2026");
+  });
+  it("never turns a missing price or basis into a zero line", () => {
+    expect(parse([{ ...cf, description: "CFA", period: "2026-10", unit: "month", quantity: "1", unitPrice: "" }]).ok).toBe(false);
+    expect(parse([{ ...cf, description: "CFA", period: "2026-10", unit: "", quantity: "1", unitPrice: "1500" }]).ok).toBe(false);
+  });
+  it("keeps a typed override on the draft line only, marked manual", () => {
+    const verified = LinePricing.verify([line({ serviceId: SERVICE_ID, period: "2026-10", pricingSource: "catalogue", unitMinor: 140_000, amountMinor: 140_000 })], [service], [], context);
+    expect(Array.isArray(verified) && verified[0]).toMatchObject({ unitMinor: 140_000, pricingSource: "manual" });
+    expect(service.prices[0].rateMinor).toBe(150_000);
+  });
+});
