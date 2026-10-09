@@ -88,8 +88,6 @@ export function LineEditor({
   layout,
   currency,
   service,
-  services,
-  courses,
   agreements,
   amount,
   canRemove,
@@ -106,9 +104,6 @@ export function LineEditor({
   currency: Currency;
   /** The linked service, if any (archived ones included, for older drafts). */
   service: Service | undefined;
-  /** Active services offered in the search box. */
-  services: readonly Service[];
-  courses: readonly string[];
   /** This client's agreements for the linked service, in force on the line's date. */
   agreements: readonly Agreement[];
   amount: string;
@@ -126,7 +121,8 @@ export function LineEditor({
   const units = (service ? service.units : CatalogueContract.UNIT_ORDER).filter((u) => u !== "milestone" || layout === "consultancy" || row.unit === "milestone");
   const kinds = (Object.keys(PERIOD_KINDS) as PeriodKind[]).filter((k) => k !== "tba" || docType === "quote" || row.periodKind === "tba");
   const [from, to] = RANGE.exec(row.period)?.slice(1) ?? ["", ""];
-  const listId = `services-${row.key}`;
+  // A fixed amount is billed once; a stored quantity other than 1 (an older line) stays editable so it can be fixed.
+  const showQuantity = basis.quantity !== null || Number(row.quantity) !== 1;
 
   return (
     <li className="grid gap-2 border-b border-line/60 pb-4 sm:grid-cols-[1fr_8rem_5rem_8rem_8rem_4rem] sm:items-end sm:gap-3">
@@ -146,21 +142,13 @@ export function LineEditor({
         </span>
         <input
           aria-label={`Line ${n} service or description`}
-          list={listId}
+          list={LineEditor.LIST}
           placeholder="Type a code, a service name, or a one-off description"
           maxLength={200}
           value={row.description}
           onChange={(e) => onText(e.target.value)}
           className={`${FIELD} mt-0`}
         />
-        <datalist id={listId}>
-          {services.map((s) => (
-            <option key={s.id} value={CatalogueContract.label(s)} />
-          ))}
-          {courses.map((title) => (
-            <option key={title} value={title} />
-          ))}
-        </datalist>
       </div>
       <label className="grid gap-1">
         <span className={SMALL}>Basis</span>
@@ -173,9 +161,9 @@ export function LineEditor({
         </select>
       </label>
       <label className="grid gap-1">
-        <span className={SMALL}>{basis.quantity ?? "Qty"}</span>
-        {basis.quantity ? (
-          <input aria-label={`Line ${n} ${basis.quantity.toLowerCase()}`} inputMode="decimal" value={row.quantity} onChange={(e) => onChange({ quantity: e.target.value })} className={`${FIELD} mt-0`} />
+        <span className={SMALL}>{basis.quantity ?? (showQuantity ? "Qty (must be 1)" : "Qty")}</span>
+        {showQuantity ? (
+          <input aria-label={`Line ${n} ${(basis.quantity ?? "quantity").toLowerCase()}`} inputMode="decimal" value={row.quantity} onChange={(e) => onChange({ quantity: e.target.value })} className={`${FIELD} mt-0`} />
         ) : (
           <span className="py-2 text-sm text-muted">1</span>
         )}
@@ -267,5 +255,22 @@ export function LineEditor({
         </label>
       )}
     </li>
+  );
+}
+
+/** The one <datalist> every line's service box searches (rendered by the form). */
+LineEditor.LIST = "line-services";
+
+/** Services (by "code · name") and course titles for the line search. */
+export function LineSearchList({ services, courses }: { services: readonly Service[]; courses: readonly string[] }) {
+  return (
+    <datalist id={LineEditor.LIST}>
+      {services.map((s) => (
+        <option key={s.id} value={CatalogueContract.label(s)} />
+      ))}
+      {courses.map((title) => (
+        <option key={title} value={title} />
+      ))}
+    </datalist>
   );
 }

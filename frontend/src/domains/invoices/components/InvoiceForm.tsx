@@ -18,7 +18,7 @@ import { InvoiceMath } from "../services/InvoiceMath";
 import { LinePricing } from "../services/LinePricing";
 import type { Agreement, BankAccount, Client, ConsultancySections, Currency, DocumentLayout, Invoice, InvoiceInput, ItemUnit, PaymentTerms } from "../types";
 import { DocumentView } from "./DocumentView";
-import { BASIS, LineEditor, periodKind, toDraft, toRow, type Row } from "./LineEditor";
+import { BASIS, LineEditor, LineSearchList, periodKind, toDraft, toRow, type Row } from "./LineEditor";
 
 const noSubscribe = () => () => {};
 const issuePrompt = (label: string) => `Issue this ${label}? It gets its number and can no longer be edited (void and duplicate it to change it).`;
@@ -129,9 +129,14 @@ export function InvoiceForm({
     return { unit, ...fixed, unitPrice: rate !== null && cur === settings.currency ? InvoiceMath.majorInput(rate) : "", pricingSource: "manual", agreementId: "" };
   };
 
+  /** Milestones print in the consultancy layout. */
+  const layoutFor = (unit: ItemUnit) => {
+    if (unit === "milestone") setLayout("consultancy");
+  };
+
   const pickUnit = (r: Row, unit: ItemUnit) => {
     update(r.key, { ...priced(r, unit, currency), ...(!r.period && { periodKind: BASIS[unit].period }) });
-    if (unit === "milestone") setLayout("consultancy");
+    layoutFor(unit);
   };
 
   /** Text in a line's service box: a catalogue label links the service; a course title fills its fee; anything else is the description. */
@@ -140,6 +145,7 @@ export function InvoiceForm({
     if (service) {
       const unit = service.defaultUnit ?? (service.units.includes(r.unit as ItemUnit) ? (r.unit as ItemUnit) : service.units[0]);
       const linked = { ...r, serviceId: service.id };
+      layoutFor(unit);
       return update(r.key, {
         serviceId: service.id,
         description: service.name,
@@ -158,6 +164,7 @@ export function InvoiceForm({
 
   const pickAgreement = (r: Row, agreement: Agreement | null) => {
     if (!agreement) return update(r.key, priced(r, r.unit as ItemUnit, currency));
+    layoutFor(agreement.unit);
     update(r.key, {
       unit: agreement.unit,
       ...(BASIS[agreement.unit].quantity === null && { quantity: "1" }),
@@ -341,6 +348,7 @@ export function InvoiceForm({
           </label>
         </legend>
         <input type="hidden" name="items" value={JSON.stringify(rows.map(toDraft))} />
+        <LineSearchList services={activeServices} courses={courses.map((c) => c.title)} />
         <ol className="mt-2 grid gap-4">
           {rows.map((r, index) => {
             const service = serviceOf(r);
@@ -353,8 +361,6 @@ export function InvoiceForm({
                 layout={layout}
                 currency={currency}
                 service={service}
-                services={activeServices}
-                courses={courses.map((c) => c.title)}
                 agreements={service && client.clientId ? LinePricing.agreementsFor(agreements, client.clientId, service.id, lineDate(r)) : []}
                 amount={money(amounts[index])}
                 canRemove={rows.length > 1}
