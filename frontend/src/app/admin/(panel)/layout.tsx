@@ -7,7 +7,7 @@ import { AdminNavigation } from "@/domains/admin/services/AdminNavigation";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const admin = await AdminAuth.require();
-  const modules = new AdminNavigation().all();
+  const modules = new AdminNavigation().all(admin.role);
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">

@@ -39,6 +39,13 @@ export class AdminAuth {
     return admin;
   }
 
+  /** An owner: billing (documents, clients, payments, settings) is owner-only. Editors go to the Research Terminal. */
+  static async requireOwner(): Promise<AdminUser> {
+    const admin = await AdminAuth.require();
+    if (admin.role !== "owner") redirect("/admin/journal");
+    return admin;
+  }
+
   static async loginWithPassword(email: string, password: string): Promise<AuthResult> {
     const repo = AdminRepository.fromEnv();
     if (!repo) return { ok: false, message: "Admin login is unavailable: the database is not configured." };

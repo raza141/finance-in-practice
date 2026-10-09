@@ -11,7 +11,8 @@ export type ItemUnit = "month" | "session" | "hour" | "milestone" | "fee";
 /** Units on documents issued before migration 029; shown as issued, never offered for new lines. */
 export type LegacyUnit = "on-demand" | "contract";
 
-export type PaymentTerms = "upfront" | "on_receipt" | "net7" | "net14" | "monthly" | "after_delivery";
+/** "custom" counts `termsDays`; "date" keeps the typed due date. "monthly" and "after_delivery" are kept for documents issued before migration 030. */
+export type PaymentTerms = "upfront" | "on_receipt" | "net7" | "net14" | "net30" | "custom" | "date" | "monthly" | "after_delivery";
 export type PaymentMethod = "bank" | "cash" | "card";
 export type DocumentLayout = "standard" | "consultancy";
 
@@ -63,13 +64,15 @@ export interface InvoiceInput {
   /** Basis points: 500 = 5%. */
   taxRateBp: number;
   trn: string;
-  /** YYYY-MM-DD. */
+  /** YYYY-MM-DD. Invoices with day-count terms are re-dated from the issue date when issued; quotes: valid until. */
   dueDate: string;
   notes: string;
   paymentInstructions: string;
   /** The bank shown under "Payment information"; its details are snapshotted on save. */
   bankAccountId: string | null;
   paymentTerms: PaymentTerms;
+  /** Days to pay with "custom" terms; null otherwise. */
+  termsDays: number | null;
   /** A pasted card / online payment URL; printed as "Pay online" when card payments are on in Settings. */
   paymentLink: string;
   layout: DocumentLayout;

@@ -24,14 +24,14 @@ export interface BankFormState {
 }
 
 async function clients(): Promise<ClientRepository> {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = ClientRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
   return repo;
 }
 
 async function banks(): Promise<BankAccountRepository> {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = BankAccountRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
   return repo;

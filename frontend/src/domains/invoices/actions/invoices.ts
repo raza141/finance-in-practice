@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Database } from "@/core/db/Database";
 import { ApiError } from "@/core/http/ApiError";
 import { ResendClient } from "@/core/email/ResendClient";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
@@ -48,7 +49,7 @@ const NO_SECTIONS = { scope: "", deliverables: "", expenses: "", assumptions: ""
 
 /** The repository, and who is acting (for the document history). */
 async function session(): Promise<{ repo: InvoiceRepository; actor: string }> {
-  const admin = await AdminAuth.require();
+  const admin = await AdminAuth.requireOwner();
   const repo = InvoiceRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
   return { repo, actor: admin.name || admin.email };
@@ -108,12 +109,20 @@ function taxProblem(doc: Invoice): string | null {
   return null;
 }
 
-/** Draft -> issued with the type's prefix, after the checks the type needs. Returns an error message, or null. */
+/**
+ * Draft -> issued with the type's prefix, after the checks the type needs. An
+ * invoice with day-count terms is due that many days after its issue date (set
+ * in the same statement); with "date" terms the typed date must not be past.
+ * Returns an error message, or null.
+ */
 async function issueDocument(repo: InvoiceRepository, id: string, settings: BillingSettings, actor: string): Promise<string | null> {
   const doc = await repo.byId(id);
   if (!doc || doc.status !== "draft") return "This document was already issued or deleted.";
   const problem = taxProblem(doc);
   if (problem) return problem;
+  const dueDays = doc.docType === "invoice" ? InvoiceContract.termDays(doc.paymentTerms, doc.termsDays) : null;
+  if (doc.docType === "invoice" && dueDays === null && doc.dueDate < today()) return "The due date is before today: choose a later date or day-count terms.";
+  if (doc.docType === "quote" && doc.dueDate < today()) return "The valid-until date has passed: choose a later date.";
   if (doc.docType === "credit_note") {
     const invoice = doc.relatedId ? await repo.byId(doc.relatedId) : null;
     if (!invoice || (invoice.status !== "sent" && invoice.status !== "paid")) return "A credit note needs an issued invoice (open or paid).";
@@ -122,7 +131,7 @@ async function issueDocument(repo: InvoiceRepository, id: string, settings: Bill
     const creditable = DocumentFormat.creditable(invoice);
     if (doc.totalMinor > creditable) return `The credit is larger than what is left to credit on the invoice (${InvoiceMath.money(creditable, invoice.currency)}).`;
   }
-  if (!(await repo.issue(id, settings.prefixes[doc.docType], actor))) return "This document was already issued.";
+  if (!(await repo.issue(id, settings.prefixes[doc.docType], actor, dueDays))) return "This document was already issued.";
   if (doc.docType === "credit_note" && doc.relatedId) await repo.settleIfCovered(doc.relatedId, actor);
   return null;
 }
@@ -238,6 +247,7 @@ async function paymentReceipt(repo: InvoiceRepository, invoice: Invoice, payment
       paymentInstructions: "",
       bankAccountId: null,
       paymentTerms: "upfront",
+      termsDays: null,
       paymentLink: "",
       layout: "standard",
       sections: NO_SECTIONS,
@@ -275,10 +285,13 @@ export async function recordInvoicePayment(formData: FormData): Promise<void> {
   const path = `/admin/invoices/${id}`;
   const parsed = InvoiceContract.parsePayment(Object.fromEntries(formData));
   if (typeof parsed === "string") redirect(withReason(path, "payment-refused", parsed));
+  // The same form sent twice (double-click, retry): the first one already recorded it.
+  if (parsed.submissionKey && (await repo.paymentByKey(parsed.submissionKey))) redirect(`${path}?notice=payment-duplicate`);
   const proof = await storeProof(formData, id);
   if (typeof proof === "string") redirect(withReason(path, "payment-refused", proof));
   const payment: PaymentRecord = { ...parsed, proofUrl: proof.url };
   const result = await repo.addPayment(id, payment, actor);
+  if (!result && payment.submissionKey && (await repo.paymentByKey(payment.submissionKey))) redirect(`${path}?notice=payment-duplicate`);
   if (!result) redirect(withReason(path, "payment-refused"));
   const invoice = await repo.byId(id);
   if (invoice) await paymentReceipt(repo, invoice, result.paymentId, payment.amountMinor, payment.paidOn, await SettingsRepository.load());
@@ -323,7 +336,7 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
   const dueDate = nextMonth
     ? InvoiceMath.addMonths(source.dueDate, 1)
     : mode === "invoice-from-quote"
-      ? InvoiceContract.dueDate(source.paymentTerms, today())
+      ? InvoiceContract.dueDate(source.paymentTerms, today(), source.termsDays)
       : mode === "credit-note"
         ? today()
         : source.dueDate;
@@ -351,6 +364,7 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
     paymentInstructions: billable ? source.paymentInstructions : "",
     bankAccountId: billable ? source.bankAccountId : null,
     paymentTerms: source.paymentTerms,
+    termsDays: source.termsDays,
     paymentLink: billable ? source.paymentLink : "",
     layout: source.layout,
     sections: source.sections,
@@ -391,13 +405,26 @@ export async function answerQuote(formData: FormData): Promise<void> {
   redirect(`/admin/invoices/${id}`);
 }
 
-/** Quote -> invoice in one step: the quote is marked accepted and the new draft keeps a link to it. */
+/**
+ * Accepted quote -> one invoice draft linked to it. A quote that already has a
+ * live invoice opens that one instead: a unique index backs this up when two
+ * conversions race (double-click, retry). Void the invoice to convert again.
+ */
 export async function convertQuote(formData: FormData): Promise<void> {
   const { repo, actor } = await session();
   const quote = await repo.byId(String(formData.get("id")));
-  if (!quote || quote.docType !== "quote" || quote.status === "draft" || quote.status === "void") return;
-  if (quote.status === "sent") await repo.answerQuote(quote.id, "accepted", actor);
-  redirect(`/admin/invoices/${await copyAsDraft(repo, quote, "invoice-from-quote", actor)}?notice=from-quote`);
+  if (!quote || quote.docType !== "quote" || quote.status !== "accepted") return;
+  const existing = await repo.invoiceFromQuote(quote.id);
+  if (existing) redirect(`/admin/invoices/${existing}?notice=quote-invoiced`);
+  let id: string;
+  try {
+    id = await copyAsDraft(repo, quote, "invoice-from-quote", actor);
+  } catch (error) {
+    const raced = Database.isUniqueViolation(error) ? await repo.invoiceFromQuote(quote.id) : null;
+    if (!raced) throw error;
+    redirect(`/admin/invoices/${raced}?notice=quote-invoiced`);
+  }
+  redirect(`/admin/invoices/${id}?notice=from-quote`);
 }
 
 /** A draft credit note against an issued invoice (open or paid), prefilled with its lines (edit them down to the amount credited). */
@@ -423,6 +450,8 @@ export async function saveQuickReceipt(_state: QuickReceiptFormState, formData: 
   const parsed = InvoiceContract.parseQuickReceipt(Object.fromEntries(formData));
   if (!parsed.ok) return { errors: parsed.errors, message: "Please fix the highlighted fields." };
   const { client, currency, service, payment } = parsed.input;
+  const recorded = payment.submissionKey && (await repo.paymentByKey(payment.submissionKey));
+  if (recorded) redirect(`/admin/invoices/${recorded}?notice=receipt`);
   const settings = await SettingsRepository.load();
   const taxRateBp = settings.vat.registered ? settings.vat.rateBp : 0;
   // ponytail: the net price is rounded to the fil, so with VAT the receipt total can differ from the typed amount by 0.01.
@@ -444,6 +473,7 @@ export async function saveQuickReceipt(_state: QuickReceiptFormState, formData: 
       paymentInstructions: "",
       bankAccountId: null,
       paymentTerms: "upfront",
+      termsDays: null,
       paymentLink: "",
       layout: "standard",
       sections: NO_SECTIONS,
@@ -457,6 +487,12 @@ export async function saveQuickReceipt(_state: QuickReceiptFormState, formData: 
   const total = InvoiceMath.totals([unitMinor], 0, input.taxRateBp).totalMinor;
   const result = await repo.addPayment(id, { ...payment, amountMinor: total, proofUrl: null }, actor);
   if (result) await repo.completeReceipt(id, result.paymentId);
+  // Lost a race with the same form sent twice: void this copy (its number stays used) and open the first.
+  const first = !result && payment.submissionKey ? await repo.paymentByKey(payment.submissionKey) : null;
+  if (first) {
+    await repo.voidQuickReceipt(id, actor);
+    redirect(`/admin/invoices/${first}?notice=receipt`);
+  }
   redirect(`/admin/invoices/${id}?notice=receipt`);
 }
 

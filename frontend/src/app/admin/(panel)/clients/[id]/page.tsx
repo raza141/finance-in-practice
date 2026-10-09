@@ -24,7 +24,7 @@ const LEDGER_KIND = { invoice: "Invoice", receipt: "Receipt", credit_note: "Cred
 
 /** Edit a saved client; see their account (running balance), statements and every document. */
 export default async function ClientPage({ params }: PageProps<"/admin/clients/[id]">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const { id } = await params;
   const client = await ClientRepository.fromEnv()?.byId(id);
   if (!client) notFound();

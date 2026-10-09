@@ -27,7 +27,7 @@ const LINK = "h-10 rounded-md border border-line px-4 py-2 text-sm text-muted ho
 
 /** Every billing document, newest first, filtered by type with `?type=`. */
 export default async function AdminInvoicesPage({ searchParams }: PageProps<"/admin/invoices">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = InvoiceRepository.fromEnv();
   if (!repo) {
     return (

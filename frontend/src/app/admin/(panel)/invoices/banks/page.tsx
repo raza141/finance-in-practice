@@ -13,7 +13,7 @@ const NOTICES: Record<string, string> = { saved: "Bank account saved.", added: "
 
 /** The one place bank details are set up; the default is preselected on new invoices. */
 export default async function BankAccountsPage({ searchParams }: PageProps<"/admin/invoices/banks">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = BankAccountRepository.fromEnv();
   if (!repo) {
     return (

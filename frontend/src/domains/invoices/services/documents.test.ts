@@ -81,6 +81,17 @@ describe("terms, periods and new document fields", () => {
     expect(InvoiceContract.dueDate("net7", "2026-10-06")).toBe("2026-10-13");
     expect(InvoiceContract.dueDate("net14", "2026-12-25")).toBe("2027-01-08");
     expect(InvoiceContract.dueDate("on_receipt", "2026-10-06")).toBe("2026-10-06");
+    expect(InvoiceContract.dueDate("net30", "2026-10-06")).toBe("2026-11-05");
+    expect(InvoiceContract.dueDate("custom", "2026-10-06", 21)).toBe("2026-10-27");
+  });
+  it("counts days only for day-count terms, and prints custom terms as Net N", () => {
+    expect(InvoiceContract.termDays("date")).toBeNull();
+    expect(InvoiceContract.termDays("custom", 0)).toBe(0);
+    expect(InvoiceContract.termDays("monthly")).toBe(7);
+    expect(InvoiceContract.termsLabel("custom", 21)).toBe("Net 21 days");
+    expect(InvoiceContract.termsLabel("custom", 0)).toBe("Due on receipt");
+    expect(InvoiceContract.termsLabel("net14", null)).toBe("Net 14 days");
+    expect(InvoiceContract.OFFERED_TERMS).not.toContain("monthly");
   });
   it("moves a period on by a month", () => {
     expect(InvoiceMath.nextPeriod("2026-12")).toBe("2027-01");
@@ -107,6 +118,25 @@ describe("terms, periods and new document fields", () => {
     expect(bad.ok ? null : bad.errors.paymentLink).toBeTruthy();
     const good = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentLink: "https://pay.example/x" }));
     expect(good.ok && good.input.paymentLink).toBe("https://pay.example/x");
+  });
+  it("needs a day count for custom terms, and keeps explicit dates off quotes", () => {
+    const custom = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "custom", termsDays: "21" }));
+    expect(custom.ok && custom.input).toMatchObject({ paymentTerms: "custom", termsDays: 21 });
+    for (const termsDays of ["", "-1", "366", "2.5"]) {
+      const bad = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "custom", termsDays }));
+      expect(bad.ok ? null : bad.errors.paymentTerms).toBeTruthy();
+    }
+    const net = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "net30", termsDays: "9" }));
+    expect(net.ok && net.input.termsDays).toBeNull();
+    const quote = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "date", docType: "quote" }));
+    expect(quote.ok ? null : quote.errors.paymentTerms).toBeTruthy();
+  });
+  it("reads a payment's submission key, refusing anything but a UUID", () => {
+    const base = { amount: "450", paidOn: "2026-10-06" };
+    const key = "6f1c2a4e-1b2c-4d3e-8f90-123456789abc";
+    expect(InvoiceContract.parsePayment({ ...base, submissionKey: key })).toMatchObject({ submissionKey: key });
+    expect(InvoiceContract.parsePayment(base)).toMatchObject({ submissionKey: null });
+    expect(typeof InvoiceContract.parsePayment({ ...base, submissionKey: "x' OR 1=1" })).toBe("string");
   });
   it("parses a Quick Receipt", () => {
     const parsed = InvoiceContract.parseQuickReceipt({ clientName: "Ali", service: "CFA session", amount: "450", paidOn: "2026-10-06", method: "cash", currency: "AED" });

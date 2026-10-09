@@ -141,6 +141,8 @@ describe("InvoiceContract.parseClient / parseBank", () => {
       { description: "CFA Level I", unit: "month", quantity: 1, unitMinor: 150_000, amountMinor: 150_000 },
       { description: "FRM Part I", unit: "month", quantity: 1, unitMinor: 150_000, amountMinor: 150_000 },
     ]);
+    // A fee without a basis is not offered as an hourly rate: the price is left empty.
+    expect(InvoiceContract.planItems({ ...client, planUnit: null }).map((item) => item.unitMinor)).toEqual([0, 0]);
     expect(InvoiceContract.planSummary(client)).toBe("AED 1,500.00 · Monthly");
     expect(InvoiceContract.planSummary({ planUnit: null, planFeeMinor: null, planCurrency: "AED" })).toBe("");
   });
@@ -233,6 +235,16 @@ describe("emails", () => {
     expect(message.text).not.toContain("Branch");
     expect(message.html).toContain("Emirates NBD");
   });
+
+  it("leaves bank details and the due date out of a paid invoice's email", () => {
+    const bank = { bankName: "Emirates NBD", accountTitle: "M A Raza", accountNumber: "", iban: "AE07 0331", branch: "", swift: "" };
+    const payment = { id: "p", amountMinor: 100, paidOn: "2026-10-07", note: "", method: "bank" as const, reference: "", proofUrl: null, receiptId: null };
+    const invoice = issued({ number: "FIP-2026-0009", clientName: "Sara", totalMinor: 100, paidMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", bank, status: "paid", payments: [payment] });
+    const message = InvoiceEmails.document(invoice, "https://x.test/invoice/tok", SETTINGS);
+    expect(message.text).not.toContain("AE07 0331");
+    expect(message.text).not.toContain("Due:");
+    expect(message.text).toContain("Paid on");
+  });
 });
 
 describe("ResendClient", () => {
@@ -285,7 +297,7 @@ describe("InvoiceEmails.whatsapp", () => {
 
 describe("InvoiceContract payments and optional email", () => {
   it("parses a payment and rejects a bad amount or date", () => {
-    expect(InvoiceContract.parsePayment({ amount: "1,500", paidOn: "2026-10-06", note: " Advance " })).toEqual({ amountMinor: 150000, paidOn: "2026-10-06", note: "Advance", method: "bank", reference: "" });
+    expect(InvoiceContract.parsePayment({ amount: "1,500", paidOn: "2026-10-06", note: " Advance " })).toEqual({ amountMinor: 150000, paidOn: "2026-10-06", note: "Advance", method: "bank", reference: "", submissionKey: null });
     expect(typeof InvoiceContract.parsePayment({ amount: "0", paidOn: "2026-10-06" })).toBe("string");
     expect(typeof InvoiceContract.parsePayment({ amount: "100", paidOn: "06/10/2026" })).toBe("string");
   });

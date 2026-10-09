@@ -22,7 +22,7 @@ async function monthOf(searchParams: PageProps<"/admin/statement/[clientId]">["s
 
 /** File name: "Statement-2026-10-Khawla-Abdullah". */
 export async function generateMetadata({ params, searchParams }: PageProps<"/admin/statement/[clientId]">): Promise<Metadata> {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const client = await ClientRepository.fromEnv()?.byId((await params).clientId);
   const name = client?.name.trim().replace(/[^\p{L}\p{N}]+/gu, "-") ?? "client";
   return { title: { absolute: `Statement-${await monthOf(searchParams)}-${name}` }, robots: { index: false, follow: false } };
@@ -30,7 +30,7 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/adm
 
 /** A client's monthly statement, opened straight into the print dialog. Admins only. */
 export default async function StatementPage({ params, searchParams }: PageProps<"/admin/statement/[clientId]">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const { clientId } = await params;
   const [client, entries, settings] = await Promise.all([
     ClientRepository.fromEnv()?.byId(clientId),

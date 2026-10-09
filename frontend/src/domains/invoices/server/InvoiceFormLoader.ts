@@ -7,7 +7,7 @@ import type { InvoiceFormOptions } from "../components/InvoiceForm";
 import { BankAccountRepository } from "./BankAccountRepository";
 import { ClientRepository } from "./ClientRepository";
 
-/** The saved clients, bank accounts and courses the invoice form picks from. */
+/** The saved clients, bank accounts and active courses the invoice form picks from. */
 export class InvoiceFormLoader {
   static async options(): Promise<InvoiceFormOptions> {
     const [clients, banks, courses, settings] = await Promise.all([
@@ -20,7 +20,7 @@ export class InvoiceFormLoader {
       clients,
       banks,
       settings,
-      courses: courses.map(({ title, priceMinor, currency }) => ({ title, priceMinor, currency })),
+      courses: courses.filter((course) => course.isActive).map(({ title, priceMinor, currency }) => ({ title, priceMinor, currency })),
     };
   }
 }

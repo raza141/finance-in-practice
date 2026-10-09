@@ -7,7 +7,7 @@ import { SettingsRepository } from "@/domains/settings/server/SettingsRepository
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const settings = await SettingsRepository.load();
   return (
     <div className="max-w-4xl">

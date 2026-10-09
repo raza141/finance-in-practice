@@ -12,14 +12,14 @@ import { SettingsRepository } from "@/domains/settings/server/SettingsRepository
 
 /** The page title becomes the PDF's file name: "Invoice-FIP-INV-2026-0002-Khawla-Abdullah". */
 export async function generateMetadata({ params }: PageProps<"/admin/invoice-pdf/[id]">): Promise<Metadata> {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const doc = await InvoiceRepository.fromEnv()?.byId((await params).id);
   return { title: { absolute: doc ? DocumentFormat.filename(doc) : "Document" }, robots: { index: false, follow: false } };
 }
 
 /** A document opened straight into the print dialog, to "Save as PDF" for WhatsApp. Admins only; doesn't count as a client view. */
 export default async function DocumentPdfPage({ params }: PageProps<"/admin/invoice-pdf/[id]">) {
-  const admin = await AdminAuth.require();
+  const admin = await AdminAuth.requireOwner();
   const repo = InvoiceRepository.fromEnv();
   const [doc, settings] = await Promise.all([repo?.byId((await params).id), SettingsRepository.load()]);
   if (!repo || !doc) notFound();

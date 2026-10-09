@@ -10,7 +10,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 export const metadata: Metadata = { title: "Clients" };
 
 export default async function AdminClientsPage() {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = ClientRepository.fromEnv();
   if (!repo) {
     return (

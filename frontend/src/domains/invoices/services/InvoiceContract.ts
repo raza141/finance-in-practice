@@ -34,6 +34,8 @@ export interface PaymentInput {
   note: string;
   method: PaymentMethod;
   reference: string;
+  /** One per rendered form: a second submit of the same form records nothing. */
+  submissionKey: string | null;
 }
 
 /** A Quick Receipt as the form submits it, validated. */
@@ -77,8 +79,23 @@ export class InvoiceContract {
     on_receipt: "Due on receipt",
     net7: "Net 7 days",
     net14: "Net 14 days",
+    net30: "Net 30 days",
+    custom: "Custom days",
+    date: "Due by date",
     monthly: "Monthly",
     after_delivery: "Pay after delivery",
+  };
+  /** Terms offered for new documents; the rest stay valid on documents that already use them. */
+  static readonly OFFERED_TERMS: readonly PaymentTerms[] = ["on_receipt", "net7", "net14", "net30", "custom", "date"];
+  /** Days from issue to due for each term; "custom" uses the document's own count, "date" has none. */
+  private static readonly TERM_DAYS: Readonly<Record<Exclude<PaymentTerms, "custom" | "date">, number>> = {
+    upfront: 0,
+    on_receipt: 0,
+    net7: 7,
+    net14: 14,
+    net30: 30,
+    monthly: 7,
+    after_delivery: 30,
   };
   static readonly PAYMENT_METHODS: Readonly<Record<PaymentMethod, string>> = { bank: "Bank transfer", cash: "Cash", card: "Card / online link" };
   static readonly LAYOUTS: Readonly<Record<DocumentLayout, string>> = { standard: "Standard", consultancy: "Consultancy" };
@@ -185,6 +202,9 @@ export class InvoiceContract {
     if (relatedId && !InvoiceContract.UUID.test(relatedId)) errors.relatedId = "Invalid linked document.";
     const paymentTerms = (text("paymentTerms") || "net7") as PaymentTerms;
     if (!Object.hasOwn(InvoiceContract.PAYMENT_TERMS, paymentTerms)) errors.paymentTerms = "Choose payment terms.";
+    else if (paymentTerms === "date" && docType === "quote") errors.paymentTerms = "A quote proposes terms in days; its date is the valid-until date.";
+    const termsDays = paymentTerms === "custom" ? Number(text("termsDays")) : null;
+    if (termsDays !== null && !(/^\d{1,3}$/.test(text("termsDays")) && termsDays <= 365)) errors.paymentTerms = "Enter the days to pay, 0 to 365.";
     const paymentLink = text("paymentLink");
     if (paymentLink && (!/^https:\/\/\S+$/i.test(paymentLink) || paymentLink.length > 500)) errors.paymentLink = "Paste a full https:// link, or leave it empty.";
     const layout = (text("layout") || "standard") as DocumentLayout;
@@ -219,6 +239,7 @@ export class InvoiceContract {
         paymentInstructions,
         bankAccountId: bankAccountId || null,
         paymentTerms,
+        termsDays,
         paymentLink,
         layout,
         sections: layout === "consultancy" ? sections : { scope: "", deliverables: "", expenses: "", assumptions: "" },
@@ -227,9 +248,12 @@ export class InvoiceContract {
     };
   }
 
-  /** Invoice lines for a client's courses on their payment plan: one per course, at the plan fee. */
+  /**
+   * Invoice lines for a client's courses on their payment plan: one per course, at the plan fee.
+   * The fee belongs to the plan's basis, so without a basis no price is filled in (0 = left empty, never a zero price).
+   */
   static planItems(client: Pick<Client, "courses" | "planUnit" | "planFeeMinor">): InvoiceItem[] {
-    const unitMinor = client.planFeeMinor ?? 0;
+    const unitMinor = client.planUnit ? (client.planFeeMinor ?? 0) : 0;
     return client.courses.map((description) => ({
       description,
       unit: client.planUnit ?? "hour",
@@ -391,7 +415,9 @@ export class InvoiceContract {
     if (reference.length > 80) return "Keep the reference under 80 characters.";
     const note = text("note");
     if (note.length > 80) return "Keep the note under 80 characters.";
-    return { amountMinor, paidOn, note, method, reference };
+    const submissionKey = text("submissionKey");
+    if (submissionKey && !InvoiceContract.UUID.test(submissionKey)) return "The form is out of date: reload the page.";
+    return { amountMinor, paidOn, note, method, reference, submissionKey: submissionKey || null };
   }
 
   /**
@@ -421,12 +447,21 @@ export class InvoiceContract {
     return { ok: true, input: { client: { clientId: clientId || null, clientName, clientEmail, clientPhone }, currency, service, payment } };
   }
 
-  /** The due date a payment term implies, counted from `from` (YYYY-MM-DD). */
-  static dueDate(terms: PaymentTerms, from: string): string {
-    const days: Record<PaymentTerms, number> = { upfront: 0, on_receipt: 0, net7: 7, net14: 14, monthly: 7, after_delivery: 30 };
-    const date = new Date(`${from}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + days[terms]);
-    return date.toISOString().slice(0, 10);
+  /** Days from issue to due, or null for "date" terms (the typed date stands). */
+  static termDays(terms: PaymentTerms, termsDays: number | null = null): number | null {
+    if (terms === "date") return null;
+    return terms === "custom" ? (termsDays ?? 0) : InvoiceContract.TERM_DAYS[terms];
+  }
+
+  /** The due date day-count terms imply, counted from the issue date `from` (YYYY-MM-DD). "date" terms return `from`. */
+  static dueDate(terms: PaymentTerms, from: string, termsDays: number | null = null): string {
+    return ZonedCalendar.addDays(from, InvoiceContract.termDays(terms, termsDays) ?? 0);
+  }
+
+  /** How the terms print: "Net 7 days", custom counts as "Net 21 days", 0 days as "Due on receipt". */
+  static termsLabel(terms: PaymentTerms, termsDays: number | null): string {
+    if (terms !== "custom") return InvoiceContract.PAYMENT_TERMS[terms];
+    return termsDays ? `Net ${termsDays} day${termsDays === 1 ? "" : "s"}` : InvoiceContract.PAYMENT_TERMS.on_receipt;
   }
 
   private static text(fields: Record<string, unknown>) {

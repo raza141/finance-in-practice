@@ -4,11 +4,13 @@ import Link from "next/link";
 import { startTransition, useActionState, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
 import { saveInvoice, type InvoiceFormState } from "../actions/invoices";
 import { InvoiceContract, type DraftItem, type InvoiceFieldErrors } from "../services/InvoiceContract";
+import { InvoiceEmails } from "../services/InvoiceEmails";
 import { InvoiceMath } from "../services/InvoiceMath";
 import type { BankAccount, Client, ConsultancySections, Currency, DocumentLayout, Invoice, InvoiceInput, ItemUnit, PaymentTerms } from "../types";
 import { DocumentView } from "./DocumentView";
@@ -82,6 +84,7 @@ export function InvoiceForm({
   const label = SettingsContract.DOCUMENT_TYPES[docType].toLowerCase();
   const isInvoice = docType === "invoice";
   const isCredit = docType === "credit_note";
+  const isQuote = docType === "quote";
   const [state, action, saving] = useActionState<InvoiceFormState, FormData>(saveInvoice, {});
   // Disabled until hydrated, or text typed before hydration is overwritten by the initial state.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
@@ -113,6 +116,7 @@ export function InvoiceForm({
   const vatOn = settings.vat.registered;
   const [taxRate, setTaxRate] = useState(vatOn ? InvoiceMath.percent(initial.taxRateBp || settings.vat.rateBp) : "");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(initial.paymentTerms);
+  const [termsDays, setTermsDays] = useState(initial.termsDays === null ? "" : String(initial.termsDays));
   const [dueDate, setDueDate] = useState(initial.dueDate);
   const [layout, setLayout] = useState<DocumentLayout>(initial.layout);
   const [preview, setPreview] = useState<Invoice | null>(null);
@@ -129,11 +133,14 @@ export function InvoiceForm({
     update(r.key, { unit, ...(rate !== null && !r.unitPrice && { unitPrice: InvoiceMath.majorInput(rate) }) });
     if (unit === "milestone") setLayout("consultancy");
   };
-  /** Terms set the due date from today; the date stays editable. */
-  const pickTerms = (terms: PaymentTerms) => {
-    setPaymentTerms(terms);
-    setDueDate(InvoiceContract.dueDate(terms, new Date().toISOString().slice(0, 10)));
-  };
+  // An invoice with day-count terms is re-dated from its issue date when issued; this
+  // shows the date it would get today. Only "Due by date" keeps a typed date.
+  const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
+  const datedOnIssue = isInvoice && paymentTerms !== "date";
+  const dueOnIssue = InvoiceContract.dueDate(paymentTerms, today, Number(termsDays) || 0);
+  // Legacy terms stay selectable on documents that already use them.
+  const termOptions = InvoiceContract.OFFERED_TERMS.filter((t) => !(isQuote && t === "date"));
+  if (!termOptions.includes(paymentTerms)) termOptions.push(paymentTerms);
   const bank = banks.find((b) => b.id === bankAccountId);
 
   // Running totals only: the server recomputes every amount.
@@ -422,21 +429,34 @@ export function InvoiceForm({
         ) : (
           <input type="hidden" name="taxRate" value="" />
         )}
-        {isInvoice && (
-          <Field label="Payment terms" error={errors.paymentTerms} hint="Sets the due date from today">
-            <select name="paymentTerms" value={paymentTerms} onChange={(e) => pickTerms(e.target.value as PaymentTerms)} className={FIELD}>
-              {Object.entries(InvoiceContract.PAYMENT_TERMS).map(([value, name]) => (
-                <option key={value} value={value}>
-                  {name}
-                </option>
-              ))}
-            </select>
+        {isInvoice || isQuote ? (
+          <Field label={isQuote ? "Proposed payment terms" : "Payment terms"} error={errors.paymentTerms} hint={isQuote ? "Copied to the invoice" : "Counted from the issue date"}>
+            <div className="mt-1 flex gap-2">
+              <select name="paymentTerms" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value as PaymentTerms)} className={`${FIELD} mt-0`}>
+                {termOptions.map((value) => (
+                  <option key={value} value={value}>
+                    {InvoiceContract.PAYMENT_TERMS[value]}
+                  </option>
+                ))}
+              </select>
+              {paymentTerms === "custom" && (
+                <input name="termsDays" aria-label="Days to pay" inputMode="numeric" required placeholder="days" value={termsDays} onChange={(e) => setTermsDays(e.target.value)} className={`${FIELD} mt-0 w-20`} />
+              )}
+            </div>
+          </Field>
+        ) : (
+          <input type="hidden" name="paymentTerms" value={paymentTerms} />
+        )}
+        {datedOnIssue ? (
+          <Field label="Due date" error={errors.dueDate} hint="Set when issued: issue date + terms">
+            <input name="dueDate" type="hidden" value={dueOnIssue} />
+            <p className="mt-1 py-2 text-sm text-ink">{InvoiceEmails.day(dueOnIssue)} if issued today</p>
+          </Field>
+        ) : (
+          <Field label={isQuote ? "Valid until" : isCredit ? "Credit date" : "Due date"} error={errors.dueDate}>
+            <input name="dueDate" type="date" required min={isCredit ? undefined : today} value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-invalid={errors.dueDate ? true : undefined} className={FIELD} />
           </Field>
         )}
-        {!isInvoice && <input type="hidden" name="paymentTerms" value={paymentTerms} />}
-        <Field label={docType === "quote" ? "Valid until" : isCredit ? "Credit date" : "Due date"} error={errors.dueDate}>
-          <input name="dueDate" type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-invalid={errors.dueDate ? true : undefined} className={FIELD} />
-        </Field>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 self-end rounded-md border border-line p-3 font-mono text-sm tabular-nums">
           <dt className="text-muted">Subtotal</dt>
           <dd className="text-right">{money(totals.subtotalMinor)}</dd>

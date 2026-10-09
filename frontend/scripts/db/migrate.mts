@@ -619,6 +619,22 @@ const MIGRATIONS: Migration[] = [
        WHERE status = 'draft' AND jsonb_array_length(items) > 0`,
     ],
   },
+  {
+    // Billing phase 0. Terms gain Net 30, a custom day count and an explicit due date;
+    // the due date of an invoice is now counted from its issue date. One live invoice
+    // per quote, and a payment form submitted twice records one payment.
+    id: "030_billing_safeguards",
+    statements: [
+      `ALTER TABLE invoices DROP CONSTRAINT invoices_payment_terms_check`,
+      `ALTER TABLE invoices
+        ADD CONSTRAINT invoices_payment_terms_check
+          CHECK (payment_terms IN ('upfront', 'on_receipt', 'net7', 'net14', 'net30', 'custom', 'date', 'monthly', 'after_delivery')),
+        ADD COLUMN terms_days integer CHECK (terms_days BETWEEN 0 AND 365),
+        ADD CONSTRAINT invoices_custom_terms_days_check CHECK ((payment_terms = 'custom') = (terms_days IS NOT NULL))`,
+      `CREATE UNIQUE INDEX invoices_one_invoice_per_quote ON invoices (related_id) WHERE doc_type = 'invoice' AND status <> 'void'`,
+      `ALTER TABLE invoice_payments ADD COLUMN submission_key uuid UNIQUE`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

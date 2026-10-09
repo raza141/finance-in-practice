@@ -11,7 +11,8 @@ import type { Client, Currency } from "../types";
 const noSubscribe = () => () => {};
 
 /** One session paid on the spot: issues a receipt and records the payment. No invoice. */
-export function QuickReceiptForm({ clients, currency, today }: { clients: Client[]; currency: Currency; today: string }) {
+/** `submissionKey` is drawn once per page load, so a receipt sent twice is recorded once. */
+export function QuickReceiptForm({ clients, currency, today, submissionKey }: { clients: Client[]; currency: Currency; today: string; submissionKey: string }) {
   const [state, action, saving] = useActionState<QuickReceiptFormState, FormData>(saveQuickReceipt, {});
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const pending = saving || !hydrated;
@@ -31,6 +32,7 @@ export function QuickReceiptForm({ clients, currency, today }: { clients: Client
 
   return (
     <form onSubmit={submit} className="grid gap-8">
+      <input type="hidden" name="submissionKey" value={submissionKey} />
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
         <legend className="mb-4 text-sm text-quant">Received from</legend>
         <Field label="Saved client" className="sm:col-span-2">

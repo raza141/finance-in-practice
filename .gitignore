@@ -43,3 +43,6 @@ graphify-out/
 .agents/
 .serena/
 skills-lock.json
+
+# --- Client documents (local exports, never committed) ----------------
+Invoices/

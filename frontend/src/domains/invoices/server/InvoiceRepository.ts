@@ -56,6 +56,7 @@ interface InvoiceRow {
   bank_account_id: string | null;
   bank: BankDetails | null;
   payment_terms: PaymentTerms;
+  terms_days: number | null;
   payment_link: string;
   layout: DocumentLayout;
   sections: Partial<ConsultancySections>;
@@ -93,7 +94,7 @@ type SummaryRow = Pick<
 > & { last_emailed_at: Date | null };
 
 /** A payment as recorded: amount and date, how it was paid, and optional proof. */
-export type PaymentRecord = Omit<InvoicePayment, "id" | "receiptId">;
+export type PaymentRecord = Omit<InvoicePayment, "id" | "receiptId"> & { submissionKey: string | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -245,14 +246,14 @@ export class InvoiceRepository {
     const [row] = (await this.sql`
       INSERT INTO invoices (token, doc_type, related_id, booking_uid, client_id, client_name, client_email, client_phone, client_address,
                             currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor, trn,
-                            due_date, notes, payment_instructions, bank_account_id, bank, payment_terms, payment_link, layout,
+                            due_date, notes, payment_instructions, bank_account_id, bank, payment_terms, terms_days, payment_link, layout,
                             sections, recurring, recurs_from)
       VALUES (${randomBytes(32).toString("base64url")}, ${input.docType}, ${input.relatedId}, ${input.bookingUid}, ${input.clientId},
               ${input.clientName}, ${input.clientEmail}, ${input.clientPhone}, ${input.clientAddress}, ${input.currency},
               ${JSON.stringify(input.items)}::jsonb, ${t.subtotalMinor}, ${t.discountMinor}, ${input.taxRateBp},
               ${t.taxMinor}, ${t.totalMinor}, ${input.trn}, ${input.dueDate}, ${input.notes},
               ${input.paymentInstructions}, ${input.bankAccountId}, ${bank && JSON.stringify(bank)}::jsonb, ${input.paymentTerms},
-              ${input.paymentLink}, ${input.layout}, ${JSON.stringify(input.sections)}::jsonb, ${input.recurring}, ${recursFrom})
+              ${input.termsDays}, ${input.paymentLink}, ${input.layout}, ${JSON.stringify(input.sections)}::jsonb, ${input.recurring}, ${recursFrom})
       RETURNING id
     `) as { id: string }[];
     await this.logEvent(row.id, actor, "created");
@@ -271,7 +272,7 @@ export class InvoiceRepository {
         discount_minor = ${t.discountMinor}, tax_rate_bp = ${input.taxRateBp}, tax_minor = ${t.taxMinor},
         total_minor = ${t.totalMinor}, trn = ${input.trn}, due_date = ${input.dueDate}, notes = ${input.notes},
         payment_instructions = ${input.paymentInstructions}, bank_account_id = ${input.bankAccountId},
-        bank = ${bank && JSON.stringify(bank)}::jsonb, payment_terms = ${input.paymentTerms}, payment_link = ${input.paymentLink},
+        bank = ${bank && JSON.stringify(bank)}::jsonb, payment_terms = ${input.paymentTerms}, terms_days = ${input.termsDays}, payment_link = ${input.paymentLink},
         layout = ${input.layout}, sections = ${JSON.stringify(input.sections)}::jsonb, recurring = ${input.recurring}, updated_at = now()
       WHERE id = ${id} AND status = 'draft'
       RETURNING id
@@ -285,9 +286,10 @@ export class InvoiceRepository {
    * freezes it as text with the prefix, e.g. FIP-INV-2026-0002. The row is
    * locked (FOR UPDATE) before nextval runs, so a concurrent issue of the same
    * draft waits, finds it no longer a draft and matches nothing: a lost race
-   * never burns a number.
+   * never burns a number. With `dueDays`, the due date is counted from the
+   * issue date in the same statement, so terms and due date always agree.
    */
-  async issue(id: string, prefix: string, actor: string): Promise<boolean> {
+  async issue(id: string, prefix: string, actor: string, dueDays: number | null = null): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const rows = await this.sql`
       WITH target AS (SELECT id, doc_type FROM invoices WHERE id = ${id} AND status = 'draft' FOR UPDATE),
@@ -295,7 +297,8 @@ export class InvoiceRepository {
       UPDATE invoices i SET
         status = 'sent', number_seq = seq.n,
         number = ${prefix} || '-' || to_char((now() AT TIME ZONE 'Asia/Dubai')::date, 'YYYY') || '-' || lpad(seq.n::text, 4, '0'),
-        issue_date = (now() AT TIME ZONE 'Asia/Dubai')::date, sent_at = now(), updated_at = now()
+        issue_date = (now() AT TIME ZONE 'Asia/Dubai')::date, sent_at = now(), updated_at = now(),
+        due_date = CASE WHEN ${dueDays}::int IS NULL THEN i.due_date ELSE (now() AT TIME ZONE 'Asia/Dubai')::date + ${dueDays}::int END
       FROM seq WHERE i.id = seq.id
       RETURNING i.id
     `;
@@ -306,7 +309,8 @@ export class InvoiceRepository {
   /**
    * Records money received against an issued invoice (or a Quick Receipt).
    * Refuses more than the balance; the payment that clears it marks the
-   * document paid. Returns null when refused.
+   * document paid. Returns null when refused, or when the payment's
+   * submission key was already used (a form sent twice records one payment).
    * ponytail: the balance is read once per statement, so two admins paying the same invoice at the same instant could overpay; fine for one admin.
    */
   async addPayment(id: string, payment: PaymentRecord, actor: string): Promise<{ paymentId: string; settled: boolean } | null> {
@@ -315,8 +319,9 @@ export class InvoiceRepository {
       `WITH inv AS (
          SELECT d.id, ${BALANCE} AS balance FROM invoices d WHERE d.id = $1 AND d.status = 'sent' AND d.doc_type IN ('invoice', 'receipt') FOR UPDATE
        ), ins AS (
-         INSERT INTO invoice_payments (invoice_id, amount_minor, paid_on, note, method, reference, proof_url)
-         SELECT id, $2::int, $3::date, $4::text, $5::text, $6::text, $7::text FROM inv WHERE $2::int <= balance
+         INSERT INTO invoice_payments (invoice_id, amount_minor, paid_on, note, method, reference, proof_url, submission_key)
+         SELECT id, $2::int, $3::date, $4::text, $5::text, $6::text, $7::text, $8::uuid FROM inv WHERE $2::int <= balance
+         ON CONFLICT (submission_key) DO NOTHING
          RETURNING id, invoice_id
        ), settle AS (
          UPDATE invoices SET status = 'paid', paid_at = now(), updated_at = now()
@@ -324,7 +329,7 @@ export class InvoiceRepository {
          RETURNING id
        )
        SELECT (SELECT id FROM ins) AS payment_id, (SELECT count(*) FROM settle)::int AS settled`,
-      [id, payment.amountMinor, payment.paidOn, payment.note, payment.method, payment.reference, payment.proofUrl],
+      [id, payment.amountMinor, payment.paidOn, payment.note, payment.method, payment.reference, payment.proofUrl, payment.submissionKey],
     )) as { payment_id: string | null; settled: number }[];
     if (!row.payment_id) return null;
     await this.logEvent(id, actor, "payment", `${InvoiceMath.money(payment.amountMinor, await this.currency(id))} by ${payment.method}${row.settled ? ", paid in full" : ""}`);
@@ -423,16 +428,36 @@ export class InvoiceRepository {
     return rows.length > 0;
   }
 
-  /** A sent quote's answer. Expired is derived from its valid-until date, never stored. */
+  /**
+   * A sent quote's answer, given once. An expired quote (past its valid-until
+   * date, Dubai) can be declined but not accepted: issue a new one instead.
+   */
   async answerQuote(id: string, answer: "accepted" | "declined", actor: string): Promise<boolean> {
     if (!UUID.test(id)) return false;
     const rows = await this.sql`
       UPDATE invoices SET status = ${answer}, updated_at = now()
-      WHERE id = ${id} AND doc_type = 'quote' AND status IN ('sent', 'accepted', 'declined')
+      WHERE id = ${id} AND doc_type = 'quote' AND status = 'sent'
+        AND (${answer} = 'declined' OR due_date >= (now() AT TIME ZONE 'Asia/Dubai')::date)
       RETURNING id
     `;
     if (rows.length > 0) await this.logEvent(id, actor, answer);
     return rows.length > 0;
+  }
+
+  /** The live (not void) invoice made from a quote, if any. A unique index allows at most one. */
+  async invoiceFromQuote(quoteId: string): Promise<string | null> {
+    if (!UUID.test(quoteId)) return null;
+    const [row] = (await this.sql`
+      SELECT id FROM invoices WHERE related_id = ${quoteId} AND doc_type = 'invoice' AND status <> 'void'
+    `) as { id: string }[];
+    return row?.id ?? null;
+  }
+
+  /** The document a payment with this submission key was recorded against, if any. */
+  async paymentByKey(submissionKey: string): Promise<string | null> {
+    if (!UUID.test(submissionKey)) return null;
+    const [row] = (await this.sql`SELECT invoice_id FROM invoice_payments WHERE submission_key = ${submissionKey}`) as { invoice_id: string }[];
+    return row?.invoice_id ?? null;
   }
 
   /** Only drafts can be deleted: they hold no number, so nothing is skipped. */
@@ -565,7 +590,7 @@ export class InvoiceRepository {
   private static readonly COLUMNS = `d.id, d.doc_type, d.number_seq, d.number, d.related_id, d.payment_id, d.token, d.status, d.booking_uid,
     d.client_id, d.client_name, d.client_email, d.client_phone, d.client_address, d.currency, d.items, d.subtotal_minor, d.discount_minor,
     d.tax_rate_bp, d.tax_minor, d.total_minor, d.trn, d.due_date::text AS due_date, d.notes, d.payment_instructions, d.bank_account_id,
-    d.bank, d.payment_terms, d.payment_link, d.layout, d.sections, d.recurring, d.recurs_from, d.link_valid_until,
+    d.bank, d.payment_terms, d.terms_days, d.payment_link, d.layout, d.sections, d.recurring, d.recurs_from, d.link_valid_until,
     d.issue_date::text AS issue_date, d.created_at, d.sent_at, d.paid_at, d.voided_at, d.view_count, d.first_viewed_at, d.last_viewed_at,
     (SELECT r.number FROM invoices r WHERE r.id = d.related_id) AS related_number,
     ${PAID}::int AS paid_minor, ${CREDITED}::int AS credited_minor,
@@ -639,6 +664,7 @@ export class InvoiceRepository {
       bankAccountId: row.bank_account_id,
       bank: row.bank,
       paymentTerms: row.payment_terms,
+      termsDays: row.terms_days,
       paymentLink: row.payment_link,
       layout: row.layout,
       sections: { scope: "", deliverables: "", expenses: "", assumptions: "", ...row.sections },

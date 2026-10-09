@@ -39,7 +39,8 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   /** Negative when a credit note on a paid invoice leaves money owed back to the client. */
   const remaining = invoice.totalMinor - settled;
   const number = invoice.number ?? "Assigned on issue";
-  // A paid invoice shows when it was settled (the last payment's date) and no outstanding terms.
+  // A paid invoice shows when it was settled (the last payment's date) and nothing about collecting:
+  // no terms, no payment desk, no "Payment:" term. The issued terms stay on the record.
   const paid = isInvoice && invoice.status === "paid";
   const paidOn = invoice.payments.at(-1)?.paidOn ?? invoice.paidAt?.toISOString().slice(0, 10) ?? invoice.dueDate;
   const related =
@@ -79,7 +80,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
             {isInvoice && (
               <>
                 <dt className={ROW_LABEL}>Terms</dt>
-                <dd className="font-semibold text-slate-900">{paid ? "Nil" : InvoiceContract.PAYMENT_TERMS[invoice.paymentTerms]}</dd>
+                <dd className="font-semibold text-slate-900">{paid ? "Nil" : InvoiceContract.termsLabel(invoice.paymentTerms, invoice.termsDays)}</dd>
               </>
             )}
             {related && (
@@ -205,7 +206,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
       )}
 
       <div className="print:mt-auto">
-        {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && (
+        {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && !paid && (
           <section className="mt-10 break-inside-avoid print:mt-4">
             <h2 className={LABEL}>Payment desk</h2>
             {bankRows.length > 0 && (
@@ -236,7 +237,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         )}
         <TextBlock title="Notes" text={invoice.notes} />
         <ThankYou firstName={InvoiceEmails.firstName(invoice.clientName)} message={THANKS[docType](settings.business.name)} settings={settings} />
-        <TermsBlock text={settings.documents[docType].terms} />
+        <TermsBlock text={settings.documents[docType].terms} omit={paid ? "Payment" : undefined} />
       </div>
     </DocumentFrame>
   );

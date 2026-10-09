@@ -163,16 +163,19 @@ export class InvoiceEmails {
     const values = InvoiceEmails.placeholders(doc, url, settings);
     const number = values.number;
     const isInvoice = doc.docType === "invoice";
+    // A paid invoice says when it was paid and leaves out how to pay.
+    const paid = isInvoice && doc.status === "paid";
+    const paidOn = paid ? doc.payments.at(-1)?.paidOn : undefined;
     const rows: [string, string][] = [
       [label, number],
       ["Issued", doc.issueDate ? InvoiceEmails.day(doc.issueDate) : ""],
-      ...(isInvoice ? ([["Due", values.dueDate]] as [string, string][]) : []),
+      ...(isInvoice ? ([paid ? ["Paid on", paidOn ? InvoiceEmails.day(paidOn) : ""] : ["Due", values.dueDate]] as [string, string][]) : []),
       ...(doc.docType === "quote" ? ([["Valid until", values.dueDate]] as [string, string][]) : []),
       [isInvoice ? "Amount due" : doc.docType === "receipt" ? "Amount received" : "Amount", isInvoice ? values.balance : values.amount],
     ];
     const subject = `${label} ${number} from ${settings.business.name}`;
-    const bankRows = isInvoice && doc.bank ? InvoiceEmails.bankRows(doc.bank) : [];
-    const instructions = isInvoice ? doc.paymentInstructions : "";
+    const bankRows = isInvoice && !paid && doc.bank ? InvoiceEmails.bankRows(doc.bank) : [];
+    const instructions = isInvoice && !paid ? doc.paymentInstructions : "";
     const payOnline = InvoiceEmails.payOnline(doc, settings);
     const hasPayment = bankRows.length > 0 || instructions !== "" || payOnline;
     const opening = SettingsContract.fill(settings.documents[doc.docType].email, values);

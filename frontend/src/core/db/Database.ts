@@ -19,6 +19,11 @@ export class Database {
     return process.env.DATABASE_URL || process.env.POSTGRES_URL || null;
   }
 
+  /** A write refused by a UNIQUE constraint (Postgres 23505), e.g. a retried submit. */
+  static isUniqueViolation(error: unknown): boolean {
+    return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "23505";
+  }
+
   static sql(): Sql | null {
     if (Database.client === undefined) {
       const url = Database.url();

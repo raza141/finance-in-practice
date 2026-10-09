@@ -36,7 +36,7 @@ async function safely<T>(promise: Promise<T> | undefined, fallback: T, source: s
 
 /** Money, clients, sessions and content at a glance. Amounts are per currency, months are Dubai months. */
 export default async function AdminDashboardPage() {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const invoices = InvoiceRepository.fromEnv();
   if (!invoices) {
     return (

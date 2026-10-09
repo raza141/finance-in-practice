@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Send a confirmation" };
 
 /** Branded session confirmation: for offline clients, or to re-send one for a Cal.com booking (`?booking=<uid>`). */
 export default async function ConfirmationPage({ searchParams }: PageProps<"/admin/invoices/confirm">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const { prefill, error } = await BookingPrefillLoader.load((await searchParams).booking);
   const timeZone = prefill?.clientTimeZone ?? InvoiceContract.DEFAULT_TIME_ZONE;
   // Built here so server and browser render the same list; keeps a Cal.com alias (e.g. Asia/Calcutta) selectable.

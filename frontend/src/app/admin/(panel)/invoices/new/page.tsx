@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "New document" };
  * Settings currency and the type's default notes are preselected.
  */
 export default async function NewInvoicePage({ searchParams }: PageProps<"/admin/invoices/new">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const query = await searchParams;
   const clients = ClientRepository.fromEnv();
   const [{ prefill, error }, options] = await Promise.all([BookingPrefillLoader.load(query.booking), InvoiceFormLoader.options()]);
@@ -66,7 +66,8 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     notes: settings.documents[docType].notes,
     paymentInstructions: "",
     bankAccountId: docType === "invoice" ? (options.banks.find((bank) => bank.isDefault)?.id ?? null) : null,
-    paymentTerms: client?.planUnit === "month" ? "monthly" : "net7",
+    paymentTerms: "net7",
+    termsDays: null,
     paymentLink: "",
     layout: "standard",
     sections: { scope: "", deliverables: "", expenses: "", assumptions: "" },

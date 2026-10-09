@@ -109,8 +109,9 @@ export function ThankYou({ firstName, message, settings }: { firstName: string; 
 }
 
 /** Numbered terms from Settings ("Title: text" per line); nothing when empty. */
-export function TermsBlock({ text }: { text: string }) {
-  const terms = SettingsContract.terms(text);
+/** The numbered terms from Settings; `omit` drops the term with that title (e.g. "Payment" once an invoice is paid). */
+export function TermsBlock({ text, omit }: { text: string; omit?: string }) {
+  const terms = SettingsContract.terms(text).filter(([title]) => !omit || title.toLowerCase() !== omit.toLowerCase());
   if (terms.length === 0) return null;
   return (
     <section className="mt-10 break-inside-avoid print:mt-6">

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -47,10 +49,12 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   duplicated: { text: "Copied into a new draft. Edit it and issue it when ready.", tone: "ok" },
   "next-month": { text: "Next month’s draft is ready: due date and months moved on. Check it, then issue it.", tone: "ok" },
   "from-quote": { text: "Invoice drafted from the accepted quote. Check it, then issue it.", tone: "ok" },
+  "quote-invoiced": { text: "This quote already has an invoice: here it is. Void it first to convert the quote again.", tone: "warn" },
   "credit-draft": { text: "Credit note drafted with the invoice’s lines. Edit them down to the amount credited, then issue it.", tone: "ok" },
   receipt: { text: "Receipt issued and payment recorded. Share it below.", tone: "ok" },
   payment: { text: "Payment recorded and a receipt issued. The invoice stays open until the balance is paid.", tone: "ok" },
   paid: { text: "Payment recorded and a receipt issued: the invoice is now paid in full.", tone: "ok" },
+  "payment-duplicate": { text: "That payment was already recorded (the form was sent twice): nothing was added.", tone: "warn" },
   "payment-refused": { text: "Payment not recorded: enter an amount up to the balance due, and the date it arrived.", tone: "warn" },
   "payment-removed": { text: "Payment removed and its receipt voided.", tone: "ok" },
   "link-renewed": { text: "Client link renewed for 90 days. Share it again below.", tone: "ok" },
@@ -75,7 +79,7 @@ function Action({ action, label, pending, className = BUTTON, extra }: { action:
 }
 
 export default async function DocumentPage({ params, searchParams }: PageProps<"/admin/invoices/[id]">) {
-  await AdminAuth.require();
+  await AdminAuth.requireOwner();
   const repo = InvoiceRepository.fromEnv();
   const doc = await repo?.byId((await params).id);
   if (!repo || !doc) notFound();
@@ -98,6 +102,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
   const id = { id: doc.id };
   const url = `${siteConfig.url}/invoice/${doc.token}`;
   const expires = DocumentAccess.expiresAt(doc);
+  const quoteInvoice = doc.docType === "quote" ? related.find((r) => r.docType === "invoice" && r.status !== "void") : undefined;
 
   return (
     <div className="max-w-4xl">
@@ -161,12 +166,17 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
             {isInvoice && (doc.status === "sent" || doc.status === "paid") && DocumentFormat.creditable(doc) > 0 && (
               <Action action={createCreditNote} extra={id} label="Credit note" pending="Drafting…" />
             )}
-            {doc.docType === "quote" && (doc.status === "sent" || doc.status === "accepted") && (
+            {doc.docType === "quote" && doc.status === "accepted" && !quoteInvoice && (
               <Action action={convertQuote} extra={id} label="Convert to invoice" pending="Converting…" className={PRIMARY} />
+            )}
+            {quoteInvoice && (
+              <Link href={`/admin/invoices/${quoteInvoice.id}`} className={`${PRIMARY} inline-flex items-center`}>
+                Open invoice {quoteInvoice.number ?? "draft"}
+              </Link>
             )}
             {doc.docType === "quote" && doc.status === "sent" && (
               <>
-                <Action action={answerQuote} extra={{ ...id, answer: "accepted" }} label="Mark accepted" pending="Saving…" />
+                {!DocumentFormat.isExpired(doc, today) && <Action action={answerQuote} extra={{ ...id, answer: "accepted" }} label="Mark accepted" pending="Saving…" />}
                 <Action action={answerQuote} extra={{ ...id, answer: "declined" }} label="Mark declined" pending="Saving…" />
               </>
             )}
@@ -231,6 +241,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
               {doc.status === "sent" && balance > 0 && (
                 <form action={recordInvoicePayment} className="mt-4 grid items-end gap-3 sm:grid-cols-3">
                   <input type="hidden" name="id" value={doc.id} />
+                  <input type="hidden" name="submissionKey" value={randomUUID()} />
                   <label className="text-xs text-muted">
                     Amount ({doc.currency})
                     <input name="amount" inputMode="decimal" required defaultValue={InvoiceMath.majorInput(balance)} className={`${FIELD} mt-1`} />

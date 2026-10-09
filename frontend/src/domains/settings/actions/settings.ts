@@ -15,7 +15,7 @@ export interface SettingsFormState {
 
 /** Re-checks the session: server actions are public POST endpoints. */
 export async function saveSettings(_state: SettingsFormState, formData: FormData): Promise<SettingsFormState> {
-  const admin = await AdminAuth.require();
+  const admin = await AdminAuth.requireOwner();
   const repo = SettingsRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
   const parsed = SettingsContract.parse(Object.fromEntries(formData));
