@@ -24,6 +24,7 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   reactivated: { text: "Reactivated: offered on new documents again.", tone: "ok" },
   "price-added": { text: "Price added. An open price for the same basis and currency now ends the day before.", tone: "ok" },
   "price-removed": { text: "Price removed.", tone: "ok" },
+  "price-restored": { text: "Price removed; the price it replaced is back in force.", tone: "ok" },
   "price-refused": { text: "Price not added.", tone: "warn" },
 };
 

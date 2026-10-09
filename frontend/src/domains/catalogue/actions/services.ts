@@ -71,6 +71,6 @@ export async function addServicePrice(formData: FormData): Promise<void> {
 export async function removeServicePrice(formData: FormData): Promise<void> {
   const services = await repo();
   const id = String(formData.get("id"));
-  await services.removePrice(id, String(formData.get("priceId")));
-  redirect(`/admin/services/${id}?notice=price-removed`);
+  const { restored } = await services.removePrice(id, String(formData.get("priceId")));
+  redirect(`/admin/services/${id}?notice=${restored ? "price-restored" : "price-removed"}`);
 }

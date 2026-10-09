@@ -125,11 +125,25 @@ export class ServiceRepository {
     }
   }
 
-  /** Removes a price entered by mistake. Documents keep the rate they were issued with. */
-  async removePrice(serviceId: string, priceId: string): Promise<boolean> {
-    if (!UUID.test(serviceId) || !UUID.test(priceId)) return false;
-    const rows = await this.sql`DELETE FROM service_prices WHERE id = ${priceId} AND service_id = ${serviceId} RETURNING id`;
-    return rows.length > 0;
+  /**
+   * Removes a price entered by mistake. The price it had ended (the one ending
+   * the day before it started) takes its place again, in the same statement.
+   * Documents keep the rate they were issued with.
+   */
+  async removePrice(serviceId: string, priceId: string): Promise<{ removed: boolean; restored: boolean }> {
+    if (!UUID.test(serviceId) || !UUID.test(priceId)) return { removed: false, restored: false };
+    const [row] = (await this.sql`
+      WITH del AS (
+        DELETE FROM service_prices WHERE id = ${priceId} AND service_id = ${serviceId}
+        RETURNING service_id, unit, currency, effective_from, effective_to
+      ), restored AS (
+        UPDATE service_prices p SET effective_to = del.effective_to FROM del
+        WHERE p.service_id = del.service_id AND p.unit = del.unit AND p.currency = del.currency AND p.effective_to = del.effective_from - 1
+        RETURNING p.id
+      )
+      SELECT (SELECT count(*) FROM del)::int AS removed, (SELECT count(*) FROM restored)::int AS restored
+    `) as { removed: number; restored: number }[];
+    return { removed: row.removed > 0, restored: row.restored > 0 };
   }
 
   private static toService(row: ServiceRow): Service {
