@@ -6,8 +6,8 @@ export type { DocumentType };
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void" | "accepted" | "declined";
 export type Currency = "AED" | "USD" | "PKR" | "GBP" | "EUR";
 
-/** How a line is billed (labels, default rates and layouts in Settings). Milestones belong to consultancy layouts. */
-export type ItemUnit = "month" | "session" | "hour" | "milestone" | "fee";
+/** How a line is billed (labels, default rates and layouts in Settings). Milestones belong to consultancy layouts; "fee" is a fixed project fee. */
+export type ItemUnit = "month" | "session" | "hour" | "package" | "milestone" | "fee";
 /** Units on documents issued before migration 029; shown as issued, never offered for new lines. */
 export type LegacyUnit = "on-demand" | "contract";
 

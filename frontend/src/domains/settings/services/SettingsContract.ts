@@ -42,6 +42,7 @@ export class SettingsContract {
       month: { label: "month", rateMinor: null, layout: "standard" },
       session: { label: "session", rateMinor: null, layout: "standard" },
       hour: { label: "hour", rateMinor: null, layout: "standard" },
+      package: { label: "package", rateMinor: null, layout: "standard" },
       milestone: { label: "milestone", rateMinor: null, layout: "consultancy" },
       fee: { label: "fee", rateMinor: null, layout: "consultancy" },
     },

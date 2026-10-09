@@ -68,6 +68,7 @@ export class InvoiceContract {
     month: "Monthly",
     session: "Per session",
     hour: "Hourly",
+    package: "Package",
     milestone: "Milestone",
     fee: "Fixed fee",
   };

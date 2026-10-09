@@ -635,6 +635,46 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE invoice_payments ADD COLUMN submission_key uuid UNIQUE`,
     ],
   },
+  {
+    // Service catalogue: what is sold (a code and a name), separate from how it is
+    // billed (dated prices per basis and currency). Archived services stay for history.
+    // "package" joins the billing bases (a fixed-price bundle, standard layout).
+    id: "031_services",
+    statements: [
+      `CREATE EXTENSION IF NOT EXISTS btree_gist`,
+      `CREATE TABLE services (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code         text NOT NULL CHECK (code ~ '^[A-Z0-9][A-Z0-9-]{1,19}$'),
+        name         text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
+        description  text NOT NULL DEFAULT '' CHECK (char_length(description) <= 200),
+        category     text NOT NULL DEFAULT '' CHECK (char_length(category) <= 60),
+        units        text[] NOT NULL CHECK (cardinality(units) BETWEEN 1 AND 6
+                       AND units <@ ARRAY['month', 'session', 'hour', 'package', 'fee', 'milestone']),
+        default_unit text CHECK (default_unit IS NULL OR default_unit = ANY (units)),
+        archived_at  timestamptz,
+        created_at   timestamptz NOT NULL DEFAULT now(),
+        updated_at   timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE UNIQUE INDEX services_code_key ON services (code)`,
+      // One price per service, basis and currency on any day: a new price ends the open one
+      // (checked at commit, so both happen in one statement).
+      `CREATE TABLE service_prices (
+        id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        service_id     uuid NOT NULL REFERENCES services (id) ON DELETE CASCADE,
+        unit           text NOT NULL CHECK (unit IN ('month', 'session', 'hour', 'package', 'fee', 'milestone')),
+        currency       text NOT NULL CHECK (currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')),
+        rate_minor     integer NOT NULL CHECK (rate_minor > 0 AND rate_minor <= 1000000000),
+        effective_from date NOT NULL,
+        effective_to   date CHECK (effective_to IS NULL OR effective_to >= effective_from),
+        created_at     timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT service_prices_no_overlap EXCLUDE USING gist (
+          service_id WITH =, unit WITH =, currency WITH =, daterange(effective_from, effective_to, '[]') WITH &&
+        ) DEFERRABLE INITIALLY DEFERRED
+      )`,
+      `ALTER TABLE clients DROP CONSTRAINT clients_plan_unit_check`,
+      `ALTER TABLE clients ADD CONSTRAINT clients_plan_unit_check CHECK (plan_unit IN ('month', 'session', 'hour', 'package', 'milestone', 'fee'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

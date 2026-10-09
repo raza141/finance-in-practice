@@ -61,6 +61,7 @@ export class ClientRepository {
           count(*) FILTER (WHERE plan_unit = 'month') AS month,
           count(*) FILTER (WHERE plan_unit = 'session') AS session,
           count(*) FILTER (WHERE plan_unit = 'hour') AS hour,
+          count(*) FILTER (WHERE plan_unit = 'package') AS package,
           count(*) FILTER (WHERE plan_unit = 'milestone') AS milestone,
           count(*) FILTER (WHERE plan_unit = 'fee') AS fee
         FROM clients
@@ -77,7 +78,7 @@ export class ClientRepository {
     return {
       total: Number(c.total),
       newThisMonth: Number(c.new_this_month),
-      byPlan: { month: Number(c.month), session: Number(c.session), hour: Number(c.hour), milestone: Number(c.milestone), fee: Number(c.fee) },
+      byPlan: { month: Number(c.month), session: Number(c.session), hour: Number(c.hour), package: Number(c.package), milestone: Number(c.milestone), fee: Number(c.fee) },
       expectedMonthly: (expected as Record<string, string>[]).map((row) => ({ currency: row.currency as Currency, totalMinor: Number(row.total) })),
     };
   }
