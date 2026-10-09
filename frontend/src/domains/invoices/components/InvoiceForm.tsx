@@ -445,7 +445,10 @@ export function InvoiceForm({
             </div>
           </Field>
         ) : (
-          <input type="hidden" name="paymentTerms" value={paymentTerms} />
+          <>
+            <input type="hidden" name="paymentTerms" value={paymentTerms} />
+            {paymentTerms === "custom" && <input type="hidden" name="termsDays" value={termsDays} />}
+          </>
         )}
         {datedOnIssue ? (
           <Field label="Due date" error={errors.dueDate} hint="Set when issued: issue date + terms">

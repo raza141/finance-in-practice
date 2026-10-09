@@ -77,9 +77,9 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
                 <dd className="font-semibold text-slate-900">{InvoiceEmails.day(paid ? paidOn : invoice.dueDate)}</dd>
               </>
             )}
-            {isInvoice && (
+            {(isInvoice || docType === "quote") && (
               <>
-                <dt className={ROW_LABEL}>Terms</dt>
+                <dt className={ROW_LABEL}>{docType === "quote" ? "Payment terms" : "Terms"}</dt>
                 <dd className="font-semibold text-slate-900">{paid ? "Nil" : InvoiceContract.termsLabel(invoice.paymentTerms, invoice.termsDays)}</dd>
               </>
             )}

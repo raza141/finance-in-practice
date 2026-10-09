@@ -128,6 +128,8 @@ describe("terms, periods and new document fields", () => {
     }
     const net = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "net30", termsDays: "9" }));
     expect(net.ok && net.input.termsDays).toBeNull();
+    const credit = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "custom", termsDays: "21", docType: "credit_note" }));
+    expect(credit.ok && credit.input.termsDays).toBe(21);
     const quote = InvoiceContract.parseInvoice(fields({ layout: "consultancy", paymentTerms: "date", docType: "quote" }));
     expect(quote.ok ? null : quote.errors.paymentTerms).toBeTruthy();
   });

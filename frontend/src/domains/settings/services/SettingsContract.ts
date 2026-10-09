@@ -8,7 +8,7 @@ import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig } from ".
 export type SettingsFieldErrors = Partial<Record<string, string>>;
 
 const INVOICE_TERMS = [
-  "Payment: Due within 7 days of issue. Sessions are confirmed once payment is received. The invoice number is to be quoted as the transfer reference.",
+  "Payment: Due by the date shown above. Sessions are confirmed once payment is received. The invoice number is to be quoted as the transfer reference.",
   "Rescheduling: Sessions can be moved with at least 24 hours’ notice. Later changes may count as delivered.",
   "Scope: Fees cover the coaching period stated on this invoice and are non-transferable. No exam result is guaranteed.",
 ].join("\n");
