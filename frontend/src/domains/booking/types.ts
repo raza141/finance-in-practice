@@ -9,6 +9,16 @@ export interface BookingTrack {
   title: string;
 }
 
+/** What the visitor has picked so far, for the live summary beside the widget. */
+export interface BookingSelection {
+  course: string | null;
+  /** e.g. "THU OCT 15" */
+  date: string | null;
+  /** e.g. "14:00 GST" */
+  time: string | null;
+  booked: boolean;
+}
+
 export type BookSide = "BID" | "ASK";
 
 export interface TimeSlot {

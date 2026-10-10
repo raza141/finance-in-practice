@@ -16,7 +16,7 @@ export function WhatsAppButton() {
       aria-label="Chat with us on WhatsApp"
       // Only the bubble takes pointer events; the hidden label must not leave a
       // click-through strip over page content.
-      className="group pointer-events-none fixed right-5 bottom-5 z-40 flex items-center gap-3 sm:right-6 sm:bottom-6"
+      className="group pointer-events-none fixed right-5 bottom-5 z-40 flex items-center gap-3 transition-[bottom] duration-300 sm:right-6 sm:bottom-6 max-lg:[html[data-bookbar]_&]:bottom-24"
     >
       <span className="pointer-events-none hidden translate-x-2 rounded-full border border-white/10 bg-[#151E32]/90 px-3 py-1.5 text-[13px] font-medium whitespace-nowrap text-ink opacity-0 shadow-lg backdrop-blur-md transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 sm:block">
         Chat on WhatsApp

@@ -11,7 +11,7 @@ import { BookingCatalog } from "../services/BookingCatalog";
 import { BookingContract, type CreateBookingResponse } from "../services/BookingContract";
 import { TerminalFormat } from "../services/TerminalFormat";
 import { ZonedCalendar } from "../services/ZonedCalendar";
-import type { DayLiquidity, TimeSlot, TrackId } from "../types";
+import type { BookingSelection, DayLiquidity, TimeSlot, TrackId } from "../types";
 import { LiquidityCurve } from "./LiquidityCurve";
 import { OrderBook } from "./OrderBook";
 import { TrackTabs } from "./TrackTabs";
@@ -38,6 +38,8 @@ const messageOf = (error: unknown) =>
 interface QuantBookingWidgetProps {
   provider?: AvailabilityProvider;
   bookingClient?: BookingApiClient;
+  /** Called whenever the picked course, date or time changes. */
+  onSelection?: (selection: BookingSelection) => void;
 }
 
 /**
@@ -45,7 +47,7 @@ interface QuantBookingWidgetProps {
  *   1. asset-class tabs (track) -> 2. liquidity curve (date)
  *   -> 3. L2 order book (time) -> 4. trade execution (live Cal.com booking).
  */
-export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidgetProps) {
+export function QuantBookingWidget({ provider, bookingClient, onSelection }: QuantBookingWidgetProps) {
   // Instances are created once and never mutated during render.
   const [feedProvider] = useState<AvailabilityProvider>(() => provider ?? new CalAvailabilityProvider());
   const [api] = useState(() => bookingClient ?? new BookingApiClient());
@@ -77,8 +79,8 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
   const busy = execution === "submitting" || execution === "running";
   const stage = !track ? 0 : !date ? 1 : execution === "idle" || execution === "submitting" ? 2 : 3;
   const finalText = feedProvider.isSimulated
-    ? "[ DIVIDEND CAPTURED: SESSION STAGED ]"
-    : "[ DIVIDEND CAPTURED: SESSION SCHEDULED ]";
+    ? "[ SESSION STAGED ]"
+    : "[ SESSION BOOKED ]";
 
   // --- data --------------------------------------------------------------
 
@@ -217,6 +219,18 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
   const zoneLabel = zone.abbreviation(slot ? new Date(slot.start) : new Date());
   const ticket = track && date && slot ? { track: catalog.track(track), date, slot } : null;
 
+  const courseTitle = track ? catalog.track(track).title : null;
+  const timeText = slot ? `${slot.label} ${zoneLabel}` : null;
+  const booked = execution === "done" || execution === "running";
+  useEffect(() => {
+    onSelection?.({
+      course: courseTitle,
+      date: date ? `${TerminalFormat.weekday(date)} ${TerminalFormat.date(date)}` : null,
+      time: timeText,
+      booked,
+    });
+  }, [onSelection, courseTitle, date, timeText, booked]);
+
   return (
     <div className="relative overflow-hidden rounded-xl border border-line font-mono text-ink shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)]">
       {/* Flash layer: the terminal background that strobes on execution. */}
@@ -267,7 +281,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
             )}
             {projection.status === "loading" && (
               <Placeholder tone="quant">
-                <span className="animate-pulse-soft">FETCHING LIVE LIQUIDITY CURVE…</span>
+                <span className="animate-pulse-soft">LOADING OPEN DAYS…</span>
               </Placeholder>
             )}
             {projection.status === "error" && (
@@ -296,12 +310,12 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
           {/* Stage 3 */}
           {date && book.status === "loading" && (
             <p className="mt-5 text-center text-xs tracking-wider text-quant">
-              <span className="animate-pulse-soft">FETCHING ORDER BOOK…</span>
+              <span className="animate-pulse-soft">LOADING OPEN TIMES…</span>
             </p>
           )}
           {date && book.status === "error" && (
             <p className="mt-5 text-center text-xs tracking-wider text-muted">
-              ORDER BOOK UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
+              TIMES UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
               <button
                 type="button"
                 className="text-quant hover:underline"
@@ -316,7 +330,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
             <div ref={bookRef} className="overflow-hidden">
               {day.slots.length === 0 ? (
                 <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-xs tracking-wider text-muted">
-                  NO LIQUIDITY LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
+                  NO TIMES LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
                 </p>
               ) : (
                 <OrderBook
@@ -376,7 +390,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
 
                 {orderError && (
                   <p role="alert" className="text-xs tracking-wider text-gold">
-                    ORDER REJECTED · {orderError}
+                    COULD NOT BOOK · {orderError}
                   </p>
                 )}
 
@@ -384,7 +398,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                   <p className="text-xs tracking-wider text-muted">
                     {ticket ? (
                       <>
-                        ORDER <span className="text-ink">{ticket.track.ticker}</span> ·{" "}
+                        SESSION <span className="text-ink">{ticket.track.ticker}</span> ·{" "}
                         {TerminalFormat.date(ticket.date)} · {ticket.slot.label} {zoneLabel} ·{" "}
                         {ticket.slot.durationMinutes}m
                       </>
@@ -397,7 +411,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                     disabled={!slot || execution !== "idle"}
                     className="h-11 rounded-md bg-gold px-5 text-sm font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
                   >
-                    {execution === "submitting" ? "ROUTING ORDER…" : "CONFIRM FREE SESSION"}
+                    {execution === "submitting" ? "BOOKING…" : "CONFIRM FREE SESSION"}
                   </button>
                 </div>
               </form>
@@ -437,7 +451,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                     onClick={reset}
                     className="mt-4 text-xs tracking-widest text-muted hover:text-quant"
                   >
-                    ↺ NEW ORDER
+                    ↺ BOOK ANOTHER
                   </button>
                 </div>
               )}

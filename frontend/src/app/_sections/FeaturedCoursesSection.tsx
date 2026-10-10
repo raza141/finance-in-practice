@@ -1,72 +1,59 @@
 import Link from "next/link";
 
+import { BookButton } from "@/core/components/ui/BookButton";
+import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { ExamGlance } from "@/domains/courses/components/ExamGlance";
+import { WeightBars } from "@/domains/courses/components/WeightBars";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import type { Course } from "@/domains/courses/types";
 
-const PRIMARY = [
-  {
-    title: "CFA®",
-    level: "Level I–II",
-    outcome: "Every reading taught through worked problems, so formulas stick on exam day.",
-    points: ["Personal study plan", "Exam-style drills", "Formula intuition, not rote"],
-    /** Opens the first published course in this category; until there is one, the fallback href. */
-    category: "CFA",
-    href: "/courses#course-pages",
-  },
-  {
-    title: "FRM®",
-    level: "Part I",
-    outcome: "Risk models and derivatives built from first principles, then drilled on exam questions.",
-    points: ["VaR and stress testing", "Exam-style drills", "Every formula worked, then coded"],
-    category: "FRM",
-    href: "/courses#course-pages",
-  },
-];
-
-
-/** Category -> slug of its first published course (by title, so Level I before Level II); empty if the database is unreachable. */
-async function liveCourses(): Promise<Map<string, string>> {
+/** Published exam courses, by title (CFA Level I, CFA Level II, FRM Part I); empty if the database is unreachable. */
+async function examCourses(): Promise<Course[]> {
   try {
-    const courses = ((await CourseRepository.fromEnv()?.active()) ?? []).toSorted((a, b) => a.title.localeCompare(b.title));
-    const byCategory = new Map<string, string>();
-    for (const course of courses) if (!byCategory.has(course.category)) byCategory.set(course.category, course.slug);
-    return byCategory;
+    const courses = (await CourseRepository.fromEnv()?.active()) ?? [];
+    return courses.filter((c) => c.category === "CFA" || c.category === "FRM").toSorted((a, b) => a.title.localeCompare(b.title));
   } catch (error) {
     console.error("home: could not load courses", error);
-    return new Map();
+    return [];
   }
 }
 
+/** Apple-style product tiles: each course is the hero of its own tile, with numbers and a chart instead of paragraphs. */
 export async function FeaturedCoursesSection() {
-  const live = await liveCourses();
+  const courses = await examCourses();
   return (
     <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-20 lg:py-24">
-      <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick where you want to start" />
+      <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick your exam. We'll get you through it." />
 
-      <div data-anim="reveal" className="mt-12 grid gap-4 lg:grid-cols-2">
-        {PRIMARY.map((course) => (
-          <Link
-            key={course.title}
-            href={live.has(course.category) ? `/courses/${live.get(course.category)}` : course.href}
-            className="group flex flex-col rounded-2xl border border-gold/30 bg-surface p-7 transition-colors hover:border-gold/70 sm:p-9"
-          >
-            <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.level}</p>
-            <h3 className="mt-4 text-4xl font-black sm:text-5xl">{course.title}</h3>
-            <p className="mt-4 text-[17px] leading-relaxed text-muted">{course.outcome}</p>
-            <ul className="mt-6 flex flex-wrap gap-2">
-              {course.points.map((point) => (
-                <li key={point} className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-3 py-1 text-sm text-ink">
-                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-gold" />
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <span className="mt-8 font-semibold group-hover:text-gold">
-              See the {course.title} course <span aria-hidden>→</span>
-            </span>
-          </Link>
-        ))}
-      </div>
+      <ul data-anim="reveal" className="mt-12 grid gap-4 lg:grid-cols-2">
+        {courses.map((course, i) => {
+          const lead = i === 0;
+          return (
+            <li
+              key={course.id}
+              className={`group relative overflow-hidden rounded-3xl border border-line bg-surface p-7 transition-colors hover:border-gold/50 sm:p-10 ${lead ? "lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-12" : ""}`}
+            >
+              <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full bg-quant/10 blur-3xl" />
+              <div className="relative">
+                <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
+                <h3 className={`mt-3 font-black ${lead ? "text-4xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}>{course.title}</h3>
+                {course.tagline && <p className="mt-3 font-serif text-xl text-ink/85 italic sm:text-2xl">{course.tagline}</p>}
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <BookButton label="Book free session" size="lg" className="w-full sm:w-auto" />
+                  <ButtonLink href={`/courses/${course.slug}`} variant="secondary" size="lg" className="w-full sm:w-auto">
+                    Learn more →
+                  </ButtonLink>
+                </div>
+              </div>
+              <div className={`relative ${lead ? "mt-10 lg:mt-0" : "mt-10"}`}>
+                <ExamGlance ticker={course.testimonialTicker} />
+                <WeightBars modules={course.modules} className="mt-8" />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
 
       <p data-anim="reveal" className="mt-6 text-muted">
         Also 1-on-1: university finance, financial modeling, Python automation and more.{" "}

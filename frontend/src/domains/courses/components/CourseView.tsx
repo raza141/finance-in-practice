@@ -7,6 +7,8 @@ import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import type { Testimonial } from "@/domains/testimonials/types";
 
 import { CourseFormat } from "../services/CourseFormat";
+
+import { ExamGlance } from "./ExamGlance";
 import type { Course, ModulePriority } from "../types";
 
 const PRIORITY_STYLE: Record<ModulePriority, string> = {
@@ -65,6 +67,12 @@ export function CourseView({
     </ButtonLink>
   );
 
+  const sections = [
+    course.method.length > 0 && { href: "#method", label: "Method" },
+    course.modules.length > 0 && { href: "#curriculum", label: "Curriculum" },
+    course.faqs.length > 0 && { href: "#faq", label: "FAQ" },
+  ].filter((s): s is { href: string; label: string } => Boolean(s));
+
   const weights = Boolean(course.weightLabel) && course.modules.some((m) => m.weight);
   return (
     <>
@@ -94,6 +102,7 @@ export function CourseView({
               </ButtonLink>
             )}
           </div>
+          <ExamGlance ticker={course.testimonialTicker} className="mt-10 max-w-lg border-t border-line pt-8" />
         </div>
         <div className="grid content-start gap-4 lg:col-span-5">
           {difference && (
@@ -113,8 +122,24 @@ export function CourseView({
         </div>
       </section>
 
+      {/* Apple-style local nav: course name, jump links and the booking button stay in reach while reading.
+          Its backdrop runs up behind the floating header (pt + -mt eat the hero's bottom padding) so text never shows through. */}
+      <nav aria-label={`${course.title} sections`} className="sticky top-0 z-30 -mt-14 hidden border-b border-line bg-canvas/85 pt-[72px] backdrop-blur-md md:block">
+        <div className="page-container flex h-14 items-center gap-6">
+          <p className="mr-auto truncate font-semibold">{course.title}</p>
+          {sections.map((s) => (
+            <a key={s.href} href={s.href} className="text-sm whitespace-nowrap text-muted transition-colors hover:text-ink">
+              {s.label}
+            </a>
+          ))}
+          <ButtonLink href={course.bookingUrl} className="h-9 rounded-full px-4 text-[13px]" {...external(course.bookingUrl)}>
+            Book free session
+          </ButtonLink>
+        </div>
+      </nav>
+
       {course.method.length > 0 && (
-        <section id="method" aria-labelledby="method-heading" className="scroll-mt-20 border-t border-line">
+        <section id="method" aria-labelledby="method-heading" className="scroll-mt-40 border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading
               id="method-heading"
@@ -190,7 +215,7 @@ export function CourseView({
       )}
 
       {course.modules.length > 0 && (
-        <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-20 border-t border-line">
+        <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-40 border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
             {/* Priority (and weight) | module | practice: compact rows, the weight label written once as a header. */}
@@ -274,7 +299,7 @@ export function CourseView({
       )}
 
       {course.faqs.length > 0 && (
-        <section aria-labelledby="faq-heading" className="border-t border-line">
+        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-40 border-t border-line">
           <div className="page-container grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
             <div className="lg:col-span-4">
               <SectionHeading id="faq-heading" eyebrow="FAQ" title="Questions, answered." />
@@ -311,7 +336,7 @@ export function CourseView({
         </section>
       )}
 
-      <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-20 border-t border-line">
+      <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-40 border-t border-line">
         <div className="page-container py-16 lg:py-20">{booking}</div>
       </section>
 

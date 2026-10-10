@@ -57,6 +57,13 @@ export class CourseFormat {
   }
 
   /** "You read first…\nBest for: candidates who…" -> body + the "Best for" line (blank when there is none). */
+  /** Midpoint of a weight like "10-15%" or "20%", as a number; null when there is no number. */
+  static weightMidpoint(weight: string | undefined): number | null {
+    const numbers = (weight ?? "").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    if (numbers.length === 0) return null;
+    return numbers.length === 1 ? numbers[0] : (numbers[0] + numbers[1]) / 2;
+  }
+
   static splitBestFor(text: string): { body: string; bestFor: string } {
     const [body, bestFor = ""] = text.split(/\n\s*Best for:\s*/i);
     const line = bestFor.trim();

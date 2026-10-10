@@ -30,7 +30,7 @@ export function OrderBook({ day, selected, zoneLabel, onSelect }: OrderBookProps
     <div className="tabular-data mt-5 rounded-lg border border-line bg-canvas/70 font-mono text-sm">
         <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-xs tracking-wider">
           <span className="text-ink">
-            L2 ORDER BOOK <span className="text-muted">· {TerminalFormat.weekday(day.date)}{" "}
+            OPEN TIMES <span className="text-muted">· {TerminalFormat.weekday(day.date)}{" "}
             {TerminalFormat.date(day.date)}</span>
           </span>
           <span className="text-muted">{TerminalFormat.slots(day.slots.length)}</span>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
-import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { BookButton } from "@/core/components/ui/BookButton";
 import { siteConfig } from "@/core/config/site";
 
 /**
@@ -69,13 +69,7 @@ export function MobileNav() {
               </li>
             ))}
           </ul>
-          <ButtonLink
-            href={siteConfig.navCta.href}
-            onClick={() => setOpen(false)}
-            className="mt-2 w-full"
-          >
-            {siteConfig.navCta.label}
-          </ButtonLink>
+          <BookButton onClick={() => setOpen(false)} className="mt-2 w-full" />
         </nav>,
           document.body,
         )}

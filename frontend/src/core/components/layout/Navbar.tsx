@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type MouseEvent } from "react";
 
 import { NavLinkAnimator } from "@/core/animations/NavLinkAnimator";
-import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { BookButton } from "@/core/components/ui/BookButton";
 import { TiltSurface } from "@/core/components/ui/TiltSurface";
 import { siteConfig } from "@/core/config/site";
 
@@ -116,12 +116,7 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <ButtonLink
-              href={siteConfig.navCta.href}
-              className="ml-1 hidden h-8 rounded-full px-4 text-[13px] lg:inline-flex"
-            >
-              {siteConfig.navCta.label}
-            </ButtonLink>
+            <BookButton className="ml-1 hidden h-8 rounded-full px-4 text-[13px] lg:inline-flex" />
           </div>
         </TiltSurface>
 

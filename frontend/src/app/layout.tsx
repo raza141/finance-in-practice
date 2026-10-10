@@ -5,6 +5,7 @@ import Script from "next/script";
 import { Footer } from "@/core/components/layout/Footer";
 import { Navbar } from "@/core/components/layout/Navbar";
 import { SiteChrome } from "@/core/components/layout/SiteChrome";
+import { StickyBookBar } from "@/core/components/layout/StickyBookBar";
 import { CustomCursor } from "@/core/components/ui/CustomCursor";
 import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
 import { JsonLd } from "@/core/components/seo/JsonLd";
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteChrome>
           <Footer />
           <WhatsAppButton />
+          <StickyBookBar />
         </SiteChrome>
         <CustomCursor />
       </body>

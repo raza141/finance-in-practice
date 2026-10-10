@@ -77,13 +77,13 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
   const readout =
     focusIndex === null
       ? "HOVER CURVE · CLICK A NODE TO LOCK DATE"
-      : `DATE: ${TerminalFormat.date(days[focusIndex].date)} | LIQUIDITY: ${TerminalFormat.slots(days[focusIndex].slots.length)}`;
+      : `DATE: ${TerminalFormat.date(days[focusIndex].date)} | OPEN: ${TerminalFormat.slots(days[focusIndex].slots.length)}`;
 
   return (
     <div>
       <div className="tabular-data flex items-center justify-between gap-3 border-b border-line/70 px-1 pb-2 font-mono text-xs tracking-wider">
         <span className="text-muted">
-          LIQUIDITY CURVE <span className="text-muted/60">· 14D PROJECTION</span>
+          OPEN DAYS <span className="text-muted/60">· NEXT 14 DAYS</span>
         </span>
         <span aria-live="polite" className={focusIndex === null ? "text-muted" : "text-quant"}>
           {readout}

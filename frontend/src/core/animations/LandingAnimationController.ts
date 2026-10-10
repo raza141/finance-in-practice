@@ -84,7 +84,6 @@ export class LandingAnimationController {
           duration: 900,
           ease: "outExpo",
         }),
-      { threshold: 0.1 },
     );
   }
 

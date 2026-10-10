@@ -31,8 +31,10 @@ export class ScrollManager {
     this.observers.clear();
   }
 
+  // Default 0, not a fraction: a section taller than ~5 viewports (stacked
+  // course tiles on a small phone) can never be 20% visible and would stay hidden.
   private observerFor({
-    threshold = 0.2,
+    threshold = 0,
     rootMargin = "0px 0px -10% 0px",
   }: ScrollTriggerOptions): IntersectionObserver {
     const key = `${threshold}|${rootMargin}`;

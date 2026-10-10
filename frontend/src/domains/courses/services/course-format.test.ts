@@ -44,5 +44,8 @@ describe("CourseFormat", () => {
     expect(CourseFormat.splitBestFor("No callout.")).toEqual({ body: "No callout.", bestFor: "" });
     expect(CourseFormat.count(3)).toBe("three");
     expect(CourseFormat.count(12)).toBe("12");
+    expect(CourseFormat.weightMidpoint("10–15%")).toBe(12.5);
+    expect(CourseFormat.weightMidpoint("30%")).toBe(30);
+    expect(CourseFormat.weightMidpoint("tbc")).toBeNull();
   });
 });
