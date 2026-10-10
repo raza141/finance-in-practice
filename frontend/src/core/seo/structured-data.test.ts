@@ -51,6 +51,7 @@ describe("StructuredData", () => {
     expect(org["@id"]).toBe(StructuredData.ORG_ID);
     expect(org.url).toBe("https://financeinpractice.me");
     expect((org.contactPoint as JsonLdNode).telephone).toMatch(/^\+971\d+$/);
+    expect(org.areaServed).toEqual({ "@type": "Country", name: "United Arab Emirates" });
     expect(byType(site, "WebSite").publisher).toEqual({ "@id": StructuredData.ORG_ID });
   });
 

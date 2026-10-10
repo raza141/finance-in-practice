@@ -11,7 +11,7 @@ export const siteConfig = {
   url: "https://financeinpractice.me",
   tagline: "Master Financial Theory. Build Real-World Systems.",
   description:
-    "CFA®, FRM® and university finance tutoring from a practitioner who builds the models in Python. Book a free 1-on-1 demo.",
+    "1-on-1 CFA® Level I, FRM® and university finance tutoring in the UAE and online, from a practitioner who builds the models in Python. Book a free demo.",
 
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [

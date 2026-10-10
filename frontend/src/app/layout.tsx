@@ -44,7 +44,7 @@ const merriweather = Merriweather({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} | CFA®, FRM® & Quant Finance Tutoring`,
+    default: `CFA® Level I & Finance Tutor in the UAE | ${siteConfig.name}`,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,

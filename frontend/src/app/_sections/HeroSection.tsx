@@ -22,7 +22,7 @@ export function HeroSection() {
             data-anim="hero-subtitle"
             className="font-mono text-xs tracking-[0.22em] text-quant uppercase"
           >
-            CFA® · FRM® · University Finance
+            CFA® Level I · FRM® · University Finance
           </p>
 
           <h1
@@ -51,7 +51,8 @@ export function HeroSection() {
           >
             Personalised tutoring for CFA, FRM and university finance learners who want more than
             memorisation. Build conceptual depth, exam readiness and practical fluency across
-            valuation, risk, markets, financial modeling and automation.
+            valuation, risk, markets, financial modeling and automation. 1-on-1 online for
+            learners across the UAE (Dubai, Abu Dhabi, Sharjah) and worldwide.
           </p>
 
           <dl

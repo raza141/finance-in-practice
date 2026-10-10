@@ -5,6 +5,17 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   // Instructor photo uploads (PhotoStorage caps them at 4 MB; Vercel's request limit is 4.5 MB).
   experimental: { serverActions: { bodySizeLimit: "4.5mb" } },
+  // One host for search engines: www permanently redirects to the apex.
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.financeinpractice.me" }],
+        destination: "https://financeinpractice.me/:path*",
+        permanent: true,
+      },
+    ];
+  },
   // Baseline hardening. HSTS comes from Vercel. No full CSP yet: inline scripts and the 3D scenes would need nonces.
   async headers() {
     return [

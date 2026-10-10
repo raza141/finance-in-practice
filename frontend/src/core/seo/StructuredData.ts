@@ -27,7 +27,8 @@ export class StructuredData {
         logo: { "@type": "ImageObject", url: `${siteConfig.url}/brand/fip-logo.png` },
         description: siteConfig.description,
         slogan: siteConfig.tagline,
-        knowsAbout: ["CFA exam preparation", "FRM exam preparation", "Corporate finance", "Financial risk management", "Quantitative finance", "Python for finance"],
+        areaServed: { "@type": "Country", name: "United Arab Emirates" },
+        knowsAbout: ["CFA Level I exam preparation", "CFA exam preparation", "FRM exam preparation", "Corporate finance", "Financial risk management", "Quantitative finance", "Python for finance"],
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "customer support",
