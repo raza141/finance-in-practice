@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import type { Testimonial } from "@/domains/testimonials/types";
 
@@ -136,7 +137,7 @@ export function CourseView({
             </a>
           ))}
           <ButtonLink href={course.bookingUrl} className="h-9 rounded-full px-4 text-[13px]" {...external(course.bookingUrl)}>
-            Book free session
+            {siteConfig.navCta.label}
           </ButtonLink>
         </div>
       </nav>

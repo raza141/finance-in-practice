@@ -1,37 +1,40 @@
 import { CourseFormat } from "../services/CourseFormat";
 import type { CourseModule } from "../types";
 
-/** Exam weight by topic as a row of bars: the shape of the exam at a glance. Renders nothing without weights. */
+/** Topics that carry the most marks. The full list lives on the course page. */
+const SHOWN = 4;
+
+/** Heaviest exam topics as labelled bars, so the reader sees where the marks are. Renders nothing without weights. */
 export function WeightBars({ modules, className = "" }: { modules: CourseModule[]; className?: string }) {
-  const bars = modules.flatMap((m) => {
-    const share = CourseFormat.weightMidpoint(m.weight);
-    return share === null ? [] : [{ title: m.title, weight: m.weight ?? "", share, top: m.priority === "high_priority" }];
-  });
+  const bars = modules
+    .flatMap((m) => {
+      const share = CourseFormat.weightMidpoint(m.weight);
+      return share === null ? [] : [{ title: m.title, weight: m.weight ?? "", share, top: m.priority === "high_priority" }];
+    })
+    .toSorted((a, b) => b.share - a.share);
   if (bars.length === 0) return null;
-  const max = Math.max(...bars.map((b) => b.share));
+  // Fixed axis (at least 25% of the exam), so near-equal topics don't all draw as full bars.
+  const axis = Math.max(25, bars[0]!.share);
+  const rest = bars.length - SHOWN;
 
   return (
     <figure className={className}>
-      <ul aria-label="Exam weight by topic" className="flex h-20 items-end gap-1.5">
-        {bars.map((bar) => (
-          <li
-            key={bar.title}
-            title={`${bar.title}: ${bar.weight}`}
-            style={{ height: `${Math.max(12, (bar.share / max) * 100)}%` }}
-            className={`flex-1 rounded-t-sm ${bar.top ? "bg-gold" : "bg-quant/50"}`}
-          >
-            <span className="sr-only">
-              {bar.title}: {bar.weight}
+      <figcaption className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Where the marks are</figcaption>
+      <ul className="mt-3 grid gap-2.5">
+        {bars.slice(0, SHOWN).map((bar) => (
+          <li key={bar.title} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-sm">
+            <span className="truncate text-ink/90">{bar.title}</span>
+            <span className="tabular-data font-mono text-xs text-muted">{bar.weight}</span>
+            <span aria-hidden className="col-span-2 h-1.5 rounded-full bg-line/60">
+              <span
+                style={{ width: `${(bar.share / axis) * 100}%` }}
+                className={`block h-full rounded-full ${bar.top ? "bg-gold" : "bg-quant/60"}`}
+              />
             </span>
           </li>
         ))}
       </ul>
-      <figcaption className="mt-2 flex justify-between font-mono text-[11px] tracking-wide text-muted uppercase">
-        <span>{bars.length} topics · exam weight</span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-2 rounded-sm bg-gold" /> high priority
-        </span>
-      </figcaption>
+      {rest > 0 && <p className="mt-3 text-xs text-muted">+ {rest} more {rest === 1 ? "topic" : "topics"} in the full curriculum</p>}
     </figure>
   );
 }

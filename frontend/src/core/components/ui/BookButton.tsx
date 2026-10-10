@@ -6,13 +6,16 @@ import { siteConfig } from "@/core/config/site";
 
 import { ButtonLink } from "./ButtonLink";
 
-type BookButtonProps = Omit<ComponentProps<typeof ButtonLink>, "href" | "children"> & { label?: string };
+/** Fired on `window` so the booking widget can pre-select a course; detail is a booking TrackId. */
+export const BOOK_TRACK_EVENT = "book:track";
+
+type BookButtonProps = Omit<ComponentProps<typeof ButtonLink>, "href" | "children"> & { label?: string; track?: string };
 
 /**
  * The one booking CTA. Pages with their own `#book` panel (home, courses,
  * consulting) scroll to it in place; every other page goes to the home panel.
  */
-export function BookButton({ label = siteConfig.navCta.label, onClick, ...props }: BookButtonProps) {
+export function BookButton({ label = siteConfig.navCta.label, track, onClick, ...props }: BookButtonProps) {
   const go = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
     const panel = document.getElementById("book");
@@ -20,6 +23,7 @@ export function BookButton({ label = siteConfig.navCta.label, onClick, ...props 
     event.preventDefault();
     panel.scrollIntoView({ behavior: "smooth" });
     history.replaceState(null, "", "#book");
+    if (track) window.dispatchEvent(new CustomEvent(BOOK_TRACK_EVENT, { detail: track }));
   };
   return (
     <ButtonLink {...props} href={siteConfig.navCta.href} onClick={go}>

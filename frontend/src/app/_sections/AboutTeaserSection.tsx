@@ -26,9 +26,18 @@ export async function AboutTeaserSection() {
             {founder.name}
           </h2>
           <p className="mt-1 text-sm text-muted">{founder.role}</p>
-          <p className="mt-5 text-lg leading-relaxed text-ink/90">
-            {founder.bio} {founder.background}
-          </p>
+          {founder.education.length > 0 && (
+            <ul aria-label="Credentials" className="mt-5 flex flex-wrap gap-2">
+              {founder.education.map((item) => (
+                <li key={item} className="flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3.5 py-1.5 text-sm font-semibold text-ink">
+                  <span aria-hidden className="text-gold">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* Bio only: the engineering background lives on /about, the teaser sells the teacher. */}
+          <p className="mt-5 text-lg leading-relaxed text-ink/90">{founder.bio}</p>
           <ButtonLink href="/about" variant="secondary" className="mt-8">
             Meet your instructor
           </ButtonLink>

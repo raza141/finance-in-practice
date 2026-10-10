@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
+import { BOOK_TRACK_EVENT } from "@/core/components/ui/BookButton";
 import { ApiError } from "@/core/http/ApiError";
 
 import { TerminalAnimator } from "../animations/TerminalAnimator";
@@ -73,6 +74,7 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
   const bookRef = useRef<HTMLDivElement>(null);
   const flashRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLParagraphElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const days = projection.status === "ready" ? projection.data : null;
   const day = book.status === "ready" ? book.data : null;
@@ -213,6 +215,35 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
     };
   }, [animator, execution, finalText]);
 
+  // Never show an empty widget: a course button picks its course, otherwise CFA once the widget is on screen
+  // (on view, not on load, so visitors who never scroll here don't hit the calendar API).
+  const latest = useRef({ lockTrack, track });
+  useEffect(() => {
+    latest.current = { lockTrack, track };
+  });
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const ids = new Set(catalog.tracks().map((t) => t.id));
+    const onTrack = (event: Event) => {
+      const id = (event as CustomEvent<unknown>).detail;
+      if (typeof id !== "string" || !ids.has(id as TrackId)) return;
+      latest.current.lockTrack(id as TrackId);
+      latest.current.track = id as TrackId; // before the re-render, so the on-view default can't override it
+    };
+    const seen = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      seen.disconnect();
+      if (!latest.current.track) latest.current.lockTrack("cfa");
+    });
+    window.addEventListener(BOOK_TRACK_EVENT, onTrack);
+    seen.observe(root);
+    return () => {
+      window.removeEventListener(BOOK_TRACK_EVENT, onTrack);
+      seen.disconnect();
+    };
+  }, [catalog]);
+
   // --- render --------------------------------------------------------------
 
   const zone = new ZonedCalendar(timeZone);
@@ -232,7 +263,7 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
   }, [onSelection, courseTitle, date, timeText, booked]);
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-line font-mono text-ink shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)]">
+    <div ref={rootRef} className="relative overflow-hidden rounded-xl border border-line font-mono text-ink shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)]">
       {/* Flash layer: the terminal background that strobes on execution. */}
       <div ref={flashRef} aria-hidden className="absolute inset-0 bg-surface" />
 

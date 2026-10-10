@@ -40,7 +40,7 @@ export async function FeaturedCoursesSection() {
                 <h3 className={`mt-3 font-black ${lead ? "text-4xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}>{course.title}</h3>
                 {course.tagline && <p className="mt-3 font-serif text-xl text-ink/85 italic sm:text-2xl">{course.tagline}</p>}
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <BookButton label="Book free session" size="lg" className="w-full sm:w-auto" />
+                  <BookButton track={course.category === "FRM" ? "frm" : "cfa"} size="lg" className="w-full sm:w-auto" />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary" size="lg" className="w-full sm:w-auto">
                     Learn more →
                   </ButtonLink>

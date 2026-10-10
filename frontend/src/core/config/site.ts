@@ -9,7 +9,7 @@ export const siteConfig = {
   name: "Finance in Practice",
   domain: "financeinpractice.me",
   url: "https://financeinpractice.me",
-  tagline: "Master Financial Theory. Build Real-World Systems.",
+  tagline: "1-on-1 CFA® & FRM® tutoring in Abu Dhabi and online across the UAE.",
   description:
     "1-on-1 CFA® Level I, FRM® and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free diagnostic session.",
 
@@ -43,7 +43,7 @@ export const siteConfig = {
   ] as readonly NavItem[],
 
   /** Gold conversion button at the end of the navbar. */
-  navCta: { label: "Book free session", href: "/#book" },
+  navCta: { label: "Book free diagnostic", href: "/#book" },
 
   /** Public contact channels. Leave `email` null to hide it on /contact. */
   contact: {
@@ -83,7 +83,7 @@ export const siteConfig = {
 
   disclosures: {
     regulatory:
-      "Educational purposes only. Not registered investment advice under SECP or international regulators.",
+      "For educational purposes only. Finance in Practice does not provide financial, investment or regulated advisory services.",
     trademarks:
       "CFA® and Chartered Financial Analyst® are registered trademarks owned by CFA Institute. FRM® and Financial Risk Manager® are registered trademarks of the Global Association of Risk Professionals (GARP). CFA Institute and GARP do not endorse, promote or warrant the accuracy or quality of the services offered here.",
   },

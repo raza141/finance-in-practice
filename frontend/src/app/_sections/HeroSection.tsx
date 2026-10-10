@@ -1,16 +1,10 @@
 import { HeroScene } from "@/core/components/3d/HeroScene";
+import { BookButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { siteConfig } from "@/core/config/site";
 
 const HEADLINE: { text: string; accent?: boolean }[][] = [
-  [{ text: "Master" }, { text: "Financial" }, { text: "Theory." }],
-  [{ text: "Build" }, { text: "Real-World" }, { text: "Systems.", accent: true }],
-];
-
-const STATUS = [
-  { label: "System status", value: "Accepting new learners", live: true },
-  { label: "Primary coverage", value: "CFA® · FRM® · Quantitative Finance" },
-  { label: "Delivery model", value: "1-on-1 · Diagnostic-led · Application-focused" },
+  [{ text: "CFA®" }, { text: "&" }, { text: "FRM®" }, { text: "Tutoring" }],
+  [{ text: "in" }, { text: "Abu", accent: true }, { text: "Dhabi", accent: true }, { text: "& Online" }],
 ];
 
 export function HeroSection() {
@@ -37,7 +31,14 @@ export function HeroSection() {
                       data-anim="hero-word"
                       className={`inline-block ${word.accent ? "text-quant" : ""}`}
                     >
-                      {word.text}
+                      {word.text.endsWith("®") ? (
+                        <>
+                          {word.text.slice(0, -1)}
+                          <sup className="text-[0.4em]">®</sup>
+                        </>
+                      ) : (
+                        word.text
+                      )}
                     </span>{" "}
                   </span>
                 ))}
@@ -49,8 +50,8 @@ export function HeroSection() {
             data-anim="hero-subtitle"
             className="mt-6 max-w-xl text-lg leading-relaxed text-ink/85 sm:text-xl"
           >
-            <strong className="font-semibold text-gold">1-on-1 CFA® &amp; FRM® tutoring</strong> where
-            every formula makes sense: worked by hand, applied to real markets, then built in code.
+            <strong className="font-semibold text-gold">1-on-1 exam prep</strong> that starts with a free diagnostic:
+            every formula from first principles, tied to real markets, on a plan built around your exam date.
           </p>
 
           <ul data-anim="hero-subtitle" className="mt-5 flex flex-wrap gap-2 text-sm font-medium">
@@ -64,27 +65,9 @@ export function HeroSection() {
             </li>
           </ul>
 
-          {/* Terminal readout is flavour, not message: desktop only so the CTA stays above the fold on phones. */}
-          <dl
-            data-anim="hero-subtitle"
-            className="mt-6 hidden gap-1.5 font-mono text-xs tracking-wide sm:grid sm:text-[13px] lg:text-[11.5px] xl:text-[13px]"
-          >
-            {STATUS.map((row) => (
-              <div key={row.label} className="flex gap-x-2">
-                <dt className="shrink-0 text-muted uppercase">{row.label}:</dt>
-                <dd className={row.live ? "flex items-center gap-2 text-quant" : "text-ink/90 sm:whitespace-nowrap"}>
-                  {row.live && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-quant" />}
-                  {row.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
           <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
             <span data-anim="hero-cta">
-              <ButtonLink href={siteConfig.bookingHref} size="lg" className="w-full sm:w-auto">
-                Book a Diagnostic Session
-              </ButtonLink>
+              <BookButton size="lg" className="w-full sm:w-auto" />
             </span>
             <span data-anim="hero-cta">
               <ButtonLink

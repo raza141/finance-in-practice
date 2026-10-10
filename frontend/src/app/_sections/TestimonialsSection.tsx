@@ -5,36 +5,29 @@ import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import { SwipeRail } from "@/domains/testimonials/components/SwipeRail";
-import { TickerTape } from "@/domains/testimonials/components/TickerTape";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
-import type { Testimonial, TickerQuote } from "@/domains/testimonials/types";
+import type { Testimonial } from "@/domains/testimonials/types";
 
-/** Fills shown in the book; older ones still count toward the ticker averages. */
-const BOOK_DEPTH = 6;
+/** Reviews shown on the home page. */
+const SHOWN = 6;
 
-interface OrderBook {
-  fills: Testimonial[];
-  quotes: TickerQuote[];
-}
-
-/** Approved testimonials only; an unavailable database shows an empty book rather than failing the page. */
-async function loadOrderBook(): Promise<OrderBook> {
+/** Approved testimonials only; an unavailable database shows none rather than failing the page. */
+async function loadReviews(): Promise<Testimonial[]> {
   const repo = TestimonialRepository.fromEnv();
-  if (!repo) return { fills: [], quotes: [] };
+  if (!repo) return [];
   try {
-    const [fills, quotes] = await Promise.all([repo.approved(), repo.tickerQuotes()]);
-    return { fills: fills.slice(0, BOOK_DEPTH), quotes };
+    return (await repo.approved()).slice(0, SHOWN);
   } catch (error) {
-    // Let Next.js prerender signals through instead of baking in an empty book.
+    // Let Next.js prerender signals through instead of baking in an empty list.
     unstable_rethrow(error);
-    console.error("[testimonials] could not load the order book", error);
-    return { fills: [], quotes: [] };
+    console.error("[testimonials] could not load reviews", error);
+    return [];
   }
 }
 
-/** Landing-page social proof: ticker tape and approved testimonials. Submissions live on /testimonials/submit. */
+/** Landing-page social proof: approved testimonials. Submissions live on /testimonials/submit. */
 export async function TestimonialsSection() {
-  const { fills, quotes } = await loadOrderBook();
+  const fills = await loadReviews();
   // No approved reviews yet: skip the section rather than show an empty proof block.
   if (fills.length === 0) return null;
 
@@ -48,8 +41,6 @@ export async function TestimonialsSection() {
       <GridBackdrop className="absolute inset-0" />
 
       <div className="relative">
-        <TickerTape quotes={quotes} />
-
         <div className="page-container py-20 lg:py-24">
           <SectionHeading id="testimonials-heading" eyebrow="Learner results" title="What learners say" />
 

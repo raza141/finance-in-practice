@@ -1,7 +1,6 @@
-import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { BookButton } from "@/core/components/ui/BookButton";
 import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
-import { siteConfig } from "@/core/config/site";
 
 const STEPS = [
   {
@@ -16,7 +15,7 @@ const STEPS = [
   },
   {
     title: "Start learning",
-    body: "Live 1-on-1 sessions, worked problems and the code behind them.",
+    body: "Live 1-on-1 sessions, worked problems and exam-style practice.",
     icon: "M5 3l14 9-14 9V3Z",
   },
 ];
@@ -46,9 +45,7 @@ export function HowItWorksSection() {
           ))}
         </ol>
         <div data-anim="reveal" className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <ButtonLink href={siteConfig.bookingHref} size="lg" className="w-full sm:w-auto">
-            Book a Diagnostic Session
-          </ButtonLink>
+          <BookButton size="lg" className="w-full sm:w-auto" />
           <p className="font-mono text-xs tracking-wide text-muted">Free · 30 min · no card needed</p>
         </div>
       </div>
