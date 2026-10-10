@@ -18,7 +18,7 @@ import { OrderBook } from "./OrderBook";
 import { TrackTabs } from "./TrackTabs";
 
 const PROJECTION_DAYS = 14;
-const STAGES = ["COURSE", "DATE", "TIME", "CONFIRM"] as const;
+const STAGES = ["COURSE", "YOUR DETAILS", "DATE & TIME", "CONFIRM"] as const;
 
 type Load<T> =
   | { status: "idle" }
@@ -79,7 +79,8 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
   const days = projection.status === "ready" ? projection.data : null;
   const day = book.status === "ready" ? book.data : null;
   const busy = execution === "submitting" || execution === "running";
-  const stage = !track ? 0 : !date ? 1 : execution === "idle" || execution === "submitting" ? 2 : 3;
+  const detailsDone = name.trim().length >= 2 && BookingContract.isEmail(email);
+  const stage = !track ? 0 : !detailsDone ? 1 : !slot ? 2 : 3;
   const finalText = feedProvider.isSimulated
     ? "[ SESSION STAGED ]"
     : "[ SESSION BOOKED ]";
@@ -303,83 +304,9 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
             onLock={lockTrack}
           />
 
-          {/* Stage 2 */}
-          <div className="mt-4">
-            {projection.status === "idle" && (
-              <Placeholder>
-                PICK A COURSE ABOVE TO SEE OPEN DAYS (NEXT {PROJECTION_DAYS} DAYS)
-              </Placeholder>
-            )}
-            {projection.status === "loading" && (
-              <Placeholder tone="quant">
-                <span className="animate-pulse-soft">LOADING OPEN DAYS…</span>
-              </Placeholder>
-            )}
-            {projection.status === "error" && (
-              <Placeholder>
-                FEED ERROR · {projection.message.toUpperCase()} ·{" "}
-                <button
-                  type="button"
-                  className="text-quant underline-offset-4 hover:underline"
-                  onClick={() => track && loadProjection(track, timeZone)}
-                >
-                  RETRY
-                </button>
-              </Placeholder>
-            )}
-            {days && (
-              <LiquidityCurve
-                key={track}
-                days={days}
-                selectedDate={date}
-                animator={animator}
-                onSelect={lockDate}
-              />
-            )}
-          </div>
-
-          {/* Stage 3 */}
-          {date && book.status === "loading" && (
-            <p className="mt-5 text-center text-xs tracking-wider text-quant">
-              <span className="animate-pulse-soft">LOADING OPEN TIMES…</span>
-            </p>
-          )}
-          {date && book.status === "error" && (
-            <p className="mt-5 text-center text-xs tracking-wider text-muted">
-              TIMES UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
-              <button
-                type="button"
-                className="text-quant hover:underline"
-                onClick={() => loadBook(date, timeZone)}
-              >
-                RETRY
-              </button>
-            </p>
-          )}
-
-          {day && execution !== "done" && (
-            <div ref={bookRef} className="overflow-hidden">
-              {day.slots.length === 0 ? (
-                <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-xs tracking-wider text-muted">
-                  NO TIMES LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
-                </p>
-              ) : (
-                <OrderBook
-                  day={day}
-                  selected={slot}
-                  zoneLabel={zoneLabel}
-                  onSelect={(s) => {
-                    setSlot(s);
-                    setOrderError(null);
-                  }}
-                />
-              )}
-              <p className="mt-2 text-xs tracking-wider text-muted">
-                Converted to your local time: <span className="text-ink/80">{timeZone}</span>
-              </p>
-
-              {/* Attendee + execution */}
-              <form onSubmit={execute} noValidate className="mt-4 space-y-3">
+          {/* Stage 2: who it's for, asked once, before the calendar. */}
+          {track && execution !== "done" && (
+            <div className="mt-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <TerminalInput
                     label="NAME"
@@ -419,6 +346,85 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
                   className="absolute -left-[9999px] h-px w-px opacity-0"
                 />
 
+            </div>
+          )}
+
+          {/* Stage 3 */}
+          <div className="mt-4">
+            {projection.status === "idle" && (
+              <Placeholder>
+                PICK A COURSE ABOVE TO SEE OPEN DAYS (NEXT {PROJECTION_DAYS} DAYS)
+              </Placeholder>
+            )}
+            {projection.status === "loading" && (
+              <Placeholder tone="quant">
+                <span className="animate-pulse-soft">LOADING OPEN DAYS…</span>
+              </Placeholder>
+            )}
+            {projection.status === "error" && (
+              <Placeholder>
+                FEED ERROR · {projection.message.toUpperCase()} ·{" "}
+                <button
+                  type="button"
+                  className="text-quant underline-offset-4 hover:underline"
+                  onClick={() => track && loadProjection(track, timeZone)}
+                >
+                  RETRY
+                </button>
+              </Placeholder>
+            )}
+            {days && (
+              <LiquidityCurve
+                key={track}
+                days={days}
+                selectedDate={date}
+                animator={animator}
+                onSelect={lockDate}
+              />
+            )}
+          </div>
+
+          {date && book.status === "loading" && (
+            <p className="mt-5 text-center text-xs tracking-wider text-quant">
+              <span className="animate-pulse-soft">LOADING OPEN TIMES…</span>
+            </p>
+          )}
+          {date && book.status === "error" && (
+            <p className="mt-5 text-center text-xs tracking-wider text-muted">
+              TIMES UNAVAILABLE · {book.message.toUpperCase()} ·{" "}
+              <button
+                type="button"
+                className="text-quant hover:underline"
+                onClick={() => loadBook(date, timeZone)}
+              >
+                RETRY
+              </button>
+            </p>
+          )}
+
+          {day && execution !== "done" && (
+            <div ref={bookRef} className="overflow-hidden">
+              {day.slots.length === 0 ? (
+                <p className="mt-5 rounded-lg border border-line px-4 py-6 text-center text-xs tracking-wider text-muted">
+                  NO TIMES LEFT ON {TerminalFormat.date(day.date)} · PICK ANOTHER DATE
+                </p>
+              ) : (
+                <OrderBook
+                  day={day}
+                  selected={slot}
+                  zoneLabel={zoneLabel}
+                  onSelect={(s) => {
+                    setSlot(s);
+                    setOrderError(null);
+                  }}
+                />
+              )}
+              <p className="mt-2 text-xs tracking-wider text-muted">
+                Converted to your local time: <span className="text-ink/80">{timeZone}</span>
+              </p>
+
+              {/* Execution */}
+              <form onSubmit={execute} noValidate className="mt-4 space-y-3">
                 {orderError && (
                   <p role="alert" className="text-xs tracking-wider text-gold">
                     COULD NOT BOOK · {orderError}

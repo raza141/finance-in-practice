@@ -88,15 +88,16 @@ export function CourseView({
             {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
+          {/* Method / Curriculum jumps are phone-only: from md up the sticky sub-nav below carries them. */}
           <div className="mt-8 flex flex-wrap gap-3">
             {cta}
             {course.method.length > 0 && (
-              <ButtonLink href="#method" variant="secondary" size="lg">
+              <ButtonLink href="#method" variant="secondary" size="lg" className="md:hidden">
                 See the method ↓
               </ButtonLink>
             )}
             {course.modules.length > 0 && (
-              <ButtonLink href="#curriculum" variant="secondary" size="lg">
+              <ButtonLink href="#curriculum" variant="secondary" size="lg" className="md:hidden">
                 See the course ↓
               </ButtonLink>
             )}
@@ -144,7 +145,7 @@ export function CourseView({
 
       {course.method.length > 0 && (
         <section id="method" aria-labelledby="method-heading" className="scroll-mt-40 border-t border-line">
-          <div className="page-container py-14 lg:py-20">
+          <div className="page-container py-12 lg:py-14">
             <SectionHeading
               id="method-heading"
               eyebrow="The Finance in Practice method"
@@ -220,7 +221,7 @@ export function CourseView({
 
       {course.modules.length > 0 && (
         <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-40 border-t border-line">
-          <div className="page-container py-14 lg:py-20">
+          <div className="page-container py-12 lg:py-14">
             <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
             {/* Priority (and weight) | module | practice: compact rows, the weight label written once as a header. */}
             {weights && (
@@ -270,7 +271,7 @@ export function CourseView({
 
       {course.options.length > 0 && (
         <section aria-labelledby="options-heading" className="border-t border-line">
-          <div className="page-container py-14 lg:py-20">
+          <div className="page-container py-12 lg:py-14">
             {/* One booking button for the whole section, not one per card. */}
             <div className="flex flex-wrap items-end justify-between gap-6">
               <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
@@ -291,7 +292,7 @@ export function CourseView({
 
       {testimonials.length > 0 && (
         <section aria-labelledby="proof-heading" className="border-t border-line">
-          <div className="page-container py-14 lg:py-20">
+          <div className="page-container py-12 lg:py-14">
             <SectionHeading id="proof-heading" eyebrow="Learner feedback" title="From people who took this course." />
             <div className="mt-10 grid gap-4 md:grid-cols-2">
               {testimonials.map((testimonial, index) => (
@@ -304,7 +305,7 @@ export function CourseView({
 
       {freeResource && (
         <section aria-label="Free download" className="border-t border-line">
-          <div className="page-container py-14 lg:py-20">{freeResource}</div>
+          <div className="page-container py-12 lg:py-14">{freeResource}</div>
         </section>
       )}
 
@@ -333,7 +334,7 @@ export function CourseView({
 
       {(course.audience || course.notFor) && (
         <section aria-labelledby="fit-heading" className="border-t border-line">
-          <div className="page-container py-14 lg:py-20">
+          <div className="page-container py-12 lg:py-14">
             <div className="rounded-2xl border border-line bg-surface p-8 sm:p-12">
               <h2 id="fit-heading" className="text-3xl font-bold">
                 Is this for you?
@@ -347,7 +348,7 @@ export function CourseView({
       )}
 
       <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-40 border-t border-line">
-        <div className="page-container py-16 lg:py-20">{booking}</div>
+        <div className="page-container py-12 lg:py-14">{booking}</div>
       </section>
 
       {course.disclaimer && (
