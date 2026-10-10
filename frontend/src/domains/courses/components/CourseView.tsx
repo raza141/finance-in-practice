@@ -24,6 +24,14 @@ const icon = (path: string) => (
   </svg>
 );
 
+/** One per method stage, by position: book (learn), target (solve), tool (apply), loop (revise). */
+const STAGE_ICONS = [
+  icon("M4 19.5V5a2 2 0 0 1 2-2h14v15H6a2 2 0 0 0-2 2Zm0 0A2 2 0 0 0 6 22h14M9 7h7M9 11h5"),
+  icon("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"),
+  icon("M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4"),
+  icon("M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"),
+];
+
 /** One per way to learn, by position: open book (self-study), presenter at a board (tutor-led), two paths merging (hybrid). */
 const MODE_ICONS = [
   icon("M12 6.5C10.2 5.2 7.8 4.5 4 4.5v13c3.8 0 6.2.7 8 2 1.8-1.3 4.2-2 8-2v-13c-3.8 0-6.2.7-8 2Zm0 0v13"),
@@ -118,10 +126,27 @@ export function CourseView({
             />
             <ol className={`mt-10 grid gap-4 ${row(course.method.length)}`}>
               {course.method.map((step, index) => (
-                <li key={index} className="rounded-xl border border-line bg-surface p-6">
-                  <span className="font-mono text-sm text-quant tabular-nums">{String(index + 1).padStart(2, "0")}</span>
-                  <h3 className="mt-3 text-lg font-bold">{step.title}</h3>
-                  {step.description && <p className="mt-2 leading-relaxed text-muted">{step.description}</p>}
+                <li
+                  key={index}
+                  className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/50 hover:shadow-[0_12px_40px_-12px_rgba(34,211,238,0.25)]"
+                >
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-quant to-gold opacity-50 transition-opacity group-hover:opacity-100" />
+                  {/* Big faded stage number behind the content. */}
+                  <span aria-hidden className="pointer-events-none absolute top-3 right-5 font-mono text-6xl font-bold text-quant/10 tabular-nums transition-colors group-hover:text-quant/20">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-quant/10 text-quant ring-1 ring-quant/30">
+                    {STAGE_ICONS[index % STAGE_ICONS.length]}
+                  </span>
+                  <p className="mt-5 font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Stage {String(index + 1).padStart(2, "0")}</p>
+                  <h3 className="mt-1 text-xl font-bold">{step.title}</h3>
+                  {step.description && <p className="mt-3 leading-relaxed text-muted">{step.description}</p>}
+                  {/* Flow arrow to the next stage, on the desktop row only. */}
+                  {index < course.method.length - 1 && (
+                    <span aria-hidden className="absolute top-1/2 -right-[13px] z-10 hidden h-6 w-6 -translate-y-1/2 place-items-center rounded-full border border-line bg-canvas text-xs text-quant md:grid">
+                      →
+                    </span>
+                  )}
                 </li>
               ))}
             </ol>
