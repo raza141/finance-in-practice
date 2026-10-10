@@ -12,7 +12,7 @@ const PRIMARY = [
     points: ["Personal study plan", "Exam-style problem drills", "Formula intuition, not rote"],
     /** Opens the first published course in this category; until there is one, the fallback href. */
     category: "CFA",
-    href: "/courses#exam-prep",
+    href: "/courses#course-pages",
   },
   {
     title: "FRM®",
@@ -20,7 +20,7 @@ const PRIMARY = [
     outcome: "Risk models, derivatives and quantitative methods built up from first principles, then tested on exam-style questions.",
     points: ["VaR and stress testing in depth", "Exam-style problem drills", "Every formula worked, then coded"],
     category: "FRM",
-    href: "/courses#exam-prep",
+    href: "/courses#course-pages",
   },
 ];
 

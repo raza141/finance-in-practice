@@ -21,22 +21,12 @@ export const STRESS_PREVIEW = [
   { label: "+200bp", shock: -0.1 },
 ] as const;
 
-/** Services shown in the landing-page bento grid. */
+/** Specialist tracks on /courses, after the exam course pages (which replace a combined CFA/FRM card). */
 export class ServiceCatalog {
   private static readonly SERVICES: readonly BentoService[] = [
     {
-      id: "exam-prep",
-      kicker: "01 · Exam prep",
-      title: "CFA® Level I–II & FRM® Part I",
-      summary:
-        "Structured preparation with a personal study plan, exam-style problem drills and formula intuition. Every quantitative reading is taught through worked problems and working code.",
-      tags: ["Fixed income", "Derivatives", "Quant methods", "Portfolio management"],
-      span: 8,
-      visual: "none",
-    },
-    {
       id: "university",
-      kicker: "02 · Mentorship",
+      kicker: "01 · Mentorship",
       title: "University finance",
       summary:
         "1-on-1 support for corporate finance, investments and econometrics coursework, dissertations and interviews.",
@@ -46,7 +36,7 @@ export class ServiceCatalog {
     },
     {
       id: "automation",
-      kicker: "03 · Automation",
+      kicker: "02 · Automation",
       title: "Financial automation",
       summary:
         "Replace fragile spreadsheets with tested Python pipelines: data cleaning, reporting and analytics you can rerun in seconds.",
@@ -56,7 +46,7 @@ export class ServiceCatalog {
     },
     {
       id: "stress-testing",
-      kicker: "04 · Risk",
+      kicker: "03 · Risk",
       title: "Stress testing & VaR",
       summary:
         "Parametric, historical and Monte Carlo VaR plus scenario stress tests, built and explained end to end.",
@@ -66,7 +56,7 @@ export class ServiceCatalog {
     },
     {
       id: "financial-modeling",
-      kicker: "05 · Modeling",
+      kicker: "04 · Modeling",
       title: "Financial modeling",
       summary:
         "Valuation, bond and option pricing models built step by step, with outputs checked against textbook benchmarks.",
@@ -75,19 +65,8 @@ export class ServiceCatalog {
       visual: "curve",
     },
     {
-      id: "lms",
-      kicker: "06 · Coming soon",
-      title: "On-demand learning platform",
-      summary:
-        "Self-paced courses with interactive quant labs running on the same engine as the 1-on-1 sessions.",
-      tags: ["Self-paced", "Quant labs"],
-      span: 12,
-      visual: "none",
-      waitlist: true,
-    },
-    {
       id: "portfolio-ml",
-      kicker: "07 · Portfolio",
+      kicker: "05 · Portfolio",
       title: "Portfolio construction & optimization with ML",
       summary:
         "From mean-variance to machine-learning signals: covariance shrinkage, hierarchical risk parity and return forecasting, backtested in Python.",
@@ -97,7 +76,7 @@ export class ServiceCatalog {
     },
     {
       id: "ips-cme",
-      kicker: "08 · Planning",
+      kicker: "06 · Planning",
       title: "IPS & capital market expectations",
       summary:
         "Draft an Investment Policy Statement and build the capital market expectations behind it, from return objectives and constraints to asset-class forecasts.",
@@ -107,13 +86,24 @@ export class ServiceCatalog {
     },
     {
       id: "goal-based-wealth",
-      kicker: "09 · Wealth",
+      kicker: "07 · Wealth",
       title: "Goal-based wealth management (UHNI)",
       summary:
         "Structure ultra-high-net-worth portfolios around client goals: liability mapping, goal-based buckets and multi-generational planning.",
       tags: ["UHNI", "Goals-based", "Private wealth"],
       span: 4,
       visual: "none",
+    },
+    {
+      id: "lms",
+      kicker: "08 · Coming soon",
+      title: "On-demand learning platform",
+      summary:
+        "Self-paced courses with interactive quant labs running on the same engine as the 1-on-1 sessions.",
+      tags: ["Self-paced", "Quant labs"],
+      span: 8,
+      visual: "none",
+      waitlist: true,
     },
   ];
 

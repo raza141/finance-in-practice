@@ -1,0 +1,144 @@
+{
+  "slug": "frm-part-1",
+  "title": "FRM Part I",
+  "category": "FRM",
+  "eyebrow": "FRM - EXAM COACHING",
+  "tagline": "Risk you can measure. Models you can explain.",
+  "summary": "One-to-one FRM Part I coaching built around GARP practice questions, error diagnosis, and risk models you build and test yourself.",
+  "audience": "Designed for committed FRM Part I candidates who attempt practice questions before each session and want personal guidance on quantitative and valuation topics. Not a passive lecture series, and no pass is guaranteed.",
+  "notFor": "",
+  "difference": "Formulas you understand, not memorise.\nEvery risk measure is worked by hand, then built in a spreadsheet or Python, so you know what it says and where it breaks.",
+  "disclaimer": "",
+  "ctaLabel": "Book a Free Strategy Session",
+  "bookingUrl": "#book",
+  "coachingLabel": "Question work",
+  "practiceLabel": "Live case",
+  "weightLabel": "Official weight (2026)",
+  "startDate": null,
+  "duration": "1-on-1 · Abu Dhabi in person or online",
+  "priceMinor": null,
+  "currency": "AED",
+  "isActive": true,
+  "method": [
+    {
+      "title": "Learn",
+      "description": "Each topic starts with the format that suits the candidate: independent study, tutor-led teaching, or a mix."
+    },
+    {
+      "title": "Solve",
+      "description": "GARP practice questions are worked through in session. The candidate explains their reasoning, and the cause of each error is identified: concept, formula, interpretation, calculation, or timing."
+    },
+    {
+      "title": "Apply",
+      "description": "Each topic ends with a short practical task, such as a VaR calculation, a hedge, a bond-pricing sheet, or a regression on market data."
+    },
+    {
+      "title": "Revise",
+      "description": "Short, spaced reviews revisit earlier topics through recall quizzes, retried errors, and mixed question sets."
+    }
+  ],
+  "modes": [
+    {
+      "title": "Self-study",
+      "description": "Candidate studies the curriculum independently. Sessions focus on questions and weak areas."
+    },
+    {
+      "title": "Tutor-led",
+      "description": "The tutor teaches the topic live, followed immediately by question work."
+    },
+    {
+      "title": "Hybrid",
+      "description": "Candidate reads first. The tutor teaches only the sections that remain unclear."
+    }
+  ],
+  "modules": [
+    {
+      "title": "Valuation and Risk Models",
+      "priority": "high_priority",
+      "summary": "Measure market, credit and operational risk, and value the instruments behind it.",
+      "coaching": "VaR, duration, convexity, option-pricing and credit questions are reviewed. Calculation and model-assumption errors are diagnosed.",
+      "practice": "Compute parametric, historical and Monte Carlo VaR for a small portfolio and compare the results.",
+      "deliverable": "VaR and bond-risk worksheet with a stress scenario.",
+      "weight": "30%"
+    },
+    {
+      "title": "Financial Markets and Products",
+      "priority": "high_priority",
+      "summary": "Understand how banks, funds and derivatives markets work, and how each product transfers risk.",
+      "coaching": "Questions on forwards, futures, swaps, options and hedging are reviewed. Payoff, sign and day-count errors are diagnosed.",
+      "practice": "Design a futures hedge for a real exposure and measure how well it worked.",
+      "deliverable": "Hedge design note with payoff charts.",
+      "weight": "30%"
+    },
+    {
+      "title": "Quantitative Analysis",
+      "priority": "core",
+      "summary": "Use probability, regression and time-series tools to model risk.",
+      "coaching": "Statistics, hypothesis-testing and regression questions are reviewed. Misread output and formula errors are diagnosed.",
+      "practice": "Estimate volatility and correlation from real price data and test a simple regression.",
+      "deliverable": "Annotated regression and volatility analysis.",
+      "weight": "20%"
+    },
+    {
+      "title": "Foundations of Risk Management",
+      "priority": "core",
+      "summary": "Explain how firms govern risk and what went wrong in the classic failures.",
+      "coaching": "Concept and case questions are attempted first. The reasoning is checked against the framework the question is testing.",
+      "practice": "Analyse a historical risk failure and map it to the governance lessons it teaches.",
+      "deliverable": "One-page case study on a risk-management failure.",
+      "weight": "20%"
+    }
+  ],
+  "options": [
+    {
+      "title": "FRM Part I Comprehensive Coaching",
+      "fee": "On request",
+      "description": "End-to-end guidance through the entire FRM Part I curriculum. Includes a customized study plan anchored to your exam window, worked problems for every topic, and continuous support from day one to exam day. Flexible payment plans available."
+    },
+    {
+      "title": "Targeted Topic Pack",
+      "fee": "On request",
+      "description": "Focused, intensive coaching on high-weight or complex areas (e.g., Valuation and Risk Models, derivatives). Designed to solidify your understanding, fix recurring calculation errors, and improve your scoring in specific problem areas."
+    },
+    {
+      "title": "Final-month revision sprint",
+      "fee": "On request",
+      "description": "An intensive 4-to-6 week program designed for the final stretch before your exam window. Includes mock-exam reviews, calculator and time-management techniques, and targeted drills to strengthen your remaining weak areas."
+    },
+    {
+      "title": "Single session",
+      "fee": "On request",
+      "description": "A dedicated one-on-one session to work through difficult questions, clarify complex formulas, or untangle a topic that is not clicking. Ideal for targeted, immediate help with no long-term commitment."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "How is this different from a regular FRM course?",
+      "answer": "A regular course teaches a fixed lecture plan to a group. This coaching is one-to-one and built around the candidate’s own attempts at practice questions. Each error is traced to its cause, whether concept, formula, interpretation, calculation or timing, and each risk measure is also built in a spreadsheet or Python."
+    },
+    {
+      "question": "Are sessions in person or online?",
+      "answer": "Both. Sessions are held in person in Abu Dhabi, or live online for candidates in Dubai, elsewhere in the UAE and abroad. Online sessions use a shared screen and whiteboard, so the question work is the same either way. The format can be mixed from week to week."
+    },
+    {
+      "question": "Is the GARP curriculum still needed?",
+      "answer": "Yes. Registered candidates receive the official FRM books and practice questions from GARP. Sessions are built around that material, not around separate notes. Finance in Practice is independent and is not affiliated with or endorsed by GARP."
+    },
+    {
+      "question": "Do I need to know Python?",
+      "answer": "No. Every topic can be done by hand and in a spreadsheet. Python is offered for candidates who want it, and it is never required for the exam."
+    },
+    {
+      "question": "Can coaching start at any time, and how are sessions priced?",
+      "answer": "Coaching can begin on request, with no fixed cohort start date. Sessions can be booked singly, monthly, or as exam-season support. Fees are discussed after the free Strategy Session, because the scope depends on the candidate’s needs."
+    },
+    {
+      "question": "Does coaching guarantee a pass?",
+      "answer": "No. Results depend on the candidate’s preparation and effort. Coaching improves the quality of practice by finding the cause of each error and a clear next step."
+    }
+  ],
+  "brochureUrl": null,
+  "seoTitle": "FRM Part I Tutor in Abu Dhabi & Dubai – In Person or Online",
+  "seoDescription": "1-on-1 FRM® Part I tutoring in person in Abu Dhabi or live online for candidates in Dubai and across the UAE. VaR, derivatives and quant, worked and built.",
+  "testimonialTicker": "FRM1"
+}

@@ -43,28 +43,8 @@ export default async function CoursesPage() {
         </p>
       </section>
 
-      <section id="curriculum" aria-labelledby="curriculum-heading" className="border-t border-line">
-        <div className="page-container py-14 lg:py-20">
-          <SectionHeading
-            id="curriculum-heading"
-            eyebrow="Select your learning mandate"
-            title="From exam technique to production code"
-            lede="Every learner begins with a different mandate: pass an examination, repair a conceptual gap, build technical fluency or translate academic knowledge into practical finance. Select the track aligned with your current objective."
-          />
-          <div className="mt-12 grid gap-4 lg:grid-cols-12">
-            {new ServiceCatalog().all().map((service) => (
-              <BentoCard key={service.id} service={service} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-line">
-        <QuantLabMetrics />
-      </div>
-
       {courses.length > 0 && (
-        <section aria-labelledby="course-list-heading" className="border-t border-line">
+        <section id="course-pages" aria-labelledby="course-list-heading" className="scroll-mt-20 border-t border-line">
           <div className="page-container py-14 lg:py-20">
             <SectionHeading
               id="course-list-heading"
@@ -72,7 +52,7 @@ export default async function CoursesPage() {
               title="Explore a course"
               lede="The full curriculum, method and ways to learn for each course."
             />
-            <ul className="mt-12 grid gap-6 md:grid-cols-2">
+            <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <li key={course.id}>
                   <Link
@@ -94,6 +74,28 @@ export default async function CoursesPage() {
           </div>
         </section>
       )}
+
+      <section id="curriculum" aria-labelledby="curriculum-heading" className="border-t border-line">
+        <div className="page-container py-14 lg:py-20">
+          <SectionHeading
+            id="curriculum-heading"
+            eyebrow="Specialist tracks"
+            title="From exam technique to production code"
+            lede="Every learner begins with a different mandate: pass an examination, repair a conceptual gap, build technical fluency or translate academic knowledge into practical finance. Select the track aligned with your current objective."
+          />
+          <div className="mt-12 grid gap-4 lg:grid-cols-12">
+            {new ServiceCatalog().all().map((service) => (
+              <BentoCard key={service.id} service={service} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      <div className="border-t border-line">
+        <QuantLabMetrics />
+      </div>
+
     </>
   );
 }
