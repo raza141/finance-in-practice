@@ -65,6 +65,11 @@ export function CourseView({
                 See the method ↓
               </ButtonLink>
             )}
+            {course.modules.length > 0 && (
+              <ButtonLink href="#curriculum" variant="secondary" size="lg">
+                See the course ↓
+              </ButtonLink>
+            )}
             {course.brochureUrl && (
               <ButtonLink href={course.brochureUrl} variant="secondary" size="lg" target="_blank" rel="noopener noreferrer" download prefetch={false}>
                 Brochure <span className="text-xs opacity-70">PDF</span>
@@ -116,7 +121,7 @@ export function CourseView({
                   {course.modes.map((mode, index) => (
                     <li key={index} className="rounded-xl border border-line p-5">
                       <p className="font-bold">{mode.title}</p>
-                      {mode.description && <p className="mt-2 leading-relaxed text-muted">{mode.description}</p>}
+                      {mode.description && <p className="mt-2 leading-relaxed whitespace-pre-line text-muted">{mode.description}</p>}
                     </li>
                   ))}
                 </ul>

@@ -40,15 +40,15 @@
   "modes": [
     {
       "title": "Self-study",
-      "description": "Candidate studies the curriculum independently. Sessions focus on questions and weak areas."
+      "description": "You read the official curriculum and attempt the item sets on your own schedule. Sessions go straight to what you got wrong or guessed: we trace each error to its cause and agree exactly what to fix before the next session.\nBest for: candidates who learn well from the books and want sharp feedback, not more lectures."
     },
     {
       "title": "Tutor-led",
-      "description": "The tutor teaches the topic live, followed immediately by question work."
+      "description": "I teach each topic live from first principles, with worked examples on a shared whiteboard. You then attempt item sets straight away, while the idea is fresh, and we review your answers together.\nBest for: first-time candidates, career switchers, or anyone who finds a topic hard to learn from the text alone."
     },
     {
       "title": "Hybrid",
-      "description": "Candidate reads first. The tutor teaches only the sections that remain unclear."
+      "description": "You read first and mark what is unclear. I teach only those parts, then we move to item sets, so no session time is spent re-explaining what you already understand. You can switch mode topic by topic.\nBest for: candidates with some background who want the fastest route through the curriculum."
     }
   ],
   "modules": [
