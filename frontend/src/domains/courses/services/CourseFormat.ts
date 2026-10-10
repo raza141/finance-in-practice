@@ -56,6 +56,13 @@ export class CourseFormat {
     return { headline: headline.trim(), body: rest.join("\n").trim() };
   }
 
+  /** "You read first…\nBest for: candidates who…" -> body + the "Best for" line (blank when there is none). */
+  static splitBestFor(text: string): { body: string; bestFor: string } {
+    const [body, bestFor = ""] = text.split(/\n\s*Best for:\s*/i);
+    const line = bestFor.trim();
+    return { body: body.trim(), bestFor: line.charAt(0).toUpperCase() + line.slice(1) };
+  }
+
   // Defensive readers for the jsonb columns: keep only well-formed items, so one bad row can't break a page.
 
   static method(value: unknown): MethodStep[] {

@@ -40,6 +40,8 @@ describe("CourseFormat", () => {
   it("splits the difference into headline and body, and spells small counts", () => {
     expect(CourseFormat.splitFirstLine("Not a lecture.\nBring your attempt.")).toEqual({ headline: "Not a lecture.", body: "Bring your attempt." });
     expect(CourseFormat.splitFirstLine("One line")).toEqual({ headline: "One line", body: "" });
+    expect(CourseFormat.splitBestFor("You read first.\nBest for: busy candidates.")).toEqual({ body: "You read first.", bestFor: "Busy candidates." });
+    expect(CourseFormat.splitBestFor("No callout.")).toEqual({ body: "No callout.", bestFor: "" });
     expect(CourseFormat.count(3)).toBe("three");
     expect(CourseFormat.count(12)).toBe("12");
   });

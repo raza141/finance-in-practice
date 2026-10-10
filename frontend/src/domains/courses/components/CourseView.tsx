@@ -18,6 +18,19 @@ const PRIORITY_STYLE: Record<ModulePriority, string> = {
 const ROW: Record<number, string> = { 1: "md:grid-cols-1", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" };
 const row = (count: number) => ROW[count] ?? "md:grid-cols-3";
 
+const icon = (path: string) => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <path d={path} />
+  </svg>
+);
+
+/** One per way to learn, by position: open book (self-study), presenter at a board (tutor-led), two paths merging (hybrid). */
+const MODE_ICONS = [
+  icon("M12 6.5C10.2 5.2 7.8 4.5 4 4.5v13c3.8 0 6.2.7 8 2 1.8-1.3 4.2-2 8-2v-13c-3.8 0-6.2.7-8 2Zm0 0v13"),
+  icon("M3 4h18v11H3zM8 20l4-5 4 5M7 9h6M7 12h4"),
+  icon("M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 1 6 6M18 3v6a6 6 0 0 1-6 6M3 6l3-3 3 3M15 6l3-3 3 3"),
+];
+
 const external = (href: string) => (href.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {});
 
 /**
@@ -113,17 +126,40 @@ export function CourseView({
               ))}
             </ol>
             {course.modes.length > 0 && (
-              <div className="mt-12">
-                <h3 className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
+              <div className="mt-16">
+                <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
                   {CourseFormat.count(course.modes.length)} {course.modes.length === 1 ? "way" : "ways"} to learn
-                </h3>
-                <ul className={`mt-5 grid gap-4 ${row(course.modes.length)}`}>
-                  {course.modes.map((mode, index) => (
-                    <li key={index} className="rounded-xl border border-line p-5">
-                      <p className="font-bold">{mode.title}</p>
-                      {mode.description && <p className="mt-2 leading-relaxed whitespace-pre-line text-muted">{mode.description}</p>}
-                    </li>
-                  ))}
+                </p>
+                <h3 className="mt-3 font-serif text-2xl font-bold sm:text-3xl">Choose how each topic is taught.</h3>
+                <p className="mt-2 max-w-2xl text-muted">Pick a mode per topic and switch whenever it suits you.</p>
+                <ul className={`mt-8 grid gap-5 ${row(course.modes.length)}`}>
+                  {course.modes.map((mode, index) => {
+                    const { body, bestFor } = CourseFormat.splitBestFor(mode.description);
+                    return (
+                      <li
+                        key={index}
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/50 hover:shadow-[0_12px_40px_-12px_rgba(34,211,238,0.25)]"
+                      >
+                        <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-quant to-gold opacity-50 transition-opacity group-hover:opacity-100" />
+                        <div className="flex items-center gap-4">
+                          <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-quant/10 text-quant ring-1 ring-quant/30">
+                            {MODE_ICONS[index % MODE_ICONS.length]}
+                          </span>
+                          <div>
+                            <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Mode {String(index + 1).padStart(2, "0")}</p>
+                            <h4 className="text-xl font-bold">{mode.title}</h4>
+                          </div>
+                        </div>
+                        {body && <p className="mt-5 flex-1 leading-relaxed text-muted">{body}</p>}
+                        {bestFor && (
+                          <div className="mt-6 rounded-xl border border-gold/30 bg-gold/5 px-4 py-3">
+                            <p className="font-mono text-[11px] tracking-[0.16em] text-gold uppercase">Best for</p>
+                            <p className="mt-1 text-sm leading-relaxed text-ink">{bestFor}</p>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
