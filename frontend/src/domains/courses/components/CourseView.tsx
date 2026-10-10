@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
-import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import type { Testimonial } from "@/domains/testimonials/types";
 
@@ -71,12 +70,6 @@ export function CourseView({
     </ButtonLink>
   );
 
-  const sections = [
-    course.method.length > 0 && { href: "#method", label: "Method" },
-    course.modules.length > 0 && { href: "#curriculum", label: "Curriculum" },
-    course.faqs.length > 0 && { href: "#faq", label: "FAQ" },
-  ].filter((s): s is { href: string; label: string } => Boolean(s));
-
   const weights = Boolean(course.weightLabel) && course.modules.some((m) => m.weight);
   return (
     <>
@@ -88,17 +81,16 @@ export function CourseView({
             {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
-          {/* Method / Curriculum jumps are phone-only: from md up the sticky sub-nav below carries them. */}
           <div className="mt-8 flex flex-wrap gap-3">
             {cta}
             {course.method.length > 0 && (
-              <ButtonLink href="#method" variant="secondary" size="lg" className="md:hidden">
+              <ButtonLink href="#method" variant="secondary" size="lg">
                 See the method ↓
               </ButtonLink>
             )}
             {course.modules.length > 0 && (
-              <ButtonLink href="#curriculum" variant="secondary" size="lg" className="md:hidden">
-                See the course ↓
+              <ButtonLink href="#curriculum" variant="secondary" size="lg">
+                See the curriculum ↓
               </ButtonLink>
             )}
             {course.brochureUrl && (
@@ -127,24 +119,8 @@ export function CourseView({
         </div>
       </section>
 
-      {/* Apple-style local nav: course name, jump links and the booking button stay in reach while reading.
-          Its backdrop runs up behind the floating header (pt + -mt eat the hero's bottom padding) so text never shows through. */}
-      <nav aria-label={`${course.title} sections`} className="sticky top-0 z-30 -mt-14 hidden border-b border-line bg-canvas/85 pt-[72px] backdrop-blur-md md:block">
-        <div className="page-container flex h-14 items-center gap-6">
-          <p className="mr-auto truncate font-semibold">{course.title}</p>
-          {sections.map((s) => (
-            <a key={s.href} href={s.href} className="text-sm whitespace-nowrap text-muted transition-colors hover:text-ink">
-              {s.label}
-            </a>
-          ))}
-          <ButtonLink href={course.bookingUrl} className="h-9 rounded-full px-4 text-[13px]" {...external(course.bookingUrl)}>
-            {siteConfig.navCta.label}
-          </ButtonLink>
-        </div>
-      </nav>
-
       {course.method.length > 0 && (
-        <section id="method" aria-labelledby="method-heading" className="scroll-mt-40 border-t border-line">
+        <section id="method" aria-labelledby="method-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
             <SectionHeading
               id="method-heading"
@@ -220,7 +196,7 @@ export function CourseView({
       )}
 
       {course.modules.length > 0 && (
-        <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-40 border-t border-line">
+        <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
             <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
             {/* Priority (and weight) | module | practice: compact rows, the weight label written once as a header. */}
@@ -310,7 +286,7 @@ export function CourseView({
       )}
 
       {course.faqs.length > 0 && (
-        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-40 border-t border-line">
+        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
             <div className="lg:col-span-4">
               <SectionHeading id="faq-heading" eyebrow="FAQ" title="Questions, answered." />
@@ -347,7 +323,7 @@ export function CourseView({
         </section>
       )}
 
-      <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-40 border-t border-line">
+      <section id="book" aria-labelledby="course-book-heading" className="scroll-mt-28 border-t border-line">
         <div className="page-container py-12 lg:py-14">{booking}</div>
       </section>
 
