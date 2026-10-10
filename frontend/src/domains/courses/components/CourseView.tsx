@@ -71,13 +71,15 @@ export function CourseView({
   );
 
   const weights = Boolean(course.weightLabel) && course.modules.some((m) => m.weight);
+  // Bars share one axis (at least 25% of the exam), so near-equal topics don't all draw full width.
+  const weightAxis = Math.max(25, ...course.modules.map((m) => CourseFormat.weightMidpoint(m.weight) ?? 0));
   return (
     <>
       <section className="page-container grid gap-10 pt-14 pb-14 lg:grid-cols-12 lg:pt-20">
         <div className="lg:col-span-7">
           <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">{course.eyebrow || course.category}</p>
           <h1 className="mt-4 text-4xl leading-tight font-black sm:text-5xl">
-            {course.title}
+            <span data-course-anim="scramble">{course.title}</span>
             {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
@@ -127,10 +129,17 @@ export function CourseView({
               eyebrow="The Finance in Practice method"
               title={`Every topic goes through ${CourseFormat.count(course.method.length)} ${course.method.length === 1 ? "stage" : "stages"}.`}
             />
-            <ol className={`mt-10 grid gap-4 ${row(course.method.length)}`}>
+            <ol data-course-anim="journey" className={`relative mt-10 grid gap-4 md:pt-8 ${row(course.method.length)}`}>
+              {/* Journey rail: drawn with the scroll from the first stage to the last (desktop row only). */}
+              {course.method.length > 1 && (
+                <span aria-hidden className="absolute top-3 hidden h-0.5 rounded-full bg-line md:block" style={{ left: `${50 / course.method.length}%`, right: `${50 / course.method.length}%` }}>
+                  <span data-course-anim="journey-line" className="block h-full origin-left rounded-full bg-quant shadow-[0_0_10px_rgb(34_211_238/0.7)]" />
+                </span>
+              )}
               {course.method.map((step, index) => (
                 <li
                   key={index}
+                  data-course-anim="stage"
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/50 hover:shadow-[0_12px_40px_-12px_rgba(34,211,238,0.25)]"
                 >
                   <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-quant to-gold opacity-50 transition-opacity group-hover:opacity-100" />
@@ -199,47 +208,72 @@ export function CourseView({
         <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
             <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
-            {/* Priority (and weight) | module | practice: compact rows, the weight label written once as a header. */}
-            {weights && (
-              <p className="mt-10 font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{course.weightLabel}</p>
-            )}
-            <ol className={`${weights ? "mt-3" : "mt-10"} divide-y divide-line border-y border-line`}>
-              {course.modules.map((module, index) => (
-                <li key={index} className="grid gap-x-8 gap-y-3 py-6 md:grid-cols-[9rem_1fr_16rem] lg:grid-cols-[9rem_1fr_20rem]">
-                  <div className="flex items-center gap-3 md:flex-col md:items-start">
-                    <span className={`rounded-full border px-3 py-1 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase ${PRIORITY_STYLE[module.priority]}`}>
-                      {CourseFormat.PRIORITIES[module.priority]}
-                    </span>
-                    {weights && module.weight && <span className="font-mono text-sm font-semibold text-ink tabular-nums">{module.weight}</span>}
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-xl font-bold">
-                      <span className="text-quant tabular-nums">{String(index + 1).padStart(2, "0")}.</span> {module.title}
-                    </h3>
-                    {module.summary && (
-                      <p className="mt-1 leading-relaxed text-muted">
-                        <strong className="text-ink">Objective:</strong> {module.summary}
-                      </p>
-                    )}
-                    {module.coaching && (
-                      <p className="mt-3 leading-relaxed">
-                        <strong className="text-quant">{course.coachingLabel}:</strong> {module.coaching}
-                      </p>
-                    )}
-                    {module.deliverable && (
-                      <p className="mt-2 leading-relaxed">
-                        <strong className="text-ink">Deliverable:</strong> {module.deliverable}
-                      </p>
-                    )}
-                  </div>
-                  {module.practice && (
-                    <div>
-                      <p className="font-bold text-gold">{course.practiceLabel}</p>
-                      <p className="mt-1 leading-relaxed">{module.practice}</p>
-                    </div>
-                  )}
-                </li>
-              ))}
+            {/* Weight map: one tap-to-open row per module, the bar showing its share of the exam.
+                Closed rows keep their details in the HTML, so search engines still read every module. */}
+            <div className="mt-10 flex flex-wrap items-baseline justify-between gap-3">
+              <p className="font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{weights ? course.weightLabel : "Modules"}</p>
+              <p className="text-xs text-muted">Tap a topic to see how we work through it.</p>
+            </div>
+            <ol data-course-anim="weights" className="mt-3 divide-y divide-line border-y border-line">
+              {course.modules.map((module, index) => {
+                const share = weights ? CourseFormat.weightMidpoint(module.weight) : null;
+                return (
+                  <li key={index}>
+                    <details className="group" open={index === 0}>
+                      <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-4 md:grid-cols-[minmax(0,1fr)_14rem_auto] [&::-webkit-details-marker]:hidden">
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-[10px] tracking-wider whitespace-nowrap uppercase ${PRIORITY_STYLE[module.priority]}`}>
+                            {CourseFormat.PRIORITIES[module.priority]}
+                          </span>
+                          <span className="truncate font-serif text-lg font-bold transition-colors group-hover:text-quant">
+                            <span className="text-quant tabular-nums">{String(index + 1).padStart(2, "0")}.</span> {module.title}
+                          </span>
+                        </span>
+                        {share !== null && (
+                          <span className="col-span-2 row-start-2 flex items-center gap-3 md:col-span-1 md:row-start-auto">
+                            <span aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-line/60">
+                              <span
+                                data-course-anim="weight-bar"
+                                style={{ width: `${(share / weightAxis) * 100}%` }}
+                                className={`block h-full origin-left rounded-full ${module.priority === "high_priority" ? "bg-gold shadow-[0_0_12px_rgb(212_175_55/0.6)]" : "bg-quant/70"}`}
+                              />
+                            </span>
+                            <span className="w-14 text-right font-mono text-xs font-semibold text-ink tabular-nums">{module.weight}</span>
+                          </span>
+                        )}
+                        <span aria-hidden className="col-start-2 row-start-1 grid h-7 w-7 place-items-center rounded-full border border-line text-muted transition-transform group-open:rotate-45 md:col-start-3">
+                          +
+                        </span>
+                      </summary>
+                      <div className="grid gap-x-8 gap-y-4 pb-6 md:grid-cols-[1fr_18rem] lg:grid-cols-[1fr_20rem]">
+                        <div>
+                          {module.summary && (
+                            <p className="leading-relaxed text-muted">
+                              <strong className="text-ink">Objective:</strong> {module.summary}
+                            </p>
+                          )}
+                          {module.coaching && (
+                            <p className="mt-3 leading-relaxed">
+                              <strong className="text-quant">{course.coachingLabel}:</strong> {module.coaching}
+                            </p>
+                          )}
+                          {module.deliverable && (
+                            <p className="mt-2 leading-relaxed">
+                              <strong className="text-ink">Deliverable:</strong> {module.deliverable}
+                            </p>
+                          )}
+                        </div>
+                        {module.practice && (
+                          <div className="rounded-xl border border-gold/30 bg-gold/5 px-4 py-3">
+                            <p className="font-bold text-gold">{course.practiceLabel}</p>
+                            <p className="mt-1 leading-relaxed">{module.practice}</p>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
             </ol>
           </div>
         </section>

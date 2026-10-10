@@ -19,7 +19,7 @@ export function ExamGlance({
         {exam.facts.map((fact) => (
           <div key={fact.label} className="flex flex-col-reverse">
             <dt className="mt-1 text-xs text-muted">{fact.label}</dt>
-            <dd className="tabular-data text-xl font-semibold text-ink sm:text-3xl">
+            <dd data-course-anim="scramble" className="tabular-data text-xl font-semibold text-ink sm:text-3xl">
               {fact.value}
             </dd>
           </div>
