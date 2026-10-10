@@ -172,7 +172,7 @@ export class TestimonialContract {
     }
 
     if (!TestimonialContract.isTicker(b.ticker)) throw new TestimonialValidationError("choose a course ticker");
-    if (!TestimonialContract.isSide(b.side)) throw new TestimonialValidationError("choose BUY or HOLD");
+    if (!TestimonialContract.isSide(b.side)) throw new TestimonialValidationError("choose Recommend or Mixed");
 
     const conviction = TestimonialContract.integer(b.conviction, LIMITS.conviction, "conviction");
     const beforeScore = TestimonialContract.integer(b.beforeScore, LIMITS.beforeScore, "before score");

@@ -5,6 +5,15 @@ import { PulseChartView } from "./PulseChartView";
 
 const geometry = new PulseChartGeometry();
 
+/** The exam topic each indicator is used to teach, so the board reads as course material, not a market feed. */
+const TOPIC: Record<string, string> = {
+  SPX: "Equity valuation",
+  ADX: "Equity · UAE market",
+  KSE100: "Frontier markets",
+  VIX: "Derivatives · volatility",
+  UST3M: "Fixed income · risk-free rate",
+};
+
 function direction(series: PulseSeries): { arrow: string; className: string } {
   if (!series.change) return { arrow: "→", className: "text-muted" };
   return series.change > 0 ? { arrow: "↗", className: "text-quant" } : { arrow: "↘", className: "text-gold" };
@@ -29,7 +38,7 @@ export function MarketPulseCard({ pulse, now = new Date() }: { pulse: MarketPuls
     <figure className="rounded-xl border border-line bg-surface p-5 font-mono text-xs sm:p-6">
       <p className="tracking-[0.2em] text-quant uppercase">Market Pulse · Daily Close</p>
       <figcaption className="mt-2 font-sans text-sm leading-relaxed text-muted">
-        Selected market indicators across developed, emerging and frontier markets.
+        Today&rsquo;s numbers, and the exam topic each one teaches. Sessions start from boards like this.
       </figcaption>
 
       {pulse ? <PulseBody pulse={pulse} now={now} /> : (
@@ -53,7 +62,7 @@ function PulseBody({ pulse, now }: { pulse: MarketPulse; now: Date }) {
             <th scope="col">Indicator</th>
             <th scope="col">Close</th>
             <th scope="col">Change</th>
-            <th scope="col">As of</th>
+            <th scope="col" className="hidden sm:table-cell">As of</th>
           </tr>
         </thead>
         <tbody>
@@ -64,12 +73,13 @@ function PulseBody({ pulse, now }: { pulse: MarketPulse; now: Date }) {
               <tr key={s.key} className="border-t border-line/60">
                 <th scope="row" className="py-2 pr-2 text-left font-normal whitespace-nowrap text-ink/90">
                   {s.label}
+                  {TOPIC[s.key] && <span className="block font-sans text-[11px] whitespace-normal text-muted">{TOPIC[s.key]}</span>}
                 </th>
                 <td className="py-2 pr-2 text-right text-ink">{MarketPulseContract.formatValue(s)}</td>
                 <td className={`py-2 pr-2 text-right whitespace-nowrap ${dir.className}`}>
                   {MarketPulseContract.formatChange(s)} <span aria-hidden>{dir.arrow}</span>
                 </td>
-                <td className={`py-2 text-right text-[11px] whitespace-nowrap ${stale ? "text-gold" : "text-muted"}`}>
+                <td className={`hidden py-2 text-right text-[11px] whitespace-nowrap sm:table-cell ${stale ? "text-gold" : "text-muted"}`}>
                   {stale ? `STALE · ${MarketPulseContract.formatDate(s.as_of)}` : MarketPulseContract.formatDate(s.as_of)}
                 </td>
               </tr>

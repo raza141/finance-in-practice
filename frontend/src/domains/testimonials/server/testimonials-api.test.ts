@@ -75,7 +75,7 @@ describe("TestimonialContract", () => {
     [{ city: "K" }, /city/],
     [{ ticker: "BTC" }, /ticker/],
     [{ ticker: "hasOwnProperty" }, /ticker/],
-    [{ side: "SELL" }, /BUY or HOLD/],
+    [{ side: "SELL" }, /Recommend or Mixed/],
     [{ conviction: 0 }, /conviction/],
     [{ conviction: 11 }, /conviction/],
     [{ conviction: 7.5 }, /conviction/],

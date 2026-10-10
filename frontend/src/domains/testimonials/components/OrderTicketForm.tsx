@@ -41,8 +41,8 @@ export function OrderTicketForm() {
   const preview =
     beforeScore !== null && afterScore !== null ? TestimonialContract.yieldPercent(beforeScore, afterScore) : null;
 
-  // What the card on the home page will look like once approved. Score and
-  // yield join in when ticker, conviction and both scores are filled.
+  // What the card on the home page will look like once approved. The score
+  // joins in when course, rating and both scores are filled.
   const previewCard: Testimonial = {
     id: "preview",
     author: draft.author.trim() || "Your name",
@@ -54,7 +54,7 @@ export function OrderTicketForm() {
       ticker && conviction !== null && beforeScore !== null && afterScore !== null && preview !== null
         ? { side, ticker, conviction, beforeScore, afterScore, yieldPercent: preview }
         : null,
-    ...(ticker && { program: `${side} · ${TestimonialContract.SYMBOLS[ticker]}` }),
+    ...(ticker && { program: TICKERS[ticker] }),
   };
 
   function onDraftInput(form: HTMLFormElement) {
@@ -83,7 +83,7 @@ export function OrderTicketForm() {
     };
 
     if (conviction === null) {
-      setPhase({ kind: "editing", error: "Tap a conviction number from 1 to 10." });
+      setPhase({ kind: "editing", error: "Tap a number from 1 to 10 for how likely you are to recommend us." });
       return;
     }
 
@@ -110,11 +110,11 @@ export function OrderTicketForm() {
   if (phase.kind === "sent") {
     return (
       <div role="status" className="rounded-xl border border-quant/40 bg-canvas/80 p-6 backdrop-blur-md">
-        <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Order received · Pending review</p>
+        <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Review received · Pending approval</p>
         <h3 className="mt-3 text-2xl">Thank you for sharing.</h3>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Every ticket is reviewed before it reaches the order book. Yours will appear once approved. We&rsquo;ll
-          never publish your email.
+          Every review is checked before it goes live. Yours will appear once approved. We&rsquo;ll never publish
+          your email.
         </p>
       </div>
     );
@@ -133,9 +133,9 @@ export function OrderTicketForm() {
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h3 id="order-ticket-heading" className="text-sm font-semibold tracking-[0.2em] uppercase">
-            Testimonial order ticket
+            Your review
           </h3>
-          <span className="font-mono text-[10px] tracking-[0.2em] text-muted uppercase">Limit · Day</span>
+          <span className="font-mono text-[10px] tracking-[0.2em] text-muted uppercase">2 minutes</span>
         </div>
 
         <fieldset disabled={busy} className="grid gap-5 p-5">
@@ -153,13 +153,13 @@ export function OrderTicketForm() {
                 }`}
               >
                 <input type="radio" name="side" value={option} checked={side === option} onChange={() => setSide(option)} className="sr-only" />
-                {option}
-                <span className="block text-[10px] font-normal tracking-normal opacity-80">{SIDES[option]}</span>
+                {/* Stored as BUY / HOLD; shown in plain words. */}
+                {SIDES[option]}
               </label>
             ))}
           </div>
 
-          <Field label="Course ticker" hint={ticker ? TICKERS[ticker] : "The programme you took"}>
+          <Field label="Course" hint="The programme you took">
             <select
               name="ticker"
               required
@@ -172,7 +172,7 @@ export function OrderTicketForm() {
               </option>
               {(Object.keys(TICKERS) as Ticker[]).map((t) => (
                 <option key={t} value={t}>
-                  {TestimonialContract.SYMBOLS[t]} · {TICKERS[t]}
+                  {TICKERS[t]}
                 </option>
               ))}
             </select>
@@ -182,10 +182,10 @@ export function OrderTicketForm() {
             <div className="flex items-baseline justify-between">
               <div>
                 <p id="conviction-label" className="text-[11px] tracking-[0.22em] text-muted uppercase">
-                  Conviction
+                  Would you recommend us?
                 </p>
                 <p id="conviction-hint" className="mt-1 text-xs text-muted">
-                  How strongly would you recommend us? Tap a number from 1 to 10.
+                  Tap a number from 1 to 10.
                 </p>
               </div>
               <output className="tabular-data text-sm font-semibold text-quant">{conviction ?? "–"}/10</output>
@@ -216,8 +216,8 @@ export function OrderTicketForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-3">
-            <Field label="Before %">
+          <div className="grid grid-cols-2 items-end gap-3">
+            <Field label="Score before %">
               <input
                 name="beforeScore"
                 inputMode="numeric"
@@ -227,7 +227,7 @@ export function OrderTicketForm() {
                 className={`${FIELD} tabular-data`}
               />
             </Field>
-            <Field label="After %">
+            <Field label="Score after %">
               <input
                 name="afterScore"
                 inputMode="numeric"
@@ -237,24 +237,8 @@ export function OrderTicketForm() {
                 className={`${FIELD} tabular-data`}
               />
             </Field>
-            <div className="block">
-              <span id="yield-label" className="text-[11px] tracking-[0.22em] text-muted uppercase">
-                Yield
-              </span>
-              <output
-                aria-labelledby="yield-label"
-                aria-live="polite"
-                className={`tabular-data mt-2 block min-w-24 rounded-md border border-line bg-surface px-3 py-2.5 text-right text-sm font-semibold ${
-                  preview === null ? "text-muted" : preview >= 0 ? "text-quant" : "text-gold"
-                }`}
-              >
-                {preview === null ? "—" : TestimonialContract.formatYield(preview)}
-              </output>
-            </div>
           </div>
-          <p className="-mt-3 text-xs text-muted/80">
-            Your score before and after, e.g. mock exam percentages. Yield = (after − before) / before.
-          </p>
+          <p className="-mt-3 text-xs text-muted/80">Your mock or practice exam score before you started with us, and your latest one.</p>
 
           <Field label="Note" hint={`${draft.quote.length} / ${LIMITS.quote.max} · your review, in your own words`}>
             <textarea
@@ -327,7 +311,7 @@ export function OrderTicketForm() {
             type="submit"
             className="h-12 rounded-md bg-gold font-semibold tracking-wider text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
           >
-            {busy ? "Routing order…" : `Place ${side} order${ticker ? ` · ${TestimonialContract.SYMBOLS[ticker]}` : ""}`}
+            {busy ? "Sending…" : "Submit review"}
           </button>
         </fieldset>
       </form>
