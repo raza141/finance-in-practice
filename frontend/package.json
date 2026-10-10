@@ -12,6 +12,7 @@
     "api:schema": "cd ../quant-backend && uv run --no-sync python -c \"import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))\" > ../frontend/openapi/quant-api.json",
     "api:types": "openapi-typescript openapi/quant-api.json --default-non-nullable=false -o src/domains/quant-lab/types/api.generated.ts",
     "gen:api": "npm run api:schema && npm run api:types",
+    "db:seed": "node --env-file-if-exists=.env.local scripts/db/seed.mts",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/db/migrate.mts",
     "admin:add": "node --env-file-if-exists=.env.local scripts/admin/add-admin.mts"
   },
