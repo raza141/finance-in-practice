@@ -101,7 +101,7 @@ export function BentoCard({ service }: { service: BentoService }) {
           href={siteConfig.bookingHref}
           className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-quant"
         >
-          {service.waitlist ? "Register interest" : "Discuss in a free demo"}
+          {service.waitlist ? "Register interest" : "Discuss in a free diagnostic"}
           <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
             →
           </span>

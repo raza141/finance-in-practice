@@ -13,7 +13,7 @@ export default function CohortPage() {
     <ComingSoon
       eyebrow="Free Cohort"
       title="Learn alongside a cohort, free"
-      description="A free, live group programme covering core finance and quant skills. Dates and syllabus will be announced here; book a demo meanwhile to get a head start."
+      description="A free, live group programme covering core finance and quant skills. Dates and syllabus will be announced here; book a free diagnostic session meanwhile to get a head start."
     />
   );
 }

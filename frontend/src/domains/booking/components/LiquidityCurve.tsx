@@ -95,7 +95,7 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
         viewBox={`0 0 ${BOX.width} ${BOX.height}`}
         className="mt-2 h-auto min-h-64 w-full touch-none select-none"
         role="group"
-        aria-label="Available demo slots over the next 14 days"
+        aria-label="Available diagnostic session slots over the next 14 days"
         onPointerMove={onPointerMove}
         onPointerLeave={() => setHover(null)}
       >

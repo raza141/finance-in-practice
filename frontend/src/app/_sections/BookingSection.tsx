@@ -9,7 +9,7 @@ export function BookingSection() {
       className="border-t border-line bg-gradient-to-b from-surface/40 to-transparent"
     >
       <div className="page-container py-20 lg:py-28">
-        <BookingPanel headingId="book-heading" eyebrow="Free diagnostic session" title="Book your free diagnostic session" />
+        <BookingPanel headingId="book-heading" />
       </div>
     </section>
   );

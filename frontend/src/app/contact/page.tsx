@@ -7,12 +7,12 @@ import { siteConfig } from "@/core/config/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with Finance in Practice or book a free 30-minute demo session.",
+  description: "Get in touch with Finance in Practice or book a free 30-minute diagnostic session.",
   alternates: { canonical: "/contact" },
 };
 
 const STEPS = [
-  { title: "Book a free demo", body: "Pick a 30-minute slot that suits your timezone." },
+  { title: "Book a free diagnostic session", body: "Pick a 30-minute slot that suits your timezone." },
   { title: "Diagnose", body: "We map where you are against your exam date or deadline." },
   { title: "Decide", body: "You get a plan and choose whether to continue. No obligation." },
 ] as const;
@@ -28,7 +28,7 @@ export default function ContactPage() {
       href: `https://wa.me/${whatsapp.number}?text=${encodeURIComponent(whatsapp.greeting)}`,
       external: true,
     },
-    { label: "Free demo", value: "Book on the site", href: siteConfig.navCta.href, external: false },
+    { label: "Free diagnostic", value: "Book on the site", href: siteConfig.navCta.href, external: false },
     { label: "Calendar", value: "cal.com/raza141", href: calUrl, external: true },
     ...(email ? [{ label: "Email", value: email, href: `mailto:${email}`, external: true }] : []),
   ];
@@ -47,7 +47,7 @@ export default function ContactPage() {
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
           Questions about a course, the free cohort or 1-on-1 sessions? The fastest route is a free
-          demo call.
+          diagnostic session.
         </p>
 
         <ul className="mt-12 grid max-w-4xl gap-4 sm:grid-cols-3">

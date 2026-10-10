@@ -77,8 +77,8 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
   const busy = execution === "submitting" || execution === "running";
   const stage = !track ? 0 : !date ? 1 : execution === "idle" || execution === "submitting" ? 2 : 3;
   const finalText = feedProvider.isSimulated
-    ? "[ DIVIDEND CAPTURED: DEMO STAGED ]"
-    : "[ DIVIDEND CAPTURED: DEMO SCHEDULED ]";
+    ? "[ DIVIDEND CAPTURED: SESSION STAGED ]"
+    : "[ DIVIDEND CAPTURED: SESSION SCHEDULED ]";
 
   // --- data --------------------------------------------------------------
 
@@ -226,7 +226,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
         {/* title bar */}
         <div className="flex items-center justify-between gap-3 border-b border-line bg-canvas/60 px-4 py-2.5 text-xs tracking-wider">
           <span className="text-muted">
-            <span className="text-ink">FIP/BOOK</span> ▸ DEMO SESSION TERMINAL
+            <span className="text-ink">FIP/BOOK</span> ▸ DIAGNOSTIC SESSION
           </span>
           <span className="flex items-center gap-2 text-quant">
             <span aria-hidden className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-gold" />

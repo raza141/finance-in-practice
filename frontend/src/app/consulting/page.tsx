@@ -4,9 +4,9 @@ import { BookingPanel } from "@/domains/booking/components/BookingPanel";
 import { CurriculumCatalog } from "@/domains/education/services/CurriculumCatalog";
 
 export const metadata: Metadata = {
-  title: "1-on-1 Sessions & Free Demo",
+  title: "1-on-1 Sessions & Free Diagnostic",
   description:
-    "Book a free 30-minute demo for CFA®, FRM®, university finance or Python automation 1-on-1 sessions.",
+    "Book a free 30-minute diagnostic session for CFA®, FRM®, university finance or Python automation 1-on-1 sessions.",
   alternates: { canonical: "/consulting" },
 };
 
@@ -21,7 +21,7 @@ export default function ConsultingPage() {
           Personal tuition, built around your exam date or deadline
         </h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-          Every engagement starts with a free demo. We diagnose where you are, agree a plan,
+          Every engagement starts with a free diagnostic session. We diagnose where you are, agree a plan,
           and you decide whether to continue.
         </p>
 

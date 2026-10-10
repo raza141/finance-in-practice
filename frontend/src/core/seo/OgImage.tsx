@@ -40,7 +40,7 @@ export class OgImage {
             <div style={{ fontSize: 34, color: "#94a3b8", marginTop: 20 }}>{card.subtitle}</div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 28 }}>
-            <span style={{ color: "#d4af37", fontWeight: 700 }}>Book a free demo</span>
+            <span style={{ color: "#d4af37", fontWeight: 700 }}>Book a free diagnostic session</span>
             <span style={{ color: "#94a3b8" }}>{siteConfig.domain}</span>
           </div>
         </div>

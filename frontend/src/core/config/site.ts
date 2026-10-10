@@ -11,7 +11,7 @@ export const siteConfig = {
   url: "https://financeinpractice.me",
   tagline: "Master Financial Theory. Build Real-World Systems.",
   description:
-    "1-on-1 CFA® Level I, FRM® and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free demo.",
+    "1-on-1 CFA® Level I, FRM® and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free diagnostic session.",
 
   /** Where 1-on-1 sessions happen: in person in Abu Dhabi, online everywhere else. */
   delivery: {
@@ -41,7 +41,7 @@ export const siteConfig = {
   ] as readonly NavItem[],
 
   /** Gold conversion button at the end of the navbar. */
-  navCta: { label: "Book free demo", href: "/consulting#book" },
+  navCta: { label: "Book free session", href: "/#book" },
 
   /** Public contact channels. Leave `email` null to hide it on /contact. */
   contact: {

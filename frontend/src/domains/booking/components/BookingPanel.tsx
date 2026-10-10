@@ -12,7 +12,7 @@ const WHAT_YOU_GET = [
 interface BookingPanelProps {
   headingId?: string;
   eyebrow?: string;
-  /** Override the default free-demo copy, e.g. on a course page. */
+  /** Override the default free-diagnostic copy, e.g. on a course page. */
   title?: string;
   lede?: string;
 }
@@ -22,8 +22,8 @@ const DEFAULT_LEDE =
 
 export function BookingPanel({
   headingId = "book-heading",
-  eyebrow = "Free demo session",
-  title = "Book your free demo session",
+  eyebrow = "Free diagnostic session",
+  title = "Book your free diagnostic session",
   lede = DEFAULT_LEDE,
 }: BookingPanelProps) {
   return (
