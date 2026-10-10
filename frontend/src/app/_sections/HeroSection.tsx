@@ -75,7 +75,7 @@ export function HeroSection() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <span data-anim="hero-cta">
               <ButtonLink href={siteConfig.bookingHref} size="lg" className="w-full sm:w-auto">
-                Open a Diagnostic Session
+                Book a Diagnostic Session
               </ButtonLink>
             </span>
             <span data-anim="hero-cta">
