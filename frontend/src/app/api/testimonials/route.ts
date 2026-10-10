@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 
+import { RequestGuard } from "@/core/http/RequestGuard";
+
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
 import {
@@ -17,17 +19,6 @@ function reject(status: number, error: TestimonialErrorCode, message: string) {
   return Response.json({ error, message }, { status, headers: NO_STORE });
 }
 
-/** Browsers always send Origin on cross-site POSTs; only our own pages may submit. */
-function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * POST /api/testimonials
  *   body: { author, email, context, program, quote, outcome?, consent, website? }
@@ -35,7 +26,7 @@ function isSameOrigin(request: NextRequest): boolean {
  * New testimonials stay hidden until approved in /admin/testimonials.
  */
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return reject(403, "FORBIDDEN", "Cross-origin requests are not allowed.");
+  if (!RequestGuard.isSameOrigin(request)) return reject(403, "FORBIDDEN", "Cross-origin requests are not allowed.");
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (!limiter.allow(ip)) {

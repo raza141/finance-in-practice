@@ -7,7 +7,8 @@ import { BookButton } from "@/core/components/ui/BookButton";
 
 /**
  * Phone-only booking bar, Apple "Buy" style: slides up once the visitor is past
- * the first screen and hides while the page's own #book panel is on screen.
+ * the first screen and hides while the page's own #book panel, or any
+ * `[data-hide-bookbar]` block (lead forms), is on screen.
  * Sets `data-bookbar` on <html> so the WhatsApp button can step above it.
  */
 export function StickyBookBar() {
@@ -15,24 +16,25 @@ export function StickyBookBar() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    let bookInView = false;
+    // The bar steps aside for the page's own booking panel and for lead forms it would cover.
+    const inView = new Set<Element>();
     const update = () => {
-      const on = window.scrollY > window.innerHeight * 0.8 && !bookInView;
+      const on = window.scrollY > window.innerHeight * 0.8 && inView.size === 0;
       setShow(on);
       document.documentElement.toggleAttribute("data-bookbar", on);
     };
-    const book = document.getElementById("book");
-    const observer = book
-      ? new IntersectionObserver(([entry]) => {
-          bookInView = entry.isIntersecting;
-          update();
-        })
-      : null;
-    if (book) observer?.observe(book);
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) inView.add(entry.target);
+        else inView.delete(entry.target);
+      }
+      update();
+    });
+    document.querySelectorAll("#book, [data-hide-bookbar]").forEach((el) => observer.observe(el));
     window.addEventListener("scroll", update, { passive: true });
     update();
     return () => {
-      observer?.disconnect();
+      observer.disconnect();
       window.removeEventListener("scroll", update);
       document.documentElement.removeAttribute("data-bookbar");
     };

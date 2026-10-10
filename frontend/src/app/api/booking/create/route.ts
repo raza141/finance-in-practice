@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 
+import { RequestGuard } from "@/core/http/RequestGuard";
+
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
@@ -16,17 +18,6 @@ function reject(status: number, error: string, message: string) {
   return Response.json({ error, message }, { status, headers: NO_STORE });
 }
 
-/** Browsers always send Origin on cross-site POSTs; only our own pages may book. */
-function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * POST /api/booking/create
  *   body: { start, name, email, phone?, timeZone, track, company? }
@@ -34,7 +25,7 @@ function isSameOrigin(request: NextRequest): boolean {
  *   200 -> { uid, start, end, status }
  */
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return reject(403, "FORBIDDEN", "Cross-origin requests are not allowed.");
+  if (!RequestGuard.isSameOrigin(request)) return reject(403, "FORBIDDEN", "Cross-origin requests are not allowed.");
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (!limiter.allow(ip)) {

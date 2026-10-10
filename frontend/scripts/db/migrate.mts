@@ -722,6 +722,25 @@ const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    // Free-resource leads: one row per email and resource. A repeat request bumps
+    // the counter; marketing consent is opt-in and never switched off by a repeat.
+    id: "033_leads",
+    statements: [
+      `CREATE TABLE leads (
+        id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        email             text NOT NULL CHECK (char_length(email) <= 254 AND email = lower(email)),
+        resource_id       text NOT NULL CHECK (char_length(resource_id) BETWEEN 1 AND 60),
+        source            text NOT NULL DEFAULT '' CHECK (char_length(source) <= 80),
+        marketing_opt_in  boolean NOT NULL DEFAULT false,
+        requests          integer NOT NULL DEFAULT 1,
+        created_at        timestamptz NOT NULL DEFAULT now(),
+        last_requested_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (email, resource_id)
+      )`,
+      `CREATE INDEX leads_created_idx ON leads (created_at DESC)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

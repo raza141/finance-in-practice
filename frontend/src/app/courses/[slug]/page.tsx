@@ -8,6 +8,8 @@ import { StructuredData } from "@/core/seo/StructuredData";
 import { BookingPanel } from "@/domains/booking/components/BookingPanel";
 import { CourseView } from "@/domains/courses/components/CourseView";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { FreeResourceBlock } from "@/domains/resources/components/FreeResourceBlock";
+import { ResourceCatalog } from "@/domains/resources/services/ResourceCatalog";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
 import type { Testimonial } from "@/domains/testimonials/types";
 import type { Course } from "@/domains/courses/types";
@@ -53,6 +55,8 @@ export async function generateMetadata({ params }: PageProps<"/courses/[slug]">)
 export default async function CoursePage({ params }: PageProps<"/courses/[slug]">) {
   const course = await loadCourse((await params).slug);
   if (!course) notFound();
+  // ponytail: one free resource today, for CFA Level I; map tickers to resources when there are more.
+  const freeResource = course.testimonialTicker === "CFA1" ? ResourceCatalog.free("cfa1-exam-map") : null;
 
   return (
     <div data-plain-page className="font-body">
@@ -60,6 +64,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
       <CourseView
         course={course}
         testimonials={await loadTestimonials(course)}
+        freeResource={freeResource && <FreeResourceBlock resource={freeResource} source={course.slug} />}
         booking={
           <BookingPanel
             headingId="course-book-heading"

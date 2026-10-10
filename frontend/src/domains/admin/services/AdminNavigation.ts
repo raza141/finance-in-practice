@@ -16,6 +16,7 @@ export class AdminNavigation {
     { href: "/admin/schedule", label: "Schedule" },
     { href: "/admin/invoices", label: "Invoices", ownerOnly: true },
     { href: "/admin/clients", label: "Clients", ownerOnly: true },
+    { href: "/admin/leads", label: "Leads", ownerOnly: true },
     { href: "/admin/services", label: "Services", ownerOnly: true },
     { href: "/admin/journal", label: "Research Terminal" },
     { href: "/admin/testimonials", label: "Testimonials" },

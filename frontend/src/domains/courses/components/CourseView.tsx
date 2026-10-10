@@ -49,11 +49,14 @@ export function CourseView({
   course,
   testimonials,
   booking,
+  freeResource,
 }: {
   course: Course;
   testimonials: readonly Testimonial[];
   /** The #book section body: the live booking widget, or a stand-in in the preview. */
   booking: ReactNode;
+  /** Optional lead magnet, shown before the FAQ. */
+  freeResource?: ReactNode;
 }) {
   const difference = course.difference ? CourseFormat.splitFirstLine(course.difference) : null;
   const facts = [
@@ -295,6 +298,12 @@ export function CourseView({
               ))}
             </div>
           </div>
+        </section>
+      )}
+
+      {freeResource && (
+        <section aria-label="Free download" className="border-t border-line">
+          <div className="page-container py-14 lg:py-20">{freeResource}</div>
         </section>
       )}
 

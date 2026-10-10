@@ -26,6 +26,7 @@ export const siteConfig = {
     { label: "Instructor", href: "/about" },
     { label: "Learning Tracks", href: "/courses" },
     { label: "Research Terminal", href: "/journal" },
+    { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
@@ -36,6 +37,7 @@ export const siteConfig = {
     { label: "Methodology", href: "/#methodology" },
     { label: "Instructor", href: "/about" },
     { label: "Research Terminal", href: "/journal" },
+    { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
     { label: "Share your experience", href: "/testimonials/submit" },
   ] as readonly NavItem[],
