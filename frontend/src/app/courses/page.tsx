@@ -33,26 +33,13 @@ export default async function CoursesPage() {
 
   return (
     <>
-      <section className="page-container pt-14 pb-12 lg:pt-20">
-        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Learning Allocation Desk</p>
-        <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">
-          Theory you can defend, models you can run
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-          CFA® and FRM® exam prep, university mentorship and hands-on quantitative finance, taught by a practitioner who builds the models.
-        </p>
-      </section>
+      {/* Visually hidden: the page opens on the course cards, but search engines and screen readers still get a title. */}
+      <h1 className="sr-only">CFA® and FRM® courses: 1-on-1 in Abu Dhabi and online in Dubai</h1>
 
       {courses.length > 0 && (
-        <section id="course-pages" aria-labelledby="course-list-heading" className="scroll-mt-20 border-t border-line">
-          <div className="page-container py-14 lg:py-20">
-            <SectionHeading
-              id="course-list-heading"
-              eyebrow="Course pages"
-              title="Explore a course"
-              lede="The full curriculum, method and ways to learn for each course."
-            />
-            <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <section id="course-pages" aria-label="Courses" className="scroll-mt-20">
+          <div className="page-container pt-10 pb-14 lg:pt-14 lg:pb-20">
+            <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <li key={course.id}>
                   <Link
