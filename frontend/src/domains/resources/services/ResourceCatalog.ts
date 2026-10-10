@@ -36,12 +36,36 @@ export class ResourceCatalog {
       format: "PDF · 2 pages",
       points: ["Where the marks are, topic by topic", "How the exam works, in four numbers", "A 12-week route to exam day"],
     },
+    {
+      id: "cfa2-exam-map",
+      title: "CFA® Level II Exam Map",
+      blurb: "Topic weights, how item sets work, and a 12-week route to exam day. Two pages.",
+      file: "/resources/cfa-level-ii-exam-map.pdf",
+      format: "PDF · 2 pages",
+      points: ["Where the marks are, topic by topic", "How item sets work, and how to pace them", "A 12-week route to exam day"],
+    },
+    {
+      id: "frm1-exam-map",
+      title: "FRM® Part I Exam Map",
+      blurb: "Topic weights, what each topic covers, and a 12-week route to exam day. Two pages.",
+      file: "/resources/frm-part-i-exam-map.pdf",
+      format: "PDF · 2 pages",
+      points: ["Where the marks are, topic by topic", "What each of the four topics covers", "A 12-week route to exam day"],
+    },
   ];
+
+  /** The exam map shown on each exam's course page, by course ticker. */
+  private static readonly BY_TICKER: Partial<Record<string, string>> = { CFA1: "cfa1-exam-map", CFA2: "cfa2-exam-map", FRM1: "frm1-exam-map" };
 
   /** Empty until the first Lemon Squeezy product exists; the paid section and lemon.js stay off until then. */
   static readonly PAID: readonly PaidProduct[] = [];
 
   static free(id: string): FreeResource | null {
     return ResourceCatalog.FREE.find((r) => r.id === id) ?? null;
+  }
+
+  static forTicker(ticker: string | null): FreeResource | null {
+    const id = ticker && ResourceCatalog.BY_TICKER[ticker];
+    return id ? ResourceCatalog.free(id) : null;
   }
 }

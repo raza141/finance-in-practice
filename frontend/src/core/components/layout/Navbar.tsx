@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 
 import { NavLinkAnimator } from "@/core/animations/NavLinkAnimator";
 import { BookButton } from "@/core/components/ui/BookButton";
@@ -22,6 +22,14 @@ import { MobileNav } from "./MobileNav";
  */
 export function Navbar() {
   const [animator] = useState(() => new NavLinkAnimator());
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const onEnter = (event: MouseEvent<HTMLAnchorElement>) =>
     animator.enter(event.currentTarget);
@@ -33,10 +41,10 @@ export function Navbar() {
       data-anim="nav"
       className="pointer-events-none fixed inset-x-0 top-6 z-50"
     >
-      {/* Below lg there is no pill, so the bar needs its own backdrop or page text scrolls under the logo. */}
+      {/* Backdrop so page text never scrolls under the logo: always below lg (no pill there), on lg+ once the page scrolls. */}
       <div
         aria-hidden
-        className="absolute inset-x-0 -top-6 bottom-[-12px] border-b border-white/5 bg-canvas/85 backdrop-blur-md lg:hidden"
+        className={`absolute inset-x-0 -top-6 bottom-[-12px] border-b border-white/5 bg-canvas/85 backdrop-blur-md transition-opacity duration-300 ${scrolled ? "" : "lg:opacity-0"}`}
       />
       <div className="page-container relative grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
         <Link

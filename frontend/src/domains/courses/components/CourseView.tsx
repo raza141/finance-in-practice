@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import type { Testimonial } from "@/domains/testimonials/types";
 
@@ -64,9 +65,10 @@ export function CourseView({
     { label: "Next start", value: CourseFormat.startDate(course.startDate) },
     { label: "Fee", value: CourseFormat.hourly(course) },
   ];
+  // Same short label as the navbar everywhere on the page; the course's own CTA label titles the booking section.
   const cta = (
     <ButtonLink href={course.bookingUrl} size="lg" {...external(course.bookingUrl)}>
-      {course.ctaLabel}
+      {siteConfig.navCta.label}
     </ButtonLink>
   );
 
@@ -75,7 +77,7 @@ export function CourseView({
   const weightAxis = Math.max(25, ...course.modules.map((m) => CourseFormat.weightMidpoint(m.weight) ?? 0));
   return (
     <>
-      <section className="page-container grid gap-10 pt-14 pb-14 lg:grid-cols-12 lg:pt-20">
+      <section className="page-container grid gap-10 pt-6 pb-12 lg:grid-cols-12 lg:pt-8">
         <div className="lg:col-span-7">
           <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">{course.eyebrow || course.category}</p>
           <h1 className="mt-4 text-4xl leading-tight font-black sm:text-5xl">
@@ -87,12 +89,12 @@ export function CourseView({
             {cta}
             {course.method.length > 0 && (
               <ButtonLink href="#method" variant="secondary" size="lg">
-                See the method ↓
+                Method ↓
               </ButtonLink>
             )}
             {course.modules.length > 0 && (
               <ButtonLink href="#curriculum" variant="secondary" size="lg">
-                See the curriculum ↓
+                Curriculum ↓
               </ButtonLink>
             )}
             {course.brochureUrl && (
@@ -101,7 +103,7 @@ export function CourseView({
               </ButtonLink>
             )}
           </div>
-          <ExamGlance ticker={course.testimonialTicker} className="mt-10 max-w-lg border-t border-line pt-8" />
+          <ExamGlance ticker={course.testimonialTicker} className="mt-8 border-t border-line pt-6" />
         </div>
         <div className="grid content-start gap-4 lg:col-span-5">
           {difference && (

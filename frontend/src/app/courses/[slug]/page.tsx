@@ -57,7 +57,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
   const course = await loadCourse((await params).slug);
   if (!course) notFound();
   // ponytail: one free resource today, for CFA Level I; map tickers to resources when there are more.
-  const freeResource = course.testimonialTicker === "CFA1" ? ResourceCatalog.free("cfa1-exam-map") : null;
+  const freeResource = ResourceCatalog.forTicker(course.testimonialTicker);
 
   return (
     <div data-plain-page className="font-body">
