@@ -33,7 +33,12 @@ export function Navbar() {
       data-anim="nav"
       className="pointer-events-none fixed inset-x-0 top-6 z-50"
     >
-      <div className="page-container grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      {/* Below lg there is no pill, so the bar needs its own backdrop or page text scrolls under the logo. */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 -top-6 bottom-[-12px] border-b border-white/5 bg-canvas/85 backdrop-blur-md lg:hidden"
+      />
+      <div className="page-container relative grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
         <Link
           href="/"
           aria-label="Finance in Practice home"
