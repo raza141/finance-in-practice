@@ -1,21 +1,24 @@
-import Link from "next/link";
-
+import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { MarketPulseCard } from "@/domains/market/components/MarketPulseCard";
 import { MarketPulseSource } from "@/domains/market/server/MarketPulseSource";
 
+/** Three reasons, one line each; the last one hands over to the live Market Pulse beside it. */
 const POINTS = [
   {
-    title: "Theory Before Execution",
-    body: "Understand the economic and financial logic before applying a formula, solving a question or building a model.",
+    title: "Concept first",
+    body: "The logic behind every formula, so you can rebuild it under exam pressure.",
+    icon: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z",
   },
   {
-    title: "Mandate-Specific Instruction",
-    body: "Your study plan is shaped around your exam, course, technical project or professional objective.",
+    title: "A plan built around you",
+    body: "Your exam date, weak topics and schedule set the pace. Nothing generic.",
+    icon: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z",
   },
   {
-    title: "Visible Assumptions",
-    body: "Learn to inspect inputs, challenge outputs and explain what would cause a conclusion to change.",
+    title: "Taught on real markets",
+    body: "Every topic tied to live prices, rates and volatility, like this board.",
+    icon: "M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4",
   },
 ];
 
@@ -25,46 +28,26 @@ export async function WhyUsSection() {
   return (
     <section id="methodology" aria-labelledby="why-heading" data-sequence="reveal" className="border-t border-line">
       <div className="page-container py-20 lg:py-24">
-        <SectionHeading
-          id="why-heading"
-          eyebrow="Why learn with us · Market Intelligence"
-          title="Where Financial Theory Meets Market Reality"
-          lede="At Finance in Practice, you learn the theory behind the calculation, the market context behind the number and the assumptions that determine whether a conclusion can be trusted."
-        />
+        <SectionHeading id="why-heading" eyebrow="Why learn with us" title="Theory that holds up in real markets" />
 
-        <div className="mt-14 grid items-start gap-12 lg:grid-cols-2 xl:gap-16">
-          <div data-anim="reveal">
-            <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Why learn with us</p>
-            <h3 className="mt-3 text-xl font-bold sm:text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl">Build Understanding that Compounds</h3>
-            <ol className="mt-8 grid gap-7">
-              {POINTS.map((point, i) => (
-                <li key={point.title}>
-                  <p className="font-mono text-sm">
-                    <span className="text-quant">0{i + 1}</span> <span className="font-semibold text-ink">{point.title}</span>
-                  </p>
-                  <p className="mt-2 leading-relaxed text-muted">{point.body}</p>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-9 border-l-2 border-quant pl-4 font-mono text-xs leading-relaxed tracking-wide uppercase">
-              <span className="text-muted">Knowledge objective:</span>{" "}
-              <span className="text-ink">Convert theory into independent analytical capacity</span>
-            </p>
-            <Link href="/courses" className="mt-6 inline-block font-mono text-sm text-quant hover:underline">
-              Learning Tracks →
-            </Link>
-          </div>
+        <div className="mt-12 grid items-start gap-10 lg:grid-cols-2 xl:gap-16">
+          <ol data-anim="reveal" className="grid min-w-0 gap-4">
+            {POINTS.map((point, i) => (
+              <li key={point.title} className="flex gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-quant/30 bg-quant/10 text-quant">
+                  <LineIcon d={point.icon} />
+                </span>
+                <div>
+                  <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">0{i + 1}</p>
+                  <h3 className="text-lg font-bold">{point.title}</h3>
+                  <p className="mt-1.5 leading-relaxed text-muted">{point.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
 
-          <div data-anim="reveal">
-            <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Market Pulse</p>
-            <h3 className="mt-3 text-xl font-bold sm:text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl">The Market is the Case Study</h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted xl:text-[13px] 2xl:text-sm">
-              Selected indicators across developed, emerging and frontier markets provide a practical reference point
-              for understanding volatility, rates, returns and market regimes.
-            </p>
-            <div className="mt-6">
-              <MarketPulseCard pulse={pulse} />
-            </div>
+          <div data-anim="reveal" className="min-w-0">
+            <MarketPulseCard pulse={pulse} />
           </div>
         </div>
       </div>

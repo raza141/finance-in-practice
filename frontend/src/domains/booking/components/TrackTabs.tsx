@@ -14,7 +14,7 @@ export function TrackTabs({ tracks, locked, disabled = false, onLock }: TrackTab
   return (
     <fieldset disabled={disabled} className="disabled:opacity-60">
       <legend className="mb-2 text-xs tracking-widest text-muted">
-        {locked ? "SESSION TRACK" : "CHOOSE A SESSION TRACK TO START"}
+        {locked ? "SESSION TRACK" : "1 · PICK YOUR COURSE"}
       </legend>
       <div role="radiogroup" aria-label="Session track" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {tracks.map((track) => {

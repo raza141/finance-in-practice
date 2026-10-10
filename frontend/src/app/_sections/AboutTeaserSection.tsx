@@ -21,7 +21,7 @@ export async function AboutTeaserSection() {
           )}
         </div>
         <div className="max-w-2xl">
-          <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">About us</p>
+          <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Your instructor</p>
           <h2 id="about-teaser-heading" className="mt-3 text-3xl font-bold sm:text-4xl">
             {founder.name}
           </h2>

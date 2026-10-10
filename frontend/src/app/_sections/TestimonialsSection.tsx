@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 
 import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
-import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import { SwipeRail } from "@/domains/testimonials/components/SwipeRail";
 import { TickerTape } from "@/domains/testimonials/components/TickerTape";
@@ -34,11 +35,14 @@ async function loadOrderBook(): Promise<OrderBook> {
 /** Landing-page social proof: ticker tape and approved testimonials. Submissions live on /testimonials/submit. */
 export async function TestimonialsSection() {
   const { fills, quotes } = await loadOrderBook();
+  // No approved reviews yet: skip the section rather than show an empty proof block.
+  if (fills.length === 0) return null;
 
   return (
     <section
       id="testimonials"
       aria-labelledby="testimonials-heading"
+      data-sequence="reveal"
       className="relative overflow-hidden border-t border-line"
     >
       <GridBackdrop className="absolute inset-0" />
@@ -47,23 +51,9 @@ export async function TestimonialsSection() {
         <TickerTape quotes={quotes} />
 
         <div className="page-container py-20 lg:py-24">
-          <div>
-            <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
-            <h2 id="testimonials-heading" className="mt-4 text-4xl leading-tight font-bold sm:text-5xl">
-              Signals from the Learning Floor
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg xl:text-base 2xl:text-lg">
-              The strongest evidence is not a marketing claim. It is the change in a learner’s ability to understand,
-              explain and apply financial concepts.
-            </p>
-          </div>
+          <SectionHeading id="testimonials-heading" eyebrow="Learner results" title="What learners say" />
 
-          {fills.length === 0 ? (
-            <p className="mt-12 rounded-lg border border-dashed border-line bg-canvas/60 px-6 py-12 text-center text-muted">
-              Reviews appear here once approved. Studied with us? Be the first to share your experience.
-            </p>
-          ) : (
-            <div className="mt-12">
+          <div className="mt-12">
               <SwipeRail label="Learner testimonials">
                 {fills.map((testimonial, i) => (
                   <li
@@ -74,18 +64,14 @@ export async function TestimonialsSection() {
                   </li>
                 ))}
               </SwipeRail>
-            </div>
-          )}
-
-          <div className="mt-10 flex flex-col gap-5 border-t border-line/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl font-mono text-xs leading-relaxed tracking-wide text-muted">
-              <span className="text-quant uppercase">Feedback policy:</span> Published with learner permission.
-              Specificity is valued over exaggeration.
-            </p>
-            <ButtonLink href="/testimonials/submit" variant="secondary">
-              Share your experience
-            </ButtonLink>
           </div>
+
+          <p className="mt-8 text-sm text-muted">
+            Studied with us?{" "}
+            <Link href="/testimonials/submit" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
+              Share your experience
+            </Link>
+          </p>
         </div>
       </div>
     </section>

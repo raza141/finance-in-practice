@@ -93,10 +93,13 @@ export function HeroSection() {
                 size="lg"
                 className="w-full sm:w-auto"
               >
-                Learning Terminal
+                See courses
               </ButtonLink>
             </span>
           </div>
+          <p data-anim="hero-cta" className="mt-3 font-mono text-xs tracking-wide text-muted">
+            Free · 30 min · no card needed
+          </p>
         </div>
 
         {/* Phones: the surface sits faded behind the headline instead of a square block below the CTA. */}

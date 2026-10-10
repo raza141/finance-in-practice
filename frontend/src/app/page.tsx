@@ -16,16 +16,16 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
-/** One goal: book a free demo. Every section either builds trust or points at the booking panel. */
+/** One goal: book a diagnostic session. Order: offer → method → who teaches → proof → steps → booking. */
 export default function HomePage() {
   return (
     <LandingAnimator>
       <HeroSection />
       <FeaturedCoursesSection />
       <WhyUsSection />
+      <AboutTeaserSection />
       <TestimonialsSection />
       <HowItWorksSection />
-      <AboutTeaserSection />
       <BookingSection />
     </LandingAnimator>
   );

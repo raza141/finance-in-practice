@@ -4,32 +4,34 @@ import { TiltSurface } from "@/core/components/ui/TiltSurface";
 import { QuantBookingWidget } from "./QuantBookingWidget";
 
 const WHAT_YOU_GET = [
-  { label: "Initial capital allocation", value: "Your time" },
-  { label: "Expected output", value: "A clearer learning plan" },
-  { label: "Commitment required", value: "None (no card, no cash)" },
+  { label: "Duration", value: "30 minutes, 1-on-1" },
+  { label: "You leave with", value: "A clear study plan" },
+  { label: "Cost", value: "Free, no card needed" },
 ];
 
 interface BookingPanelProps {
   headingId?: string;
+  eyebrow?: string;
   /** Override the default free-demo copy, e.g. on a course page. */
   title?: string;
   lede?: string;
 }
 
 const DEFAULT_LEDE =
-  "A 30-minute introductory session to identify your starting point, clarify your objective and map the most efficient route forward.";
+  "Find your starting point and leave with a plan to exam day.";
 
 export function BookingPanel({
   headingId = "book-heading",
+  eyebrow = "Free demo session",
   title = "Book your free demo session",
   lede = DEFAULT_LEDE,
 }: BookingPanelProps) {
   return (
     <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
-      <div className="lg:col-span-4">
+      <div className="min-w-0 lg:col-span-4">
         <SectionHeading
           id={headingId}
-          eyebrow="Free demo session"
+          eyebrow={eyebrow}
           title={title}
           lede={lede}
         />
@@ -51,7 +53,7 @@ export function BookingPanel({
         </ul>
       </div>
 
-      <div data-anim="reveal" className="lg:col-span-8">
+      <div data-anim="reveal" className="min-w-0 lg:col-span-8">
         <TiltSurface maxTilt={2.5}>
           <QuantBookingWidget />
         </TiltSurface>

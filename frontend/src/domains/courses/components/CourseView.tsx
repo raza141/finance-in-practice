@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import type { Testimonial } from "@/domains/testimonials/types";
@@ -18,11 +19,7 @@ const PRIORITY_STYLE: Record<ModulePriority, string> = {
 const ROW: Record<number, string> = { 1: "md:grid-cols-1", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" };
 const row = (count: number) => ROW[count] ?? "md:grid-cols-3";
 
-const icon = (path: string) => (
-  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <path d={path} />
-  </svg>
-);
+const icon = (path: string) => <LineIcon d={path} />;
 
 /** One per method stage, by position: book (learn), target (solve), tool (apply), loop (revise). */
 const STAGE_ICONS = [

@@ -17,7 +17,7 @@ import { OrderBook } from "./OrderBook";
 import { TrackTabs } from "./TrackTabs";
 
 const PROJECTION_DAYS = 14;
-const STAGES = ["TRACK", "DATE", "TIME", "EXECUTE"] as const;
+const STAGES = ["COURSE", "DATE", "TIME", "CONFIRM"] as const;
 
 type Load<T> =
   | { status: "idle" }
@@ -262,7 +262,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
           <div className="mt-4">
             {projection.status === "idle" && (
               <Placeholder>
-                SELECT AN ASSET CLASS TO LOAD THE {PROJECTION_DAYS}-DAY LIQUIDITY CURVE
+                PICK A COURSE ABOVE TO SEE OPEN DAYS (NEXT {PROJECTION_DAYS} DAYS)
               </Placeholder>
             )}
             {projection.status === "loading" && (
@@ -389,7 +389,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                         {ticket.slot.durationMinutes}m
                       </>
                     ) : (
-                      "SELECT A TIME FROM THE BOOK"
+                      "PICK A TIME ABOVE"
                     )}
                   </p>
                   <button
@@ -397,7 +397,7 @@ export function QuantBookingWidget({ provider, bookingClient }: QuantBookingWidg
                     disabled={!slot || execution !== "idle"}
                     className="h-11 rounded-md bg-gold px-5 text-sm font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
                   >
-                    {execution === "submitting" ? "ROUTING ORDER…" : "EXECUTE DEMO TRADE"}
+                    {execution === "submitting" ? "ROUTING ORDER…" : "CONFIRM FREE SESSION"}
                   </button>
                 </div>
               </form>
