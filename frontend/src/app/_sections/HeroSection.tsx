@@ -51,8 +51,10 @@ export function HeroSection() {
           >
             Personalised tutoring for CFA, FRM and university finance learners who want more than
             memorisation. Build conceptual depth, exam readiness and practical fluency across
-            valuation, risk, markets, financial modeling and automation. 1-on-1 online for
-            learners across the UAE (Dubai, Abu Dhabi, Sharjah) and worldwide.
+            valuation, risk, markets, financial modeling and automation.
+          </p>
+          <p data-anim="hero-subtitle" className="mt-3 max-w-xl font-semibold text-ink">
+            {siteConfig.delivery.line}
           </p>
 
           <dl

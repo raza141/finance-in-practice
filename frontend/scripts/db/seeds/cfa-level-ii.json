@@ -15,7 +15,7 @@
   "practiceLabel": "Live case",
   "weightLabel": "Official weight (2027)",
   "startDate": null,
-  "duration": "1-on-1 · flexible schedule",
+  "duration": "1-on-1 · Abu Dhabi in person or online",
   "priceMinor": null,
   "currency": "AED",
   "isActive": true,
@@ -171,6 +171,10 @@
       "answer": "Level I tests whether you know the curriculum. Level II tests whether you can apply it: every question sits inside a vignette, and the marks go to candidates who find the decisive detail quickly. Coaching focuses on that reading skill as much as on the finance."
     },
     {
+      "question": "Are sessions in person or online?",
+      "answer": "Both. Sessions are held in person in Abu Dhabi, or live online for candidates in Dubai, elsewhere in the UAE and abroad. Online sessions use a shared screen and whiteboard, so the question work is the same either way. The format can be mixed from week to week."
+    },
+    {
       "question": "Can the tutor teach topics, or is it only item-set practice?",
       "answer": "Both are available. Each topic can be studied independently, taught live by the tutor, or handled as a hybrid where the candidate reads first and the tutor covers only the unclear parts. The format can change from one topic to the next."
     },
@@ -188,7 +192,7 @@
     }
   ],
   "brochureUrl": null,
-  "seoTitle": "CFA Level II Tutor in Dubai & UAE – 1-on-1 Online",
-  "seoDescription": "1-on-1 CFA® Level II tutoring for candidates in Dubai, Abu Dhabi and across the UAE. Item-set practice on official curriculum vignettes. Book a free session.",
+  "seoTitle": "CFA Level II Tutor in Abu Dhabi & Dubai – In Person or Online",
+  "seoDescription": "1-on-1 CFA® Level II tutoring in person in Abu Dhabi or live online for candidates in Dubai and across the UAE. Official curriculum questions. Book a free session.",
   "testimonialTicker": "CFA2"
 }

@@ -11,7 +11,14 @@ export const siteConfig = {
   url: "https://financeinpractice.me",
   tagline: "Master Financial Theory. Build Real-World Systems.",
   description:
-    "1-on-1 CFA® Level I, FRM® and university finance tutoring in the UAE and online, from a practitioner who builds the models in Python. Book a free demo.",
+    "1-on-1 CFA® Level I, FRM® and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free demo.",
+
+  /** Where 1-on-1 sessions happen: in person in Abu Dhabi, online everywhere else. */
+  delivery: {
+    line: "In person in Abu Dhabi · live online for Dubai and the rest of the UAE.",
+    short: "In person in Abu Dhabi · Online in Dubai & worldwide",
+    onsiteCity: "Abu Dhabi",
+  },
 
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [

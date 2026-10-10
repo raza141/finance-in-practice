@@ -15,7 +15,7 @@
   "practiceLabel": "Live case",
   "weightLabel": "Official weight (2027)",
   "startDate": null,
-  "duration": "1-on-1 · flexible schedule",
+  "duration": "1-on-1 · Abu Dhabi in person or online",
   "priceMinor": null,
   "currency": "AED",
   "isActive": true,
@@ -171,6 +171,10 @@
       "answer": "A regular course teaches a fixed lecture plan to a group. This coaching is one-to-one and built around the candidate’s own attempts at official curriculum questions. Each error is traced to its cause, whether concept, formula, interpretation, calculation or timing. Each topic then ends with a short practical task."
     },
     {
+      "question": "Are sessions in person or online?",
+      "answer": "Both. Sessions are held in person in Abu Dhabi, or live online for candidates in Dubai, elsewhere in the UAE and abroad. Online sessions use a shared screen and whiteboard, so the question work is the same either way. The format can be mixed from week to week."
+    },
+    {
       "question": "Can the tutor teach topics, or is it only question practice?",
       "answer": "Both are available. Each topic can be studied independently, taught live by the tutor, or handled as a hybrid where the candidate reads first and the tutor covers only the unclear parts. The format can change from one topic to the next."
     },
@@ -188,7 +192,7 @@
     }
   ],
   "brochureUrl": null,
-  "seoTitle": "CFA Level I Tutor in Dubai & UAE – 1-on-1 Online",
-  "seoDescription": "1-on-1 CFA® Level I tutoring for candidates in Dubai, Abu Dhabi and across the UAE. Diagnostic-led prep with official curriculum questions. Book a free session.",
+  "seoTitle": "CFA Level I Tutor in Abu Dhabi & Dubai – In Person or Online",
+  "seoDescription": "1-on-1 CFA® Level I tutoring in person in Abu Dhabi or live online for candidates in Dubai and across the UAE. Official curriculum questions. Book a free session.",
   "testimonialTicker": "CFA1"
 }

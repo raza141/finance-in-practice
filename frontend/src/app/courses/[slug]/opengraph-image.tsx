@@ -1,3 +1,4 @@
+import { siteConfig } from "@/core/config/site";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { OgImage } from "@/core/seo/OgImage";
 
@@ -13,6 +14,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   return OgImage.render({
     eyebrow: course?.eyebrow || "Exam coaching",
     title: course ? `${course.title} Tutoring` : "CFA® & Finance Tutoring",
-    subtitle: "1-on-1 online · learners across the UAE & worldwide",
+    subtitle: siteConfig.delivery.short,
   });
 }

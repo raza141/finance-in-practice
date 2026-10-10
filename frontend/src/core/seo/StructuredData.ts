@@ -27,7 +27,11 @@ export class StructuredData {
         logo: { "@type": "ImageObject", url: `${siteConfig.url}/brand/fip-logo.png` },
         description: siteConfig.description,
         slogan: siteConfig.tagline,
-        areaServed: { "@type": "Country", name: "United Arab Emirates" },
+        areaServed: [
+          { "@type": "City", name: "Abu Dhabi" },
+          { "@type": "City", name: "Dubai" },
+          { "@type": "Country", name: "United Arab Emirates" },
+        ],
         knowsAbout: ["CFA Level I exam preparation", "CFA exam preparation", "FRM exam preparation", "Corporate finance", "Financial risk management", "Quantitative finance", "Python for finance"],
         contactPoint: {
           "@type": "ContactPoint",
@@ -97,7 +101,7 @@ export class StructuredData {
     ]);
   }
 
-  /** /courses/[slug]: Course with an online instance and, when priced, an offer. */
+  /** /courses/[slug]: Course taught 1-on-1 in person (Abu Dhabi) or online and, when priced, an offer. */
   static course(course: Course): JsonLdNode {
     const url = `${siteConfig.url}/courses/${course.slug}`;
     return StructuredData.graph([
@@ -118,7 +122,8 @@ export class StructuredData {
         }),
         hasCourseInstance: {
           "@type": "CourseInstance",
-          courseMode: "Online",
+          courseMode: ["Onsite", "Online"],
+          location: { "@type": "Place", name: siteConfig.delivery.onsiteCity, address: { "@type": "PostalAddress", addressLocality: siteConfig.delivery.onsiteCity, addressCountry: "AE" } },
           // Free text like "8 weeks · 16 live sessions"; schema.org accepts text here.
           courseWorkload: course.duration,
           ...(course.startDate && { startDate: StructuredData.dateTime(course.startDate) }),

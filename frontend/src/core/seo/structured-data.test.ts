@@ -51,7 +51,7 @@ describe("StructuredData", () => {
     expect(org["@id"]).toBe(StructuredData.ORG_ID);
     expect(org.url).toBe("https://financeinpractice.me");
     expect((org.contactPoint as JsonLdNode).telephone).toMatch(/^\+971\d+$/);
-    expect(org.areaServed).toEqual({ "@type": "Country", name: "United Arab Emirates" });
+    expect(org.areaServed).toContainEqual({ "@type": "City", name: "Abu Dhabi" });
     expect(byType(site, "WebSite").publisher).toEqual({ "@id": StructuredData.ORG_ID });
   });
 
@@ -82,7 +82,7 @@ describe("StructuredData", () => {
   it("marks up a course with an online instance and a priced offer", () => {
     const course = byType(StructuredData.course(COURSE), "Course");
     expect(course.provider).toEqual({ "@id": StructuredData.ORG_ID });
-    expect(course.hasCourseInstance).toMatchObject({ courseMode: "Online", startDate: "2026-11-01T00:00:00+04:00" });
+    expect(course.hasCourseInstance).toMatchObject({ courseMode: ["Onsite", "Online"], startDate: "2026-11-01T00:00:00+04:00" });
     expect(course.offers).toMatchObject({ price: "1500.00", priceCurrency: "AED", category: "Paid" });
   });
 
