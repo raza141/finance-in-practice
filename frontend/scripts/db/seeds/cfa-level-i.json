@@ -66,8 +66,8 @@
       "priority": "high_priority",
       "summary": "Build the tools used across valuation, risk and portfolio decisions.",
       "coaching": "Official curriculum practice problems are attempted. Calculation, formula and interpretation errors are diagnosed.",
-      "practice": "Build a return, risk and compounding worksheet.",
-      "deliverable": "Build a return, risk and compounding worksheet.",
+      "practice": "Calculate returns, volatility and compound growth from a real price series.",
+      "deliverable": "A return, risk and compounding worksheet.",
       "weight": "11-14%"
     },
     {
@@ -92,7 +92,7 @@
       "title": "Fixed Income",
       "priority": "high_priority",
       "summary": "Understand how bond prices respond to interest rates, and why.",
-      "coaching": "Understand how bond prices respond to interest rates, and why.",
+      "coaching": "Bond pricing, yield and duration questions are reviewed. Errors in compounding, sign and rate direction are diagnosed.",
       "practice": "Price a bond and test its sensitivity to a rate change.",
       "deliverable": "Bond pricing sheet with a rate-shock table.",
       "weight": "11-14%"
@@ -136,7 +136,7 @@
     {
       "title": "Portfolio Construction",
       "priority": "core",
-      "summary": "Project comparison sheet with a recommendation.",
+      "summary": "Build a portfolio that fits a client’s objectives, constraints and risk tolerance.",
       "coaching": "Risk-return, diversification and policy questions are reviewed. Each answer is tied to client constraints.",
       "practice": "Draft a simple Investment Policy Statement for a fictional client.",
       "deliverable": "Completed Investment Policy Statement draft.",
@@ -146,12 +146,12 @@
   "options": [
     {
       "title": "CFA Level I Comprehensive Coaching",
-      "fee": "",
+      "fee": "On request",
       "description": "End-to-end guidance through the entire CFA Level I curriculum. Includes a customized study plan anchored to your exam date, step-by-step concept breakdowns, and continuous support from day one to exam day. Flexible payment plans available."
     },
     {
       "title": "Targeted Topic Pack",
-      "fee": "",
+      "fee": "On request",
       "description": "Focused, intensive coaching on high-weight or complex areas (e.g., Fixed Income, FSA). Designed to solidify your understanding of critical concepts, diagnose calculation errors, and improve your scoring in specific problem areas."
     },
     {
@@ -162,7 +162,7 @@
     {
       "title": "Single session",
       "fee": "150 AED",
-      "description": "A dedicated one-on-one session to tackle specific hurdles, clarify complex formulas, or walk through challenging curriculum questions. Ideal for targeted, immediate help with no long-term"
+      "description": "A dedicated one-on-one session to tackle specific hurdles, clarify complex formulas, or walk through challenging curriculum questions. Ideal for targeted, immediate help with no long-term commitment."
     }
   ],
   "faqs": [
@@ -180,7 +180,7 @@
     },
     {
       "question": "Can coaching start at any time, and how are sessions priced?",
-      "answer": "Coaching can begin on request, with no fixed cohort start date. Sessions can be booked singly, monthly, or as exam-season support. Fees are discussed after the free Portfolio Review, because the scope depends on the candidate’s needs."
+      "answer": "Coaching can begin on request, with no fixed cohort start date. Sessions can be booked singly, monthly, or as exam-season support. Fees are discussed after the free Strategy Session, because the scope depends on the candidate’s needs."
     },
     {
       "question": "Does coaching guarantee a pass?",
@@ -188,7 +188,7 @@
     }
   ],
   "brochureUrl": null,
-  "seoTitle": "",
-  "seoDescription": "",
+  "seoTitle": "CFA Level I Tutor in Dubai & UAE – 1-on-1 Online",
+  "seoDescription": "1-on-1 CFA® Level I tutoring for candidates in Dubai, Abu Dhabi and across the UAE. Diagnostic-led prep with official curriculum questions. Book a free session.",
   "testimonialTicker": "CFA1"
 }
