@@ -4,6 +4,7 @@ import { BookButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { ExamGlance } from "@/domains/courses/components/ExamGlance";
+import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import { WeightBars } from "@/domains/courses/components/WeightBars";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import type { Course } from "@/domains/courses/types";
@@ -39,6 +40,11 @@ export async function FeaturedCoursesSection() {
                 <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
                 <h3 className={`mt-3 font-black ${lead ? "text-4xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}>{course.title}</h3>
                 {course.tagline && <p className="mt-3 font-serif text-xl text-ink/85 italic sm:text-2xl">{course.tagline}</p>}
+                {course.priceMinor ? (
+                  <p className="mt-5 text-muted">
+                    <span className="text-2xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour · 30-min diagnostic free
+                  </p>
+                ) : null}
                 <div className="mt-8 flex flex-wrap gap-3">
                   <BookButton track={course.category === "FRM" ? "frm" : "cfa"} size="lg" className="w-full sm:w-auto" />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary" size="lg" className="w-full sm:w-auto">

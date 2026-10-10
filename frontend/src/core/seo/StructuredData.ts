@@ -123,7 +123,7 @@ export class StructuredData {
         hasCourseInstance: {
           "@type": "CourseInstance",
           courseMode: ["Onsite", "Online"],
-          location: { "@type": "Place", name: siteConfig.delivery.onsiteCity, address: { "@type": "PostalAddress", addressLocality: siteConfig.delivery.onsiteCity, addressCountry: "AE" } },
+          location: { "@type": "Place", name: `${siteConfig.delivery.onsiteArea}, ${siteConfig.delivery.onsiteCity}`, address: { "@type": "PostalAddress", addressLocality: siteConfig.delivery.onsiteCity, addressRegion: siteConfig.delivery.onsiteArea, addressCountry: "AE" } },
           // Free text like "8 weeks · 16 live sessions"; schema.org accepts text here.
           courseWorkload: course.duration,
           ...(course.startDate && { startDate: StructuredData.dateTime(course.startDate) }),

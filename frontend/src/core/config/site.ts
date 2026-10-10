@@ -13,11 +13,12 @@ export const siteConfig = {
   description:
     "1-on-1 CFA® Level I, FRM® and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free diagnostic session.",
 
-  /** Where 1-on-1 sessions happen: in person in Abu Dhabi, online everywhere else. */
+  /** Where 1-on-1 sessions happen: at the learner's home in Abu Dhabi (base: Khalifa City), online everywhere else. */
   delivery: {
-    line: "In person in Abu Dhabi · live online for Dubai and the rest of the UAE.",
-    short: "In person in Abu Dhabi · Online in Dubai & worldwide",
+    line: "At your home anywhere in Abu Dhabi, or in Khalifa City · live online for Dubai and the rest of the UAE.",
+    short: "At your home in Abu Dhabi · Online across the UAE",
     onsiteCity: "Abu Dhabi",
+    onsiteArea: "Khalifa City",
   },
 
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */

@@ -63,7 +63,7 @@ export function CourseView({
   const facts = [
     { label: "Format", value: course.duration },
     { label: "Next start", value: CourseFormat.startDate(course.startDate) },
-    { label: "Fee", value: CourseFormat.price(course) },
+    { label: "Fee", value: CourseFormat.hourly(course) },
   ];
   const cta = (
     <ButtonLink href={course.bookingUrl} size="lg" {...external(course.bookingUrl)}>

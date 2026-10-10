@@ -20,6 +20,12 @@ export class CourseFormat {
 
   private static readonly NUMBERS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
 
+  /** Headline fee is per one-hour session: "AED 150 / hour"; "On request" and "Free" pass through. */
+  static hourly(course: Pick<Course, "priceMinor" | "currency">): string {
+    const price = CourseFormat.price(course);
+    return course.priceMinor ? `${price} / hour` : price;
+  }
+
   static price(course: Pick<Course, "priceMinor" | "currency">): string {
     if (course.priceMinor === null) return "On request";
     if (course.priceMinor === 0) return "Free";

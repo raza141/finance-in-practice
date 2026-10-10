@@ -5,7 +5,7 @@ import { SectionHeading } from "@/core/components/ui/SectionHeading";
 const STEPS = [
   {
     title: "Book a free diagnostic",
-    body: "30 minutes, in person in Abu Dhabi or online. No card needed.",
+    body: "30 minutes, at your home in Abu Dhabi, in Khalifa City or online. No card needed.",
     icon: "M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm4 11 2 2 4-4",
   },
   {

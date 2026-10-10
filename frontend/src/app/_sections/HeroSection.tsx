@@ -57,7 +57,7 @@ export function HeroSection() {
           <ul data-anim="hero-subtitle" className="mt-5 flex flex-wrap gap-2 text-sm font-medium">
             <li className="flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3.5 py-1.5 text-ink">
               <span aria-hidden className="h-2 w-2 rounded-full bg-gold" />
-              In person · Abu Dhabi
+              At your home · Abu Dhabi
             </li>
             <li className="flex items-center gap-2 rounded-full border border-quant/40 bg-quant/10 px-3.5 py-1.5 text-ink">
               <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-quant" />
