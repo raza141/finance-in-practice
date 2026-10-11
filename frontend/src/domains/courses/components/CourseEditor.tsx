@@ -323,7 +323,7 @@ export function CourseEditor({
 
           {tab === "conversion" && (
             <div className="grid gap-5 sm:grid-cols-2">
-              {text("ctaLabel", "CTA label", { max: 40, placeholder: "Book a free diagnostic" })}
+              {text("ctaLabel", "CTA label", { max: 40, placeholder: "Book your free diagnostic session" })}
               {text("bookingUrl", "Booking link", { max: 500, hint: "#book = the booking calendar on the page. Or /contact, or an https:// link." })}
               {text("difference", "What makes it different", {
                 rows: 3,
