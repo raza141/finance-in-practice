@@ -11,9 +11,9 @@ import { InstructorRepository } from "@/domains/team/server/InstructorRepository
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "About Us",
+  title: "Your Instructor",
   description:
-    "Meet the instructors behind Finance in Practice: practitioners who teach the theory and build the models.",
+    "Meet your CFA® and FRM® instructor in Abu Dhabi: theory first, then the model that proves it. 1-on-1 in person or online.",
   alternates: { canonical: "/about" },
 };
 
@@ -27,32 +27,30 @@ export default async function AboutPage() {
         <section
           data-cosmic-section
           aria-labelledby="about-heading"
-          className="page-container flex min-h-screen flex-col items-center justify-center py-32 text-center"
+          className="page-container flex min-h-[70svh] flex-col items-center justify-center py-16 text-center"
         >
           <p
             data-reveal
             className="font-mono text-xs tracking-[0.3em] text-quant uppercase"
           >
-            About us · The instructors
+            {instructors.length > 1 ? "The instructors" : "Your instructor"}
           </p>
           <h1
             data-reveal
             id="about-heading"
             className="mt-6 max-w-4xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-7xl"
           >
-            Learn from someone who works at the intersection of finance, risk
-            and technology
+            Learn finance from someone who builds the models
           </h1>
           <p
             data-reveal
             className="mt-6 max-w-xl text-lg leading-relaxed text-muted"
           >
-            Theory first, then the model that proves it. Scroll to meet each of
-            us.
+            Theory first, then the model that proves it.
           </p>
           <p
             data-reveal
-            className="mt-16 font-mono text-[11px] tracking-[0.35em] text-muted uppercase"
+            className="mt-10 font-mono text-[11px] tracking-[0.35em] text-muted uppercase"
           >
             Scroll ↓
           </p>

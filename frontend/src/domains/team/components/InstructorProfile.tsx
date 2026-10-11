@@ -50,13 +50,15 @@ export function InstructorProfile({ instructor, index, total }: InstructorProfil
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-canvas/45 p-6 backdrop-blur-md sm:p-8">
-          <p data-reveal className="font-mono text-xs tracking-[0.3em] text-quant uppercase">
-            Instructor {counter}
-          </p>
+          {total > 1 && (
+            <p data-reveal className="mb-4 font-mono text-xs tracking-[0.3em] text-quant uppercase">
+              Instructor {counter}
+            </p>
+          )}
           <h2
             data-reveal
             id={headingId}
-            className="mt-4 text-4xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
+            className="text-4xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
           >
             {instructor.name}
           </h2>

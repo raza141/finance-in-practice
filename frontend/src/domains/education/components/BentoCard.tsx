@@ -6,8 +6,8 @@ import { STRESS_PREVIEW, type BentoService } from "../services/ServiceCatalog";
 
 const SPAN: Record<BentoService["span"], string> = {
   4: "lg:col-span-4",
-  8: "lg:col-span-8",
-  12: "lg:col-span-12",
+  8: "md:col-span-2 lg:col-span-8",
+  12: "md:col-span-2 lg:col-span-12",
 };
 
 function CodeVisual() {
@@ -91,15 +91,18 @@ export function BentoCard({ service }: { service: BentoService }) {
         </div>
       )}
 
-      <div className={`flex flex-wrap items-center gap-2 ${service.waitlist ? "mt-6 lg:mt-0" : "mt-auto pt-6"}`}>
-        {service.tags.map((tag) => (
-          <code key={tag} className="rounded bg-canvas px-2 py-1 font-mono text-[11px] text-quant/90">
-            {tag}
-          </code>
-        ))}
+      {/* Tags, then the link on its own ruled row, so every card ends on the same line. */}
+      <div className={`flex flex-col gap-4 ${service.waitlist ? "mt-6 lg:mt-0 lg:min-w-60" : "mt-auto pt-6"}`}>
+        <div className="flex flex-wrap gap-2">
+          {service.tags.map((tag) => (
+            <code key={tag} className="rounded bg-canvas px-2 py-1 font-mono text-[11px] text-quant/90">
+              {tag}
+            </code>
+          ))}
+        </div>
         <Link
           href={siteConfig.bookingHref}
-          className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-quant"
+          className="inline-flex items-center gap-1.5 border-t border-white/5 pt-4 text-sm font-semibold text-ink transition-colors hover:text-quant"
         >
           {service.waitlist ? "Register interest" : "Discuss in a free diagnostic"}
           <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
