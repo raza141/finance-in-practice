@@ -8,6 +8,14 @@ export interface FreeResource {
   format: string;
   /** Three short lines of value shown beside the form. */
   points: readonly string[];
+  /** The CSS cover preview; mirrors page 1 of the PDF (scripts/resources/build-exam-maps.mjs). */
+  cover: {
+    exam: string;
+    facts: readonly string[];
+    /** Bar widths in %, heaviest topics first; the first `gold` bars are the high-priority ones. */
+    bars: readonly number[];
+    gold: number;
+  };
 }
 
 /** A paid product sold through Lemon Squeezy (hosted checkout; they handle tax, receipts and delivery). */
@@ -35,6 +43,7 @@ export class ResourceCatalog {
       file: "/resources/cfa-level-i-exam-map.pdf",
       format: "PDF · 2 pages",
       points: ["Where the marks are, topic by topic", "How the exam works, in four numbers", "A 12-week route to exam day"],
+      cover: { exam: "CFA® Level I", facts: ["180", "2×135", "300+", "43%"], bars: [100, 92, 92, 92, 92, 55, 55, 55, 55, 74], gold: 5 },
     },
     {
       id: "cfa2-exam-map",
@@ -43,6 +52,7 @@ export class ResourceCatalog {
       file: "/resources/cfa-level-ii-exam-map.pdf",
       format: "PDF · 2 pages",
       points: ["Where the marks are, topic by topic", "How item sets work, and how to pace them", "A 12-week route to exam day"],
+      cover: { exam: "CFA® Level II", facts: ["22", "88", "2×132", "300+"], bars: [100, 100, 100, 100, 100, 60, 60, 60, 60, 60], gold: 5 },
     },
     {
       id: "frm1-exam-map",
@@ -51,6 +61,7 @@ export class ResourceCatalog {
       file: "/resources/frm-part-i-exam-map.pdf",
       format: "PDF · 2 pages",
       points: ["Where the marks are, topic by topic", "What each of the four topics covers", "A 12-week route to exam day"],
+      cover: { exam: "FRM® Part I", facts: ["100", "4h", "240", "47%"], bars: [100, 100, 67, 67], gold: 2 },
     },
   ];
 
