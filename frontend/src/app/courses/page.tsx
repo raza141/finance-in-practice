@@ -13,8 +13,9 @@ import type { Course } from "@/domains/courses/types";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Courses",
-  description: "Every Finance in Practice course: curriculum, start date, duration and fees.",
+  title: "CFA® & FRM® Courses in Abu Dhabi & Online",
+  description:
+    "1-on-1 CFA® Level I, CFA® Level II and FRM® Part I tutoring in Abu Dhabi or online across the UAE, plus applied finance tracks. AED 150/hour, free diagnostic.",
   alternates: { canonical: "/courses" },
 };
 

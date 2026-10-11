@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import { useIdleMount } from "./useIdleMount";
+
 /**
  * WebGL cannot render on the server, so the R3F canvas is code-split and
  * loaded client-side only. `ssr: false` is only permitted inside a Client
@@ -13,6 +15,8 @@ const Hero3D = dynamic(() => import("./Hero3D"), {
 });
 
 export function HeroScene({ className = "" }: { className?: string }) {
+  // Desktop only: on phones the surface sat at 35% opacity behind the headline and cost seconds of main thread.
+  const show = useIdleMount("(min-width: 1024px)");
   return (
     <div className={`relative ${className}`}>
       {/* soft cyan halo behind the mesh */}
@@ -20,7 +24,7 @@ export function HeroScene({ className = "" }: { className?: string }) {
         aria-hidden
         className="pointer-events-none absolute inset-[15%] rounded-full bg-quant/10 blur-3xl"
       />
-      <Hero3D />
+      {show && <Hero3D />}
     </div>
   );
 }

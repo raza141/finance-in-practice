@@ -48,9 +48,10 @@ export async function generateMetadata({ params }: PageProps<"/journal/[slug]">)
       authors: [article.authorName],
       section: doc.category ?? undefined,
       tags: doc.tags,
-      ...(image && { images: [{ url: image, alt: doc.featuredImage?.alt ?? doc.title }] }),
+      // No article image: fall back to the site card so shares never go out blank.
+      images: [image ? { url: image, alt: doc.featuredImage?.alt ?? doc.title } : { url: "/opengraph-image", alt: siteConfig.name }],
     },
-    twitter: { card: image ? "summary_large_image" : "summary", title: doc.seo.ogTitle || doc.title, description: doc.seo.description || doc.excerpt },
+    twitter: { card: "summary_large_image", title: doc.seo.ogTitle || doc.title, description: doc.seo.description || doc.excerpt },
   };
 }
 

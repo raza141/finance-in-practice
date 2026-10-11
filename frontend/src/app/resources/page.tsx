@@ -7,9 +7,9 @@ import { FreeResourceBlock } from "@/domains/resources/components/FreeResourceBl
 import { ResourceCatalog } from "@/domains/resources/services/ResourceCatalog";
 
 export const metadata: Metadata = {
-  title: "Free CFA® Resources & Study Templates",
+  title: "Free CFA® & FRM® Exam Maps",
   description:
-    "Free CFA® Level I Exam Map: topic weights, exam format and a 12-week study route. Plus Notion study templates and cheat sheets.",
+    "Free Exam Maps for CFA® Level I, CFA® Level II and FRM® Part I: topic weights, exam format and a study route, as PDFs.",
   alternates: { canonical: "/resources" },
 };
 
