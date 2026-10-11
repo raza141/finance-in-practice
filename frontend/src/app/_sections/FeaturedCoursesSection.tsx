@@ -3,11 +3,17 @@ import Link from "next/link";
 import { BookButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
-import { ExamGlance } from "@/domains/courses/components/ExamGlance";
-import { CourseFormat } from "@/domains/courses/services/CourseFormat";
-import { WeightBars } from "@/domains/courses/components/WeightBars";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { CourseFormat } from "@/domains/courses/services/CourseFormat";
+import { ExamFacts } from "@/domains/courses/services/ExamFacts";
 import type { Course } from "@/domains/courses/types";
+
+/** How tutoring cuts each exam's study load. Topic shares mirror the Exam Map PDFs (scripts/resources/build-exam-maps.mjs). */
+const TIME_SAVERS: Partial<Record<NonNullable<Course["testimonialTicker"]>, readonly string[]>> = {
+  CFA1: ["Start with the five topics worth 55–70% of the marks", "A diagnostic skips what you already know", "Formulas taught as logic, not re-memorised"],
+  CFA2: ["Start with the five topics worth 50–75% of the marks", "Item-set drills: questions first, then the case", "A diagnostic skips what you already know"],
+  FRM1: ["Start with the two topics worth 60% of the exam", "Quant learned once, used in both", "A diagnostic skips what you already know"],
+};
 
 /** Published exam courses, by title (CFA Level I, CFA Level II, FRM Part I); empty if the database is unreachable. */
 async function examCourses(): Promise<Course[]> {
@@ -20,47 +26,62 @@ async function examCourses(): Promise<Course[]> {
   }
 }
 
-/** Apple-style product tiles: each course is the hero of its own tile, with numbers and a chart instead of paragraphs. */
+/** One compact tile per exam: the official study load, then how 1-on-1 tutoring cuts it. Exam specs live on the course pages. */
 export async function FeaturedCoursesSection() {
   const courses = await examCourses();
   return (
     <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-12 lg:py-16">
       <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick your exam. We'll get you through it." />
 
-      <ul data-anim="reveal" className="mt-8 grid gap-4 lg:grid-cols-2">
-        {courses.map((course, i) => {
-          const lead = i === 0;
+      <ul data-anim="reveal" className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {courses.map((course) => {
+          const study = ExamFacts.for(course.testimonialTicker)?.facts.find((f) => f.label === "typical study")?.value;
+          const savers = (course.testimonialTicker && TIME_SAVERS[course.testimonialTicker]) || [];
           return (
             <li
               key={course.id}
-              className={`group relative overflow-hidden rounded-3xl border border-line bg-surface p-7 transition-colors hover:border-gold/50 sm:p-10 ${lead ? "lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-12" : ""}`}
+              className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 sm:p-8"
             >
-              <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full bg-quant/10 blur-3xl" />
-              <div className="relative">
-                <p className="font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
-                <h3 className={`mt-3 font-black ${lead ? "text-4xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}>{course.title}</h3>
-                {course.tagline && <p className="mt-3 font-serif text-xl text-ink/85 italic sm:text-2xl">{course.tagline}</p>}
+              <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full bg-quant/10 blur-3xl" />
+              <p className="relative font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
+              <h3 className="relative mt-2 text-3xl font-black sm:text-4xl">{course.title}</h3>
+              {course.tagline && <p className="relative mt-2 font-serif text-lg text-ink/85 italic">{course.tagline}</p>}
+
+              {study && (
+                <div className="relative mt-6 rounded-2xl border border-line bg-canvas/60 p-5">
+                  <p className="text-sm text-muted">
+                    <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study. Make them count:
+                  </p>
+                  <ul className="mt-3 grid gap-2 text-sm text-ink/90">
+                    {savers.map((line) => (
+                      <li key={line} className="flex gap-2.5">
+                        <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-[10px] text-canvas">
+                          ✓
+                        </span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="relative mt-auto pt-6">
                 {course.priceMinor ? (
-                  <p className="mt-5 text-muted">
-                    <span className="text-2xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour · 30-min diagnostic free
+                  <p className="text-sm text-muted">
+                    <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour · 30-min diagnostic free
                   </p>
                 ) : null}
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <BookButton track={course.category === "FRM" ? "frm" : "cfa"} size="lg" className="w-full sm:w-auto" />
-                  <ButtonLink href={`/courses/${course.slug}`} variant="secondary" size="lg" className="w-full sm:w-auto">
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+                  <BookButton track={course.category === "FRM" ? "frm" : "cfa"} className="w-full" />
+                  <ButtonLink href={`/courses/${course.slug}`} variant="secondary" className="w-full">
                     Learn more →
                   </ButtonLink>
                 </div>
-              </div>
-              <div className={`relative ${lead ? "mt-10 lg:mt-0" : "mt-10"}`}>
-                <ExamGlance ticker={course.testimonialTicker} />
-                <WeightBars modules={course.modules} className="mt-8" />
               </div>
             </li>
           );
         })}
       </ul>
-
       <p data-anim="reveal" className="mt-6 text-muted">
         Also 1-on-1: university finance, financial modeling, Python automation and more.{" "}
         <Link href="/courses" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
