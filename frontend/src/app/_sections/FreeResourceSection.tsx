@@ -8,9 +8,9 @@ export function FreeResourceSection() {
   if (!resource) return null;
   return (
     <section id="free-guide" aria-labelledby="free-guide-heading" data-sequence="reveal" className="border-t border-line">
-      <div className="page-container py-20 lg:py-24">
+      <div className="page-container py-12 lg:py-16">
         <SectionHeading id="free-guide-heading" eyebrow="Not ready to book yet?" title="Start with the free exam map" />
-        <div data-anim="reveal" className="mt-10">
+        <div data-anim="reveal" className="mt-8">
           <FreeResourceBlock resource={resource} source="home" />
         </div>
       </div>

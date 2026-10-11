@@ -24,10 +24,10 @@ async function examCourses(): Promise<Course[]> {
 export async function FeaturedCoursesSection() {
   const courses = await examCourses();
   return (
-    <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-20 lg:py-24">
+    <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-12 lg:py-16">
       <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick your exam. We'll get you through it." />
 
-      <ul data-anim="reveal" className="mt-12 grid gap-4 lg:grid-cols-2">
+      <ul data-anim="reveal" className="mt-8 grid gap-4 lg:grid-cols-2">
         {courses.map((course, i) => {
           const lead = i === 0;
           return (

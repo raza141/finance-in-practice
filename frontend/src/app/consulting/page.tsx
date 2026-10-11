@@ -15,7 +15,7 @@ export default function ConsultingPage() {
 
   return (
     <>
-      <section className="page-container pt-14 pb-10 lg:pt-20">
+      <section className="page-container pt-10 pb-8 lg:pt-12">
         <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">1-on-1 Sessions</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">
           Personal tuition, built around your exam date or deadline
@@ -37,7 +37,7 @@ export default function ConsultingPage() {
       </section>
 
       <section id="book" aria-labelledby="consulting-book-heading" className="border-t border-line">
-        <div className="page-container py-16 lg:py-20">
+        <div className="page-container py-12 lg:py-16">
           <BookingPanel headingId="consulting-book-heading" />
         </div>
       </section>

@@ -10,7 +10,7 @@ const HEADLINE: { text: string; accent?: boolean }[][] = [
 export function HeroSection() {
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden">
-      <div className="page-container grid items-center gap-8 pt-8 pb-14 sm:pt-10 lg:grid-cols-2 xl:gap-16 lg:pt-10 lg:pb-16">
+      <div className="page-container grid items-center gap-8 pt-8 pb-8 sm:pt-10 lg:grid-cols-2 xl:gap-16 lg:pt-6 lg:pb-8">
         <div className="relative z-10">
           <p
             data-anim="hero-subtitle"
@@ -91,7 +91,7 @@ export function HeroSection() {
           className="pointer-events-none absolute inset-x-0 top-10 h-[60vh] max-h-[520px] lg:pointer-events-auto lg:relative lg:inset-auto lg:h-auto lg:max-h-none"
         >
           <div className="h-full opacity-35 lg:opacity-100">
-            <HeroScene className="mx-auto h-full w-full lg:aspect-square lg:h-auto lg:max-w-[600px]" />
+            <HeroScene className="mx-auto h-full w-full lg:aspect-square lg:h-auto lg:max-w-[460px]" />
           </div>
         </div>
       </div>

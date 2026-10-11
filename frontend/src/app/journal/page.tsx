@@ -68,7 +68,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
 
   return (
     <>
-      <section className="page-container pt-14 pb-10 lg:pt-20">
+      <section className="page-container pt-10 pb-8 lg:pt-12">
         <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Research Terminal</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">Notes from the trading desk of theory</h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">

@@ -37,7 +37,7 @@ export default function ContactPage() {
     <section aria-labelledby="contact-heading" className="relative -mt-20 overflow-hidden">
       <CosmicBackdrop className="absolute inset-0" tilt={0.6} zoom={7.5} />
 
-      <div className="page-container relative flex min-h-screen flex-col justify-center py-32">
+      <div className="page-container relative flex flex-col justify-center pt-28 pb-12 lg:pt-32 lg:pb-16">
         <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Contact</p>
         <h1
           id="contact-heading"

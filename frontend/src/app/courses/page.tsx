@@ -38,7 +38,7 @@ export default async function CoursesPage() {
 
       {courses.length > 0 && (
         <section id="course-pages" aria-label="Courses" className="scroll-mt-20">
-          <div className="page-container pt-10 pb-14 lg:pt-14 lg:pb-20">
+          <div className="page-container pt-8 pb-10 lg:pt-10 lg:pb-12">
             <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <li key={course.id}>
@@ -63,7 +63,7 @@ export default async function CoursesPage() {
       )}
 
       <section id="curriculum" aria-labelledby="curriculum-heading" className="border-t border-line">
-        <div className="page-container py-14 lg:py-20">
+        <div className="page-container py-12 lg:py-16">
           <SectionHeading
             id="curriculum-heading"
             eyebrow="Specialist tracks"

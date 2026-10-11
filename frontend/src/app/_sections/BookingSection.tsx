@@ -8,7 +8,7 @@ export function BookingSection() {
       data-sequence="reveal"
       className="border-t border-line bg-gradient-to-b from-surface/40 to-transparent"
     >
-      <div className="page-container py-20 lg:py-28">
+      <div className="page-container py-12 lg:py-16">
         <BookingPanel headingId="book-heading" />
       </div>
     </section>

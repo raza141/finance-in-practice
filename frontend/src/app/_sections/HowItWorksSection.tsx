@@ -23,9 +23,9 @@ const STEPS = [
 export function HowItWorksSection() {
   return (
     <section aria-labelledby="how-heading" data-sequence="reveal" className="border-t border-line">
-      <div className="page-container py-20 lg:py-24">
+      <div className="page-container py-12 lg:py-16">
         <SectionHeading id="how-heading" eyebrow="How it works" title="Three steps to your first session" />
-        <ol data-anim="reveal" className="mt-12 grid gap-4 md:grid-cols-3">
+        <ol data-anim="reveal" className="mt-8 grid gap-4 md:grid-cols-3">
           {STEPS.map((step, i) => (
             <li key={step.title} className="relative rounded-2xl border border-line bg-surface p-6">
               <div className="flex items-center gap-4">

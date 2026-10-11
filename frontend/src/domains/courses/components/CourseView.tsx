@@ -323,7 +323,7 @@ export function CourseView({
 
       {course.faqs.length > 0 && (
         <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-28 border-t border-line">
-          <div className="page-container grid gap-10 py-14 lg:grid-cols-12 lg:py-20">
+          <div className="page-container grid gap-10 py-12 lg:grid-cols-12 lg:py-14">
             <div className="lg:col-span-4">
               <SectionHeading id="faq-heading" eyebrow="FAQ" title="Questions, answered." />
             </div>

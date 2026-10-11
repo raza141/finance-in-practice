@@ -41,10 +41,10 @@ export async function TestimonialsSection() {
       <GridBackdrop className="absolute inset-0" />
 
       <div className="relative">
-        <div className="page-container py-20 lg:py-24">
+        <div className="page-container py-12 lg:py-16">
           <SectionHeading id="testimonials-heading" eyebrow="Learner results" title="What learners say" />
 
-          <div className="mt-12">
+          <div className="mt-8">
               <SwipeRail label="Learner testimonials">
                 {fills.map((testimonial, i) => (
                   <li

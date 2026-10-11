@@ -14,7 +14,7 @@ export function QuantLabMetrics() {
       id="quant-lab"
       aria-labelledby="quant-lab-heading"
       data-sequence="counters"
-      className="page-container py-20 lg:py-28"
+      className="page-container py-12 lg:py-16"
     >
       <SectionHeading
         id="quant-lab-heading"
