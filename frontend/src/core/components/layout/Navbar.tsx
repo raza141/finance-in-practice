@@ -63,7 +63,8 @@ export function Navbar() {
             <nav aria-label="Primary">
               <ul className="flex items-center">
                 {siteConfig.nav.map((item) => (
-                  <li key={item.href} className="group relative">
+                  // Logo already links home, so "Terminal" only shows once there is room (xl+).
+                  <li key={item.href} className={`group relative ${item.href === "/" ? "hidden xl:block" : ""}`}>
                     <Link
                       href={item.href}
                       onMouseEnter={onEnter}
@@ -71,7 +72,7 @@ export function Navbar() {
                       onFocus={(e) => animator.enter(e.currentTarget)}
                       onBlur={(e) => animator.leave(e.currentTarget)}
                       aria-haspopup={item.children ? "true" : undefined}
-                      className="relative flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium whitespace-nowrap outline-offset-4"
+                      className="relative flex items-center gap-1 px-2 py-1.5 text-[13px] xl:px-3 font-medium whitespace-nowrap outline-offset-4"
                     >
                       <span data-nav-label className="text-[#94A3B8]">
                         {item.label}
@@ -98,7 +99,7 @@ export function Navbar() {
                         // Initial scale lives in `transform` (not Tailwind's scale-x-0, which
                         // uses the separate CSS `scale` property and would cancel anime's scaleX).
                         style={{ transform: "scaleX(0)" }}
-                        className="absolute inset-x-3 bottom-0.5 h-px origin-center bg-quant shadow-[0_0_8px_rgb(34_211_238/0.8)]"
+                        className="absolute inset-x-2 bottom-0.5 h-px xl:inset-x-3 origin-center bg-quant shadow-[0_0_8px_rgb(34_211_238/0.8)]"
                       />
                     </Link>
 
