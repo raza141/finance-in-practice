@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 
 import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
 import { SwipeRail } from "@/domains/testimonials/components/SwipeRail";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
@@ -25,7 +25,7 @@ async function loadReviews(): Promise<Testimonial[]> {
   }
 }
 
-/** Landing-page social proof: approved testimonials. Submissions live on /testimonials/submit. */
+/** Landing-page social proof: approved testimonials. New reviews go to Google (siteConfig.contact.googleReviewUrl). */
 export async function TestimonialsSection() {
   const fills = await loadReviews();
   // No approved reviews yet: skip the section rather than show an empty proof block.
@@ -59,9 +59,14 @@ export async function TestimonialsSection() {
 
           <p className="mt-8 text-sm text-muted">
             Studied with us?{" "}
-            <Link href="/testimonials/submit" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
-              Share your experience
-            </Link>
+            <a
+              href={siteConfig.contact.googleReviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant"
+            >
+              Leave a review on Google ↗
+            </a>
           </p>
         </div>
       </div>

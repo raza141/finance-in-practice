@@ -18,7 +18,12 @@ export function Footer() {
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
             {siteConfig.footerNav.map((item) => (
-              <Link key={item.href} href={item.href} className="text-muted hover:text-ink">
+              <Link
+                key={item.href}
+                href={item.href}
+                {...(item.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}
+                className="text-muted hover:text-ink"
+              >
                 {item.label}
               </Link>
             ))}

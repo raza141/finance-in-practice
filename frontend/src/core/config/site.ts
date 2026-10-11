@@ -39,7 +39,7 @@ export const siteConfig = {
     { label: "Research Terminal", href: "/journal" },
     { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
-    { label: "Share your experience", href: "/testimonials/submit" },
+    { label: "Review us on Google", href: "https://g.page/r/CXVZIOQD9qJXEBM/review" },
     { label: "Privacy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
   ] as readonly NavItem[],
@@ -51,6 +51,9 @@ export const siteConfig = {
   contact: {
     email: null as string | null,
     calUrl: "https://cal.com/raza141/30min",
+    /** Google Business Profile: reviews are collected there, not on the site. */
+    googleProfileUrl: "https://g.page/r/CXVZIOQD9qJXEBM",
+    googleReviewUrl: "https://g.page/r/CXVZIOQD9qJXEBM/review",
     /** Click-to-chat number in international format, digits only (wa.me). */
     whatsapp: {
       number: "971588070565",

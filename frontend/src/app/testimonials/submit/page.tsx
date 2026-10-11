@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Share your experience",
   description: "Studied or worked with Finance in Practice? Tell other students what it was like.",
   alternates: { canonical: "/testimonials/submit" },
+  // Public reviews now go to Google; this form stays for anyone sent the link directly.
+  robots: { index: false, follow: true },
 };
 
 export default function SubmitTestimonialPage() {
