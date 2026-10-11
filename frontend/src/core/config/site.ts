@@ -31,7 +31,6 @@ export const siteConfig = {
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
-  // ponytail: add Privacy and Terms here once those pages exist.
   footerNav: [
     { label: "Terminal", href: "/" },
     { label: "Learning Tracks", href: "/courses" },
@@ -41,6 +40,8 @@ export const siteConfig = {
     { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
     { label: "Share your experience", href: "/testimonials/submit" },
+    { label: "Privacy", href: "/privacy" },
+    { label: "Terms", href: "/terms" },
   ] as readonly NavItem[],
 
   /** Gold conversion button at the end of the navbar. */

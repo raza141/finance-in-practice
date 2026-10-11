@@ -19,6 +19,8 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: "daily" 
   { path: "/contact", priority: 0.6, changeFrequency: "monthly" },
   { path: "/journal", priority: 0.5, changeFrequency: "monthly" },
   { path: "/testimonials/submit", priority: 0.3, changeFrequency: "monthly" },
+  { path: "/privacy", priority: 0.2, changeFrequency: "monthly" },
+  { path: "/terms", priority: 0.2, changeFrequency: "monthly" },
 ];
 
 /** Active courses, or none when the database is unset or unreachable (e.g. at build time). */

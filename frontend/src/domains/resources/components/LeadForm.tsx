@@ -86,6 +86,13 @@ export function LeadForm({ resource, source }: { resource: FreeResource; source:
         <input type="checkbox" name="optIn" className="mt-0.5 accent-[#22d3ee]" />
         Also send me occasional CFA/FRM exam tips. Unsubscribe anytime.
       </label>
+      <p className="text-xs text-muted">
+        See our{" "}
+        <a href="/privacy" className="underline underline-offset-2 hover:text-quant">
+          Privacy Policy
+        </a>
+        .
+      </p>
       {state.kind === "error" && (
         <p role="alert" className="text-sm text-gold">
           {state.message}
