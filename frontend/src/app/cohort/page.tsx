@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: "Free Cohort",
   description: "A free group cohort for finance students. Dates and syllabus announced soon.",
   alternates: { canonical: "/cohort" },
+  // Placeholder until the cohort launches: keep it out of search (and the sitemap) till then.
+  robots: { index: false, follow: true },
 };
 
 export default function CohortPage() {
