@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Merriweather, Roboto } from "next/font/google";
 import Script from "next/script";
 
 import { Footer } from "@/core/components/layout/Footer";
+import { SiteAnalytics } from "@/core/components/layout/SiteAnalytics";
 import { Navbar } from "@/core/components/layout/Navbar";
 import { SiteChrome } from "@/core/components/layout/SiteChrome";
 import { StickyBookBar } from "@/core/components/layout/StickyBookBar";
@@ -110,6 +111,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <StickyBookBar />
         </SiteChrome>
         <CustomCursor />
+        <SiteAnalytics />
       </body>
     </html>
   );

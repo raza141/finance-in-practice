@@ -26,10 +26,10 @@ export function InstructorProfile({ instructor, index, total }: InstructorProfil
     <section
       data-cosmic-section
       aria-labelledby={headingId}
-      className="page-container flex min-h-screen items-center py-24"
+      className="page-container flex items-center py-10 lg:min-h-[80svh] lg:py-16"
     >
-      <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
-        <div data-reveal className="mx-auto w-full max-w-xs sm:max-w-sm">
+      <div className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
+        <div data-reveal className="mx-auto w-full max-w-[13rem] sm:max-w-sm">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/15 bg-surface/60 shadow-[0_0_80px_-20px_rgb(34_211_238/0.45)] backdrop-blur-sm">
             {instructor.photo ? (
               <Image

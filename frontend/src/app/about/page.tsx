@@ -27,7 +27,7 @@ export default async function AboutPage() {
         <section
           data-cosmic-section
           aria-labelledby="about-heading"
-          className="page-container flex min-h-[70svh] flex-col items-center justify-center py-16 text-center"
+          className="page-container flex min-h-[55svh] flex-col items-center justify-center py-12 text-center lg:min-h-[60svh] lg:py-16"
         >
           <p
             data-reveal
