@@ -3,9 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { GooglePlacesClient } from "./GooglePlacesClient";
 
 describe("GooglePlacesClient", () => {
-  it("needs both the key and the place ID", () => {
-    expect(GooglePlacesClient.fromEnv({ GOOGLE_PLACES_API_KEY: "k" } as unknown as NodeJS.ProcessEnv)).toBeNull();
-    expect(GooglePlacesClient.fromEnv({ GOOGLE_PLACE_ID: "p" } as unknown as NodeJS.ProcessEnv)).toBeNull();
+  it("needs the key and a place ID", () => {
+    expect(GooglePlacesClient.fromEnv({} as unknown as NodeJS.ProcessEnv)).toBeNull();
+    expect(GooglePlacesClient.fromEnv({ GOOGLE_PLACES_API_KEY: "k" } as unknown as NodeJS.ProcessEnv, "")).toBeNull();
+    expect(GooglePlacesClient.fromEnv({ GOOGLE_PLACES_API_KEY: "k" } as unknown as NodeJS.ProcessEnv)).not.toBeNull();
   });
 
   it("maps the place and drops star-only reviews", async () => {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { siteConfig } from "@/core/config/site";
 import { BaseApiClient } from "@/core/http/BaseApiClient";
 
 export interface GoogleReview {
@@ -53,10 +54,9 @@ export class GooglePlacesClient extends BaseApiClient {
     });
   }
 
-  /** Null when GOOGLE_PLACES_API_KEY or GOOGLE_PLACE_ID is missing: the page then shows the review button only. */
-  static fromEnv(env: NodeJS.ProcessEnv = process.env): GooglePlacesClient | null {
+  /** Null without GOOGLE_PLACES_API_KEY: the page then shows the review button only. */
+  static fromEnv(env: NodeJS.ProcessEnv = process.env, placeId: string = siteConfig.contact.googlePlaceId): GooglePlacesClient | null {
     const apiKey = env.GOOGLE_PLACES_API_KEY?.trim();
-    const placeId = env.GOOGLE_PLACE_ID?.trim();
     if (!apiKey || !placeId) return null;
     return new GooglePlacesClient(placeId, apiKey);
   }
