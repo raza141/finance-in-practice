@@ -17,6 +17,10 @@ export interface CalBookingInput {
   start: string;
   attendee: { name: string; email: string; timeZone: string; language: string };
   metadata: Record<string, string>;
+  /** Omitted: the event type's first location. */
+  location?: { type: "attendeeAddress"; address: string } | { type: "integration"; integration: "google-meet" | "cal-video" };
+  /** Booking-field slug -> answer, e.g. { notes } (shown in Cal.com's emails). */
+  bookingFieldsResponses?: Record<string, string>;
 }
 
 export interface CalBooking {
@@ -67,13 +71,15 @@ export class CalComClient extends BaseApiClient {
 
   /**
    * Reads CAL_API_KEY and the public booking link ("username/event-slug").
-   * Returns null when either is missing so routes can answer 503.
+   * Returns null when either is missing so routes can answer 503. `eventTypeSlug`
+   * picks another event of the same user (e.g. the students' "session").
    */
-  static fromEnv(env: NodeJS.ProcessEnv = process.env): CalComClient | null {
+  static fromEnv(env: NodeJS.ProcessEnv = process.env, eventTypeSlug?: string): CalComClient | null {
     const apiKey = env.CAL_API_KEY?.trim();
-    const [username, eventTypeSlug] = (env.NEXT_PUBLIC_CAL_LINK ?? "").trim().split("/");
-    if (!apiKey || !username || !eventTypeSlug) return null;
-    return new CalComClient({ apiKey, username, eventTypeSlug });
+    const [username, publicSlug] = (env.NEXT_PUBLIC_CAL_LINK ?? "").trim().split("/");
+    const slug = eventTypeSlug ?? publicSlug;
+    if (!apiKey || !username || !slug) return null;
+    return new CalComClient({ apiKey, username, eventTypeSlug: slug });
   }
 
   /** Available slots grouped by date in `timeZone` (inclusive date range). */

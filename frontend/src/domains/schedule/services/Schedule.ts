@@ -34,9 +34,9 @@ export class Schedule {
     return blocks.length === 0 ? slots : slots.filter((slot) => !blocks.some((b) => Schedule.overlaps(slot, b)));
   }
 
-  /** The public session that would start at `start`. */
-  static session(start: string): TimeRange {
-    return { start, end: new Date(Date.parse(start) + Schedule.SESSION_MINUTES * 60_000).toISOString() };
+  /** The session that would start at `start` (the public 30-minute one by default). */
+  static session(start: string, minutes: number = Schedule.SESSION_MINUTES): TimeRange {
+    return { start, end: new Date(Date.parse(start) + minutes * 60_000).toISOString() };
   }
 
   /** Dubai wall-clock date + "HH:MM" -> ISO instant. "24:00" means the end of that day. */

@@ -39,6 +39,7 @@ export const siteConfig = {
     { label: "Research Terminal", href: "/journal" },
     { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
+    { label: "Student login", href: "/student" },
     { label: "Review us on Google", href: "https://g.page/r/CXVZIOQD9qJXEBM/review" },
     { label: "Privacy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
@@ -66,6 +67,9 @@ export const siteConfig = {
   },
 
   bookingHref: "/#book",
+
+  /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
+  studentBooking: { eventSlug: "session", minutes: 60, href: "/student" },
 
   /**
    * Authority metrics. Every figure must be verifiable: these describe the

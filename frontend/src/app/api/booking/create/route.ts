@@ -6,6 +6,7 @@ import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
+import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
 
@@ -48,6 +49,19 @@ export async function POST(request: NextRequest) {
       // Honeypot filled: never touch the real calendar. Deliberately not a fake
       // success, so a human whose browser autofilled the field isn't misled.
       return reject(400, "INVALID_REQUEST", "Unable to process this request.");
+    }
+    // The free diagnostic is for new people; enrolled students book their sessions at /student.
+    // A failed lookup must not block a new visitor's booking.
+    const student = await StudentRepository.fromEnv()?.enrolledByEmail(booking.email).catch((error) => {
+      console.error("[booking] student lookup failed", error);
+      return null;
+    });
+    if (student) {
+      return reject(
+        409,
+        "ALREADY_STUDENT",
+        "You're already a Finance in Practice student, so the free diagnostic isn't needed. Sign in at financeinpractice.me/student to book your next session.",
+      );
     }
     const result = await new BookingGateway(cal, BlockRepository.fromEnv()).create(booking);
     // The booking is made: a failure saving the client record must not undo or hide it.

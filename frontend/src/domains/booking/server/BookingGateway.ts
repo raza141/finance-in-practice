@@ -16,7 +16,7 @@ import { ZonedCalendar } from "../services/ZonedCalendar";
 import { Schedule } from "@/domains/schedule/services/Schedule";
 import type { TimeRange } from "@/domains/schedule/types";
 
-import { CalComClient, type CalSlot } from "./CalComClient";
+import { CalComClient, type CalBookingInput, type CalSlot } from "./CalComClient";
 
 /** Source of time the owner blocked in the admin panel (BlockRepository). */
 export interface BlockSource {
@@ -50,11 +50,7 @@ export class BookingGateway {
   }
 
   async create(request: CreateBookingRequest): Promise<CreateBookingResponse> {
-    const session = Schedule.session(request.start);
-    if (this.blocks && (await this.blocks.between(session.start, session.end)).length > 0) {
-      throw new SlotBlockedError();
-    }
-    const booking = await this.cal.createBooking({
+    return this.book({
       start: request.start,
       attendee: {
         name: request.name,
@@ -64,6 +60,15 @@ export class BookingGateway {
       },
       metadata: { track: request.track, source: "financeinpractice.me" },
     });
+  }
+
+  /** Any booking on this gateway's event type, refused when it overlaps time blocked in admin. */
+  async book(input: CalBookingInput, minutes: number = Schedule.SESSION_MINUTES): Promise<CreateBookingResponse> {
+    const session = Schedule.session(input.start, minutes);
+    if (this.blocks && (await this.blocks.between(session.start, session.end)).length > 0) {
+      throw new SlotBlockedError();
+    }
+    const booking = await this.cal.createBooking(input);
     return { uid: booking.uid, start: booking.start, end: booking.end, status: booking.status };
   }
 

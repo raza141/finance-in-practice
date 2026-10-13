@@ -119,7 +119,7 @@ describe("GoogleOAuth", () => {
 
   it("exchanges the code with the PKCE verifier and client secret", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ id_token: idToken(CLAIMS) }));
-    const client = new GoogleOAuth(CLIENT_ID, "secret", "http://localhost:3000", fetchImpl);
+    const client = new GoogleOAuth(CLIENT_ID, "secret", "http://localhost:3000", GoogleOAuth.CALLBACK_PATH, fetchImpl);
 
     expect(await client.exchange("the-code", "the-verifier", NOW)).toEqual({ sub: "1098765", email: "owner@gmail.com" });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
@@ -133,7 +133,7 @@ describe("GoogleOAuth", () => {
 
   it("surfaces token endpoint failures", async () => {
     const fetchImpl = vi.fn(async () => new Response("invalid_grant", { status: 400 }));
-    const client = new GoogleOAuth(CLIENT_ID, "secret", "http://localhost:3000", fetchImpl);
+    const client = new GoogleOAuth(CLIENT_ID, "secret", "http://localhost:3000", GoogleOAuth.CALLBACK_PATH, fetchImpl);
     await expect(client.exchange("bad", "v", NOW)).rejects.toThrow(/token exchange failed \(400\)/);
   });
 });

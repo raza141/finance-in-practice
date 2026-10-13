@@ -33,13 +33,19 @@ export class GoogleOAuth {
     private readonly clientSecret: string,
     /** Origin registered with Google, e.g. https://financeinpractice.me. */
     readonly origin: string,
+    /** Admin by default; student sign-in has its own callback (and allowlist). */
+    private readonly callbackPath: string = GoogleOAuth.CALLBACK_PATH,
     private readonly fetchImpl: typeof fetch = (input, init) => globalThis.fetch(input, init),
   ) {}
 
   /** Null (button hidden) unless both credentials are set. */
-  static fromEnv(origin: string, env: Record<string, string | undefined> = process.env): GoogleOAuth | null {
+  static fromEnv(
+    origin: string,
+    env: Record<string, string | undefined> = process.env,
+    callbackPath: string = GoogleOAuth.CALLBACK_PATH,
+  ): GoogleOAuth | null {
     const { GOOGLE_CLIENT_ID: id, GOOGLE_CLIENT_SECRET: secret } = env;
-    return id && secret ? new GoogleOAuth(id, secret, origin) : null;
+    return id && secret ? new GoogleOAuth(id, secret, origin, callbackPath) : null;
   }
 
   /**
@@ -58,7 +64,7 @@ export class GoogleOAuth {
   }
 
   get redirectUri(): string {
-    return `${this.origin}${GoogleOAuth.CALLBACK_PATH}`;
+    return `${this.origin}${this.callbackPath}`;
   }
 
   /** Fresh state + PKCE verifier, stored in a short-lived cookie as `state.verifier`. */

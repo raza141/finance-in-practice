@@ -52,6 +52,7 @@ export interface BookingErrorBody {
 export type BookingErrorCode =
   | "INVALID_REQUEST"
   | "SLOT_UNAVAILABLE"
+  | "ALREADY_STUDENT"
   | "RATE_LIMITED"
   | "FORBIDDEN"
   | "NOT_CONFIGURED"

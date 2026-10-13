@@ -749,6 +749,20 @@ const MIGRATIONS: Migration[] = [
         CHECK (linkedin_url ~ '^https://([a-z]{2,3}\\.)?linkedin\\.com/in/[A-Za-z0-9_%-]+/?$' AND char_length(linkedin_url) <= 200)`,
     ],
   },
+  {
+    // Student sign-in (Google). Only clients with at least one course may sign in;
+    // the session lookup re-checks that, so clearing a client's courses locks them out.
+    id: "035_student_sessions",
+    statements: [
+      `CREATE TABLE student_sessions (
+        token_hash text PRIMARY KEY,
+        client_id  uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz NOT NULL
+      )`,
+      `CREATE INDEX student_sessions_client_idx ON student_sessions (client_id)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
