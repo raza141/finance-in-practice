@@ -25,7 +25,7 @@ export class StructuredData {
         name: siteConfig.name,
         url: siteConfig.url,
         logo: { "@type": "ImageObject", url: `${siteConfig.url}/brand/fip-logo.png` },
-        sameAs: [siteConfig.contact.googleProfileUrl],
+        sameAs: [siteConfig.contact.googleProfileUrl, siteConfig.contact.linkedinUrl],
         description: siteConfig.description,
         slogan: siteConfig.tagline,
         areaServed: [

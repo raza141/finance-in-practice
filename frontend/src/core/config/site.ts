@@ -54,6 +54,7 @@ export const siteConfig = {
     /** Google Business Profile: reviews are collected there, not on the site. */
     googleProfileUrl: "https://g.page/r/CXVZIOQD9qJXEBM",
     googleReviewUrl: "https://g.page/r/CXVZIOQD9qJXEBM/review",
+    linkedinUrl: "https://www.linkedin.com/company/financeinpractice",
     /** Click-to-chat number in international format, digits only (wa.me). */
     whatsapp: {
       number: "971588070565",
