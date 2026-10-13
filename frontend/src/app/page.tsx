@@ -8,16 +8,15 @@ import { FeaturedCoursesSection } from "./_sections/FeaturedCoursesSection";
 import { FreeResourceSection } from "./_sections/FreeResourceSection";
 import { HeroSection } from "./_sections/HeroSection";
 import { HowItWorksSection } from "./_sections/HowItWorksSection";
-import { TestimonialsSection } from "./_sections/TestimonialsSection";
 import { WhyUsSection } from "./_sections/WhyUsSection";
 
-// Approved testimonials come from the database. Moderation actions revalidate
-// "/" immediately; this hourly ISR is a fallback.
+// Instructors come from the database and the Google rating from Places API;
+// admin saves revalidate "/" immediately, this hourly ISR is a fallback.
 export const revalidate = 3600;
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
-/** One goal: book a diagnostic session. Order: offer → method → who teaches → proof → steps → booking,
+/** One goal: book a diagnostic session. Order: offer → method → who teaches (+ Google reviews) → steps → booking,
  * then a free download for visitors not ready to book. */
 export default function HomePage() {
   return (
@@ -26,7 +25,6 @@ export default function HomePage() {
       <FeaturedCoursesSection />
       <WhyUsSection />
       <AboutTeaserSection />
-      <TestimonialsSection />
       <HowItWorksSection />
       <BookingSection />
       <FreeResourceSection />

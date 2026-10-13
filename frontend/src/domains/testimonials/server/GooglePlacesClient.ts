@@ -3,43 +3,18 @@ import "server-only";
 import { siteConfig } from "@/core/config/site";
 import { BaseApiClient } from "@/core/http/BaseApiClient";
 
-export interface GoogleReview {
-  author: string;
-  /** The reviewer's Google Maps profile; Google's terms require linking it. */
-  authorUrl: string | null;
-  photoUrl: string | null;
-  rating: number;
-  text: string;
-  /** Google's own wording, e.g. "2 weeks ago". */
-  when: string;
-}
-
 export interface GoogleRating {
   rating: number;
   count: number;
-  /** At most 5, picked by Google ("most relevant"). */
-  reviews: GoogleReview[];
-}
-
-interface PlaceResponse {
-  rating?: number;
-  userRatingCount?: number;
-  reviews?: {
-    rating?: number;
-    relativePublishTimeDescription?: string;
-    text?: { text?: string };
-    originalText?: { text?: string };
-    authorAttribution?: { displayName?: string; uri?: string; photoUri?: string };
-  }[];
 }
 
 /**
- * Server-only Places API (New) client for the Business Profile's rating and
- * reviews. The key never leaves the server.
+ * Server-only Places API (New) client for the Business Profile's star rating
+ * and review count. The key never leaves the server.
  */
 export class GooglePlacesClient extends BaseApiClient {
   static readonly BASE_URL = "https://places.googleapis.com/v1";
-  static readonly FIELDS = "rating,userRatingCount,reviews";
+  static readonly FIELDS = "rating,userRatingCount";
 
   constructor(
     private readonly placeId: string,
@@ -54,7 +29,7 @@ export class GooglePlacesClient extends BaseApiClient {
     });
   }
 
-  /** Null without GOOGLE_PLACES_API_KEY: the page then shows the review button only. */
+  /** Null without GOOGLE_PLACES_API_KEY: the buttons then show without the rating. */
   static fromEnv(env: NodeJS.ProcessEnv = process.env, placeId: string = siteConfig.contact.googlePlaceId): GooglePlacesClient | null {
     const apiKey = env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey || !placeId) return null;
@@ -62,21 +37,9 @@ export class GooglePlacesClient extends BaseApiClient {
   }
 
   async rating(): Promise<GoogleRating> {
-    const place = await this.get<PlaceResponse>(`/places/${encodeURIComponent(this.placeId)}?languageCode=en`);
-    return {
-      rating: place.rating ?? 0,
-      count: place.userRatingCount ?? 0,
-      reviews: (place.reviews ?? [])
-        .map((r) => ({
-          author: r.authorAttribution?.displayName ?? "Google user",
-          authorUrl: r.authorAttribution?.uri ?? null,
-          photoUrl: r.authorAttribution?.photoUri ?? null,
-          rating: r.rating ?? 0,
-          text: (r.text?.text ?? r.originalText?.text ?? "").trim(),
-          when: r.relativePublishTimeDescription ?? "",
-        }))
-        // A star-only review has nothing to quote.
-        .filter((r) => r.text),
-    };
+    const place = await this.get<{ rating?: number; userRatingCount?: number }>(
+      `/places/${encodeURIComponent(this.placeId)}`,
+    );
+    return { rating: place.rating ?? 0, count: place.userRatingCount ?? 0 };
   }
 }

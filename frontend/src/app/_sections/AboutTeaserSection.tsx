@@ -2,6 +2,7 @@ import Image from "next/image";
 
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { InstructorRepository } from "@/domains/team/server/InstructorRepository";
+import { GoogleReviewButtons } from "@/domains/testimonials/components/GoogleReviews";
 
 export async function AboutTeaserSection() {
   const [founder] = await InstructorRepository.published();
@@ -41,6 +42,8 @@ export async function AboutTeaserSection() {
           <ButtonLink href="/about" variant="secondary" className="mt-8">
             Meet your instructor
           </ButtonLink>
+          {/* Social proof lives on Google; the on-site testimonials (/admin/testimonials) are kept but not shown. */}
+          <GoogleReviewButtons className="mt-6" />
         </div>
       </div>
     </section>
