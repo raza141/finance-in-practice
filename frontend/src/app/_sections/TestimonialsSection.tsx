@@ -3,33 +3,35 @@ import { unstable_rethrow } from "next/navigation";
 import { GridBackdrop } from "@/core/components/3d/GridBackdrop";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { siteConfig } from "@/core/config/site";
-import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
+import { GoogleReviewButton, GoogleReviewCard } from "@/domains/testimonials/components/GoogleReviews";
 import { SwipeRail } from "@/domains/testimonials/components/SwipeRail";
-import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
-import type { Testimonial } from "@/domains/testimonials/types";
+import { GooglePlacesClient, type GoogleRating } from "@/domains/testimonials/server/GooglePlacesClient";
 
-/** Reviews shown on the home page. */
-const SHOWN = 6;
-
-/** Approved testimonials only; an unavailable database shows none rather than failing the page. */
-async function loadReviews(): Promise<Testimonial[]> {
-  const repo = TestimonialRepository.fromEnv();
-  if (!repo) return [];
+/**
+ * Rating and reviews from the Google Business Profile. Null (button only) when
+ * the Places API isn't configured or is down. Fetched once per ISR window of
+ * the home page, not per visit.
+ */
+async function loadGoogleRating(): Promise<GoogleRating | null> {
+  const client = GooglePlacesClient.fromEnv();
+  if (!client) return null;
   try {
-    return (await repo.approved()).slice(0, SHOWN);
+    return await client.rating();
   } catch (error) {
     // Let Next.js prerender signals through instead of baking in an empty list.
     unstable_rethrow(error);
-    console.error("[testimonials] could not load reviews", error);
-    return [];
+    console.error("[reviews] could not load Google reviews", error);
+    return null;
   }
 }
 
-/** Landing-page social proof: approved testimonials. New reviews go to Google (siteConfig.contact.googleReviewUrl). */
+/**
+ * Landing-page social proof: Google reviews. The on-site testimonials
+ * (TestimonialRepository, /admin/testimonials) are kept but no longer shown.
+ */
 export async function TestimonialsSection() {
-  const fills = await loadReviews();
-  // No approved reviews yet: skip the section rather than show an empty proof block.
-  if (fills.length === 0) return null;
+  const google = await loadGoogleRating();
+  const reviews = google?.reviews ?? [];
 
   return (
     <section
@@ -42,32 +44,35 @@ export async function TestimonialsSection() {
 
       <div className="relative">
         <div className="page-container py-12 lg:py-16">
-          <SectionHeading id="testimonials-heading" eyebrow="Learner results" title="What learners say" />
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <SectionHeading id="testimonials-heading" eyebrow="Google reviews" title="What learners say" />
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <GoogleReviewButton summary={google} />
+              <a
+                href={siteConfig.contact.googleProfileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted underline decoration-quant/50 underline-offset-4 hover:text-ink"
+              >
+                Read all reviews on Google ↗
+              </a>
+            </div>
+          </div>
 
-          <div className="mt-8">
-              <SwipeRail label="Learner testimonials">
-                {fills.map((testimonial, i) => (
+          {reviews.length > 0 && (
+            <div className="mt-8">
+              <SwipeRail label="Google reviews">
+                {reviews.map((review, i) => (
                   <li
-                    key={testimonial.id}
-                    className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] xl:w-[calc((100%-2rem)/3)] [&>article]:h-full"
+                    key={`${review.author}-${i}`}
+                    className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] xl:w-[calc((100%-2rem)/3)]"
                   >
-                    <OrderBookCard testimonial={testimonial} index={i} />
+                    <GoogleReviewCard review={review} />
                   </li>
                 ))}
               </SwipeRail>
-          </div>
-
-          <p className="mt-8 text-sm text-muted">
-            Studied with us?{" "}
-            <a
-              href={siteConfig.contact.googleReviewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant"
-            >
-              Leave a review on Google ↗
-            </a>
-          </p>
+            </div>
+          )}
         </div>
       </div>
     </section>
