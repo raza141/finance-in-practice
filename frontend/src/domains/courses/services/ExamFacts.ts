@@ -80,6 +80,14 @@ export class ExamFacts {
     return profile.windows.filter((w) => Date.parse(`${w.starts}T00:00:00Z`) >= cutoff).slice(0, count);
   }
 
+  /** "in 4 months", counted in calendar months (only the month of a window is verified, never the day). */
+  static countdown(window: ExamWindow, now: Date): string {
+    const [year, month] = window.starts.split("-").map(Number);
+    const months = (year - now.getUTCFullYear()) * 12 + (month - 1 - now.getUTCMonth());
+    if (months <= 0) return "this month";
+    return months === 1 ? "next month" : `in ${months} months`;
+  }
+
   static for(ticker: Ticker | null): ExamProfile | null {
     return (ticker && ExamFacts.BY_TICKER[ticker]) || null;
   }

@@ -11,6 +11,13 @@ describe("ExamFacts", () => {
     expect(ExamFacts.nextWindows(frm, new Date("2030-01-01T00:00:00Z"))).toEqual([]);
   });
 
+  it("counts down in calendar months", () => {
+    const feb = { label: "Feb 2027", starts: "2027-02-20" };
+    expect(ExamFacts.countdown(feb, new Date("2026-10-13T00:00:00Z"))).toBe("in 4 months");
+    expect(ExamFacts.countdown(feb, new Date("2027-01-31T00:00:00Z"))).toBe("next month");
+    expect(ExamFacts.countdown(feb, new Date("2027-02-01T00:00:00Z"))).toBe("this month");
+  });
+
   it("has no profile for non-exam courses", () => {
     expect(ExamFacts.for(null)).toBeNull();
     expect(ExamFacts.for("UNI")).toBeNull();

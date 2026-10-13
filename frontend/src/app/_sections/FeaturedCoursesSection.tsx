@@ -35,7 +35,10 @@ export async function FeaturedCoursesSection() {
 
       <ul data-anim="reveal" className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => {
-          const study = ExamFacts.for(course.testimonialTicker)?.facts.find((f) => f.label === "typical study")?.value;
+          const exam = ExamFacts.for(course.testimonialTicker);
+          const study = exam?.facts.find((f) => f.label === "typical study")?.value;
+          // Re-evaluated every ISR window (1h), so the countdown moves on by itself.
+          const [next] = exam ? ExamFacts.nextWindows(exam, new Date(), 1) : [];
           const savers = (course.testimonialTicker && TIME_SAVERS[course.testimonialTicker]) || [];
           return (
             <li
@@ -46,6 +49,16 @@ export async function FeaturedCoursesSection() {
               <p className="relative font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
               <h3 className="relative mt-2 text-3xl font-black sm:text-4xl">{course.title}</h3>
               {course.tagline && <p className="relative mt-2 font-serif text-lg text-ink/85 italic">{course.tagline}</p>}
+              {next && (
+                <p className="relative mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
+                  <span aria-hidden className="relative flex h-2 w-2">
+                    <span className="absolute inset-0 animate-ping rounded-full bg-quant/60 motion-reduce:hidden" />
+                    <span className="relative h-2 w-2 rounded-full bg-quant" />
+                  </span>
+                  <span className="font-semibold text-quant">Next exam</span>
+                  {next.label} · {ExamFacts.countdown(next, new Date())}
+                </p>
+              )}
 
               {study && (
                 <div className="relative mt-6 rounded-2xl border border-line bg-canvas/60 p-5">

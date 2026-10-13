@@ -35,6 +35,7 @@ export function ExamGlance({
             <p className="inline-flex items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
               <span className="font-semibold text-quant">Next exams</span>
               {windows.map((w) => w.label).join(" · ")}
+              <span className="text-muted">({ExamFacts.countdown(windows[0], new Date())})</span>
             </p>
           )}
           {exam.passRate && (
