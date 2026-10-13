@@ -10,6 +10,7 @@ const VALID = {
   education: "MSc Finance\n\n  CFA charterholder  ",
   highlights: "Valuation, Excel, , DCF",
   photo: "https://example.com/jane.jpg",
+  linkedin: "https://www.linkedin.com/in/jane-doe",
   sortOrder: "2",
   isActive: "on",
 };
@@ -26,6 +27,7 @@ describe("InstructorContract", () => {
         education: ["MSc Finance", "CFA charterholder"],
         highlights: ["Valuation", "Excel", "DCF"],
         photo: "https://example.com/jane.jpg",
+        linkedin: "https://www.linkedin.com/in/jane-doe",
         sortOrder: 2,
         isActive: true,
       },
@@ -33,8 +35,8 @@ describe("InstructorContract", () => {
   });
 
   it("treats blanks as empty, order 0 and unpublished", () => {
-    const result = InstructorContract.parse({ ...VALID, background: "", education: "", highlights: "", photo: " ", sortOrder: "", isActive: undefined });
-    expect(result.ok && result.input).toMatchObject({ background: "", education: [], highlights: [], photo: null, sortOrder: 0, isActive: false });
+    const result = InstructorContract.parse({ ...VALID, background: "", education: "", highlights: "", photo: " ", linkedin: "", sortOrder: "", isActive: undefined });
+    expect(result.ok && result.input).toMatchObject({ background: "", education: [], highlights: [], photo: null, linkedin: null, sortOrder: 0, isActive: false });
   });
 
   it("accepts a photo from public/team", () => {
@@ -51,6 +53,9 @@ describe("InstructorContract", () => {
     ["photo", { photo: "http://example.com/a.jpg" }],
     ["photo", { photo: "javascript:alert(1)" }],
     ["photo", { photo: "/team/../secret.jpg" }],
+    ["linkedin", { linkedin: "https://www.linkedin.com/company/financeinpractice" }],
+    ["linkedin", { linkedin: "http://www.linkedin.com/in/jane" }],
+    ["linkedin", { linkedin: "https://evil.com/linkedin.com/in/jane" }],
     ["sortOrder", { sortOrder: "1.5" }],
   ])("rejects a bad %s", (field, patch) => {
     const result = InstructorContract.parse({ ...VALID, ...patch });

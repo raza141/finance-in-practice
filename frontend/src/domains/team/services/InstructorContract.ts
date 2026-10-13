@@ -1,4 +1,4 @@
-/** What the admin instructor form saves. Mirrors the columns of 007_instructors. */
+/** What the admin instructor form saves. Mirrors the columns of 007_instructors (+ 034 linkedin_url). */
 export interface InstructorInput {
   name: string;
   role: string;
@@ -7,6 +7,7 @@ export interface InstructorInput {
   education: string[];
   highlights: string[];
   photo: string | null;
+  linkedin: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -28,7 +29,11 @@ export class InstructorContract {
     education: [10, 160],
     highlights: [12, 40],
     photo: 500,
+    linkedin: 200,
   } as const;
+
+  /** Personal profiles only (linkedin.com/in/...), matching the DB CHECK. */
+  static readonly LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[A-Za-z0-9_%-]+\/?$/;
 
   private static readonly PHOTO = /^(\/team\/[A-Za-z0-9._-]+|https:\/\/\S+)$/;
 
@@ -76,6 +81,11 @@ export class InstructorContract {
       errors.photo = "Use an https:// image link or a file in public/team/, e.g. /team/raza.jpg.";
     }
 
+    const linkedin = text("linkedin");
+    if (linkedin && (!InstructorContract.LINKEDIN.test(linkedin) || linkedin.length > LIMITS.linkedin)) {
+      errors.linkedin = "Use your public profile link, e.g. https://www.linkedin.com/in/your-name";
+    }
+
     const sortRaw = text("sortOrder");
     const sortOrder = sortRaw === "" ? 0 : Number(sortRaw);
     if (!Number.isInteger(sortOrder) || Math.abs(sortOrder) > 1000) errors.sortOrder = "Whole number, e.g. 1, 2, 3.";
@@ -91,6 +101,7 @@ export class InstructorContract {
         education,
         highlights,
         photo: photo || null,
+        linkedin: linkedin || null,
         sortOrder,
         isActive: fields.isActive === "on" || fields.isActive === "true",
       },

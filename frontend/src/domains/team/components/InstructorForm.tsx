@@ -83,6 +83,17 @@ export function InstructorForm({ instructor }: { instructor?: Instructor }) {
         <Field label="Highlight tags" error={errors.highlights} hint="Comma-separated, e.g. CFA®, Python, Valuation">
           <input name="highlights" defaultValue={instructor?.highlights.join(", ")} aria-invalid={invalid("highlights")} className={FIELD} />
         </Field>
+        <Field label="LinkedIn profile" error={errors.linkedin} hint="Optional. Shown as a link under the profile on /about." className="sm:col-span-2">
+          <input
+            name="linkedin"
+            type="url"
+            maxLength={200}
+            placeholder="https://www.linkedin.com/in/your-name"
+            defaultValue={instructor?.links?.find((l) => l.label === "LinkedIn")?.href}
+            aria-invalid={invalid("linkedin")}
+            className={FIELD}
+          />
+        </Field>
       </fieldset>
 
       <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_8rem]">

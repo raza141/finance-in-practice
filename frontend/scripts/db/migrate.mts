@@ -741,6 +741,14 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX leads_created_idx ON leads (created_at DESC)`,
     ],
   },
+  {
+    // Optional LinkedIn profile per instructor: a link on /about and a Person sameAs.
+    id: "034_instructor_linkedin",
+    statements: [
+      `ALTER TABLE instructors ADD COLUMN linkedin_url text
+        CHECK (linkedin_url ~ '^https://([a-z]{2,3}\\.)?linkedin\\.com/in/[A-Za-z0-9_%-]+/?$' AND char_length(linkedin_url) <= 200)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

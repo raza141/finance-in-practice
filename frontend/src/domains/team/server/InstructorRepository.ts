@@ -16,6 +16,7 @@ interface InstructorRow {
   education: unknown;
   highlights: unknown;
   photo_url: string | null;
+  linkedin_url: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -25,7 +26,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
-/** The teaching team. Schema: scripts/db/migrate.mts (007_instructors). */
+/** The teaching team. Schema: scripts/db/migrate.mts (007_instructors, 034_instructor_linkedin). */
 export class InstructorRepository {
   constructor(private readonly sql: Sql) {}
 
@@ -49,7 +50,7 @@ export class InstructorRepository {
   /** Published instructors in display order, for /about and the home teaser. */
   async active(): Promise<Instructor[]> {
     const rows = (await this.sql`
-      SELECT id, name, role, bio, background, education, highlights, photo_url, sort_order, is_active
+      SELECT id, name, role, bio, background, education, highlights, photo_url, linkedin_url, sort_order, is_active
       FROM instructors
       WHERE is_active
       ORDER BY sort_order, created_at
@@ -60,7 +61,7 @@ export class InstructorRepository {
   /** Every instructor, published or not, for the admin list. */
   async all(): Promise<Instructor[]> {
     const rows = (await this.sql`
-      SELECT id, name, role, bio, background, education, highlights, photo_url, sort_order, is_active
+      SELECT id, name, role, bio, background, education, highlights, photo_url, linkedin_url, sort_order, is_active
       FROM instructors
       ORDER BY sort_order, created_at
     `) as InstructorRow[];
@@ -70,7 +71,7 @@ export class InstructorRepository {
   async byId(id: string): Promise<Instructor | null> {
     if (!UUID.test(id)) return null;
     const [row] = (await this.sql`
-      SELECT id, name, role, bio, background, education, highlights, photo_url, sort_order, is_active
+      SELECT id, name, role, bio, background, education, highlights, photo_url, linkedin_url, sort_order, is_active
       FROM instructors
       WHERE id = ${id}
     `) as InstructorRow[];
@@ -79,10 +80,10 @@ export class InstructorRepository {
 
   async create(input: InstructorInput): Promise<void> {
     await this.sql`
-      INSERT INTO instructors (name, role, bio, background, education, highlights, photo_url, sort_order, is_active)
+      INSERT INTO instructors (name, role, bio, background, education, highlights, photo_url, linkedin_url, sort_order, is_active)
       VALUES (${input.name}, ${input.role}, ${input.bio}, ${input.background},
               ${JSON.stringify(input.education)}::jsonb, ${JSON.stringify(input.highlights)}::jsonb,
-              ${input.photo}, ${input.sortOrder}, ${input.isActive})
+              ${input.photo}, ${input.linkedin}, ${input.sortOrder}, ${input.isActive})
     `;
   }
 
@@ -93,7 +94,7 @@ export class InstructorRepository {
       UPDATE instructors SET
         name = ${input.name}, role = ${input.role}, bio = ${input.bio}, background = ${input.background},
         education = ${JSON.stringify(input.education)}::jsonb, highlights = ${JSON.stringify(input.highlights)}::jsonb,
-        photo_url = ${input.photo}, sort_order = ${input.sortOrder}, is_active = ${input.isActive},
+        photo_url = ${input.photo}, linkedin_url = ${input.linkedin}, sort_order = ${input.sortOrder}, is_active = ${input.isActive},
         updated_at = now()
       WHERE id = ${id}
       RETURNING id
@@ -121,6 +122,7 @@ export class InstructorRepository {
       education: strings(row.education),
       highlights: strings(row.highlights),
       photo: row.photo_url ?? undefined,
+      ...(row.linkedin_url && { links: [{ label: "LinkedIn", href: row.linkedin_url }] }),
       sortOrder: row.sort_order,
       isActive: row.is_active,
     };
