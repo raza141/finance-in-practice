@@ -99,6 +99,7 @@ export class InvoiceEmails {
         EmailHtml.paragraph(contact),
         EmailHtml.paragraph(`Best regards,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`),
       ].join(""),
+      { follow: true },
     );
     const text = [
       `Hi ${InvoiceEmails.firstName(input.clientName)},`,
@@ -111,6 +112,8 @@ export class InvoiceEmails {
       contact,
       "",
       `Best regards,\n${InvoiceEmails.SENDER}\n${siteConfig.name}`,
+      "",
+      EmailHtml.FOLLOW_TEXT,
     ].join("\n");
     return { subject, html, text };
   }
@@ -207,6 +210,7 @@ export class InvoiceEmails {
         EmailHtml.paragraph(closing),
         EmailHtml.paragraph(signOff),
       ].join(""),
+      { follow: true },
     );
     const text = [
       `Hi ${values.firstName},`,
@@ -224,6 +228,8 @@ export class InvoiceEmails {
       closing,
       "",
       signOff,
+      "",
+      EmailHtml.FOLLOW_TEXT,
     ].join("\n");
     return { subject, html, text };
   }

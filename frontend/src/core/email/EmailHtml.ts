@@ -55,14 +55,27 @@ export class EmailHtml {
     );
   }
 
-  /** Branded shell around already-built (safe) body HTML. */
-  static document(title: string, bodyHtml: string): string {
+  /** Plain-text twin of the LinkedIn line in client emails. */
+  static readonly FOLLOW_TEXT = `Follow ${siteConfig.name} on LinkedIn for exam tips and new articles: ${siteConfig.contact.linkedinUrl}`;
+
+  /** A small "Follow us on LinkedIn" strip for emails that go to clients (not the owner's notices). */
+  private static follow(): string {
+    return (
+      `<tr><td style="padding:14px 28px;background:#eef5fc;border-top:1px solid #e2e8f0;font-size:13px;color:#0f172a">` +
+      `<a href="${EmailHtml.escape(siteConfig.contact.linkedinUrl)}" style="display:inline-block;background:#0a66c2;color:#ffffff;text-decoration:none;padding:7px 14px;border-radius:5px;font-weight:600;margin-right:10px">in&nbsp;&nbsp;Follow us on LinkedIn</a>` +
+      `Exam tips, new articles and courses.</td></tr>`
+    );
+  }
+
+  /** Branded shell around already-built (safe) body HTML. `follow`: add the LinkedIn strip (client emails). */
+  static document(title: string, bodyHtml: string, { follow = false }: { follow?: boolean } = {}): string {
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${EmailHtml.escape(title)}</title></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden">
 <tr><td style="background:#0b1120;padding:20px 28px;color:#d4af37;font-family:Georgia,serif;font-size:20px;font-style:italic">${EmailHtml.escape(siteConfig.name)}</td></tr>
 <tr><td style="padding:28px;font-size:15px">${bodyHtml}</td></tr>
+${follow ? EmailHtml.follow() : ""}
 <tr><td style="padding:16px 28px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px">${EmailHtml.escape(siteConfig.name)} · <a href="${siteConfig.url}" style="color:#64748b">${siteConfig.domain}</a></td></tr>
 </table></td></tr></table></body></html>`;
   }

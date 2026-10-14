@@ -30,8 +30,8 @@ async function emailCopy(lead: LeadRequest, url: string): Promise<boolean> {
   try {
     await resend.send(lead.email, {
       subject: `Your ${title}`,
-      html: EmailHtml.document(title, body),
-      text: `Your ${title}: ${url}\n\nBook a free diagnostic session: ${siteConfig.url}/#book`,
+      html: EmailHtml.document(title, body, { follow: true }),
+      text: `Your ${title}: ${url}\n\nBook a free diagnostic session: ${siteConfig.url}/#book\n\n${EmailHtml.FOLLOW_TEXT}`,
     });
     return true;
   } catch (error) {

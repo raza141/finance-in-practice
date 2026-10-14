@@ -226,6 +226,14 @@ describe("emails", () => {
     expect(message.text).toContain("Thank you,\nAhmed Raza\n");
   });
 
+  it("invites clients to follow the LinkedIn page; the owner's notices don't", () => {
+    const invoice = issued({ number: "FIP-2026-0009", clientName: "Sara", totalMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12" });
+    const message = InvoiceEmails.document(invoice, "https://x.test/invoice/tok", SETTINGS);
+    expect(message.html).toContain('href="https://www.linkedin.com/company/financeinpractice"');
+    expect(message.text.endsWith(EmailHtml.FOLLOW_TEXT)).toBe(true);
+    expect(EmailHtml.document("Owner notice", "<p>x</p>")).not.toContain("linkedin.com");
+  });
+
   it("puts the bank details in the invoice email, skipping empty fields", () => {
     const bank = { bankName: "Emirates NBD", accountTitle: "M A Raza", accountNumber: "", iban: "AE07 0331", branch: "", swift: "" };
     const invoice = issued({ number: "FIP-2026-0008", clientName: "Sara", totalMinor: 100, currency: "AED", issueDate: "2026-10-05", dueDate: "2026-10-12", bank });
