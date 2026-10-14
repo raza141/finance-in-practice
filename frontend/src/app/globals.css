@@ -170,3 +170,10 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
 @utility bg-grid-lines {
   background-image: var(--grid-lines);
 }
+
+/* MarketBackdrop: the chart is two identical tiles, so moving one tile left loops seamlessly. */
+@keyframes market-drift {
+  to {
+    transform: translateX(-50%);
+  }
+}

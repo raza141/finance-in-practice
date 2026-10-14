@@ -13,6 +13,13 @@ export interface SlotSelection {
 }
 
 const PAGE = 7;
+
+/** Same classes as the cells below. */
+const LEGEND = [
+  ["bg-gold", "Your selection"],
+  ["bg-quant/10", "Available"],
+  ["bg-canvas/40", "Busy or unavailable"],
+] as const;
 const dayLabel = (iso: string, part: "weekday" | "day") =>
   new Intl.DateTimeFormat("en-GB", part === "weekday" ? { weekday: "short", timeZone: "UTC" } : { day: "numeric", month: "short", timeZone: "UTC" }).format(
     new Date(`${iso}T00:00:00Z`),
@@ -91,6 +98,17 @@ export function SlotGrid({
 
   return (
     <div className="grid gap-3">
+      <ul aria-label="Colours" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        {LEGEND.map(([swatch, label]) => (
+          <li key={label} className="flex items-center gap-1.5">
+            {/* On the grid's own background, so the sample matches the cells exactly. */}
+            <span aria-hidden className="overflow-hidden rounded-sm bg-line">
+              <span className={`block h-3 w-4 ${swatch}`} />
+            </span>
+            {label}
+          </li>
+        ))}
+      </ul>
       <div className="flex items-center justify-between gap-3 text-xs text-muted">
         <span>Times in {calendar.abbreviation()}</span>
         {pages > 1 && (

@@ -175,13 +175,13 @@ export function StudentPortal({
   const TABS: [Tab, string][] = [
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
-    ["plan", "Study plan & materials"],
     ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
+    ["plan", "Study plan & materials"],
   ];
 
   return (
     <div className="grid gap-6">
-      <nav aria-label="Student portal" className="flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/70 p-1.5 backdrop-blur-md">
+      <nav aria-label="Student portal" className="sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 p-1.5 backdrop-blur-md">
         {TABS.map(([id, label]) => (
           <button
             key={id}
@@ -293,7 +293,7 @@ export function StudentPortal({
 
       {tab === "book" && (
         <div className="grid items-start gap-6 lg:grid-cols-[22rem_1fr]">
-          <aside className="grid gap-6 lg:sticky lg:top-6">
+          <aside className="grid gap-6 lg:sticky lg:top-40">
             <section aria-labelledby="preview-heading" className={CARD}>
               <h2 id="preview-heading" className={LABEL}>
                 {moving ? "Moving this session" : "Your session"}
@@ -317,7 +317,7 @@ export function StudentPortal({
                 </div>
                 {!moving && (
                   <div>
-                    <dt className="text-xs text-muted">Where</dt>
+                    <dt className="text-xs text-muted">Location</dt>
                     <dd className="text-ink">{where}</dd>
                     {mode === "in_person" && mapUrl && !mapLinkInvalid && <dd className="text-xs text-quant">Map pin added ✓</dd>}
                   </div>
@@ -373,8 +373,8 @@ export function StudentPortal({
                   )}
 
                   <div className="grid gap-2">
-                    <span className={LABEL}>Where</span>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Where">
+                    <span className={LABEL}>Location</span>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Location">
                       {(
                         [
                           ["online", "Online · Google Meet"],

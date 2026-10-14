@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
-import { CosmicBackdrop } from "@/core/components/3d/CosmicBackdrop";
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { MarketBackdrop } from "@/core/components/ui/MarketBackdrop";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
@@ -77,13 +77,14 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
 
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
-    <div className="relative -mt-20 min-h-screen overflow-hidden">
-      <CosmicBackdrop className="absolute inset-0" tilt={0.6} zoom={7.5} />
+    <div className="relative -mt-20 min-h-screen overflow-clip">
+      <MarketBackdrop className="absolute inset-0" />
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
-      <header className="relative border-b border-white/5 bg-canvas/70 backdrop-blur-md">
+      {/* Frozen at the top while scrolling (the portal tabs stick just below it). */}
+      <header className="sticky top-0 z-30 border-b border-white/5 bg-canvas/85 backdrop-blur-md">
         <div className="page-container flex h-16 items-center justify-between gap-4">
-          <Link href="/student" aria-label="Student portal home">
+          <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
           </Link>
           {student ? (
