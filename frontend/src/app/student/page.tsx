@@ -55,6 +55,7 @@ async function portalData(student: Student) {
   return {
     courses: courses ?? student.courses,
     sessions: bookings && StudentSessions.upcoming(bookings),
+    past: bookings ? StudentSessions.past(bookings) : [],
     addresses: bookings ? StudentSessions.addresses(bookings) : [],
     plan,
   };
@@ -73,64 +74,73 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
       <header className="relative border-b border-white/5 bg-canvas/70 backdrop-blur-md">
         <div className="page-container flex h-16 items-center justify-between gap-4">
-          <Link href="/" aria-label="Finance in Practice home">
+          <Link href="/student" aria-label="Student portal home">
             <Logo height={30} priority />
           </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="hidden font-mono text-[11px] tracking-[0.25em] text-quant uppercase sm:inline">Student portal</span>
-            <Link href="/" className="text-muted hover:text-ink">
-              ← Website
-            </Link>
-          </div>
+          {student ? (
+            <div className="flex items-center gap-3 text-sm">
+              <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
+                {initialsOf(student.name)}
+              </span>
+              <span className="hidden max-w-48 truncate text-ink sm:inline">{student.name}</span>
+              <form action={signOutStudent}>
+                <button type="submit" className="rounded-md border border-line px-3 py-1.5 text-muted hover:border-red-300/50 hover:text-red-300">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          ) : (
+            <span className="font-mono text-[11px] tracking-[0.25em] text-quant uppercase">Student portal</span>
+          )}
         </div>
       </header>
 
-      <div className="page-container relative py-10 lg:py-14">
+      <div className="page-container relative py-8 lg:py-10">
         {student ? <Portal student={student} /> : <SignIn error={error} register={view === "register" || error === "not_enrolled"} whatsappHref={whatsappHref} />}
       </div>
     </div>
   );
 }
 
-async function Portal({ student }: { student: Student }) {
-  const { courses, sessions, addresses, plan } = await portalData(student);
-  const first = student.name.split(/\s+/)[0];
-  const initials = student.name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
-  const welcome = (
-    <section aria-labelledby="welcome-heading" className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md">
-      <div className="flex items-center gap-4">
-        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-quant/15 font-semibold text-quant">
-          {initials}
-        </span>
-        <div className="min-w-0">
-          <h1 id="welcome-heading" className="text-2xl font-normal italic">
-            Hi {first}, welcome back
-          </h1>
-          <p className="truncate text-sm text-muted">{student.email}</p>
-        </div>
-      </div>
-      {student.courses.length > 0 && (
-        <ul aria-label="Your programmes" className="mt-4 flex flex-wrap gap-2">
-          {student.courses.map((c) => (
-            <li key={c} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-ink">
-              {c}
-            </li>
-          ))}
-        </ul>
-      )}
-      <form action={signOutStudent} className="mt-5 border-t border-line pt-4">
-        <button type="submit" className="rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:border-red-300/50 hover:text-red-300">
-          Sign out
-        </button>
-      </form>
-    </section>
-  );
+async function Portal({ student }: { student: Student }) {
+  const { courses, sessions, past, addresses, plan } = await portalData(student);
+  const first = student.name.split(/\s+/)[0];
 
   return (
     <div className="grid gap-6">
-      <StudentPortal welcome={welcome} courses={courses} lengths={siteConfig.studentBooking.lengths} sessions={sessions} addresses={addresses} />
-      <StudyPlanTimeline items={plan} />
+      <section aria-labelledby="welcome-heading" className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 id="welcome-heading" className="text-3xl font-normal italic sm:text-4xl">
+            Hi {first}, welcome back
+          </h1>
+          <p className="mt-1 text-sm text-muted">{student.email}</p>
+        </div>
+        {student.courses.length > 0 && (
+          <ul aria-label="Your programmes" className="flex flex-wrap gap-2">
+            {student.courses.map((c) => (
+              <li key={c} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-ink">
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <StudentPortal
+        courses={courses}
+        lengths={siteConfig.studentBooking.lengths}
+        sessions={sessions}
+        past={past}
+        addresses={addresses}
+        plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
+      />
     </div>
   );
 }
@@ -146,7 +156,7 @@ async function SignIn({ error, register, whatsappHref }: { error?: string; regis
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
     <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/70 backdrop-blur-md md:grid-cols-2">
-      <div className="relative flex flex-col justify-between gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
+      <div className="relative flex flex-col justify-start gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
         <Logo height={44} />
         <div>
           <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Student portal</p>
@@ -164,7 +174,7 @@ async function SignIn({ error, register, whatsappHref }: { error?: string; regis
         </div>
       </div>
 
-      <div className="grid content-center gap-5 p-8 sm:p-10">
+      <div className="grid content-start gap-5 p-8 sm:p-10">
         <nav aria-label="Sign in or register" className="flex gap-1 rounded-lg border border-line p-1">
           <Link href="/student" aria-current={!register ? "page" : undefined} className={tab(!register)}>
             Sign in

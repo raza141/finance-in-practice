@@ -29,6 +29,10 @@ describe("StudentSessions", () => {
     ]);
   });
 
+  it("lists past sessions, most recent first, cancelled ones left out", () => {
+    expect(StudentSessions.past(bookings, NOW).map((s) => s.uid)).toEqual(["past"]);
+  });
+
   it("remembers distinct in-person addresses, never meeting links", () => {
     expect(StudentSessions.addresses(bookings)).toEqual(["khalifa city a, villa 12", "Al Reem, Sky Tower 1503"]);
   });

@@ -11,7 +11,7 @@ const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
 const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
 const client = new StudentApiClient();
-const { OTHER, LIMITS } = RegistrationContract;
+const { OTHER, EXTRA, LIMITS } = RegistrationContract;
 
 /** Public sign-up: a request the owner approves in admin before the student can sign in. `courses` = published titles only. */
 export function RegisterForm({ courses }: { courses: string[] }) {
@@ -61,12 +61,23 @@ export function RegisterForm({ courses }: { courses: string[] }) {
             <option value="" disabled>
               Choose a course
             </option>
-            {courses.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-            <option value={OTHER}>Something else (school, university, other)</option>
+            <optgroup label="Exam courses">
+              {courses.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Consultancy">
+              {EXTRA.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Anything else">
+              <option value={OTHER}>School, university or other subject</option>
+            </optgroup>
           </select>
         </label>
         {course === OTHER && (

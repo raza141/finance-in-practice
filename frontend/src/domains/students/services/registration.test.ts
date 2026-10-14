@@ -14,6 +14,8 @@ describe("RegistrationContract", () => {
     });
     const other = RegistrationContract.parse({ ...VALID, course: "Other", topic: "AP Statistics" }, COURSES);
     expect(other.ok && other.value.course).toBe("Other: AP Statistics");
+    const consultancy = RegistrationContract.parse({ ...VALID, course: "Business consultancy" }, COURSES);
+    expect(consultancy.ok && consultancy.value.course).toBe("Business consultancy");
   });
 
   it.each([

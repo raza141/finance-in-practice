@@ -36,6 +36,14 @@ export class StudentSessions {
       });
   }
 
+  /** Sessions that already took place (accepted), most recent first. */
+  static past(bookings: readonly BookingLike[], now: Date = new Date(), limit = 20): StudentSession[] {
+    const ended = bookings.filter((b) => b.status === "accepted" && Date.parse(b.end) <= now.getTime());
+    return StudentSessions.upcoming(ended, new Date(0))
+      .toReversed()
+      .slice(0, limit);
+  }
+
   /** Distinct in-person addresses, most recent first, to offer again on the next booking. */
   static addresses(bookings: readonly BookingLike[]): string[] {
     const seen = new Map<string, string>();

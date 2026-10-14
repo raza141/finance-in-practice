@@ -17,7 +17,7 @@ export function RegistrationList({ registrations, courses: titles }: { registrat
       </h2>
       <p className="mt-1 text-sm text-muted">
         Approve with a course to let them sign in at /student (pick an internal course such as Academic Mentorship Program for &ldquo;Other&rdquo;).
-        They aren&rsquo;t emailed automatically: confirm on WhatsApp.
+        Approving emails them a sign-in link (when email sending is set up).
       </p>
       <ul className="mt-4 divide-y divide-line/60">
         {registrations.map((r) => {

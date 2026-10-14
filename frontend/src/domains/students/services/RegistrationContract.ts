@@ -5,6 +5,8 @@ export type RegistrationResult = { ok: true; value: RegistrationInput; spam: boo
 /** Validation for the public "Register" form on /student. Pure: shared by the form and the API route. Limits mirror 037. */
 export class RegistrationContract {
   static readonly OTHER = "Other";
+  /** Services offered beyond the published courses (the catalogue categories without a course page). */
+  static readonly EXTRA = ["Financial consultancy", "Business consultancy"] as const;
   static readonly LIMITS = { name: [2, 120], email: 254, phone: [7, 25], topic: [3, 120] } as const;
   private static readonly EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   private static readonly PHONE = /^\+?[0-9 ()-]+$/;
@@ -33,7 +35,7 @@ export class RegistrationContract {
       const topic = text("topic");
       if (topic.length < LIMITS.topic[0] || topic.length > LIMITS.topic[1]) return { ok: false, error: "Tell us what you'd like to study." };
       course = `${OTHER}: ${topic}`;
-    } else if (!courses.includes(picked)) {
+    } else if (!courses.includes(picked) && !(RegistrationContract.EXTRA as readonly string[]).includes(picked)) {
       return { ok: false, error: "Choose a course, or Other." };
     }
 

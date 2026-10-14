@@ -40,9 +40,9 @@ export class RegistrationRepository {
 
   /**
    * Owner approval: adds `course` to the client with this email (filling a
-   * missing phone), or creates the client. Returns the client id.
+   * missing phone), or creates the client. Returns the client and who to tell.
    */
-  async approve(id: string, course: string): Promise<string | null> {
+  async approve(id: string, course: string): Promise<{ clientId: string; name: string; email: string } | null> {
     if (!UUID.test(id)) return null;
     const [registration] = (await this.sql`SELECT name, email, phone FROM student_registrations WHERE id = ${id}`) as RegistrationRow[];
     if (!registration) return null;
@@ -67,7 +67,7 @@ export class RegistrationRepository {
       clientId = row.id;
     }
     await this.sql`DELETE FROM student_registrations WHERE id = ${id}`;
-    return clientId;
+    return { clientId, name: registration.name, email: registration.email };
   }
 
   async remove(id: string): Promise<void> {
