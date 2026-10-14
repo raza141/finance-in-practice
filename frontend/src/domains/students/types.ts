@@ -21,3 +21,19 @@ export interface StudentBookingRequest {
   address: string;
   notes: string;
 }
+
+export type StudyStatus = "planned" | "done" | "skipped";
+
+/** One row of a student's study plan (036_study_plan). */
+export interface StudyPlanItem {
+  id: string;
+  /** YYYY-MM-DD; null when not scheduled yet. */
+  dueOn: string | null;
+  topic: string;
+  status: StudyStatus;
+  note: string;
+  /** https link to the material, e.g. a Google Drive file shared with the student. */
+  materialUrl: string | null;
+}
+
+export type StudyPlanInput = Omit<StudyPlanItem, "id">;

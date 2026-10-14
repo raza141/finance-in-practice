@@ -6,6 +6,7 @@ import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
 import { signOutStudent } from "@/domains/students/actions/session";
 import { StudentBookingForm } from "@/domains/students/components/StudentBookingForm";
+import { StudentDashboard } from "@/domains/students/components/StudentDashboard";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = {
@@ -83,6 +84,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
             </div>
           )}
         </div>
+        {student && <StudentDashboard student={student} />}
       </div>
     </section>
   );

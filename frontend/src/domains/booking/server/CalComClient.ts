@@ -121,6 +121,15 @@ export class CalComClient extends BaseApiClient {
     return response.data ?? [];
   }
 
+  /** Booked or pending sessions of one attendee from now on, soonest first (cancelled and rejected ones left out). */
+  async upcomingFor(email: string, now: Date = new Date()): Promise<CalBookingDetail[]> {
+    const query = new URLSearchParams({ attendeeEmail: email, afterStart: now.toISOString(), sortStart: "asc", take: "50" });
+    const response = await this.get<{ data: CalBookingDetail[] }>(`/bookings?${query}`, {
+      headers: { "cal-api-version": CalComClient.ADMIN_API_VERSION },
+    });
+    return (response.data ?? []).filter((b) => b.status === "accepted" || b.status === "pending");
+  }
+
   async booking(uid: string): Promise<CalBookingDetail> {
     const response = await this.get<{ data: CalBookingDetail }>(`/bookings/${encodeURIComponent(uid)}`, {
       headers: { "cal-api-version": CalComClient.ADMIN_API_VERSION },

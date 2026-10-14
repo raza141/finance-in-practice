@@ -20,6 +20,8 @@ import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
+import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -27,6 +29,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "agreement-added": { text: "Agreement added. It is offered on this client's new documents for that service.", tone: "ok" },
   "agreement-ended": { text: "Agreement ended. Documents that used it keep their rates.", tone: "ok" },
   "agreement-refused": { text: "Agreement not added.", tone: "warn" },
+  "plan-saved": { text: "Study plan saved.", tone: "ok" },
+  "plan-refused": { text: "Study plan not saved.", tone: "warn" },
 };
 
 const LEDGER_KIND = { invoice: "Invoice", receipt: "Receipt", credit_note: "Credit note", payment: "Payment for" } as const;
@@ -39,12 +43,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   if (!client) notFound();
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
     AgreementRepository.fromEnv()?.forClient(client.id) ?? [],
     ServiceRepository.fromEnv()?.all() ?? [],
+    StudyPlanRepository.fromEnv()?.forClient(client.id) ?? [],
   ]);
   const query = await searchParams;
   const notice = NOTICES[String(query.notice)];
@@ -78,6 +83,8 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       <div className="mt-8">
         <ClientForm key={client.id} client={client} courses={courses.map((c) => c.title)} />
       </div>
+
+      <StudyPlanEditor clientId={client.id} items={plan} />
 
       <section id="agreements" className="mt-12 rounded-lg border border-line p-5">
         <h2 className="text-lg">Agreements</h2>

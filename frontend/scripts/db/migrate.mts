@@ -763,6 +763,25 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX student_sessions_client_idx ON student_sessions (client_id)`,
     ],
   },
+  {
+    // Per-student study plan shown on /student: dated topics with a status and an
+    // optional material link (e.g. a Google Drive file shared with the student).
+    id: "036_study_plan",
+    statements: [
+      `CREATE TABLE study_plan_items (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id    uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        due_on       date,
+        topic        text NOT NULL CHECK (char_length(topic) BETWEEN 2 AND 160),
+        status       text NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'done', 'skipped')),
+        note         text NOT NULL DEFAULT '' CHECK (char_length(note) <= 500),
+        material_url text CHECK (material_url ~ '^https://' AND char_length(material_url) <= 500),
+        created_at   timestamptz NOT NULL DEFAULT now(),
+        updated_at   timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX study_plan_items_client_idx ON study_plan_items (client_id, due_on)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
