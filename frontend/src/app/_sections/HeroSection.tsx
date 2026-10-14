@@ -11,7 +11,7 @@ export function HeroSection() {
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden">
       <div className="page-container grid items-center gap-8 pt-8 pb-8 sm:pt-10 lg:grid-cols-2 xl:gap-16 lg:pt-6 lg:pb-8">
-        <div className="relative z-10">
+        <div className="@container relative z-10">
           <p
             data-anim="hero-subtitle"
             className="font-mono text-xs tracking-[0.22em] text-quant uppercase"
@@ -21,10 +21,11 @@ export function HeroSection() {
 
           <h1
             id="hero-heading"
-            className="mt-5 text-[2.6rem] leading-[1.08] font-black tracking-tight sm:text-6xl lg:text-[4.1rem]"
+            // Two lines at every width: each line is ~10.7em wide, so 9% of the column (cqw) always fits; capped at the old size.
+            className="mt-5 text-[min(9cqw,4.1rem)] leading-[1.08] font-black tracking-tight"
           >
             {HEADLINE.map((line, i) => (
-              <span key={i} className="block">
+              <span key={i} className="block whitespace-nowrap">
                 {line.map((word) => (
                   <span key={word.text}>
                     <span
