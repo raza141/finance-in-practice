@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { ApiError } from "@/core/http/ApiError";
@@ -13,30 +14,24 @@ const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
 const client = new StudentApiClient();
 const { OTHER, EXTRA, LIMITS } = RegistrationContract;
 
-/** Public sign-up: a request the owner approves in admin before the student can sign in. `courses` = published titles only. */
-export function RegisterForm({ courses }: { courses: string[] }) {
+/** "Finish joining" after Google sign-in: enrols at once and opens the portal. `courses` = published titles only. */
+export function JoinForm({ courses, email }: { courses: string[]; email: string }) {
+  const router = useRouter();
   const [course, setCourse] = useState("");
-  const [state, setState] = useState<{ kind: "editing"; error?: string } | { kind: "sending" } | { kind: "done"; message: string }>({ kind: "editing" });
+  const [state, setState] = useState<{ kind: "editing"; error?: string } | { kind: "sending" }>({ kind: "editing" });
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = Object.fromEntries([...new FormData(event.currentTarget)].map(([k, v]) => [k, String(v)]));
     setState({ kind: "sending" });
     try {
-      const { message } = await client.register(fields);
-      setState({ kind: "done", message });
+      await client.join(fields);
+      // The session cookie is set: /student now renders the signed-in portal.
+      router.replace("/student");
+      router.refresh();
     } catch (error) {
       setState({ kind: "editing", error: error instanceof ApiError ? error.message : "Something went wrong. Please retry." });
     }
-  }
-
-  if (state.kind === "done") {
-    return (
-      <div role="status" className="rounded-2xl border border-quant/40 bg-quant/5 p-5">
-        <p className="font-semibold text-ink">You&rsquo;re registered</p>
-        <p className="mt-1 text-sm text-muted">{state.message} Once you&rsquo;re confirmed, sign in here with Google to book your sessions.</p>
-      </div>
-    );
   }
 
   return (
@@ -46,11 +41,13 @@ export function RegisterForm({ courses }: { courses: string[] }) {
           <span className={LABEL}>Full name</span>
           <input name="name" required autoComplete="name" minLength={LIMITS.name[0]} maxLength={LIMITS.name[1]} className={FIELD} />
         </label>
-        <label className="grid gap-1.5">
-          <span className={LABEL}>Email</span>
-          <input name="email" type="email" required autoComplete="email" maxLength={LIMITS.email} className={FIELD} />
-          <span className="text-xs text-muted">Use your Google / Gmail address: that&rsquo;s how you&rsquo;ll sign in.</span>
-        </label>
+        <div className="grid gap-1.5">
+          <span className={LABEL}>Google account</span>
+          <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
+            <span aria-hidden className="text-quant">✓</span>
+            {email}
+          </p>
+        </div>
         <label className="grid gap-1.5">
           <span className={LABEL}>Mobile (WhatsApp)</span>
           <input name="phone" type="tel" required autoComplete="tel" maxLength={LIMITS.phone[1]} placeholder="+971 50 123 4567" className={FIELD} />
@@ -99,7 +96,7 @@ export function RegisterForm({ courses }: { courses: string[] }) {
         disabled={state.kind === "sending"}
         className="inline-flex h-11 items-center justify-center rounded-md bg-gold px-6 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
-        {state.kind === "sending" ? "Registering…" : "Register"}
+        {state.kind === "sending" ? "Opening your portal…" : "Join and open my portal"}
       </button>
       <p className="text-xs text-muted">We only use these details to arrange your lessons.</p>
     </form>

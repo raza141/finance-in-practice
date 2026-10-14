@@ -6,12 +6,10 @@ import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { ClientForm } from "@/domains/invoices/components/BillingForms";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
-import { RegistrationList } from "@/domains/students/components/RegistrationList";
-import { RegistrationRepository } from "@/domains/students/server/RegistrationRepository";
 
 export const metadata: Metadata = { title: "Clients" };
 
-export default async function AdminClientsPage({ searchParams }: PageProps<"/admin/clients">) {
+export default async function AdminClientsPage() {
   await AdminAuth.requireOwner();
   const repo = ClientRepository.fromEnv();
   if (!repo) {
@@ -21,24 +19,12 @@ export default async function AdminClientsPage({ searchParams }: PageProps<"/adm
       </p>
     );
   }
-  const [clients, courses, registrations, query] = await Promise.all([
-    repo.all(),
-    CourseRepository.fromEnv()?.all() ?? [],
-    RegistrationRepository.fromEnv()?.pending() ?? [],
-    searchParams,
-  ]);
+  const [clients, courses] = await Promise.all([repo.all(), CourseRepository.fromEnv()?.all() ?? []]);
 
   return (
     <div className="max-w-5xl">
       <h1 className="text-3xl font-normal tracking-tight italic">Clients</h1>
       <p className="mt-2 text-sm text-muted">Saved clients to bill. Pick one on an invoice to fill in the “Bill to” details.</p>
-      {query.notice === "registration-refused" && (
-        <p role="status" className="mt-4 text-sm text-gold">
-          Registration not approved: pick a course from the catalogue.
-        </p>
-      )}
-
-      <RegistrationList registrations={registrations} courses={courses.map((c) => c.title)} />
 
       <details className="mt-8 rounded-lg border border-line p-5" open={clients.length === 0}>
         <summary className="cursor-pointer text-sm text-quant">+ New client</summary>

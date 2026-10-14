@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { CosmicBackdrop } from "@/core/components/3d/CosmicBackdrop";
@@ -9,10 +10,11 @@ import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/Ca
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
 import { ClassroomPanel } from "@/domains/students/components/ClassroomPanel";
-import { RegisterForm } from "@/domains/students/components/RegisterForm";
+import { JoinForm } from "@/domains/students/components/JoinForm";
 import { StudentPortal } from "@/domains/students/components/StudentPortal";
 import { StudyPlanTimeline } from "@/domains/students/components/StudyPlanTimeline";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
+import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
 
 const ERRORS: Record<string, string> = {
   not_enrolled:
-    "We couldn't find a student with that Google account. Use the email we have on file, or register below and we'll confirm your place.",
+    "We couldn't find a student with that Google account. Use the email we have on file, or register below.",
   google_cancelled: "Sign-in was cancelled.",
   google_state: "That sign-in link expired. Please try again.",
   google_failed: "Google sign-in didn't work. Please try again.",
@@ -100,7 +102,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       </header>
 
       <div className="page-container relative py-8 lg:py-10">
-        {student ? <Portal student={student} /> : <SignIn error={error} register={view === "register" || error === "not_enrolled"} whatsappHref={whatsappHref} />}
+        {student ? <Portal student={student} /> : <SignIn error={error} view={view} whatsappHref={whatsappHref} />}
       </div>
     </div>
   );
@@ -155,8 +157,11 @@ async function publicCourses(): Promise<string[]> {
   return (await safely("published courses", async () => (await CourseRepository.fromEnv()?.active())?.map((c) => c.title) ?? [])) ?? [];
 }
 
-async function SignIn({ error, register, whatsappHref }: { error?: string; register: boolean; whatsappHref: string }) {
-  const courses = register ? await publicCourses() : [];
+async function SignIn({ error, view, whatsappHref }: { error?: string; view?: string; whatsappHref: string }) {
+  // "join": back from Google with a verified email that isn't a student yet.
+  const joining = view === "join" ? (SignupTicket.fromEnv()?.read((await cookies()).get(SignupTicket.COOKIE)?.value) ?? null) : null;
+  const register = joining !== null || view === "register" || view === "join" || error === "not_enrolled";
+  const courses = joining ? await publicCourses() : [];
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
@@ -193,11 +198,30 @@ async function SignIn({ error, register, whatsappHref }: { error?: string; regis
             {ERRORS[error]}
           </p>
         )}
-        {register ? (
+        {joining ? (
+          <>
+            <h1 className="text-3xl font-normal tracking-tight italic">Almost there</h1>
+            <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
+            <JoinForm courses={courses} email={joining} />
+          </>
+        ) : register ? (
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
-            <p className="text-muted">New student? Tell us who you are and what you&rsquo;d like to study. We&rsquo;ll confirm your place, then you can sign in.</p>
-            <RegisterForm courses={courses} />
+            <p className="text-muted">
+              New student? Continue with the Google account you&rsquo;ll use to sign in. Then add your mobile and course, and your portal opens
+              straight away.
+            </p>
+            {view === "join" && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
+            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
+              Continue with Google
+            </ButtonLink>
+            <p className="text-sm text-muted">
+              No Google account?{" "}
+              <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                Message us on WhatsApp
+              </Link>
+              .
+            </p>
           </>
         ) : (
           <>

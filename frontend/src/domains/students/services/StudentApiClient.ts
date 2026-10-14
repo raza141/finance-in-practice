@@ -15,8 +15,8 @@ export class StudentApiClient extends BaseApiClient {
     return this.post<CreateBookingResponse>("/api/student/book", body);
   }
 
-  register(body: Record<string, string>) {
-    return this.post<{ message: string }>("/api/student/register", body);
+  join(body: Record<string, string>) {
+    return this.post<{ ok: true }>("/api/student/join", body);
   }
 
   reschedule(uid: string, start: string) {

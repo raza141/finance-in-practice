@@ -41,6 +41,34 @@ export class StudentRepository {
     return [...new Set([...student.courses, ...rows.map((r) => r.title)])];
   }
 
+  /**
+   * Self-service join, only after Google proved the email: adds the course to
+   * the client with that email (filling a missing name or phone), or creates the
+   * client. Returns the client id.
+   */
+  async join(input: { name: string; email: string; phone: string; course: string }): Promise<string> {
+    const email = input.email.toLowerCase();
+    const [existing] = (await this.sql`
+      SELECT id FROM clients WHERE lower(email) = ${email} ORDER BY created_at LIMIT 1
+    `) as { id: string }[];
+    if (existing) {
+      await this.sql`
+        UPDATE clients SET
+          courses = CASE WHEN ${input.course} = ANY(courses) THEN courses ELSE array_append(courses, ${input.course}) END,
+          phone = CASE WHEN phone = '' THEN ${input.phone} ELSE phone END,
+          updated_at = now()
+        WHERE id = ${existing.id}
+      `;
+      return existing.id;
+    }
+    const [row] = (await this.sql`
+      INSERT INTO clients (name, email, phone, address, courses)
+      VALUES (${input.name}, ${email}, ${input.phone}, '', ARRAY[${input.course}]::text[])
+      RETURNING id
+    `) as { id: string }[];
+    return row.id;
+  }
+
   async createSession(clientId: string, tokenHash: string, expiresAt: Date): Promise<void> {
     await this.sql.transaction([
       this.sql`DELETE FROM student_sessions WHERE expires_at < now()`,

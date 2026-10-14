@@ -3,11 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { GoogleOAuth, GoogleOAuthError } from "@/domains/admin/server/GoogleOAuth";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentOAuth } from "@/domains/students/server/StudentOAuth";
+import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 
 /**
  * GET /api/student/auth/google/callback?code&state
- * Signs in only Google accounts whose email belongs to a client with a course.
+ * Signs in Google accounts whose email belongs to a client with a course. Anyone
+ * else gets a short-lived signed ticket for that verified email and is sent to
+ * the "finish joining" form (/student?view=join), which enrols them at once.
  */
 export async function GET(request: NextRequest) {
   const origin = GoogleOAuth.canonicalOrigin(request.nextUrl.origin);
@@ -32,7 +35,19 @@ export async function GET(request: NextRequest) {
   try {
     const identity = await google.exchange(code, flow.verifier);
     const student = await repo.enrolledByEmail(identity.email);
-    if (!student) return fail("not_enrolled");
+    if (!student) {
+      const tickets = SignupTicket.fromEnv();
+      if (!tickets) return fail("not_enrolled");
+      const response = finish("/student?view=join");
+      response.cookies.set(SignupTicket.COOKIE, tickets.issue(identity.email), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: SignupTicket.TTL_MS / 1000,
+      });
+      return response;
+    }
     await StudentAuth.startSession(student.id, repo);
   } catch (error) {
     console.error("[student] Google sign-in failed", error instanceof GoogleOAuthError ? error.message : error);

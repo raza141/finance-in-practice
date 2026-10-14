@@ -57,15 +57,11 @@ export interface StudentSession {
   group: boolean;
 }
 
-/** A public sign-up waiting for the owner (037_student_registrations). */
-export interface StudentRegistration {
-  id: string;
+/** What a new student gives when joining (email always from Google). */
+export interface RegistrationInput {
   name: string;
   email: string;
   phone: string;
-  /** A published course title, or "Other: <topic>". */
+  /** A published course title, a consultancy, or "Other: <topic>". */
   course: string;
-  createdAt: string;
 }
-
-export type RegistrationInput = Omit<StudentRegistration, "id" | "createdAt">;
