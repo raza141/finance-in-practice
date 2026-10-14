@@ -41,6 +41,8 @@ async function ownBooking(request: NextRequest, uid: string): Promise<Response |
   if (!isTheirs || !["accepted", "pending"].includes(booking.status) || Date.parse(booking.start) <= Date.now()) {
     return reject(404, "NOT_FOUND", "That session can't be changed any more.");
   }
+  // A group class or mock: one student cancelling would cancel it for everyone.
+  if (booking.attendees.length > 1) return reject(409, "GROUP_SESSION", "This is a group session. Please message your instructor to change it.");
   return { student, cal, booking };
 }
 

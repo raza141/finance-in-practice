@@ -53,6 +53,8 @@ export interface StudentSession {
   meetingUrl: string | null;
   /** In person: where. */
   address: string | null;
+  /** More than one student booked on it (a group class or mock): only the instructor changes it. */
+  group: boolean;
 }
 
 /** A public sign-up waiting for the owner (037_student_registrations). */

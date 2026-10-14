@@ -25,7 +25,7 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-type Tab = "book" | "sessions" | "plan";
+type Tab = "book" | "sessions" | "plan" | "classroom";
 
 const messageOf = (error: unknown) => (error instanceof ApiError ? error.message : "Something went wrong. Please retry.");
 const dayLabel = (iso: string) =>
@@ -44,6 +44,7 @@ export function StudentPortal({
   past,
   addresses,
   plan,
+  classroom,
 }: {
   courses: string[];
   lengths: readonly number[];
@@ -52,6 +53,8 @@ export function StudentPortal({
   addresses: string[];
   /** The study plan and materials tab, rendered on the server. */
   plan: ReactNode;
+  /** The Classroom tab, rendered on the server. */
+  classroom: ReactNode;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
@@ -173,6 +176,7 @@ export function StudentPortal({
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
     ["plan", "Study plan & materials"],
+    ["classroom", "Classroom"],
   ];
 
   return (
@@ -194,6 +198,7 @@ export function StudentPortal({
       </nav>
 
       {tab === "plan" && plan}
+      {tab === "classroom" && classroom}
 
       {tab === "sessions" && (
         <div className="grid gap-6">
@@ -218,11 +223,23 @@ export function StudentPortal({
                     <div>
                       <p className="font-semibold text-ink">{when(s.start, s.minutes)}</p>
                       <p className="text-muted">
+                        {s.group && (
+                          <span className="mr-2 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold">Group session</span>
+                        )}
                         {s.course} · {hours(s.minutes)} · {s.address ?? "Online"}
                         {s.status === "pending" && <span className="text-gold"> · awaiting confirmation</span>}
                       </p>
                     </div>
-                    {confirmCancel === s.uid ? (
+                    {s.group ? (
+                      <p className="flex flex-wrap items-center gap-4">
+                        {s.meetingUrl && (
+                          <a href={s.meetingUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                            Join ↗
+                          </a>
+                        )}
+                        <span className="text-xs text-muted">Shared with your batch: message your instructor to change it.</span>
+                      </p>
+                    ) : confirmCancel === s.uid ? (
                       <p className="flex flex-wrap items-center gap-3">
                         <span className="text-ink">Cancel this session?</span>
                         <button type="button" disabled={busy} onClick={() => cancel(s)} className="text-red-300 hover:underline disabled:opacity-50">

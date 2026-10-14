@@ -10,6 +10,7 @@ interface BookingLike {
   meetingUrl: string | null;
   location?: string | null;
   metadata?: Record<string, string>;
+  attendees?: readonly unknown[];
 }
 
 /** Pure reads over a student's Cal.com bookings: what is coming up, and where they met in person before. */
@@ -32,6 +33,7 @@ export class StudentSessions {
           status: b.status === "pending" ? "pending" : "accepted",
           meetingUrl: b.meetingUrl?.startsWith("https://") ? b.meetingUrl : null,
           address,
+          group: (b.attendees?.length ?? 0) > 1,
         };
       });
   }

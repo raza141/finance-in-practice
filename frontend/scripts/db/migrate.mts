@@ -799,6 +799,15 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX student_registrations_created_idx ON student_registrations (created_at DESC)`,
     ],
   },
+  {
+    // A Google Classroom invite per course (one class per course or batch: announcements,
+    // mocks, shared files). Private: only enrolled students see it, on /student.
+    id: "038_course_classroom",
+    statements: [
+      `ALTER TABLE courses ADD COLUMN classroom_url text
+        CHECK (classroom_url ~ '^https://classroom\\.google\\.com/' AND char_length(classroom_url) <= 300)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

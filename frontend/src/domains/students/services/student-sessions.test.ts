@@ -29,6 +29,14 @@ describe("StudentSessions", () => {
     ]);
   });
 
+  it("marks bookings with several students as group sessions", () => {
+    const group = booking("mock", "2026-10-24T06:00:00Z", 3, { attendees: [{ email: "a@x.com" }, { email: "b@x.com" }] });
+    expect(StudentSessions.upcoming([group, bookings[1]], NOW).map((s) => [s.uid, s.group])).toEqual([
+      ["later", false],
+      ["mock", true],
+    ]);
+  });
+
   it("lists past sessions, most recent first, cancelled ones left out", () => {
     expect(StudentSessions.past(bookings, NOW).map((s) => s.uid)).toEqual(["past"]);
   });
