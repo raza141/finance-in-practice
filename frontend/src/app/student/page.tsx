@@ -6,7 +6,9 @@ import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
+import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
+import { RegisterForm } from "@/domains/students/components/RegisterForm";
 import { StudentPortal } from "@/domains/students/components/StudentPortal";
 import { StudyPlanTimeline } from "@/domains/students/components/StudyPlanTimeline";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
@@ -23,7 +25,7 @@ export const metadata: Metadata = {
 
 const ERRORS: Record<string, string> = {
   not_enrolled:
-    "We couldn't find a student with that Google account. Use the email we have on file, or message us on WhatsApp. New here? Start with the free diagnostic.",
+    "We couldn't find a student with that Google account. Use the email we have on file, or register below and we'll confirm your place.",
   google_cancelled: "Sign-in was cancelled.",
   google_state: "That sign-in link expired. Please try again.",
   google_failed: "Google sign-in didn't work. Please try again.",
@@ -58,8 +60,8 @@ async function portalData(student: Student) {
   };
 }
 
-export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const [student, { error }] = await Promise.all([StudentAuth.current(), searchParams]);
+export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
+  const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
   const { whatsapp } = siteConfig.contact;
   const whatsappHref = `https://wa.me/${whatsapp.number}?text=${encodeURIComponent("Hi! I'm a student and I'd like to book a session.")}`;
 
@@ -84,7 +86,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       </header>
 
       <div className="page-container relative py-10 lg:py-14">
-        {student ? <Portal student={student} /> : <SignIn error={error} whatsappHref={whatsappHref} />}
+        {student ? <Portal student={student} /> : <SignIn error={error} register={view === "register" || error === "not_enrolled"} whatsappHref={whatsappHref} />}
       </div>
     </div>
   );
@@ -133,7 +135,15 @@ async function Portal({ student }: { student: Student }) {
   );
 }
 
-function SignIn({ error, whatsappHref }: { error?: string; whatsappHref: string }) {
+/** Published courses only: the public form never lists drafts or internal programmes. */
+async function publicCourses(): Promise<string[]> {
+  return (await safely("published courses", async () => (await CourseRepository.fromEnv()?.active())?.map((c) => c.title) ?? [])) ?? [];
+}
+
+async function SignIn({ error, register, whatsappHref }: { error?: string; register: boolean; whatsappHref: string }) {
+  const courses = register ? await publicCourses() : [];
+  const tab = (active: boolean) =>
+    `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
     <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/70 backdrop-blur-md md:grid-cols-2">
       <div className="relative flex flex-col justify-between gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
@@ -155,30 +165,52 @@ function SignIn({ error, whatsappHref }: { error?: string; whatsappHref: string 
       </div>
 
       <div className="grid content-center gap-5 p-8 sm:p-10">
-        <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
-        <p className="text-muted">Already studying with us? Use the Google account we have on file.</p>
+        <nav aria-label="Sign in or register" className="flex gap-1 rounded-lg border border-line p-1">
+          <Link href="/student" aria-current={!register ? "page" : undefined} className={tab(!register)}>
+            Sign in
+          </Link>
+          <Link href="/student?view=register" aria-current={register ? "page" : undefined} className={tab(register)}>
+            Register
+          </Link>
+        </nav>
         {error && ERRORS[error] && (
           <p role="alert" className="text-sm text-gold">
             {ERRORS[error]}
           </p>
         )}
-        {/* A plain link: the route redirects to Google, so no client JS is needed. */}
-        <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
-          Continue with Google
-        </ButtonLink>
-        <p className="text-sm text-muted">
-          No Google account?{" "}
-          <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-            Message us on WhatsApp
-          </Link>{" "}
-          and we&rsquo;ll book it for you.
-        </p>
-        <p className="border-t border-line pt-5 text-sm text-muted">
-          New to Finance in Practice?{" "}
-          <Link href={siteConfig.bookingHref} className="text-gold hover:underline">
-            Book the free diagnostic
-          </Link>
-        </p>
+        {register ? (
+          <>
+            <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
+            <p className="text-muted">New student? Tell us who you are and what you&rsquo;d like to study. We&rsquo;ll confirm your place, then you can sign in.</p>
+            <RegisterForm courses={courses} />
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
+            <p className="text-muted">Already studying with us? Use the Google account we have on file.</p>
+            {/* A plain link: the route redirects to Google, so no client JS is needed. */}
+            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
+              Continue with Google
+            </ButtonLink>
+            <p className="text-sm text-muted">
+              No Google account?{" "}
+              <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                Message us on WhatsApp
+              </Link>{" "}
+              and we&rsquo;ll book it for you.
+            </p>
+            <p className="border-t border-line pt-5 text-sm text-muted">
+              New here?{" "}
+              <Link href="/student?view=register" className="text-quant hover:underline">
+                Register
+              </Link>{" "}
+              or{" "}
+              <Link href={siteConfig.bookingHref} className="text-gold hover:underline">
+                book the free diagnostic
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

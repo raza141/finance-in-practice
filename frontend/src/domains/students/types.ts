@@ -22,6 +22,8 @@ export interface StudentBookingRequest {
   notes: string;
   /** Session length, one of siteConfig.studentBooking.lengths. */
   minutes: number;
+  /** In person, optional: a Google Maps link to the exact spot. */
+  mapUrl: string;
 }
 
 export type StudyStatus = "planned" | "done" | "skipped";
@@ -52,3 +54,16 @@ export interface StudentSession {
   /** In person: where. */
   address: string | null;
 }
+
+/** A public sign-up waiting for the owner (037_student_registrations). */
+export interface StudentRegistration {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  /** A published course title, or "Other: <topic>". */
+  course: string;
+  createdAt: string;
+}
+
+export type RegistrationInput = Omit<StudentRegistration, "id" | "createdAt">;

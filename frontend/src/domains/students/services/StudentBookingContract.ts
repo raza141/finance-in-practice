@@ -9,7 +9,9 @@ const MODES: readonly SessionMode[] = ["online", "in_person"];
 /** Validation for a signed-in student's session booking. Pure: shared by the form and the API route. */
 export class StudentBookingContract {
   static readonly OTHER = "Other";
-  static readonly LIMITS = { topic: [3, 120], address: [5, 200], notes: 500 } as const;
+  static readonly LIMITS = { topic: [3, 120], address: [5, 200], notes: 500, mapUrl: 300 } as const;
+  /** Hosts a pasted "share location" link may come from. */
+  private static readonly MAP_HOSTS = ["www.google.com", "google.com", "maps.google.com", "maps.app.goo.gl", "goo.gl"];
 
   static parse(body: unknown, courses: readonly string[], now: Date = new Date()): StudentBookingRequest {
     if (!body || typeof body !== "object") throw new BookingValidationError("body must be a JSON object");
@@ -33,6 +35,9 @@ export class StudentBookingContract {
       throw new BookingValidationError("Add the address in Abu Dhabi where the session should take place.");
     }
 
+    const mapUrl = mode === "in_person" ? text("mapUrl") : "";
+    if (mapUrl && !StudentBookingContract.isMapLink(mapUrl)) throw new BookingValidationError("Paste a Google Maps link, or leave the map pin empty.");
+
     const notes = text("notes");
     if (notes.length > LIMITS.notes) throw new BookingValidationError(`Notes can be at most ${LIMITS.notes} characters.`);
 
@@ -48,7 +53,24 @@ export class StudentBookingContract {
       throw new BookingValidationError(`start must be within ${BookingContract.MAX_ADVANCE_DAYS} days`);
     }
 
-    return { start: start.toISOString(), timeZone: b.timeZone, course, topic, mode, address, notes, minutes };
+    return { start: start.toISOString(), timeZone: b.timeZone, course, topic, mode, address, notes, minutes, mapUrl };
+  }
+
+  /** A Google Maps link: https, a Google Maps host, maps path on google.com. Nothing else ever reaches Cal.com. */
+  static isMapLink(value: string): boolean {
+    if (value.length > StudentBookingContract.LIMITS.mapUrl) return false;
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:" || !StudentBookingContract.MAP_HOSTS.includes(url.hostname)) return false;
+      return url.hostname.endsWith("google.com") && url.hostname !== "maps.google.com" ? url.pathname.startsWith("/maps") : true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The link for a dropped pin (browser geolocation). */
+  static pinLink(latitude: number, longitude: number): string {
+    return `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`;
   }
 
   static isLength(minutes: unknown): minutes is number {
@@ -84,6 +106,7 @@ export class StudentBookingContract {
       `Course: ${request.course === StudentBookingContract.OTHER ? `Other: ${request.topic}` : request.course}`,
       `Length: ${request.minutes / 60} h`,
       `Where: ${request.mode === "online" ? "Online (Google Meet)" : `In person: ${request.address}`}`,
+      request.mapUrl && `Map: ${request.mapUrl}`,
       request.notes && `Notes: ${request.notes}`,
     ]
       .filter(Boolean)

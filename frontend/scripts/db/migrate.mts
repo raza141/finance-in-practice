@@ -782,6 +782,23 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX study_plan_items_client_idx ON study_plan_items (client_id, due_on)`,
     ],
   },
+  {
+    // Public "Register" on /student. Insert-only from the website: a request never
+    // touches a clients row. The owner approves it in admin Clients (that creates
+    // or updates the client with a course) or dismisses it.
+    id: "037_student_registrations",
+    statements: [
+      `CREATE TABLE student_registrations (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name       text NOT NULL CHECK (char_length(name) BETWEEN 2 AND 120),
+        email      text NOT NULL CHECK (char_length(email) <= 254 AND email = lower(email)),
+        phone      text NOT NULL CHECK (char_length(phone) BETWEEN 7 AND 25),
+        course     text NOT NULL CHECK (char_length(course) BETWEEN 2 AND 200),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX student_registrations_created_idx ON student_registrations (created_at DESC)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

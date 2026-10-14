@@ -12,7 +12,7 @@ const parse = (patch: Record<string, unknown>) => StudentBookingContract.parse({
 
 describe("StudentBookingContract", () => {
   it("accepts one of the student's courses online", () => {
-    expect(parse({})).toEqual({ ...VALID, start: "2026-10-15T14:00:00.000Z", topic: "", address: "", notes: "", minutes: 60 });
+    expect(parse({})).toEqual({ ...VALID, start: "2026-10-15T14:00:00.000Z", topic: "", address: "", notes: "", minutes: 60, mapUrl: "" });
   });
 
   it("accepts Other with a topic, in person with an address", () => {
@@ -23,6 +23,11 @@ describe("StudentBookingContract", () => {
 
   it("drops a topic or address that doesn't apply", () => {
     expect(parse({ minutes: 180 }).minutes).toBe(180);
+    const pin = StudentBookingContract.pinLink(24.4539, 54.3773);
+    expect(pin).toBe("https://www.google.com/maps?q=24.453900,54.377300");
+    expect(parse({ mode: "in_person", address: "Khalifa City A, villa 12", mapUrl: pin }).mapUrl).toBe(pin);
+    expect(parse({ mode: "in_person", address: "Khalifa City A, villa 12", mapUrl: "https://maps.app.goo.gl/AbC123" }).mapUrl).toBe("https://maps.app.goo.gl/AbC123");
+    expect(parse({ mapUrl: pin }).mapUrl).toBe("");
     expect(parse({ topic: "ignored", address: "ignored too" })).toMatchObject({ topic: "", address: "" });
   });
 
@@ -36,6 +41,8 @@ describe("StudentBookingContract", () => {
     ["a start beyond 90 days", { start: "2027-02-01T14:00:00Z" }],
     ["a bad timezone", { timeZone: "Mars/Base" }],
     ["a length Cal.com doesn't offer", { minutes: 90 }],
+    ["a map link that isn't Google Maps", { mode: "in_person", address: "Khalifa City A, villa 12", mapUrl: "https://evil.example/maps" }],
+    ["a google.com link outside /maps", { mode: "in_person", address: "Khalifa City A, villa 12", mapUrl: "https://www.google.com/search?q=x" }],
   ])("rejects %s", (_, patch) => {
     expect(() => parse(patch)).toThrow(BookingValidationError);
   });

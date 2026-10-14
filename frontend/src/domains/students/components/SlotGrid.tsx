@@ -92,9 +92,7 @@ export function SlotGrid({
   return (
     <div className="grid gap-3">
       <div className="flex items-center justify-between gap-3 text-xs text-muted">
-        <span>
-          {fixedMinutes ? `Pick a new start (${fixedMinutes / 60} h)` : "Click a start time, or drag down for a longer session"} · {calendar.abbreviation()}
-        </span>
+        <span>Times in {calendar.abbreviation()}</span>
         {pages > 1 && (
           <span className="flex gap-1">
             <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Earlier days" className="rounded border border-line px-2 py-1 hover:border-quant/50 disabled:opacity-30">

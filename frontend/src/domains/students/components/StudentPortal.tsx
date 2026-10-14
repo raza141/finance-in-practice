@@ -57,6 +57,8 @@ export function StudentPortal({
   const [mode, setMode] = useState<SessionMode>("online");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [mapUrl, setMapUrl] = useState("");
+  const [locating, setLocating] = useState<"idle" | "busy" | "failed">("idle");
   const [selection, setSelection] = useState<SlotSelection | null>(null);
   const [moving, setMoving] = useState<StudentSession | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
@@ -88,6 +90,18 @@ export function StudentPortal({
     setMode(next);
     if (next === "in_person" && !address && addresses[0]) setAddress(addresses[0]);
   };
+  // Free: the browser's own location, turned into a Google Maps link. No map API or key involved.
+  const dropPin = () => {
+    if (!navigator.geolocation) return setLocating("failed");
+    setLocating("busy");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => (setMapUrl(StudentBookingContract.pinLink(coords.latitude, coords.longitude)), setLocating("idle")),
+      () => setLocating("failed"),
+      { enableHighAccuracy: true, timeout: 15_000 },
+    );
+  };
+  const mapLinkInvalid = mapUrl !== "" && !StudentBookingContract.isMapLink(mapUrl);
+
   const done = (text: string) => {
     setNotice({ tone: "ok", text });
     setSelection(null);
@@ -106,7 +120,7 @@ export function StudentPortal({
         await client.reschedule(moving.uid, selection.start);
         done(`Moved to ${when(selection.start, moving.minutes)}. Cal.com has emailed you the new time.`);
       } else {
-        const booking = await client.book({ start: selection.start, timeZone, course, topic, mode, address, notes, minutes: selection.minutes });
+        const booking = await client.book({ start: selection.start, timeZone, course, topic, mode, address, notes, mapUrl, minutes: selection.minutes });
         done(
           booking.status.toLowerCase() === "accepted"
             ? `Booked: ${when(selection.start, selection.minutes)}. Cal.com has emailed you the invite.`
@@ -175,6 +189,7 @@ export function StudentPortal({
               <div>
                 <dt className="text-xs text-muted">Where</dt>
                 <dd className="text-ink">{where}</dd>
+                {mode === "in_person" && mapUrl && !mapLinkInvalid && <dd className="text-xs text-quant">Map pin added ✓</dd>}
               </div>
             )}
             {!moving && notes && (
@@ -310,16 +325,50 @@ export function StudentPortal({
                       aria-label="Address in Abu Dhabi"
                       className={FIELD}
                     />
-                    {address.length >= LIMITS.address[0] && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address}, Abu Dhabi`)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="justify-self-start text-xs text-quant hover:underline"
-                      >
-                        Check it on Google Maps ↗
-                      </a>
-                    )}
+                    <div className="grid gap-2 rounded-xl border border-dashed border-line p-3">
+                      <p className="text-xs text-muted">Map pin (optional): helps me find the exact building.</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={dropPin} disabled={locating === "busy"} className={chip(false)}>
+                          {locating === "busy" ? "Finding you…" : "📍 Use my current location"}
+                        </button>
+                        <span className="text-xs text-muted">or</span>
+                        <input
+                          type="url"
+                          inputMode="url"
+                          maxLength={LIMITS.mapUrl}
+                          value={mapUrl}
+                          onChange={(e) => setMapUrl(e.target.value.trim())}
+                          placeholder="Paste a Google Maps link"
+                          aria-label="Google Maps link"
+                          aria-invalid={mapLinkInvalid}
+                          className={`${FIELD} min-w-48 flex-1 py-2`}
+                        />
+                      </div>
+                      {locating === "failed" && <p className="text-xs text-gold">Couldn&rsquo;t get your location. Allow location access, or paste a Google Maps link.</p>}
+                      {mapLinkInvalid && <p className="text-xs text-gold">That isn&rsquo;t a Google Maps link. In Google Maps, tap Share and copy the link.</p>}
+                      <p className="flex flex-wrap gap-4 text-xs">
+                        {mapUrl && !mapLinkInvalid && (
+                          <>
+                            <a href={mapUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                              Check the pin ↗
+                            </a>
+                            <button type="button" onClick={() => setMapUrl("")} className="text-muted hover:text-ink">
+                              Remove pin
+                            </button>
+                          </>
+                        )}
+                        {!mapUrl && address.length >= LIMITS.address[0] && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address}, Abu Dhabi`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-quant hover:underline"
+                          >
+                            Find my address on Google Maps ↗
+                          </a>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -327,7 +376,12 @@ export function StudentPortal({
           )}
 
           <div className="grid gap-2">
-            <span className={LABEL}>Date and time</span>
+            <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className={LABEL}>Date and time</span>
+              <span className="text-xs text-muted">
+                {moving ? `Click a new start time (${hours(moving.minutes)})` : "Click a start time, or drag down for 2–4 hours"}
+              </span>
+            </p>
             {days.status === "loading" && <p className="text-sm text-muted">Loading free times…</p>}
             {days.status === "error" && (
               <p role="alert" className="text-sm text-gold">
@@ -364,7 +418,7 @@ export function StudentPortal({
         )}
         <button
           type="submit"
-          disabled={busy || !selection || !course}
+          disabled={busy || !selection || !course || (mode === "in_person" && mapLinkInvalid)}
           className="inline-flex h-12 items-center justify-center rounded-md bg-gold px-6 font-mono text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
         >
           {busy ? "Saving…" : moving ? "Move session" : selection ? `Book ${hours(selection.minutes)} session` : "Book session"}

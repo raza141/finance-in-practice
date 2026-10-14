@@ -15,6 +15,10 @@ export class StudentApiClient extends BaseApiClient {
     return this.post<CreateBookingResponse>("/api/student/book", body);
   }
 
+  register(body: Record<string, string>) {
+    return this.post<{ message: string }>("/api/student/register", body);
+  }
+
   reschedule(uid: string, start: string) {
     return this.post<CreateBookingResponse>(`/api/student/bookings/${encodeURIComponent(uid)}`, { action: "reschedule", start });
   }
