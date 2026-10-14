@@ -36,6 +36,8 @@ const ERRORS: Record<string, string> = {
   google_unavailable: "Student sign-in is not available right now. Please message us on WhatsApp.",
 };
 
+const REGISTER_STEPS = ["Continue with your Google account", "Add your mobile and course", "Your portal opens straight away"];
+
 const PERKS = ["Book 1 to 4 hour sessions in your own time", "Change or cancel a session in two clicks", "Follow your study plan and open your materials"];
 
 /** Each source fails on its own: a Cal.com or database hiccup never takes the whole portal down. */
@@ -69,8 +71,6 @@ async function portalData(student: Student) {
 
 export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
   const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
-  const { whatsapp } = siteConfig.contact;
-  const whatsappHref = `https://wa.me/${whatsapp.number}?text=${encodeURIComponent("Hi! I'm a student and I'd like to book a session.")}`;
 
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
@@ -102,7 +102,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       </header>
 
       <div className="page-container relative py-8 lg:py-10">
-        {student ? <Portal student={student} /> : <SignIn error={error} view={view} whatsappHref={whatsappHref} />}
+        {student ? <Portal student={student} /> : <SignIn error={error} view={view} />}
       </div>
     </div>
   );
@@ -157,12 +157,15 @@ async function publicCourses(): Promise<string[]> {
   return (await safely("published courses", async () => (await CourseRepository.fromEnv()?.active())?.map((c) => c.title) ?? [])) ?? [];
 }
 
-async function SignIn({ error, view, whatsappHref }: { error?: string; view?: string; whatsappHref: string }) {
+async function SignIn({ error, view }: { error?: string; view?: string }) {
   // "join": back from Google with a verified email that isn't a student yet.
   const joining = view === "join" ? (SignupTicket.fromEnv()?.read((await cookies()).get(SignupTicket.COOKIE)?.value) ?? null) : null;
   // Back on the join view without a valid ticket: it expired (or was used).
   const expired = view === "join" && joining === null;
+  const register = joining !== null || view === "register" || view === "join";
   const courses = joining ? await publicCourses() : [];
+  const tab = (active: boolean) =>
+    `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
     <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/70 backdrop-blur-md md:grid-cols-2">
       <div className="relative flex flex-col justify-start gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
@@ -184,6 +187,14 @@ async function SignIn({ error, view, whatsappHref }: { error?: string; view?: st
       </div>
 
       <div className="grid content-start gap-5 p-8 sm:p-10">
+        <nav aria-label="Sign in or register" className="flex gap-1 rounded-lg border border-line p-1">
+          <Link href="/student" aria-current={!register ? "page" : undefined} className={tab(!register)}>
+            Sign in
+          </Link>
+          <Link href="/student?view=register" aria-current={register ? "page" : undefined} className={tab(register)}>
+            Register
+          </Link>
+        </nav>
         {error && ERRORS[error] && (
           <p role="alert" className="text-sm text-gold">
             {ERRORS[error]}
@@ -195,36 +206,47 @@ async function SignIn({ error, view, whatsappHref }: { error?: string; view?: st
             <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
             <JoinForm courses={courses} email={joining} />
           </>
+        ) : register ? (
+          <>
+            <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
+            {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
+            <ol className="grid gap-2 text-sm text-ink/90">
+              {REGISTER_STEPS.map((step, i) => (
+                <li key={step} className="flex gap-2.5">
+                  <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold text-[11px] font-bold text-canvas">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            {/* A plain link: the route redirects to Google, so no client JS is needed. */}
+            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
+              Register with Google
+            </ButtonLink>
+            <p className="border-t border-line pt-5 text-sm text-muted">
+              Already registered?{" "}
+              <Link href="/student" className="text-quant hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </>
         ) : (
           <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Sign in or join</h1>
-            {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
-            {/* A plain link: the route redirects to Google, so no client JS is needed. New and returning students use the same button. */}
+            <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
+            <p className="text-muted">Already studying with us? Sign in with your Google account.</p>
             <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
               Continue with Google
             </ButtonLink>
-            <p className="flex gap-2.5 rounded-lg border border-gold/30 bg-gold/5 p-3 text-sm text-ink/90">
-              <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-[10px] font-bold text-canvas">
-                i
-              </span>
-              <span>
-                <span className="font-semibold">First time?</span> Same button. You&rsquo;ll add your mobile and course once, and your portal opens straight
-                away.
-              </span>
-            </p>
-            <p className="text-sm text-muted">
-              No Google account?{" "}
-              <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                Message us on WhatsApp
-              </Link>{" "}
-              and we&rsquo;ll book it for you.
-            </p>
             <p className="border-t border-line pt-5 text-sm text-muted">
-              Just exploring?{" "}
-              <Link href={siteConfig.bookingHref} className="text-gold hover:underline">
-                Book the free diagnostic
+              New here?{" "}
+              <Link href="/student?view=register" className="font-semibold text-gold hover:underline">
+                Register
+              </Link>{" "}
+              or{" "}
+              <Link href={siteConfig.bookingHref} className="text-quant hover:underline">
+                book the free diagnostic
               </Link>
-              , no sign-in needed.
             </p>
           </>
         )}
