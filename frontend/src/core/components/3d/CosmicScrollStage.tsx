@@ -13,6 +13,8 @@ interface CosmicScrollStageProps {
   /** Number of stops after the intro; one progress dot each. */
   count: number;
   className?: string;
+  /** Replaces the WebGL vortex with another full-screen background (scroll choreography and dots stay). */
+  backdrop?: ReactNode;
 }
 
 /**
@@ -20,7 +22,7 @@ interface CosmicScrollStageProps {
  * the camera as each one scrolls through. The WebGL scene mounts when the
  * stage first nears the viewport and stops rendering whenever it leaves.
  */
-export function CosmicScrollStage({ children, count, className = "" }: CosmicScrollStageProps) {
+export function CosmicScrollStage({ children, count, className = "", backdrop }: CosmicScrollStageProps) {
   const root = useRef<HTMLDivElement>(null);
   const [state] = useState(() => new CosmicState());
   const [mounted, setMounted] = useState(false);
@@ -51,7 +53,7 @@ export function CosmicScrollStage({ children, count, className = "" }: CosmicScr
       {/* Absolute track + sticky child pins the stage only within this section. */}
       <div className="absolute inset-0">
         <div className="sticky top-0 h-screen w-full">
-          {mounted && <CosmicScene state={state} active={visible} className="absolute inset-0" />}
+          {backdrop ?? (mounted && <CosmicScene state={state} active={visible} className="absolute inset-0" />)}
           <ol
             aria-hidden
             className="absolute top-1/2 right-4 hidden -translate-y-1/2 flex-col gap-3 lg:flex"

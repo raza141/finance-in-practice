@@ -1,18 +1,10 @@
-"use client";
+import { FrontierModel, type RiskReturn } from "../FrontierModel";
+import { type BackdropScene, GOLD, INK, Paint, QUANT } from "../Paint";
 
-import { useEffect, useRef } from "react";
-
-import { FrontierModel, type RiskReturn } from "./FrontierModel";
-
-const QUANT = "34,211,238";
-const GOLD = "212,175,55";
-const INK = "203,213,225";
-const CYCLE_S = 16;
 const DOTS = 420;
-const FPS = 30;
 
 /** One cycle of the story: portfolios appear, the frontier draws, the CML sweeps in, the optimum pulses, fade. */
-class FrontierScene {
+export class FrontierScene implements BackdropScene {
   private readonly model: FrontierModel;
   private readonly dots: RiskReturn[];
   private readonly efficient: RiskReturn[];
@@ -40,10 +32,9 @@ class FrontierScene {
     const bottom = h * 0.86;
     const x = (sigma: number) => left + ((sigma - this.min.sigma) / (this.max.sigma - this.min.sigma)) * (right - left);
     const y = (mu: number) => bottom - ((mu - this.min.mu) / (this.max.mu - this.min.mu)) * (bottom - top);
-    const ease = (v: number) => (v <= 0 ? 0 : v >= 1 ? 1 : 1 - (1 - v) ** 3);
-    const span = (from: number, to: number) => ease((t - from) / (to - from));
-    const fade = 1 - span(CYCLE_S - 2.5, CYCLE_S);
-    ctx.globalAlpha = fade;
+    const span = (from: number, to: number) => Paint.span(t, from, to);
+    ctx.globalAlpha = Paint.fade(t);
+    Paint.caption(ctx, w, h, "PORTFOLIO OPTIMISATION", "Mean-variance · long-only · max Sharpe");
 
     // Axes.
     ctx.strokeStyle = `rgba(${INK},0.16)`;
@@ -157,73 +148,4 @@ class FrontierScene {
     }
     ctx.globalAlpha = 1;
   }
-}
-
-/**
- * Portfolio optimisation behind a full-bleed page: random portfolios, the
- * efficient frontier, the capital market line and the max-Sharpe portfolio,
- * on a 16 s loop. 2D canvas at 30 fps, paused while the tab is hidden; a
- * single still frame for visitors who prefer reduced motion.
- */
-export function FrontierBackdrop({ className = "" }: { className?: string }) {
-  const canvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const el = canvas.current;
-    const ctx = el?.getContext("2d");
-    if (!el || !ctx) return;
-    let seed = 1;
-    let scene = new FrontierScene(seed);
-    let size = { w: 0, h: 0 };
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      size = { w: el.clientWidth, h: el.clientHeight };
-      el.width = Math.round(size.w * dpr);
-      el.height = Math.round(size.h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const observer = new ResizeObserver(() => {
-      resize();
-      if (still) scene.draw(ctx, size.w, size.h, 11);
-    });
-    observer.observe(el);
-
-    if (still) {
-      scene.draw(ctx, size.w, size.h, 11);
-      return () => observer.disconnect();
-    }
-
-    let frame = 0;
-    let start = performance.now();
-    let last = 0;
-    const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      if (now - last < 1000 / FPS) return;
-      last = now;
-      let t = (now - start) / 1000;
-      if (t >= CYCLE_S) {
-        start = now;
-        t = 0;
-        scene = new FrontierScene(++seed);
-      }
-      scene.draw(ctx, size.w, size.h, t);
-    };
-    // requestAnimationFrame already stops while the tab is hidden.
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, []);
-
-  return (
-    <div aria-hidden className={`pointer-events-none overflow-hidden bg-canvas bg-grid-lines ${className}`}>
-      <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
-      {/* Keep the cards readable: a soft glow top left, fading into the page at the bottom. */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgb(34_211_238/0.1),transparent_55%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(11_17_32/0.2),transparent_40%,rgb(11_17_32/0.7))]" />
-    </div>
-  );
 }

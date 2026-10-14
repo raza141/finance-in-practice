@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { CosmicBackdrop } from "@/core/components/3d/CosmicBackdrop";
+import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 
 export const metadata: Metadata = {
@@ -34,7 +35,7 @@ export default function ContactPage() {
 
   return (
     <section aria-labelledby="contact-heading" className="relative -mt-20 overflow-hidden">
-      <CosmicBackdrop className="absolute inset-0" tilt={0.6} zoom={7.5} />
+      <FinanceBackdrop start="orderbook" dim className="absolute inset-0" />
 
       <div className="page-container relative grid gap-10 pt-28 pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-14 lg:pt-32 lg:pb-16">
         <div>
@@ -70,6 +71,7 @@ export default function ContactPage() {
               <span className="mt-1 block text-sm text-muted">At your home, or live online across the UAE</span>
             </li>
           </ul>
+          <LinkedInFollow className="mt-6" />
         </div>
 
         <aside

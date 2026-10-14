@@ -3,6 +3,7 @@ import "katex/dist/katex.min.css";
 import Link from "next/link";
 
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
+import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 
 import { CodeHighlighter } from "../server/CodeHighlighter";
@@ -307,6 +308,12 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
         <ButtonLink href={cta.href} className="mt-4">
           {doc.cta ? doc.cta.label : siteConfig.navCta.label}
         </ButtonLink>
+      </div>
+
+      {/* Readers who aren't ready to book can still follow for the next article. */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/10 p-5">
+        <p className="text-sm text-ink/90">New articles and exam tips, on LinkedIn.</p>
+        <LinkedInFollow note="Get the next article in your feed" />
       </div>
     </article>
   );

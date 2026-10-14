@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 
 import { Logo } from "./Logo";
@@ -15,6 +16,7 @@ export function Footer() {
             <p className="mt-4 text-sm leading-relaxed text-muted">
               Financial theory taught by a practitioner who builds the models.
             </p>
+            <LinkedInFollow variant="pill" className="mt-5" />
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
             {siteConfig.footerNav.map((item) => (

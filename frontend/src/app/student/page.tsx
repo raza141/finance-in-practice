@@ -4,7 +4,8 @@ import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { FrontierBackdrop } from "@/core/components/ui/FrontierBackdrop";
+import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
+import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
@@ -78,7 +79,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
     <div className="relative -mt-20 min-h-screen overflow-clip">
-      <FrontierBackdrop className="absolute inset-0" />
+      <FinanceBackdrop className="absolute inset-0" />
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
       {/* Frozen at the top while scrolling (the portal tabs stick just below it). */}
@@ -140,15 +141,18 @@ async function Portal({ student }: { student: Student }) {
           </h1>
           <p className="mt-1 text-sm text-muted">{student.email}</p>
         </div>
-        {student.courses.length > 0 && (
-          <ul aria-label="Your programmes" className="flex flex-wrap gap-2">
-            {student.courses.map((c) => (
-              <li key={c} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-ink">
-                {c}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          {student.courses.length > 0 && (
+            <ul aria-label="Your programmes" className="flex flex-wrap gap-2">
+              {student.courses.map((c) => (
+                <li key={c} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-ink">
+                  {c}
+                </li>
+              ))}
+            </ul>
+          )}
+          <LinkedInFollow variant="pill" />
+        </div>
       </section>
       <StudentPortal
         courses={courses}
@@ -262,6 +266,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
             </p>
           </>
         )}
+        {!joining && <LinkedInFollow variant="pill" className="justify-self-start" />}
       </div>
     </div>
   );
