@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { MarketBackdrop } from "@/core/components/ui/MarketBackdrop";
+import { FrontierBackdrop } from "@/core/components/ui/FrontierBackdrop";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
@@ -78,11 +78,11 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
     <div className="relative -mt-20 min-h-screen overflow-clip">
-      <MarketBackdrop className="absolute inset-0" />
+      <FrontierBackdrop className="absolute inset-0" />
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
       {/* Frozen at the top while scrolling (the portal tabs stick just below it). */}
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-canvas/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-canvas/25 backdrop-blur-md">
         <div className="page-container flex h-16 items-center justify-between gap-4">
           <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
@@ -179,7 +179,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
-    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/70 backdrop-blur-md md:grid-cols-2">
+    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/40 backdrop-blur-[2px] md:grid-cols-2">
       <div className="relative flex flex-col justify-start gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
         <Logo height={44} />
         <div>
