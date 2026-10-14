@@ -35,6 +35,12 @@ export class StudentRepository {
     return row ?? null;
   }
 
+  /** What a student may book: their own courses first, then every published course (title order). */
+  async bookableCourses(student: Student): Promise<string[]> {
+    const rows = (await this.sql`SELECT title FROM courses WHERE is_active ORDER BY title`) as { title: string }[];
+    return [...new Set([...student.courses, ...rows.map((r) => r.title)])];
+  }
+
   async createSession(clientId: string, tokenHash: string, expiresAt: Date): Promise<void> {
     await this.sql.transaction([
       this.sql`DELETE FROM student_sessions WHERE expires_at < now()`,

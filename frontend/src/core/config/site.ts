@@ -71,7 +71,8 @@ export const siteConfig = {
   bookingHref: "/#book",
 
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
-  studentBooking: { eventSlug: "session", minutes: 60, href: "/student" },
+  /** `lengths` must match the durations offered on the Cal.com "session" event (60/120/180/240). */
+  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180, 240], href: "/student" },
 
   /**
    * Authority metrics. Every figure must be verifiable: these describe the

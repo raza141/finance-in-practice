@@ -20,6 +20,8 @@ export interface StudentBookingRequest {
   /** Required in person: where in Abu Dhabi. */
   address: string;
   notes: string;
+  /** Session length, one of siteConfig.studentBooking.lengths. */
+  minutes: number;
 }
 
 export type StudyStatus = "planned" | "done" | "skipped";
@@ -37,3 +39,16 @@ export interface StudyPlanItem {
 }
 
 export type StudyPlanInput = Omit<StudyPlanItem, "id">;
+
+/** A booked session as the student portal shows it (from Cal.com). */
+export interface StudentSession {
+  uid: string;
+  start: string;
+  end: string;
+  minutes: number;
+  course: string;
+  status: "accepted" | "pending";
+  meetingUrl: string | null;
+  /** In person: where. */
+  address: string | null;
+}

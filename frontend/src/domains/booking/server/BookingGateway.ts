@@ -72,6 +72,16 @@ export class BookingGateway {
     return { uid: booking.uid, start: booking.start, end: booking.end, status: booking.status };
   }
 
+  /** Moves a booking, refused when the new time overlaps time blocked in admin. */
+  async reschedule(uid: string, start: string, minutes: number, by: string): Promise<CreateBookingResponse> {
+    const session = Schedule.session(start, minutes);
+    if (this.blocks && (await this.blocks.between(session.start, session.end)).length > 0) {
+      throw new SlotBlockedError();
+    }
+    const booking = await this.cal.rescheduleBooking(uid, start, by, "Rescheduled by the student on financeinpractice.me");
+    return { uid: booking.uid, start: booking.start, end: booking.end, status: booking.status };
+  }
+
   /** Blocks touching calendar days [from, to] in any timezone (padded a day each side). */
   private blocked(from: string, to: string): Promise<TimeRange[]> {
     if (!this.blocks) return Promise.resolve([]);

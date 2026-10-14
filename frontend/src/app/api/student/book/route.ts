@@ -7,6 +7,7 @@ import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
+import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { StudentBookingContract } from "@/domains/students/services/StudentBookingContract";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -20,7 +21,7 @@ function reject(status: number, error: string, message: string) {
 
 /**
  * POST /api/student/book
- *   body: { start, timeZone, course, topic?, mode, address?, notes? }
+ *   body: { start, timeZone, course, topic?, mode, address?, notes?, minutes? }
  *   Name and email come from the signed-in student's client record, never the body.
  *   200 -> { uid, start, end, status }  (status "pending" when the event needs confirmation)
  */
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const booking = StudentBookingContract.parse(payload, student.courses);
+    const courses = (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses;
+    const booking = StudentBookingContract.parse(payload, courses);
     const result = await new BookingGateway(cal, BlockRepository.fromEnv()).book(
       {
         start: booking.start,
@@ -54,13 +56,14 @@ export async function POST(request: NextRequest) {
             ? { type: "integration", integration: "google-meet" }
             : { type: "attendeeAddress", address: booking.address },
         bookingFieldsResponses: { notes: StudentBookingContract.summary(booking) },
+        lengthInMinutes: booking.minutes,
         metadata: {
           source: "financeinpractice.me/student",
           clientId: student.id,
           course: (booking.course === StudentBookingContract.OTHER ? `Other: ${booking.topic}` : booking.course).slice(0, 500),
         },
       },
-      siteConfig.studentBooking.minutes,
+      booking.minutes,
     );
     return Response.json(result, { status: 200, headers: NO_STORE });
   } catch (error) {

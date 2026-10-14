@@ -69,6 +69,13 @@ export function MobileNav() {
               </li>
             ))}
           </ul>
+          <Link
+            href={siteConfig.studentBooking.href}
+            onClick={() => setOpen(false)}
+            className="mt-2 block rounded-md border border-line px-2 py-3 text-center text-base text-ink hover:bg-surface"
+          >
+            Student login
+          </Link>
           <BookButton onClick={() => setOpen(false)} className="mt-2 w-full" />
         </nav>,
           document.body,

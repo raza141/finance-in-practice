@@ -1,3 +1,4 @@
+import { siteConfig } from "@/core/config/site";
 import { BookingContract, BookingValidationError } from "@/domains/booking/services/BookingContract";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
@@ -35,6 +36,9 @@ export class StudentBookingContract {
     const notes = text("notes");
     if (notes.length > LIMITS.notes) throw new BookingValidationError(`Notes can be at most ${LIMITS.notes} characters.`);
 
+    const minutes = b.minutes === undefined ? siteConfig.studentBooking.minutes : Number(b.minutes);
+    if (!StudentBookingContract.isLength(minutes)) throw new BookingValidationError("Choose a session of 1 to 4 hours.");
+
     if (!ZonedCalendar.isValidTimeZone(b.timeZone)) throw new BookingValidationError("timeZone must be a valid IANA zone");
 
     const start = typeof b.start === "string" ? new Date(b.start) : new Date(Number.NaN);
@@ -44,13 +48,41 @@ export class StudentBookingContract {
       throw new BookingValidationError(`start must be within ${BookingContract.MAX_ADVANCE_DAYS} days`);
     }
 
-    return { start: start.toISOString(), timeZone: b.timeZone, course, topic, mode, address, notes };
+    return { start: start.toISOString(), timeZone: b.timeZone, course, topic, mode, address, notes, minutes };
+  }
+
+  static isLength(minutes: unknown): minutes is number {
+    return typeof minutes === "number" && (siteConfig.studentBooking.lengths as readonly number[]).includes(minutes);
+  }
+
+  /** A new start for an existing booking: ISO, in the future, within the booking window. */
+  static parseStart(value: unknown, now: Date = new Date()): string {
+    const start = typeof value === "string" ? new Date(value) : new Date(Number.NaN);
+    if (Number.isNaN(start.getTime()) || start.getTime() <= now.getTime()) throw new BookingValidationError("Pick a time in the future.");
+    if (start.getTime() - now.getTime() > BookingContract.MAX_ADVANCE_DAYS * 86_400_000) {
+      throw new BookingValidationError(`Pick a time within ${BookingContract.MAX_ADVANCE_DAYS} days.`);
+    }
+    return start.toISOString();
+  }
+
+  /**
+   * How many back-to-back hourly slots start at `index` (capped at `max`):
+   * a run of k free 60-minute slots means a k-hour session fits there.
+   */
+  static runLength(slots: readonly { start: string }[], index: number, max: number): number {
+    let length = index >= 0 && index < slots.length ? 1 : 0;
+    while (length > 0 && length < max && index + length < slots.length) {
+      if (Date.parse(slots[index + length].start) - Date.parse(slots[index + length - 1].start) !== 3_600_000) break;
+      length++;
+    }
+    return length;
   }
 
   /** The text Cal.com shows the owner in the booking and its emails. */
   static summary(request: StudentBookingRequest): string {
     return [
       `Course: ${request.course === StudentBookingContract.OTHER ? `Other: ${request.topic}` : request.course}`,
+      `Length: ${request.minutes / 60} h`,
       `Where: ${request.mode === "online" ? "Online (Google Meet)" : `In person: ${request.address}`}`,
       request.notes && `Notes: ${request.notes}`,
     ]

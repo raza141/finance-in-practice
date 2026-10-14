@@ -21,6 +21,8 @@ export interface CalBookingInput {
   location?: { type: "attendeeAddress"; address: string } | { type: "integration"; integration: "google-meet" | "cal-video" };
   /** Booking-field slug -> answer, e.g. { notes } (shown in Cal.com's emails). */
   bookingFieldsResponses?: Record<string, string>;
+  /** Only for event types offering several lengths; omitted: the default length. */
+  lengthInMinutes?: number;
 }
 
 export interface CalBooking {
@@ -37,6 +39,8 @@ export interface CalBookingDetail extends CalBooking {
   metadata: Record<string, string>;
   attendees: { name: string; email: string; timeZone: string }[];
   createdAt: string;
+  /** Free text: an address, a meeting URL or an integration key. */
+  location?: string | null;
 }
 
 /** A busy interval from a connected calendar (Google, Apple...). No titles: Cal.com doesn't expose them. */
@@ -121,13 +125,23 @@ export class CalComClient extends BaseApiClient {
     return response.data ?? [];
   }
 
-  /** Booked or pending sessions of one attendee from now on, soonest first (cancelled and rejected ones left out). */
-  async upcomingFor(email: string, now: Date = new Date()): Promise<CalBookingDetail[]> {
-    const query = new URLSearchParams({ attendeeEmail: email, afterStart: now.toISOString(), sortStart: "asc", take: "50" });
+  /** Every booking of one attendee, any status, newest first (last 100). */
+  async bookingsFor(email: string): Promise<CalBookingDetail[]> {
+    const query = new URLSearchParams({ attendeeEmail: email, sortStart: "desc", take: "100" });
     const response = await this.get<{ data: CalBookingDetail[] }>(`/bookings?${query}`, {
       headers: { "cal-api-version": CalComClient.ADMIN_API_VERSION },
     });
-    return (response.data ?? []).filter((b) => b.status === "accepted" || b.status === "pending");
+    return response.data ?? [];
+  }
+
+  /** Same length and details at a new start; Cal.com emails both sides the change. */
+  async rescheduleBooking(uid: string, start: string, rescheduledBy: string, reason: string): Promise<CalBooking> {
+    const response = await this.post<{ status: string; data: CalBooking }>(
+      `/bookings/${encodeURIComponent(uid)}/reschedule`,
+      { start, rescheduledBy, reschedulingReason: reason },
+      { headers: { "cal-api-version": CalComClient.BOOKINGS_API_VERSION } },
+    );
+    return response.data;
   }
 
   async booking(uid: string): Promise<CalBookingDetail> {

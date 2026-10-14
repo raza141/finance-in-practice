@@ -11,8 +11,16 @@ export class StudentApiClient extends BaseApiClient {
     return this.get<RangeSlotsResponse>(`/api/student/slots?${new URLSearchParams({ start, end, timeZone })}`);
   }
 
-  book(body: Record<string, string>) {
+  book(body: Record<string, string | number>) {
     return this.post<CreateBookingResponse>("/api/student/book", body);
+  }
+
+  reschedule(uid: string, start: string) {
+    return this.post<CreateBookingResponse>(`/api/student/bookings/${encodeURIComponent(uid)}`, { action: "reschedule", start });
+  }
+
+  cancel(uid: string) {
+    return this.post<{ uid: string; status: string }>(`/api/student/bookings/${encodeURIComponent(uid)}`, { action: "cancel" });
   }
 
   protected static override extractMessage(payload: unknown): string | null {
