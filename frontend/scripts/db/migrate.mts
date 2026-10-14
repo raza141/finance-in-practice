@@ -808,6 +808,31 @@ const MIGRATIONS: Migration[] = [
         CHECK (classroom_url ~ '^https://classroom\\.google\\.com/' AND char_length(classroom_url) <= 300)`,
     ],
   },
+  {
+    // Owner controls for the self-service portal: a student asks for a course's
+    // Classroom and only sees the invite once approved (removable again); public
+    // YouTube videos on /resources; clients the owner hasn't opened yet
+    // (seen_at NULL, set by self-joins) for the admin "new" badge.
+    id: "039_portal_controls",
+    statements: [
+      `CREATE TABLE classroom_access (
+        client_id    uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course       text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        status       text NOT NULL CHECK (status IN ('requested', 'approved', 'removed')),
+        requested_at timestamptz NOT NULL DEFAULT now(),
+        decided_at   timestamptz,
+        PRIMARY KEY (client_id, course)
+      )`,
+      `CREATE INDEX classroom_access_requested_idx ON classroom_access (requested_at) WHERE status = 'requested'`,
+      `CREATE TABLE videos (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        youtube_id text NOT NULL UNIQUE CHECK (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
+        title      text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `ALTER TABLE clients ADD COLUMN seen_at timestamptz DEFAULT now()`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

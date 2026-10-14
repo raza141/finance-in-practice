@@ -72,8 +72,12 @@ export function MobileNav() {
           <Link
             href={siteConfig.studentBooking.href}
             onClick={() => setOpen(false)}
-            className="mt-2 block rounded-md border border-line px-2 py-3 text-center text-base text-ink hover:bg-surface"
+            className="mt-2 flex items-center justify-center gap-2 rounded-md border border-line px-2 py-3 text-base text-ink hover:bg-surface"
           >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="text-gold">
+              <circle cx="8" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M2.5 14c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
             Student login
           </Link>
           <BookButton onClick={() => setOpen(false)} className="mt-2 w-full" />

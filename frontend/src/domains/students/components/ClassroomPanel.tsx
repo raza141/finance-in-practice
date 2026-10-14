@@ -1,3 +1,8 @@
+import { PendingButton } from "@/domains/admin/components/PendingButton";
+
+import { requestClassroom } from "../actions/classroom";
+import type { StudentClassroom } from "../types";
+
 const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
 
 /** Inline chalkboard mark (no image request). */
@@ -17,8 +22,8 @@ const HOW = [
   ["Private comments", "Questions only you and your instructor can read."],
 ] as const;
 
-/** The portal's Classroom tab: one Google Classroom per course or batch (links set in admin Courses). */
-export function ClassroomPanel({ classes, email }: { classes: { title: string; url: string }[]; email: string }) {
+/** The portal's Classroom tab: one Google Classroom per course or batch (links set in admin Courses, access approved per student). */
+export function ClassroomPanel({ classes, email }: { classes: StudentClassroom[]; email: string }) {
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
       <section aria-labelledby="classroom-heading" className={CARD}>
@@ -35,19 +40,38 @@ export function ClassroomPanel({ classes, email }: { classes: { title: string; u
             {classes.map((c) => (
               <li
                 key={c.title}
-                className="relative overflow-hidden rounded-2xl border border-[#34a853]/30 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.22),transparent_60%)] p-5"
+                className={`relative overflow-hidden rounded-2xl border p-5 ${
+                  c.url ? "border-[#34a853]/30 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.22),transparent_60%)]" : "border-line"
+                }`}
               >
-                <BoardIcon className="h-9 w-9 text-[#34a853]" />
+                <BoardIcon className={`h-9 w-9 ${c.url ? "text-[#34a853]" : "text-muted"}`} />
                 <p className="mt-3 font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom</p>
                 <p className="mt-1 text-lg font-semibold text-ink">{c.title}</p>
-                <a
-                  href={c.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-[#1e8e3e] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#188038]"
-                >
-                  Join Google Classroom <span aria-hidden>↗</span>
-                </a>
+                {c.url ? (
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-[#1e8e3e] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#188038]"
+                  >
+                    Join Google Classroom <span aria-hidden>↗</span>
+                  </a>
+                ) : c.access === "none" ? (
+                  <form action={requestClassroom.bind(null, c.title)} className="mt-4">
+                    <PendingButton
+                      pendingLabel="Sending…"
+                      className="inline-flex h-10 items-center rounded-md border border-[#34a853]/50 px-4 text-sm font-semibold text-ink transition-colors hover:bg-[#34a853]/15"
+                    >
+                      Request access
+                    </PendingButton>
+                  </form>
+                ) : (
+                  <p className={`mt-4 text-sm ${c.access === "requested" ? "text-gold" : "text-muted"}`}>
+                    {c.access === "requested"
+                      ? "Request sent. The join button appears here once your instructor approves it."
+                      : "Access is paused. Please message your instructor."}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

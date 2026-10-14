@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { ServiceRepository } from "@/domains/catalogue/server/ServiceRepository";
 import { CatalogueContract } from "@/domains/catalogue/services/CatalogueContract";
@@ -21,6 +22,8 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
+import { decideClassroom } from "@/domains/students/actions/classroom";
+import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
 
 export const metadata: Metadata = { title: "Client" };
@@ -31,6 +34,11 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "agreement-refused": { text: "Agreement not added.", tone: "warn" },
   "plan-saved": { text: "Study plan saved.", tone: "ok" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
+  "classroom-approved": { text: "Classroom access approved: the join button now shows in their portal.", tone: "ok" },
+  "classroom-removed": {
+    text: "Classroom invite hidden from their portal. If they already joined, also remove them in Google Classroom (People).",
+    tone: "ok",
+  },
 };
 
 const LEDGER_KIND = { invoice: "Invoice", receipt: "Receipt", credit_note: "Credit note", payment: "Payment for" } as const;
@@ -43,13 +51,15 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   if (!client) notFound();
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan, classrooms] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
     AgreementRepository.fromEnv()?.forClient(client.id) ?? [],
     ServiceRepository.fromEnv()?.all() ?? [],
     StudyPlanRepository.fromEnv()?.forClient(client.id) ?? [],
+    ClassroomRepository.fromEnv()?.forClient(client.id, client.courses) ?? [],
+    AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
   const notice = NOTICES[String(query.notice)];
@@ -85,6 +95,41 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       </div>
 
       <StudyPlanEditor clientId={client.id} items={plan} />
+
+      <section id="classroom" className="mt-12 rounded-lg border border-line p-5">
+        <h2 className="text-lg">Google Classroom access</h2>
+        <p className="mt-1 text-sm text-muted">
+          Their portal shows a course&rsquo;s invite only after you approve it here. Courses without a Classroom link (set on the course page) aren&rsquo;t listed.
+        </p>
+        {classrooms.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">None of this client&rsquo;s courses has a Classroom yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line/60 text-sm">
+            {classrooms.map((c) => (
+              <li key={c.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
+                <span className="flex-1">{c.title}</span>
+                <span className={`text-xs ${c.access === "requested" ? "font-semibold text-gold" : c.access === "approved" ? "text-quant" : "text-muted"}`}>
+                  {{ none: "Not requested", requested: "Requested access", approved: "Has access", removed: "Access removed" }[c.access]}
+                </span>
+                <form action={decideClassroom}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="course" value={c.title} />
+                  <input type="hidden" name="status" value={c.access === "approved" ? "removed" : "approved"} />
+                  {c.access === "approved" ? (
+                    <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
+                      Remove access
+                    </PendingButton>
+                  ) : (
+                    <PendingButton pendingLabel="Approving…" className="h-8 rounded-md bg-quant/15 px-3 text-xs font-medium text-quant hover:bg-quant/25">
+                      Approve
+                    </PendingButton>
+                  )}
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section id="agreements" className="mt-12 rounded-lg border border-line p-5">
         <h2 className="text-lg">Agreements</h2>

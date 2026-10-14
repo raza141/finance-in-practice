@@ -4,6 +4,8 @@ import Script from "next/script";
 import { BookButton } from "@/core/components/ui/BookButton";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { FreeResourceBlock } from "@/domains/resources/components/FreeResourceBlock";
+import { VideoGallery } from "@/domains/resources/components/VideoGallery";
+import { VideoRepository, type Video } from "@/domains/resources/server/VideoRepository";
 import { ResourceCatalog } from "@/domains/resources/services/ResourceCatalog";
 
 export const metadata: Metadata = {
@@ -13,9 +15,23 @@ export const metadata: Metadata = {
   alternates: { canonical: "/resources" },
 };
 
-/** Free downloads (email in, PDF out) and paid templates (Lemon Squeezy overlay checkout). */
-export default function ResourcesPage() {
+// Cached page (ISR); adding or removing a video in admin revalidates it at once.
+export const revalidate = 3600;
+
+/** Videos, or none when the database is unset or unreachable (e.g. at build time). */
+async function loadVideos(): Promise<Video[]> {
+  try {
+    return (await VideoRepository.fromEnv()?.all()) ?? [];
+  } catch (error) {
+    console.error("resources: could not load videos", error);
+    return [];
+  }
+}
+
+/** Free downloads (email in, PDF out), YouTube videos and paid templates (Lemon Squeezy overlay checkout). */
+export default async function ResourcesPage() {
   const paid = ResourceCatalog.PAID;
+  const videos = await loadVideos();
   return (
     <>
       <section className="page-container pt-10 pb-8 lg:pt-12">
@@ -29,6 +45,15 @@ export default function ResourcesPage() {
           <FreeResourceBlock key={resource.id} resource={resource} source="resources" />
         ))}
       </section>
+
+      {videos.length > 0 && (
+        <section aria-labelledby="videos-heading" className="border-t border-line">
+          <div className="page-container py-12 lg:py-16">
+            <SectionHeading id="videos-heading" eyebrow="Videos" title="Watch and learn" />
+            <VideoGallery videos={videos} />
+          </div>
+        </section>
+      )}
 
       {paid.length > 0 && (
         <section aria-labelledby="templates-heading" className="border-t border-line">

@@ -1,17 +1,14 @@
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
-import { siteConfig } from "@/core/config/site";
-import { EmailHtml } from "@/core/email/EmailHtml";
-import { ResendClient } from "@/core/email/ResendClient";
 import { RequestGuard } from "@/core/http/RequestGuard";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
 import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { RegistrationContract } from "@/domains/students/services/RegistrationContract";
-import type { RegistrationInput } from "@/domains/students/types";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -20,29 +17,6 @@ const limiter = new SlidingWindowRateLimiter(5, 60 * 60_000);
 
 function reject(status: number, message: string) {
   return Response.json({ message }, { status, headers: NO_STORE });
-}
-
-/** Best-effort heads-up to the owner's inbox (EMAIL_REPLY_TO). */
-async function notifyOwner(student: RegistrationInput, clientId: string): Promise<void> {
-  const to = process.env.EMAIL_REPLY_TO?.trim();
-  const resend = ResendClient.fromEnv();
-  if (!to || !resend) return;
-  const rows: [string, string][] = [
-    ["Name", student.name],
-    ["Email", student.email],
-    ["Mobile", student.phone],
-    ["Course", student.course],
-  ];
-  const link = `${siteConfig.url}/admin/clients/${clientId}`;
-  try {
-    await resend.send(to, {
-      subject: `New student joined: ${student.name}`,
-      html: EmailHtml.document("New student joined", EmailHtml.table(rows) + EmailHtml.button(link, "Open in admin")),
-      text: `${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${link}`,
-    });
-  } catch (error) {
-    console.error("[join] owner email failed", error);
-  }
 }
 
 /**
@@ -77,7 +51,8 @@ export async function POST(request: NextRequest) {
     const clientId = await repo.join(parsed.value);
     await StudentAuth.startSession(clientId, repo);
     store.delete({ name: SignupTicket.COOKIE, path: "/" });
-    await notifyOwner(parsed.value, clientId);
+    const { name, email: joined, phone, course } = parsed.value;
+    await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", joined], ["Mobile", phone], ["Course", course]], clientId);
     return Response.json({ ok: true }, { headers: NO_STORE });
   } catch (error) {
     console.error("[join] could not enrol", error);

@@ -63,7 +63,7 @@ export function Navbar() {
             <nav aria-label="Primary">
               <ul className="flex items-center">
                 {siteConfig.nav.map((item) => (
-                  // Logo already links home, so "Terminal" only shows once there is room (xl+).
+                  // Logo already links home, so "Home" only shows once there is room (xl+).
                   <li key={item.href} className={`group relative ${item.href === "/" ? "hidden xl:block" : ""}`}>
                     <Link
                       href={item.href}
@@ -134,7 +134,7 @@ export function Navbar() {
             href={siteConfig.studentBooking.href}
             className="hidden h-9 items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-4 text-[13px] font-medium text-ink shadow-lg backdrop-blur-md transition-colors hover:border-quant/50 hover:text-quant lg:inline-flex"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-gold">
               <circle cx="8" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4" />
               <path d="M2.5 14c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>

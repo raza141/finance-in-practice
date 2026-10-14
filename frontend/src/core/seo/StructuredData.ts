@@ -96,7 +96,7 @@ export class StructuredData {
         isPartOf: { "@id": StructuredData.SITE_ID },
       },
       StructuredData.breadcrumbs([
-        { name: "Research Terminal", path: "/journal" },
+        { name: "Blog", path: "/journal" },
         { name: doc.title, path: `/journal/${doc.slug}` },
       ]),
     ]);
@@ -141,7 +141,7 @@ export class StructuredData {
         }),
       },
       StructuredData.breadcrumbs([
-        { name: "Learning Tracks", path: "/courses" },
+        { name: "Courses", path: "/courses" },
         { name: course.title, path: `/courses/${course.slug}` },
       ]),
     ]);

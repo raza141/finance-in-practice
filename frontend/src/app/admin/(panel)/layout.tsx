@@ -3,11 +3,20 @@ import Link from "next/link";
 import { logout } from "@/domains/admin/actions/auth";
 import { SidebarToggle } from "@/domains/admin/components/SidebarToggle";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { AdminNavigation } from "@/domains/admin/services/AdminNavigation";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const admin = await AdminAuth.require();
   const modules = new AdminNavigation().all(admin.role);
+  // Owner only: what needs attention (one small DB query + a 2-minute cached Cal.com count).
+  const inbox = admin.role === "owner" ? await AdminInbox.counts() : null;
+  const badges: Record<string, { count: number; label: string }> = inbox
+    ? {
+        "/admin/clients": { count: inbox.clients, label: "new students or Classroom requests to look at" },
+        "/admin/schedule": { count: inbox.pendingBookings, label: "bookings waiting for confirmation" },
+      }
+    : {};
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -37,9 +46,18 @@ export default async function AdminPanelLayout({ children }: { children: React.R
               <Link
                 key={module.href}
                 href={module.href}
-                className="rounded-md px-3 py-2 text-sm whitespace-nowrap text-muted transition-colors hover:bg-surface-raised hover:text-ink"
+                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm whitespace-nowrap text-muted transition-colors hover:bg-surface-raised hover:text-ink"
               >
                 {module.label}
+                {(badges[module.href]?.count ?? 0) > 0 && (
+                  <span
+                    title={`${badges[module.href].count} ${badges[module.href].label}`}
+                    className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 font-mono text-[11px] font-semibold text-canvas"
+                  >
+                    {badges[module.href].count}
+                    <span className="sr-only"> {badges[module.href].label}</span>
+                  </span>
+                )}
               </Link>
             ),
           )}

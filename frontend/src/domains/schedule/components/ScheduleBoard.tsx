@@ -6,7 +6,7 @@ import { useActionState, useState, useTransition, type MouseEvent } from "react"
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
-import { blockTime, cancelBooking, removeBlock, type ScheduleActionState } from "../actions/schedule";
+import { blockTime, cancelBooking, confirmBooking, declineBooking, moveBooking, removeBlock, type ScheduleActionState } from "../actions/schedule";
 import { Schedule } from "../services/Schedule";
 import type { ScheduleEvent } from "../types";
 
@@ -19,11 +19,18 @@ const STYLE: Record<ScheduleEvent["kind"], string> = {
   block: "border-gold/60 bg-[repeating-linear-gradient(135deg,rgb(212_175_55/0.18)_0_6px,transparent_6px_12px)] text-ink",
 };
 
+/** A booking waiting for the owner's confirmation. */
+const PENDING = "border-dashed border-gold bg-gold/15 text-ink";
+
 const LEGEND: { kind: ScheduleEvent["kind"]; label: string }[] = [
   { kind: "booking", label: "Website booking" },
   { kind: "busy", label: "Google / Apple calendar" },
   { kind: "block", label: "Blocked here" },
 ];
+
+/** Cancelled or declined: kept in the list, struck through, never on the grid. */
+const closed = (e: ScheduleEvent) => e.status === "cancelled" || e.status === "rejected";
+const awaiting = (e: ScheduleEvent) => e.kind === "booking" && e.status === "pending";
 
 const midnight = (date: string) => Date.parse(`${date}T00:00:00${Schedule.OFFSET}`);
 const time = (iso: string) => DUBAI.timeOf(new Date(iso));
@@ -51,7 +58,7 @@ const pad = (minutes: number) => `${String(Math.floor(minutes / 60) % 24).padSta
  */
 export function ScheduleBoard({ weekStart, today, events }: { weekStart: string; today: string; events: ScheduleEvent[] }) {
   const days = Array.from({ length: 7 }, (_, i) => ZonedCalendar.addDays(weekStart, i));
-  const visible = events.filter((e) => e.status !== "cancelled");
+  const visible = events.filter((e) => !closed(e));
 
   // Hours shown: 08-22, widened to fit whatever is on the calendar.
   let first = 8;
@@ -89,6 +96,10 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
               {l.label}
             </li>
           ))}
+          <li className="flex items-center gap-2">
+            <span aria-hidden className={`inline-block h-3 w-4 rounded-sm border ${PENDING}`} />
+            Waiting for your confirmation
+          </li>
         </ul>
         <div className="overflow-x-auto rounded-lg border border-line bg-surface">
           <div className="grid min-w-[44rem] grid-cols-[3rem_repeat(7,minmax(0,1fr))]">
@@ -133,7 +144,7 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
                       type="button"
                       onClick={() => setSelected(e)}
                       aria-pressed={selected?.id === e.id}
-                      className={`absolute inset-x-1 overflow-hidden rounded border px-1.5 py-0.5 text-left text-[11px] leading-tight aria-pressed:ring-2 aria-pressed:ring-ink/60 ${STYLE[e.kind]}`}
+                      className={`absolute inset-x-1 overflow-hidden rounded border px-1.5 py-0.5 text-left text-[11px] leading-tight aria-pressed:ring-2 aria-pressed:ring-ink/60 ${awaiting(e) ? PENDING : STYLE[e.kind]}`}
                       style={{ top, height }}
                     >
                       <span className="block truncate font-medium">{e.title}</span>
@@ -149,7 +160,8 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
       </section>
 
       <aside className="grid content-start gap-6">
-        {selected && <EventDetail event={selected} onClose={() => setSelected(null)} />}
+        {/* The fresh copy after an action refreshed the week (e.g. pending -> accepted). */}
+        {selected && <EventDetail key={selected.id} event={events.find((e) => e.id === selected.id) ?? selected} onClose={() => setSelected(null)} />}
 
         <form id="block-form" action={submit} className="grid gap-3 rounded-lg border border-line bg-surface p-4">
           <h2 className="font-serif text-lg italic">Block time</h2>
@@ -236,20 +248,111 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
                 <button
                   type="button"
                   onClick={() => setSelected(e)}
-                  className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left text-sm hover:bg-surface-raised ${e.status === "cancelled" ? "opacity-50" : ""}`}
+                  className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left text-sm hover:bg-surface-raised ${closed(e) ? "opacity-50" : ""}`}
                 >
-                  <span aria-hidden className={`h-3 w-4 shrink-0 rounded-sm border ${STYLE[e.kind]}`} />
+                  <span aria-hidden className={`h-3 w-4 shrink-0 rounded-sm border ${awaiting(e) ? PENDING : STYLE[e.kind]}`} />
                   <span className="w-36 shrink-0 font-mono text-xs text-muted">
                     {dayLabel(DUBAI.dateOf(new Date(e.start)), "short")} {time(e.start)}
                   </span>
-                  <span className={`min-w-0 flex-1 truncate ${e.status === "cancelled" ? "line-through" : ""}`}>{e.title}</span>
-                  <span className="text-xs text-muted">{e.status === "cancelled" ? "cancelled" : e.detail}</span>
+                  <span className={`min-w-0 flex-1 truncate ${closed(e) ? "line-through" : ""}`}>{e.title}</span>
+                  <span className={`text-xs ${awaiting(e) ? "font-semibold text-gold" : "text-muted"}`}>{statusLabel(e)}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+const statusLabel = (e: ScheduleEvent) =>
+  e.status === "cancelled" ? "cancelled" : e.status === "rejected" ? "declined" : awaiting(e) ? "Waiting for you to confirm" : e.detail;
+
+/** Confirm or decline a booking that waits for the owner (Cal.com "Requires confirmation"). */
+function ConfirmBar({ uid, onResult }: { uid: string; onResult: (r: ScheduleActionState) => void }) {
+  const [pending, startTransition] = useTransition();
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <div className="grid gap-2 rounded-md border border-gold/50 bg-gold/5 p-3">
+      <p className="text-xs text-muted">This time stays held until you decide.</p>
+      {declining ? (
+        <>
+          <label className="grid gap-1">
+            Reason (sent to the client)
+            <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="This time isn't available. Please pick another." className="rounded-md border border-line bg-canvas px-3 py-2" />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => startTransition(async () => onResult(await declineBooking(uid, reason)))}
+              className="rounded-md border border-red-400/50 px-3 py-1.5 text-red-300 hover:bg-red-400/10 disabled:opacity-60"
+            >
+              {pending ? "Declining…" : "Decline booking"}
+            </button>
+            <button type="button" onClick={() => setDeclining(false)} className="px-3 py-1.5 text-muted hover:text-ink">
+              Back
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => startTransition(async () => onResult(await confirmBooking(uid)))}
+            className="rounded-md bg-quant px-3 py-1.5 font-semibold text-canvas disabled:opacity-60"
+          >
+            {pending ? "Confirming…" : "Confirm"}
+          </button>
+          <button type="button" onClick={() => setDeclining(true)} className="rounded-md border border-line px-3 py-1.5 hover:border-red-300/50 hover:text-red-300">
+            Decline…
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Move a booking to another Dubai date and time, e.g. to fix a student's mistake. */
+function MoveBooking({ uid, date, start, onResult }: { uid: string; date: string; start: string; onResult: (r: ScheduleActionState) => void }) {
+  const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [when, setWhen] = useState({ date, time: start });
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="justify-self-start text-xs text-quant hover:underline">
+        Change time…
+      </button>
+    );
+  return (
+    <div className="grid gap-2 rounded-md border border-line p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="grid gap-1 text-xs text-muted">
+          New date
+          <input type="date" value={when.date} onChange={(e) => setWhen({ ...when, date: e.target.value })} className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink" />
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Start (Dubai)
+          <input type="time" step={900} value={when.time} onChange={(e) => setWhen({ ...when, time: e.target.value })} className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink" />
+        </label>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => startTransition(async () => onResult(await moveBooking(uid, when.date, when.time)))}
+          className="rounded-md bg-quant/15 px-3 py-1.5 font-medium text-quant hover:bg-quant/25 disabled:opacity-60"
+        >
+          {pending ? "Moving…" : "Move booking"}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-muted hover:text-ink">
+          Back
+        </button>
+      </div>
+      <p className="text-xs text-muted">Same length. Cal.com emails the client the new time.</p>
     </div>
   );
 }
@@ -271,7 +374,7 @@ function EventDetail({ event, onClose }: { event: ScheduleEvent; onClose: () => 
             {dayLabel(date, "long")} · {time(event.start)}–{time(event.end)}
             {endDate !== date && ` (${dayLabel(endDate, "short")})`}
           </p>
-          <p className="text-xs text-muted">{event.status === "cancelled" ? "Cancelled" : event.detail}</p>
+          <p className={`text-xs ${awaiting(event) ? "font-semibold text-gold" : "text-muted"}`}>{statusLabel(event)}</p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
           ✕
@@ -305,7 +408,7 @@ function EventDetail({ event, onClose }: { event: ScheduleEvent; onClose: () => 
               {event.email}
             </a>
           )}
-          {event.meetingUrl && event.status !== "cancelled" && (
+          {event.meetingUrl && !closed(event) && (
             <a href={event.meetingUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
               Join meeting ↗
             </a>
@@ -318,7 +421,10 @@ function EventDetail({ event, onClose }: { event: ScheduleEvent; onClose: () => 
               Create invoice
             </Link>
           </div>
-          {event.status !== "cancelled" &&
+          {awaiting(event) && <ConfirmBar uid={event.id} onResult={setResult} />}
+          {!closed(event) && <MoveBooking uid={event.id} date={date} start={time(event.start)} onResult={setResult} />}
+          {!closed(event) &&
+            !awaiting(event) &&
             (confirming ? (
               <div className="grid gap-2 rounded-md border border-gold/40 p-3">
                 <label className="grid gap-1">

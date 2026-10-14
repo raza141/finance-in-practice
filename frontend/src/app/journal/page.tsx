@@ -7,7 +7,7 @@ import { JournalTaxonomy } from "@/domains/journal/services/JournalTaxonomy";
 import type { ArticleSummary } from "@/domains/journal/types";
 
 export const metadata: Metadata = {
-  title: "Research Terminal",
+  title: "Blog",
   description: "Research notes on CFA and FRM topics, risk models, valuation, markets in Pakistan and the UAE, and the Python behind them.",
   alternates: { canonical: "/journal" },
 };
@@ -69,7 +69,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
   return (
     <>
       <section className="page-container pt-10 pb-8 lg:pt-12">
-        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Research Terminal</p>
+        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Blog</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">Notes from the trading desk of theory</h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
           Worked explanations of exam topics, risk models, markets and the Python behind them. Every chart carries its source and date.

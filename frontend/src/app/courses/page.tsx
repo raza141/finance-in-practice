@@ -35,7 +35,7 @@ export default async function CoursesPage() {
   return (
     <>
       <header className="page-container pt-10 lg:pt-12">
-        <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Learning tracks</p>
+        <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Courses</p>
         <h1 className="mt-3 max-w-3xl text-4xl leading-tight font-bold sm:text-5xl">
           CFA<sup className="text-[0.4em]">®</sup> &amp; FRM<sup className="text-[0.4em]">®</sup> courses, 1-on-1
         </h1>

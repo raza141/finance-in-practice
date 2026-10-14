@@ -23,20 +23,20 @@ export const siteConfig = {
 
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [
-    { label: "Terminal", href: "/" },
+    { label: "Home", href: "/" },
     { label: "Instructor", href: "/about" },
-    { label: "Learning Tracks", href: "/courses" },
-    { label: "Research Terminal", href: "/journal" },
+    { label: "Courses", href: "/courses" },
+    { label: "Blog", href: "/journal" },
     { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
   footerNav: [
-    { label: "Terminal", href: "/" },
-    { label: "Learning Tracks", href: "/courses" },
+    { label: "Home", href: "/" },
+    { label: "Courses", href: "/courses" },
     { label: "Methodology", href: "/#methodology" },
     { label: "Instructor", href: "/about" },
-    { label: "Research Terminal", href: "/journal" },
+    { label: "Blog", href: "/journal" },
     { label: "Resources", href: "/resources" },
     { label: "Contact", href: "/contact" },
     { label: "Student login", href: "/student" },
@@ -72,7 +72,8 @@ export const siteConfig = {
 
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
   /** `lengths` must match the durations offered on the Cal.com "session" event (60/120/180/240). */
-  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180, 240], href: "/student" },
+  /** `maxUpcoming`: a student's own upcoming sessions (pending included) before booking more is refused. */
+  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180, 240], maxUpcoming: 4, href: "/student" },
 
   /**
    * Authority metrics. Every figure must be verifiable: these describe the

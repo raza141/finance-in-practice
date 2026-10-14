@@ -151,6 +151,28 @@ export class CalComClient extends BaseApiClient {
     return response.data;
   }
 
+  /** Bookings waiting for the host to confirm (event types with "Requires confirmation"). */
+  async unconfirmed(): Promise<CalBookingDetail[]> {
+    const response = await this.get<{ data: CalBookingDetail[] }>("/bookings?status=unconfirmed&take=100", {
+      headers: { "cal-api-version": CalComClient.ADMIN_API_VERSION },
+    });
+    return response.data ?? [];
+  }
+
+  /** Accepts a pending booking; Cal.com emails the attendee and adds it to the calendars. */
+  async confirmBooking(uid: string): Promise<void> {
+    await this.post(`/bookings/${encodeURIComponent(uid)}/confirm`, {}, { headers: { "cal-api-version": CalComClient.BOOKINGS_API_VERSION } });
+  }
+
+  /** Rejects a pending booking; Cal.com emails the attendee the reason. */
+  async declineBooking(uid: string, reason: string): Promise<void> {
+    await this.post(
+      `/bookings/${encodeURIComponent(uid)}/decline`,
+      { reason },
+      { headers: { "cal-api-version": CalComClient.BOOKINGS_API_VERSION } },
+    );
+  }
+
   /** Cal.com emails the attendee the cancellation itself. */
   async cancelBooking(uid: string, reason: string): Promise<void> {
     await this.post(

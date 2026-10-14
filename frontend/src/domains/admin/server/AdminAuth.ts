@@ -39,7 +39,7 @@ export class AdminAuth {
     return admin;
   }
 
-  /** An owner: billing (documents, clients, payments, settings) is owner-only. Editors go to the Research Terminal. */
+  /** An owner: billing (documents, clients, payments, settings) is owner-only. Editors go to the Blog. */
   static async requireOwner(): Promise<AdminUser> {
     const admin = await AdminAuth.require();
     if (admin.role !== "owner") redirect("/admin/journal");

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
-import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ScheduleBoard } from "@/domains/schedule/components/ScheduleBoard";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
@@ -18,6 +18,12 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T, source: string
   return fallback;
 }
 
+/** Every week, not just this one: each waits for Confirm or Decline (open its week, click it). */
+function awaitingConfirmation(bookings: CalBookingDetail[]): CalBookingDetail[] {
+  const now = Date.now();
+  return bookings.filter((b) => b.status === "pending" && Date.parse(b.end) > now).toSorted((a, b) => a.start.localeCompare(b.start));
+}
+
 export default async function AdminSchedulePage({ searchParams }: PageProps<"/admin/schedule">) {
   await AdminAuth.require();
   const today = new ZonedCalendar(Schedule.TIME_ZONE).today();
@@ -29,10 +35,11 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
 
   const cal = CalComClient.fromEnv();
   const repo = BlockRepository.fromEnv();
-  const [bookings, busy, blocks] = await Promise.allSettled([
+  const [bookings, busy, blocks, unconfirmed] = await Promise.allSettled([
     cal ? cal.bookings(from, to) : Promise.resolve([]),
     cal ? cal.busyTimes(weekStart, weekEnd, Schedule.TIME_ZONE) : Promise.resolve([]),
     repo ? repo.between(from, to) : Promise.resolve([]),
+    cal ? cal.unconfirmed() : Promise.resolve([]),
   ]);
   const warnings: string[] = [];
   if (!cal) warnings.push("Cal.com is not configured (CAL_API_KEY), so bookings and calendars are not shown.");
@@ -42,6 +49,9 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
     settled(busy, [], "Google/Apple calendar busy times", warnings),
     settled(blocks, [], "Blocked time", warnings),
   );
+
+  const waiting = awaitingConfirmation(settled(unconfirmed, [], "Bookings waiting for confirmation", warnings));
+  const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
 
   const week = (offset: number) => `/admin/schedule?week=${ZonedCalendar.addDays(weekStart, offset)}`;
   const label = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" });
@@ -74,6 +84,30 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
           {w}
         </p>
       ))}
+      {waiting.length > 0 && (
+        <section aria-label="Waiting for confirmation" className="mt-5 rounded-lg border border-dashed border-gold bg-gold/5 p-4">
+          <h2 className="text-sm font-semibold text-gold">
+            {waiting.length} {waiting.length === 1 ? "booking is" : "bookings are"} waiting for your confirmation
+          </h2>
+          <p className="mt-1 text-xs text-muted">Each time stays held until you decide. Open it in the week below to confirm or decline.</p>
+          <ul className="mt-3 grid gap-1.5 text-sm">
+            {waiting.map((b) => {
+              const date = dubai.dateOf(new Date(b.start));
+              return (
+                <li key={b.uid}>
+                  <Link href={`/admin/schedule?week=${Schedule.weekStart(date)}`} className="flex flex-wrap gap-x-3 hover:text-quant">
+                    <span className="w-40 font-mono text-xs text-muted">
+                      {label(date)} {dubai.timeOf(new Date(b.start))}
+                    </span>
+                    <span>{b.attendees[0]?.name || b.title}</span>
+                    <span className="text-muted">{b.metadata?.course}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <ScheduleBoard key={weekStart} weekStart={weekStart} today={today} events={events} />
     </div>
   );

@@ -44,7 +44,7 @@ export class StudentRepository {
   /**
    * Self-service join, only after Google proved the email: adds the course to
    * the client with that email (filling a missing name or phone), or creates the
-   * client. Returns the client id.
+   * client. Either way the client shows as new in admin (seen_at NULL). Returns the client id.
    */
   async join(input: { name: string; email: string; phone: string; course: string }): Promise<string> {
     const email = input.email.toLowerCase();
@@ -56,14 +56,15 @@ export class StudentRepository {
         UPDATE clients SET
           courses = CASE WHEN ${input.course} = ANY(courses) THEN courses ELSE array_append(courses, ${input.course}) END,
           phone = CASE WHEN phone = '' THEN ${input.phone} ELSE phone END,
+          seen_at = CASE WHEN ${input.course} = ANY(courses) THEN seen_at ELSE NULL END,
           updated_at = now()
         WHERE id = ${existing.id}
       `;
       return existing.id;
     }
     const [row] = (await this.sql`
-      INSERT INTO clients (name, email, phone, address, courses)
-      VALUES (${input.name}, ${email}, ${input.phone}, '', ARRAY[${input.course}]::text[])
+      INSERT INTO clients (name, email, phone, address, courses, seen_at)
+      VALUES (${input.name}, ${email}, ${input.phone}, '', ARRAY[${input.course}]::text[], NULL)
       RETURNING id
     `) as { id: string }[];
     return row.id;

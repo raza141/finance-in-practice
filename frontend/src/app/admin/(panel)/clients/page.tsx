@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { ClientForm } from "@/domains/invoices/components/BillingForms";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
@@ -19,7 +20,7 @@ export default async function AdminClientsPage() {
       </p>
     );
   }
-  const [clients, courses] = await Promise.all([repo.all(), CourseRepository.fromEnv()?.all() ?? []]);
+  const [clients, courses, unseen] = await Promise.all([repo.all(), CourseRepository.fromEnv()?.all() ?? [], AdminInbox.unseenIds()]);
 
   return (
     <div className="max-w-5xl">
@@ -55,6 +56,9 @@ export default async function AdminClientsPage() {
                     <Link href={`/admin/clients/${client.id}`} className="text-quant hover:underline">
                       {client.name}
                     </Link>
+                    {unseen.has(client.id) && (
+                      <span className="ml-2 rounded-full bg-gold px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-canvas uppercase">New</span>
+                    )}
                   </td>
                   <td className="py-2.5 pr-4 text-muted">{client.email}</td>
                   <td className="py-2.5 pr-4 text-muted">{client.phone || "—"}</td>

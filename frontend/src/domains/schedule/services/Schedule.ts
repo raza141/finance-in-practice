@@ -59,7 +59,7 @@ export class Schedule {
    */
   static merge(bookings: readonly BookingLike[], busy: readonly BusyLike[], blocks: readonly BookingBlock[]): ScheduleEvent[] {
     const key = (r: TimeRange) => `${Date.parse(r.start)}-${Date.parse(r.end)}`;
-    const booked = new Set(bookings.filter((b) => b.status !== "cancelled").map(key));
+    const booked = new Set(bookings.filter((b) => b.status !== "cancelled" && b.status !== "rejected").map(key));
 
     const events: ScheduleEvent[] = [
       ...bookings.map((b): ScheduleEvent => ({
@@ -68,7 +68,7 @@ export class Schedule {
         start: b.start,
         end: b.end,
         title: b.attendees[0]?.name || b.title,
-        detail: b.metadata.track ? b.metadata.track.toUpperCase() : "Website booking",
+        detail: b.metadata.course || (b.metadata.track ? b.metadata.track.toUpperCase() : "Website booking"),
         status: b.status,
         email: b.attendees[0]?.email,
         meetingUrl: b.meetingUrl,

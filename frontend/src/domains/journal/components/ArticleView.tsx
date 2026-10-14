@@ -226,7 +226,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
   return (
     <article className="page-container max-w-3xl pt-10 pb-16 lg:pt-12">
       <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
-        ← Research Terminal
+        ← Blog
       </Link>
       <p className="mt-6 font-mono text-xs tracking-[0.16em] text-muted uppercase">
         {[doc.category, doc.format, doc.difficulty].filter(Boolean).join(" · ")}

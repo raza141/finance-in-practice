@@ -1,7 +1,9 @@
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 
 import { siteConfig } from "@/core/config/site";
 import { RequestGuard } from "@/core/http/RequestGuard";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
@@ -9,6 +11,7 @@ import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { StudentBookingContract } from "@/domains/students/services/StudentBookingContract";
+import { StudentSessions } from "@/domains/students/services/StudentSessions";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -45,7 +48,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const courses = (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses;
+    const [courses, existing] = await Promise.all([
+      StudentRepository.fromEnv()?.bookableCourses(student) ?? student.courses,
+      cal.bookingsFor(student.email),
+    ]);
+    // A self-joined account can't hold the whole calendar: group classes the instructor added don't count.
+    const { maxUpcoming } = siteConfig.studentBooking;
+    if (StudentSessions.upcoming(existing).filter((s) => !s.group).length >= maxUpcoming) {
+      return reject(409, "TOO_MANY_BOOKINGS", `You already have ${maxUpcoming} upcoming sessions. Book more after one of them, or message your instructor.`);
+    }
     const booking = StudentBookingContract.parse(payload, courses);
     const result = await new BookingGateway(cal, BlockRepository.fromEnv()).book(
       {
@@ -65,6 +76,7 @@ export async function POST(request: NextRequest) {
       },
       booking.minutes,
     );
+    revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
     return Response.json(result, { status: 200, headers: NO_STORE });
   } catch (error) {
     const { status, body } = BookingGateway.errorResponse(error);

@@ -1,7 +1,9 @@
+import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 
 import { siteConfig } from "@/core/config/site";
 import { RequestGuard } from "@/core/http/RequestGuard";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
@@ -59,12 +61,14 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/api/
   try {
     if (body.action === "cancel") {
       await own.cal.cancelBooking(own.booking.uid, "Cancelled by the student on financeinpractice.me");
+      revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
       return Response.json({ uid: own.booking.uid, status: "cancelled" }, { headers: NO_STORE });
     }
     if (body.action !== "reschedule") return reject(400, "INVALID_REQUEST", "action must be reschedule or cancel");
     const start = StudentBookingContract.parseStart(body.start);
     const minutes = Math.round((Date.parse(own.booking.end) - Date.parse(own.booking.start)) / 60_000);
     const result = await new BookingGateway(own.cal, BlockRepository.fromEnv()).reschedule(own.booking.uid, start, minutes, own.student.email);
+    revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
     return Response.json(result, { headers: NO_STORE });
   } catch (error) {
     const { status, body: payload } = BookingGateway.errorResponse(error);

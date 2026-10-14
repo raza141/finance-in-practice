@@ -65,3 +65,13 @@ export interface RegistrationInput {
   /** A published course title, a consultancy, or "Other: <topic>". */
   course: string;
 }
+
+/** "none": not asked yet. Only "approved" reveals the invite (039_portal_controls). */
+export type ClassroomAccess = "none" | "requested" | "approved" | "removed";
+
+/** One of the student's courses that has a Google Classroom. `url` only once approved. */
+export interface StudentClassroom {
+  title: string;
+  access: ClassroomAccess;
+  url: string | null;
+}

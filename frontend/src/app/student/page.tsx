@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 const ERRORS: Record<string, string> = {
   not_enrolled:
-    "We couldn't find a student with that Google account. Use the email we have on file, or register below.",
+    "We couldn't find a student with that Google account. Please message us on WhatsApp.",
   google_cancelled: "Sign-in was cancelled.",
   google_state: "That sign-in link expired. Please try again.",
   google_failed: "Google sign-in didn't work. Please try again.",
@@ -55,7 +55,7 @@ async function portalData(student: Student) {
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
     ),
     safely("study plan", async (): Promise<StudyPlanItem[]> => (await StudyPlanRepository.fromEnv()?.forClient(student.id)) ?? []),
-    safely("classrooms", async () => (await ClassroomRepository.fromEnv()?.forTitles(student.courses)) ?? []),
+    safely("classrooms", async () => (await ClassroomRepository.fromEnv()?.forClient(student.id, student.courses)) ?? []),
   ]);
   return {
     courses: courses ?? student.courses,
@@ -160,10 +160,9 @@ async function publicCourses(): Promise<string[]> {
 async function SignIn({ error, view, whatsappHref }: { error?: string; view?: string; whatsappHref: string }) {
   // "join": back from Google with a verified email that isn't a student yet.
   const joining = view === "join" ? (SignupTicket.fromEnv()?.read((await cookies()).get(SignupTicket.COOKIE)?.value) ?? null) : null;
-  const register = joining !== null || view === "register" || view === "join" || error === "not_enrolled";
+  // Back on the join view without a valid ticket: it expired (or was used).
+  const expired = view === "join" && joining === null;
   const courses = joining ? await publicCourses() : [];
-  const tab = (active: boolean) =>
-    `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
     <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/70 backdrop-blur-md md:grid-cols-2">
       <div className="relative flex flex-col justify-start gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
@@ -185,14 +184,6 @@ async function SignIn({ error, view, whatsappHref }: { error?: string; view?: st
       </div>
 
       <div className="grid content-start gap-5 p-8 sm:p-10">
-        <nav aria-label="Sign in or register" className="flex gap-1 rounded-lg border border-line p-1">
-          <Link href="/student" aria-current={!register ? "page" : undefined} className={tab(!register)}>
-            Sign in
-          </Link>
-          <Link href="/student?view=register" aria-current={register ? "page" : undefined} className={tab(register)}>
-            Register
-          </Link>
-        </nav>
         {error && ERRORS[error] && (
           <p role="alert" className="text-sm text-gold">
             {ERRORS[error]}
@@ -204,33 +195,23 @@ async function SignIn({ error, view, whatsappHref }: { error?: string; view?: st
             <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
             <JoinForm courses={courses} email={joining} />
           </>
-        ) : register ? (
-          <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
-            <p className="text-muted">
-              New student? Continue with the Google account you&rsquo;ll use to sign in. Then add your mobile and course, and your portal opens
-              straight away.
-            </p>
-            {view === "join" && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
-            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
-              Continue with Google
-            </ButtonLink>
-            <p className="text-sm text-muted">
-              No Google account?{" "}
-              <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                Message us on WhatsApp
-              </Link>
-              .
-            </p>
-          </>
         ) : (
           <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
-            <p className="text-muted">Already studying with us? Use the Google account we have on file.</p>
-            {/* A plain link: the route redirects to Google, so no client JS is needed. */}
+            <h1 className="text-3xl font-normal tracking-tight italic">Sign in or join</h1>
+            {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
+            {/* A plain link: the route redirects to Google, so no client JS is needed. New and returning students use the same button. */}
             <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
               Continue with Google
             </ButtonLink>
+            <p className="flex gap-2.5 rounded-lg border border-gold/30 bg-gold/5 p-3 text-sm text-ink/90">
+              <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-[10px] font-bold text-canvas">
+                i
+              </span>
+              <span>
+                <span className="font-semibold">First time?</span> Same button. You&rsquo;ll add your mobile and course once, and your portal opens straight
+                away.
+              </span>
+            </p>
             <p className="text-sm text-muted">
               No Google account?{" "}
               <Link href={whatsappHref} target="_blank" rel="noreferrer" className="text-quant hover:underline">
@@ -239,14 +220,11 @@ async function SignIn({ error, view, whatsappHref }: { error?: string; view?: st
               and we&rsquo;ll book it for you.
             </p>
             <p className="border-t border-line pt-5 text-sm text-muted">
-              New here?{" "}
-              <Link href="/student?view=register" className="text-quant hover:underline">
-                Register
-              </Link>{" "}
-              or{" "}
+              Just exploring?{" "}
               <Link href={siteConfig.bookingHref} className="text-gold hover:underline">
-                book the free diagnostic
+                Book the free diagnostic
               </Link>
+              , no sign-in needed.
             </p>
           </>
         )}
