@@ -106,7 +106,14 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       </header>
 
       <div className="page-container relative py-8 lg:py-10">
-        {student ? <Portal student={student} /> : <SignIn error={error} view={view} />}
+        {student ? (
+          <Portal student={student} />
+        ) : (
+          // Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding).
+          <div className="grid min-h-[calc(100svh-4rem-5rem)] content-center">
+            <SignIn error={error} view={view} />
+          </div>
+        )}
       </div>
     </div>
   );
