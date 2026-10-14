@@ -22,7 +22,7 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
-import { decideClassroom } from "@/domains/students/actions/classroom";
+import { addPrivateClassroom, decideClassroom, removePrivateClassroom } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
 
@@ -39,6 +39,12 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
     text: "Classroom invite hidden from their portal. If they already joined, also remove them in Google Classroom (People).",
     tone: "ok",
   },
+  "private-added": { text: "Private classroom added: it shows in their portal now.", tone: "ok" },
+  "private-removed": { text: "Private classroom removed from their portal. Also remove them in Google Classroom (People).", tone: "ok" },
+  "private-refused": {
+    text: "Not added: give it a title (up to 120 characters), a line up to 160, and an invite link starting with https://classroom.google.com/.",
+    tone: "warn",
+  },
 };
 
 const LEDGER_KIND = { invoice: "Invoice", receipt: "Receipt", credit_note: "Credit note", payment: "Payment for" } as const;
@@ -51,14 +57,16 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   if (!client) notFound();
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan, classrooms] = await Promise.all([
+  const classroomRepo = ClassroomRepository.fromEnv();
+  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
     AgreementRepository.fromEnv()?.forClient(client.id) ?? [],
     ServiceRepository.fromEnv()?.all() ?? [],
     StudyPlanRepository.fromEnv()?.forClient(client.id) ?? [],
-    ClassroomRepository.fromEnv()?.forClient(client.id, client.courses) ?? [],
+    classroomRepo?.forClient(client.id, client.courses) ?? [],
+    classroomRepo?.privateFor(client.id) ?? [],
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
@@ -97,9 +105,56 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       <StudyPlanEditor clientId={client.id} items={plan} />
 
       <section id="classroom" className="mt-12 rounded-lg border border-line p-5">
-        <h2 className="text-lg">Google Classroom access</h2>
+        <h2 className="text-lg">Google Classroom</h2>
+
+        <h3 className="mt-5 text-sm font-semibold">Private classrooms (only this student)</h3>
         <p className="mt-1 text-sm text-muted">
-          Their portal shows a course&rsquo;s invite only after you approve it here. Courses without a Classroom link (set on the course page) aren&rsquo;t listed.
+          For mentorship and one-to-one subjects: create a class in Google Classroom, copy its invite link (Settings → Invite link) and add it here. It
+          shows in their portal straight away, no request needed.
+        </p>
+        {privateClasses.length > 0 && (
+          <ul className="mt-4 divide-y divide-line/60 text-sm">
+            {privateClasses.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <a href={c.url} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                    {c.title}
+                  </a>
+                  {c.note && <span className="block text-xs text-muted">{c.note}</span>}
+                </span>
+                <form action={removePrivateClassroom}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="id" value={c.id} />
+                  <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
+                    Remove
+                  </PendingButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={addPrivateClassroom} className="mt-4 grid items-end gap-3 sm:grid-cols-2">
+          <input type="hidden" name="clientId" value={client.id} />
+          <label className="text-xs text-muted">
+            Class name
+            <input name="title" required maxLength={120} placeholder="e.g. AP Statistics" className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted">
+            Invite link
+            <input name="url" required type="url" placeholder="https://classroom.google.com/c/…" className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted sm:col-span-2">
+            One line for the student (optional)
+            <input name="note" maxLength={160} placeholder="e.g. Your notes, homework and practice tests" className={`${FIELD} mt-1`} />
+          </label>
+          <PendingButton pendingLabel="Adding…" className="h-9 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant hover:bg-quant/25 sm:justify-self-start">
+            Add private classroom
+          </PendingButton>
+        </form>
+
+        <h3 className="mt-8 border-t border-line pt-5 text-sm font-semibold">Course classrooms (shared with the batch)</h3>
+        <p className="mt-1 text-sm text-muted">
+          One class per course, e.g. CFA Level I. Their portal shows a course&rsquo;s invite only after you approve it here. Courses without a Classroom link (set on the course page) aren&rsquo;t listed.
         </p>
         {classrooms.length === 0 ? (
           <p className="mt-4 text-sm text-muted">None of this client&rsquo;s courses has a Classroom yet.</p>

@@ -64,3 +64,28 @@ export async function decideClassroom(formData: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   redirect(`/admin/clients/${clientId}?notice=classroom-${status}#classroom`);
 }
+
+/** Owner adds a class just for this client: it shows in their portal straight away. */
+export async function addPrivateClassroom(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const clientId = String(formData.get("clientId"));
+  if (!UUID.test(clientId)) redirect("/admin/clients");
+  const clean = (key: string) => String(formData.get(key) ?? "").trim().replace(/\s+/g, " ");
+  const title = clean("title");
+  const note = clean("note");
+  const url = clean("url");
+  const path = `/admin/clients/${clientId}`;
+  if (!title || title.length > 120 || note.length > 160 || !ClassroomLink.isValid(url)) {
+    redirect(`${path}?notice=private-refused#classroom`);
+  }
+  await classrooms().addPrivate(clientId, { title, note, url });
+  redirect(`${path}?notice=private-added#classroom`);
+}
+
+export async function removePrivateClassroom(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const clientId = String(formData.get("clientId"));
+  if (!UUID.test(clientId)) redirect("/admin/clients");
+  await classrooms().removePrivate(clientId, String(formData.get("id")));
+  redirect(`/admin/clients/${clientId}?notice=private-removed#classroom`);
+}

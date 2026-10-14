@@ -2,7 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
-import type { ClassroomAccess, StudentClassroom } from "../types";
+import type { ClassroomAccess, PrivateClassroom, StudentClassroom } from "../types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -69,5 +69,26 @@ export class ClassroomRepository {
       INSERT INTO classroom_access (client_id, course, status, decided_at) VALUES (${clientId}, ${course}, ${status}, now())
       ON CONFLICT (client_id, course) DO UPDATE SET status = EXCLUDED.status, decided_at = now()
     `;
+  }
+
+  /** The student's own classes, oldest first. */
+  async privateFor(clientId: string): Promise<PrivateClassroom[]> {
+    if (!UUID.test(clientId)) return [];
+    return (await this.sql`
+      SELECT id, title, note, url FROM private_classrooms WHERE client_id = ${clientId} ORDER BY created_at
+    `) as PrivateClassroom[];
+  }
+
+  async addPrivate(clientId: string, input: Omit<PrivateClassroom, "id">): Promise<void> {
+    if (!UUID.test(clientId)) return;
+    await this.sql`
+      INSERT INTO private_classrooms (client_id, title, note, url) VALUES (${clientId}, ${input.title}, ${input.note}, ${input.url})
+    `;
+  }
+
+  /** Scoped to the client, so a stray id can't remove another student's class. */
+  async removePrivate(clientId: string, id: string): Promise<void> {
+    if (!UUID.test(clientId) || !UUID.test(id)) return;
+    await this.sql`DELETE FROM private_classrooms WHERE id = ${id} AND client_id = ${clientId}`;
   }
 }

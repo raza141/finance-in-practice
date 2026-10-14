@@ -53,8 +53,8 @@ export function StudentPortal({
   addresses: string[];
   /** The study plan and materials tab, rendered on the server. */
   plan: ReactNode;
-  /** The Classroom tab, rendered on the server. */
-  classroom: ReactNode;
+  /** The Classroom tab, rendered on the server; null hides the tab. */
+  classroom: ReactNode | null;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
@@ -176,7 +176,7 @@ export function StudentPortal({
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
     ["plan", "Study plan & materials"],
-    ["classroom", "Classroom"],
+    ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
   ];
 
   return (

@@ -51,13 +51,15 @@ async function safely<T>(label: string, load: () => Promise<T>): Promise<T | nul
 }
 
 async function portalData(student: Student) {
-  const [courses, bookings, plan, classes] = await Promise.all([
+  const classrooms = ClassroomRepository.fromEnv();
+  const [courses, bookings, plan, classes, own] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
     ),
     safely("study plan", async (): Promise<StudyPlanItem[]> => (await StudyPlanRepository.fromEnv()?.forClient(student.id)) ?? []),
-    safely("classrooms", async () => (await ClassroomRepository.fromEnv()?.forClient(student.id, student.courses)) ?? []),
+    safely("classrooms", async () => (await classrooms?.forClient(student.id, student.courses)) ?? []),
+    safely("private classrooms", async () => (await classrooms?.privateFor(student.id)) ?? []),
   ]);
   return {
     courses: courses ?? student.courses,
@@ -66,6 +68,7 @@ async function portalData(student: Student) {
     addresses: bookings ? StudentSessions.addresses(bookings) : [],
     plan,
     classes: classes ?? [],
+    own: own ?? [],
   };
 }
 
@@ -117,7 +120,7 @@ const initialsOf = (name: string) =>
     .toUpperCase();
 
 async function Portal({ student }: { student: Student }) {
-  const { courses, sessions, past, addresses, plan, classes } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, classes, own } = await portalData(student);
   const first = student.name.split(/\s+/)[0];
 
   return (
@@ -146,7 +149,8 @@ async function Portal({ student }: { student: Student }) {
         past={past}
         addresses={addresses}
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
-        classroom={<ClassroomPanel classes={classes} email={student.email} />}
+        // No Classroom yet (e.g. a single session): no tab, nothing to explain.
+        classroom={classes.length + own.length > 0 ? <ClassroomPanel classes={classes} own={own} email={student.email} /> : null}
       />
     </div>
   );

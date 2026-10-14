@@ -75,3 +75,12 @@ export interface StudentClassroom {
   access: ClassroomAccess;
   url: string | null;
 }
+
+/** A Google Classroom for one student only (040_private_classrooms); visible as soon as the owner adds it. */
+export interface PrivateClassroom {
+  id: string;
+  title: string;
+  /** One line about the class, e.g. "AP Statistics: notes, homework and mocks". */
+  note: string;
+  url: string;
+}

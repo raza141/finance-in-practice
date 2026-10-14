@@ -833,6 +833,22 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE clients ADD COLUMN seen_at timestamptz DEFAULT now()`,
     ],
   },
+  {
+    // A Google Classroom just for one student (mentorship: own books, own level).
+    // The owner adds it, so it shows in that student's portal at once.
+    id: "040_private_classrooms",
+    statements: [
+      `CREATE TABLE private_classrooms (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id  uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        title      text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
+        note       text NOT NULL DEFAULT '' CHECK (char_length(note) <= 160),
+        url        text NOT NULL CHECK (url ~ '^https://classroom\\.google\\.com/' AND char_length(url) <= 300),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX private_classrooms_client_idx ON private_classrooms (client_id)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
