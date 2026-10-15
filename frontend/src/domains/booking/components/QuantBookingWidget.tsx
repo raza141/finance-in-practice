@@ -288,7 +288,9 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
                 aria-current={i === stage ? "step" : undefined}
                 className={i === stage ? "text-quant" : i < stage ? "text-ink/70" : "text-muted/60"}
               >
-                {String(i + 1).padStart(2, "0")} {label}
+                {String(i + 1).padStart(2, "0")}
+                {/* Phones: every number, but only the current step's name, so the rail never runs off the edge. */}
+                <span className={i === stage ? "" : "hidden sm:inline"}> {label}</span>
               </span>
               {i < STAGES.length - 1 && <span className="text-muted/40">›</span>}
             </li>

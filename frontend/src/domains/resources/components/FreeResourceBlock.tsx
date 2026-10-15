@@ -5,7 +5,7 @@ import { LeadForm } from "./LeadForm";
 export function FreeResourceBlock({ resource, source, eyebrow = "Free download" }: { resource: FreeResource; source: string; eyebrow?: string }) {
   const { cover } = resource;
   return (
-    <div data-hide-bookbar className="grid items-center gap-10 rounded-3xl border border-line bg-surface p-7 sm:p-10 lg:grid-cols-[18rem_1fr] lg:gap-14">
+    <div data-hide-bookbar className="grid items-center gap-10 rounded-3xl border border-line bg-surface p-7 sm:p-10 lg:grid-cols-[18rem_minmax(0,38rem)] lg:justify-center lg:gap-14">
       {/* Two stacked "pages" drawn in CSS: the exam map cover in miniature. */}
       <div aria-hidden className="relative mx-auto h-72 w-56">
         <div className="absolute inset-0 translate-x-5 rotate-6 rounded-lg border border-white/10 bg-ink/90 shadow-2xl" />

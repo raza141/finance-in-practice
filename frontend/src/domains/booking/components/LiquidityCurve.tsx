@@ -74,10 +74,16 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
     }
   };
 
+  // Touch screens can't hover: say "tap" there, and keep the mouse wording where there is one.
   const readout =
-    focusIndex === null
-      ? "HOVER CURVE · CLICK A NODE TO LOCK DATE"
-      : `DATE: ${TerminalFormat.date(days[focusIndex].date)} | OPEN: ${TerminalFormat.slots(days[focusIndex].slots.length)}`;
+    focusIndex === null ? (
+      <>
+        <span className="hidden [@media(hover:hover)]:inline">HOVER CURVE · CLICK A NODE TO LOCK DATE</span>
+        <span className="[@media(hover:hover)]:hidden">TAP A NODE TO PICK A DATE</span>
+      </>
+    ) : (
+      `DATE: ${TerminalFormat.date(days[focusIndex].date)} | OPEN: ${TerminalFormat.slots(days[focusIndex].slots.length)}`
+    );
 
   return (
     <div>
