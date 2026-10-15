@@ -15,7 +15,7 @@ const STEPS = [
   },
   {
     title: "Start learning",
-    body: "Live 1-on-1 sessions, worked problems and exam-style practice.",
+    body: "Live 1-on-1 sessions, worked problems and exam-style practice. Between sessions, your student portal keeps your bookings, Classroom work and progress in one place.",
     icon: "M5 3l14 9-14 9V3Z",
   },
 ];

@@ -43,7 +43,11 @@ const ERRORS: Record<string, string> = {
   link_failed: "That email link didn't work. Please try again.",
 };
 
-const PERKS = ["Book 1 to 4 hour sessions in your own time", "Change or cancel a session in two clicks", "Follow your study plan and open your materials"];
+const PERKS = [
+  "Book, move or cancel sessions yourself",
+  "Your Classroom quizzes, mocks and files in one place",
+  "See your progress against your target score",
+];
 
 /** Each source fails on its own: a Cal.com or database hiccup never takes the whole portal down. */
 async function safely<T>(label: string, load: () => Promise<T>): Promise<T | null> {
