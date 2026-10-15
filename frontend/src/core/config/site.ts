@@ -11,7 +11,7 @@ export const siteConfig = {
   url: "https://financeinpractice.me",
   tagline: "1-on-1 CFA® & FRM® tutoring in Abu Dhabi and online across the UAE.",
   description:
-    "1-on-1 CFA® Level I & II, FRM® Part I and finance tutoring: in person in Abu Dhabi, live online for Dubai and across the UAE. Book a free diagnostic session.",
+    "1-on-1 CFA® Level 1 & 2 and FRM® Part 1 tutoring, classes and coaching: at home in Abu Dhabi or live online across the UAE. Book a free diagnostic session.",
 
   /** Where 1-on-1 sessions happen: at the learner's home in Abu Dhabi (base: Khalifa City), online everywhere else. */
   delivery: {

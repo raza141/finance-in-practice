@@ -132,12 +132,24 @@
       "answer": "A private student portal. Book or move sessions yourself, open every quiz, mock and file your instructor posts in Google Classroom, and follow your marks topic by topic against your target."
     },
     {
+      "question": "Are GARP exam fees included?",
+      "answer": "No. Registration and exam fees are paid directly to GARP when you register for the exam. Our fees cover tutoring only: AED 150 an hour, or AED 3,000 a month for 30 hours."
+    },
+    {
+      "question": "Can I study online from Dubai or anywhere else in the UAE?",
+      "answer": "Yes. Sessions run live online at UAE times for candidates in Dubai and across the UAE, with a shared screen and whiteboard. Your student portal, quizzes and progress work the same wherever you are."
+    },
+    {
+      "question": "Do you teach at home in Abu Dhabi?",
+      "answer": "Yes. In-person sessions are held at your home in Abu Dhabi, including Khalifa City, and you can mix home and online sessions from week to week."
+    },
+    {
       "question": "Does coaching guarantee a pass?",
       "answer": "No. Results depend on the candidate’s preparation and effort. Coaching improves the quality of practice by finding the cause of each error and a clear next step."
     }
   ],
   "brochureUrl": null,
-  "seoTitle": "FRM Part I Tutor in Abu Dhabi & Dubai – In Person or Online",
+  "seoTitle": "FRM Part 1 Tutor & Classes Abu Dhabi",
   "seoDescription": "1-on-1 FRM® Part I tutoring in person in Abu Dhabi or live online for candidates in Dubai and across the UAE. VaR, derivatives and quant, worked and built.",
   "testimonialTicker": "FRM1"
 }
