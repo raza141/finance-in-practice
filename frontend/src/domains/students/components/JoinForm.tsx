@@ -162,7 +162,7 @@ export function EmailSignIn() {
       <label htmlFor="signin-email" className={LABEL}>
         No Google account? Sign in by email
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           id="signin-email"
           name="email"
@@ -178,7 +178,7 @@ export function EmailSignIn() {
         <button
           type="submit"
           disabled={state.kind === "sending"}
-          className="shrink-0 rounded-md border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
+          className="h-10 shrink-0 rounded-md border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
         >
           {state.kind === "sending" ? "Sending…" : "Email me a link"}
         </button>

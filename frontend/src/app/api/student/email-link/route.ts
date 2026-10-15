@@ -39,14 +39,14 @@ const COPY: Record<EmailLinkKind, { subject: string; heading: string; line: stri
   },
 };
 
-/** Best effort; outside production the link is logged instead, so testing never mails real people. */
-async function mail(to: string, name: string, kind: EmailLinkKind, url: string): Promise<void> {
+/** True once the email is handed to Resend. Outside production the link is logged instead, so testing never mails real people. */
+async function mail(to: string, name: string, kind: EmailLinkKind, url: string): Promise<boolean> {
   if (process.env.NODE_ENV !== "production") {
     console.info(`[email-link] ${kind} link for ${to}: ${url}`);
-    return;
+    return true;
   }
   const resend = ResendClient.fromEnv();
-  if (!resend) return;
+  if (!resend) return false;
   const copy = COPY[kind];
   const first = name.split(/\s+/)[0];
   const minutes = EmailLink.TTL_MS / 60_000;
@@ -60,8 +60,10 @@ async function mail(to: string, name: string, kind: EmailLinkKind, url: string):
       ),
       text: `Hi ${first},\n\n${copy.line}\n\n${url}\n\n${note}\n\n${siteConfig.name}`,
     });
+    return true;
   } catch (error) {
     console.error("[email-link] email failed", error);
+    return false;
   }
 }
 
@@ -95,7 +97,10 @@ export async function POST(request: NextRequest) {
       const parsed = RegistrationContract.parse(body, (await courses.active()).map((c) => c.title));
       if (!parsed.ok) return reject(400, parsed.error);
       const id = await repo.park(parsed.value);
-      await mail(parsed.value.email, parsed.value.name, "register", links.url(origin, "register", id));
+      // Every registration is mailed, so saying the send failed reveals nothing about who is a student.
+      if (!(await mail(parsed.value.email, parsed.value.name, "register", links.url(origin, "register", id)))) {
+        return reject(502, "We couldn't send the email. Please try again, or use Register with Google.");
+      }
       return sent();
     }
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";

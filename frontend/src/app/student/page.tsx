@@ -226,7 +226,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
             {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
-            <p className="text-muted">Two ways to join. Either way, your portal opens straight away.</p>
+            <p className="text-muted">With Google, your portal opens straight away. With email, we first send you a link to confirm it.</p>
             {/* A plain link: the route redirects to Google, so no client JS is needed. */}
             <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
               Register with Google
