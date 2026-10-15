@@ -17,6 +17,7 @@ const item = (over: Partial<ClassItem>): ClassItem => ({
   late: false,
   grade: null,
   gradedAt: null,
+  topicOrder: null,
   mock: false,
   files: [],
   ...over,

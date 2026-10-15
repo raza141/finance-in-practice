@@ -94,9 +94,10 @@ export async function ClassFeedPanel({ result }: { result: Promise<FeedResult> }
   const { feed } = r;
   const todo = ClassFeed.todo(feed.items);
   const notJoined = feed.classes.filter((c) => !c.joined);
-  // The latest few up front; older posts fold away (native <details>, no JS).
+  // The latest few up front; everything, older ones too, folds away by topic (native <details>, no JS).
   const shown = feed.items.slice(0, FIRST);
-  const older = feed.items.slice(FIRST, 60);
+  const groups = feed.items.length > FIRST ? ClassFeed.byTopic(feed.items) : [];
+  const manyClasses = new Set(groups.map((g) => g.classTitle)).size > 1;
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
       <section aria-labelledby="feed-heading" className={CARD}>
@@ -118,18 +119,31 @@ export async function ClassFeedPanel({ result }: { result: Promise<FeedResult> }
                 <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={ClassFeed.isNew(item, feed.seenAt)} />
               ))}
             </ul>
-            {older.length > 0 && (
-              <details className="group border-t border-line/60 pt-4">
-                <summary className="cursor-pointer text-sm text-quant hover:underline">
-                  <span className="group-open:hidden">Show {older.length} earlier posts</span>
-                  <span className="hidden group-open:inline">Hide earlier posts</span>
-                </summary>
-                <ul className="divide-y divide-line/60">
-                  {older.map((item) => (
-                    <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={false} />
+            {groups.length > 0 && (
+              <div className="border-t border-line/60 pt-4">
+                <h3 className={LABEL}>Everything, by topic</h3>
+                <div className="mt-2 divide-y divide-line/60">
+                  {groups.map((g) => (
+                    <details key={`${g.classTitle}-${g.topic}`} className="group py-1">
+                      <summary className="flex cursor-pointer items-center justify-between gap-3 py-2 text-sm text-ink hover:text-quant">
+                        <span className="font-semibold">
+                          {g.topic}
+                          {manyClasses && <span className="font-normal text-muted"> · {g.classTitle}</span>}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted">
+                          {g.items.length} {g.items.length === 1 ? "post" : "posts"}
+                          <span aria-hidden className="ml-2 inline-block transition-transform group-open:rotate-90">›</span>
+                        </span>
+                      </summary>
+                      <ul className="divide-y divide-line/60">
+                        {g.items.map((item) => (
+                          <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={false} />
+                        ))}
+                      </ul>
+                    </details>
                   ))}
-                </ul>
-              </details>
+                </div>
+              </div>
             )}
           </>
         )}

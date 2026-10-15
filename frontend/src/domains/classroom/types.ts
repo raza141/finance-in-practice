@@ -82,6 +82,8 @@ export interface ClassItem {
   postedAt: string;
   dueAt: string | null;
   topic: string | null;
+  /** The topic's place in the class's topic list (Classroom's order); null when untagged. */
+  topicOrder: number | null;
   /** Null for materials and announcements (nothing to hand in). */
   status: ClassItemStatus | null;
   late: boolean;

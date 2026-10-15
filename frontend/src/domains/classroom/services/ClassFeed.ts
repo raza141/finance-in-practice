@@ -48,18 +48,20 @@ export class ClassFeed {
 
   /** Everything in one class this student may see. `userId` null: they haven't joined, so no statuses. */
   static items(classTitle: string, data: GCourseData, userId: string | null, submissions: readonly GSubmission[], now = Date.now()): ClassItem[] {
-    const topics = new Map(data.topics.map((t) => [t.topicId, t.name]));
+    const topics = new Map(data.topics.map((t, i) => [t.topicId, { name: t.name, order: i }]));
     const mine = new Map(submissions.filter((s) => !userId || s.userId === userId).map((s) => [s.courseWorkId, s]));
     const visible = (x: { assigneeMode?: string; individualStudentsOptions?: { studentIds?: string[] } }) =>
       x.assigneeMode !== "INDIVIDUAL_STUDENTS" || (userId !== null && (x.individualStudentsOptions?.studentIds ?? []).includes(userId));
     const base = (x: { id: string; alternateLink?: string; creationTime?: string; updateTime?: string; topicId?: string; materials?: GMaterial[] }) => {
-      const topic = x.topicId ? (topics.get(x.topicId) ?? null) : null;
+      const found = x.topicId ? topics.get(x.topicId) : undefined;
+      const topic = found?.name ?? null;
       return {
         id: x.id,
         classTitle,
         link: x.alternateLink ?? null,
         postedAt: x.creationTime ?? x.updateTime ?? new Date(now).toISOString(),
         topic,
+        topicOrder: found?.order ?? null,
         mock: topic !== null && /mock/i.test(topic),
         files: ClassFeed.files(x.materials),
       };
@@ -105,6 +107,20 @@ export class ClassFeed {
       };
     });
     return [...work, ...materials, ...announcements].sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt));
+  }
+
+  /** Every post, one group per class and topic in Classroom's topic order; untagged posts last as "Other". */
+  static byTopic(items: readonly ClassItem[]): { classTitle: string; topic: string; items: ClassItem[] }[] {
+    const groups = new Map<string, { classTitle: string; topic: string; order: number; items: ClassItem[] }>();
+    for (const item of items) {
+      const key = `${item.classTitle}\u0000${item.topic ?? ""}`;
+      const group = groups.get(key) ?? { classTitle: item.classTitle, topic: item.topic ?? "Other", order: item.topicOrder ?? Number.MAX_SAFE_INTEGER, items: [] };
+      group.items.push(item);
+      groups.set(key, group);
+    }
+    return [...groups.values()]
+      .sort((a, b) => a.classTitle.localeCompare(b.classTitle) || a.order - b.order)
+      .map(({ classTitle, topic, items }) => ({ classTitle, topic, items }));
   }
 
   static isNew(item: ClassItem, seenAt: string | null, now = Date.now()): boolean {

@@ -78,4 +78,19 @@ describe("ClassFeed", () => {
     expect(week.marks.map((i) => i.id)).toEqual(["m2"]);
     expect(ClassFeed.progress([])).toMatchObject({ mocks: [], latest: null, average: null, change: null });
   });
+
+  it("groups every post by topic in Classroom's order, with no cap", () => {
+    const books = Array.from({ length: 10 }, (_, b) => ({ topicId: `b${b + 1}`, name: `Book ${b + 1}` }));
+    const library: GCourseData = {
+      topics: books,
+      work: [{ id: "only-sara", title: "Sara's file", topicId: "b2", assigneeMode: "INDIVIDUAL_STUDENTS", individualStudentsOptions: { studentIds: ["u-sara"] } }],
+      materials: Array.from({ length: 70 }, (_, i) => ({ id: `f${i}`, title: `File ${i}`, topicId: `b${(i % 10) + 1}`, creationTime: new Date(NOW - i * 3_600_000).toISOString() })),
+      announcements: [{ id: "a1", text: "Welcome", creationTime: "2026-10-14T09:00:00Z" }],
+    };
+    const groups = ClassFeed.byTopic(ClassFeed.items("CFA Level I", library, "u-ali", [], NOW));
+    expect(groups.map((g) => g.topic)).toEqual([...books.map((b) => b.name), "Other"]);
+    expect(groups.slice(0, 10).every((g) => g.items.length === 7)).toBe(true);
+    expect(groups.flatMap((g) => g.items).some((i) => i.id === "only-sara")).toBe(false);
+    expect(ClassFeed.byTopic(ClassFeed.items("CFA Level I", library, "u-sara", [], NOW))[1].items.map((i) => i.id)).toContain("only-sara");
+  });
 });
