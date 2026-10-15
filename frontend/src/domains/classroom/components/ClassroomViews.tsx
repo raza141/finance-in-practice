@@ -1,7 +1,7 @@
 import { siteConfig } from "@/core/config/site";
 import { TabButton } from "@/domains/students/components/StudentPortal";
 
-import { ClassFeed, type Progress } from "../services/ClassFeed";
+import { ClassFeed, type Score } from "../services/ClassFeed";
 import type { ClassItem, StudentFeed } from "../types";
 
 /** What the page hands every view: never a rejected promise, so one Google hiccup can't break the portal. */
@@ -177,15 +177,15 @@ export async function ClassFeedPanel({ result }: { result: Promise<FeedResult> }
   );
 }
 
-/** Mock scores over time as a small inline SVG (no chart library). */
-function Chart({ mocks, W, className }: { mocks: Progress["mocks"]; W: number; className: string }) {
+/** Marks over time as a small inline SVG (no chart library). */
+function Chart({ scores, W, className }: { scores: Score[]; W: number; className: string }) {
   const H = 220;
   const pad = { l: 36, r: 16, t: 34, b: 28 };
-  const x = (i: number) => pad.l + (mocks.length === 1 ? (W - pad.l - pad.r) / 2 : (i / (mocks.length - 1)) * (W - pad.l - pad.r));
+  const x = (i: number) => pad.l + (scores.length === 1 ? (W - pad.l - pad.r) / 2 : (i / (scores.length - 1)) * (W - pad.l - pad.r));
   const y = (pct: number) => pad.t + (1 - pct / 100) * (H - pad.t - pad.b);
-  const line = mocks.map((m, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(m.pct).toFixed(1)}`).join(" ");
+  const line = scores.map((m, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(m.pct).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Mock scores: ${mocks.map((m) => `${m.title} ${m.pct}%`).join(", ")}`} className={`mt-4 w-full ${className}`}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Marks: ${scores.map((m) => `${m.title} ${m.pct}%`).join(", ")}`} className={`mt-4 w-full ${className}`}>
       {[0, 25, 50, 75, 100].map((g) => (
         <g key={g}>
           <line x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} stroke="rgb(255 255 255 / 0.07)" />
@@ -201,7 +201,7 @@ function Chart({ mocks, W, className }: { mocks: Progress["mocks"]; W: number; c
         Target {TARGET}%
       </text>
       <path d={line} fill="none" stroke="rgb(34 211 238)" strokeWidth="2.5" strokeLinejoin="round" />
-      {mocks.map((m, i) => (
+      {scores.map((m, i) => (
         <g key={m.id}>
           <circle cx={x(i)} cy={y(m.pct)} r="5" fill={m.pct < TARGET ? "rgb(212 175 55)" : "rgb(34 211 238)"} />
           <text x={x(i)} y={y(m.pct) - 10} textAnchor="middle" fontSize="11" fill="rgb(226 232 240)">
@@ -218,30 +218,30 @@ function Chart({ mocks, W, className }: { mocks: Progress["mocks"]; W: number; c
 
 const BOOK = "inline-flex h-9 items-center rounded-md bg-gold px-3.5 text-sm font-semibold text-canvas hover:bg-gold-bright";
 
-/** Progress tab: mock trend, stats and the weakest topics, each with a way to book a review. */
+/** Progress tab: every returned mark, overall and per Classroom topic (mocks are one topic), each weak spot with a way to book a review. */
 export async function ProgressPanel({ result }: { result: Promise<FeedResult> }) {
   const r = await result;
   if (r.status === "off") return null;
   if (r.status === "error") return unavailable;
   const p = ClassFeed.progress(r.feed.items);
-  if (p.mocks.length === 0 && p.topics.length === 0) {
+  const { last, average, best, count } = p.overall;
+  if (!last) {
     return (
       <section className={CARD}>
         <h2 className="text-2xl font-normal italic">Your progress</h2>
-        <p className="mt-3 text-sm text-muted">Your mock and quiz marks appear here once your instructor returns them in Classroom.</p>
+        <p className="mt-3 text-sm text-muted">Your quiz, test and mock marks appear here once your instructor returns them in Classroom.</p>
       </section>
     );
   }
-  const last = p.mocks.at(-1);
   const stats: [string, string][] = [
-    ["Latest mock", p.latest === null ? "—" : `${p.latest}%`],
-    ["Average", p.average === null ? "—" : `${p.average}%`],
-    ["Best", p.best === null ? "—" : `${p.best}%`],
-    ["Since first mock", p.change === null ? "—" : `${p.change > 0 ? "+" : ""}${p.change} pts`],
+    ["Latest mark", `${last.pct}%`],
+    ["Average", average === null ? "—" : `${average}%`],
+    ["Best", best === null ? "—" : `${best}%`],
+    ["Marked", String(count)],
   ];
   return (
     <div className="grid gap-6">
-      {last && last.pct < TARGET && (
+      {last.pct < TARGET && (
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-gold/10 p-5 backdrop-blur-md">
           <p className="text-sm text-ink">
             {last.title}: <span className="font-semibold">{last.pct}%</span>, below your {TARGET}% target. A review session on what you missed helps most
@@ -264,64 +264,69 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
             </div>
           ))}
         </dl>
-        {p.mocks.length > 0 ? (
-          <>
-            {/* Narrower drawing on phones, so the labels stay readable. */}
-            <Chart mocks={p.mocks} W={340} className="sm:hidden" />
-            <Chart mocks={p.mocks} W={640} className="hidden sm:block" />
-            <ol className="mt-4 divide-y divide-line/60 text-sm">
-              {p.mocks.map((m, i) => (
-                <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
-                  <span>
-                    <span className="mr-2 font-mono text-muted">{i + 1}</span>
-                    {m.title}
-                    <span className="text-muted"> · {day(m.at)}</span>
-                  </span>
-                  <span className="flex items-center gap-4">
-                    <span className={`font-semibold ${m.pct < TARGET ? "text-gold" : "text-quant"}`}>{m.pct}%</span>
-                    {m.link && (
-                      <a href={m.link} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                        Review ↗
-                      </a>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </>
-        ) : (
-          <p className="mt-4 text-sm text-muted">No mock marks yet. Mocks are the work your instructor posts under &ldquo;Mock exams&rdquo;.</p>
-        )}
+        <h3 className={`${LABEL} mt-6`}>By topic</h3>
+        <ul className="mt-3 grid gap-4">
+          {p.topics.map((t) => (
+            <li key={t.name} className="grid gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="text-ink">
+                  {t.name} <span className="text-muted">· {t.count} marked</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className={`font-semibold ${t.pct < TARGET ? "text-gold" : "text-quant"}`}>{t.pct}%</span>
+                  {t.pct < TARGET && (
+                    <TabButton tab="book" notes={`Review: ${t.name} (${t.pct}% average)`} className="text-xs text-gold hover:underline">
+                      Book a review
+                    </TabButton>
+                  )}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                <div className={`h-full rounded-full ${t.pct < TARGET ? "bg-gold" : "bg-quant"}`} style={{ width: `${Math.min(t.pct, 100)}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
       </section>
-      {p.topics.length > 0 && (
-        <section aria-labelledby="topics-heading" className={CARD}>
-          <h2 id="topics-heading" className={LABEL}>
-            Quizzes by topic
-          </h2>
-          <ul className="mt-4 grid gap-4">
-            {p.topics.map((t) => (
-              <li key={t.name} className="grid gap-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <span className="text-ink">
-                    {t.name} <span className="text-muted">· {t.count} marked</span>
-                  </span>
-                  <span className="flex items-center gap-3">
-                    <span className={`font-semibold ${t.pct < TARGET ? "text-gold" : "text-quant"}`}>{t.pct}%</span>
-                    {t.pct < TARGET && (
-                      <TabButton tab="book" notes={`Review: ${t.name} (${t.pct}% on quizzes)`} className="text-xs text-gold hover:underline">
-                        Book a review
-                      </TabButton>
-                    )}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                  <div className={`h-full rounded-full ${t.pct < TARGET ? "bg-gold" : "bg-quant"}`} style={{ width: `${Math.min(t.pct, 100)}%` }} />
-                </div>
+      {/* Two topics a row on wide screens, so each chart stays a readable size. */}
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+      {p.topics.map((t) => (
+        <section key={t.name} aria-label={t.name} className={CARD}>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-xl font-normal italic">{t.name}</h2>
+            <p className="text-sm text-muted">
+              {t.count} marked · average <span className={t.pct < TARGET ? "text-gold" : "text-quant"}>{t.pct}%</span>
+            </p>
+          </div>
+          {/* A trend needs two marks; one mark is just the list. Narrower drawing on phones, so the labels stay readable. */}
+          {t.scores.length > 1 && (
+            <>
+              <Chart scores={t.scores} W={340} className="sm:hidden" />
+              <Chart scores={t.scores} W={640} className="hidden sm:block" />
+            </>
+          )}
+          <ol className="mt-4 divide-y divide-line/60 text-sm">
+            {t.scores.map((m, i) => (
+              <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <span>
+                  <span className="mr-2 font-mono text-muted">{i + 1}</span>
+                  {m.title}
+                  <span className="text-muted"> · {day(m.at)}</span>
+                </span>
+                <span className="flex items-center gap-4">
+                  <span className={`font-semibold ${m.pct < TARGET ? "text-gold" : "text-quant"}`}>{m.pct}%</span>
+                  {m.link && (
+                    <a href={m.link} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                      Review ↗
+                    </a>
+                  )}
+                </span>
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
-      )}
+      ))}
+      </div>
     </div>
   );
 }
@@ -336,11 +341,12 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
   const soon = ClassFeed.dueWithin(feed.items, 7);
   const fresh = feed.items.filter((i) => ClassFeed.isNew(i, feed.seenAt));
   const p = ClassFeed.progress(feed.items);
+  const shown = p.latest ?? p.overall.last?.pct ?? null;
   const card = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
   return (
     <>
       <section className={card}>
-        <h2 className={LABEL}>Class to-do</h2>
+        <h2 className={LABEL}>Google Classroom · to-do</h2>
         <p className="mt-2 text-3xl font-semibold text-ink">{soon.length}</p>
         <p className="text-sm text-muted">due in the next 7 days{missing.length > 0 && <span className="text-red-300"> · {missing.length} missing</span>}</p>
         {soon[0] && <p className="mt-2 truncate text-sm text-ink/90">Next: {soon[0].title}</p>}
@@ -349,10 +355,15 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
         </TabButton>
       </section>
       <section className={card}>
-        <h2 className={LABEL}>Latest mock</h2>
-        <p className={`mt-2 text-3xl font-semibold ${p.latest !== null && p.latest < TARGET ? "text-gold" : "text-ink"}`}>{p.latest === null ? "—" : `${p.latest}%`}</p>
-        <p className="text-sm text-muted">
-          {p.mocks.length === 0 ? "No marks returned yet" : `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%`}
+        {/* Mocks when there are any; otherwise the latest quiz or test mark. */}
+        <h2 className={LABEL}>{p.mocks.length > 0 ? "Latest mock" : "Latest mark"}</h2>
+        <p className={`mt-2 text-3xl font-semibold ${shown !== null && shown < TARGET ? "text-gold" : "text-ink"}`}>{shown === null ? "—" : `${shown}%`}</p>
+        <p className="truncate text-sm text-muted">
+          {p.mocks.length > 0
+            ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%`
+            : p.overall.last
+              ? `${p.overall.last.title} · target ${TARGET}%`
+              : "No marks returned yet"}
           {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
         </p>
         <TabButton tab="progress" className="mt-3 text-sm text-quant hover:underline">

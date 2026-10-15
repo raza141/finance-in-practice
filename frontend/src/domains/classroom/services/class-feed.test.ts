@@ -70,7 +70,10 @@ describe("ClassFeed", () => {
     expect(items.filter((i) => ClassFeed.isNew(i, "2026-10-13T12:00:00Z", NOW)).map((i) => i.id)).toEqual(["soon", "a1"]);
     const p = ClassFeed.progress(items);
     expect(p.mocks.map((m) => m.pct)).toEqual([50, 72]);
-    expect(p).toMatchObject({ latest: 72, average: 61, best: 72, change: 22, topics: [{ name: "Ethics", pct: 60, count: 1 }] });
+    expect(p).toMatchObject({ latest: 72, average: 61, best: 72, change: 22 });
+    // Every mark counts, by topic in Classroom's order: mocks (t1) then Ethics (t2).
+    expect(p.topics.map((t) => [t.name, t.pct, t.count])).toEqual([["Mock exams", 61, 2], ["Ethics", 60, 1]]);
+    expect(p.overall).toMatchObject({ last: { id: "e1", pct: 60 }, average: 60.7, best: 72, count: 3 });
     const week = ClassFeed.week(items, NOW);
     expect(week.due.map((i) => i.id)).toEqual(["soon"]);
     expect(week.missing.map((i) => i.id)).toEqual(["hw"]);

@@ -11,7 +11,7 @@ const when = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" }).format(new Date(iso));
 const dateOf = (ymd: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${ymd}T00:00:00Z`));
 
-/** The portal's first tab: the next session and plan item, then the Classroom cards (streamed in). */
+/** The portal's first tab: the next session, the Classroom cards (streamed in: to-do, latest mock, what's new), then the plan. */
 export function PortalOverview({ sessions, plan, classCards }: { sessions: StudentSession[] | null; plan: StudyPlanItem[] | null; classCards: ReactNode }) {
   const next = sessions?.[0];
   const step = (plan ?? [])
@@ -48,6 +48,8 @@ export function PortalOverview({ sessions, plan, classCards }: { sessions: Stude
           </>
         )}
       </section>
+      {classCards}
+      {/* Last: the instructor rarely assigns plan steps directly; Classroom carries most of the work. */}
       <section className={CARD}>
         <h2 className={LABEL}>Study plan</h2>
         {step ? (
@@ -62,7 +64,6 @@ export function PortalOverview({ sessions, plan, classCards }: { sessions: Stude
           Plan & materials →
         </TabButton>
       </section>
-      {classCards}
       <InstallHint />
     </div>
   );

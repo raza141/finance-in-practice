@@ -83,17 +83,21 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
     <div className="relative -mt-20 min-h-screen overflow-clip">
-      <FinanceBackdrop className="absolute inset-0" />
+      {/* Grid pinned to the screen, like the bar's, so the frozen bar blends into the page. */}
+      <FinanceBackdrop glow={false} className="absolute inset-0 bg-fixed" />
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
-      {/* Frozen at the top while scrolling (the portal tabs stick just below it). */}
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-canvas/25 backdrop-blur-md">
+      {/* Frozen at the top while scrolling (the portal tabs stick just below it), in the page's own colour and grid. */}
+      <header className="sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
         <div className="page-container flex h-16 items-center justify-between gap-4">
           <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
           </Link>
           {student ? (
             <div className="flex items-center gap-3 text-sm">
+              <span className="hidden md:block">
+                <LinkedInFollow variant="pill" />
+              </span>
               <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
                 {initialsOf(student.name)}
               </span>
@@ -134,7 +138,6 @@ const initialsOf = (name: string) =>
 
 async function Portal({ student }: { student: Student }) {
   const { courses, sessions, past, addresses, plan, classes, own } = await portalData(student);
-  const first = student.name.split(/\s+/)[0];
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -150,26 +153,6 @@ async function Portal({ student }: { student: Student }) {
 
   return (
     <div className="grid gap-6">
-      <section aria-labelledby="welcome-heading" className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 id="welcome-heading" className="text-3xl font-normal italic sm:text-4xl">
-            Hi {first}, welcome back
-          </h1>
-          <p className="mt-1 text-sm text-muted">{student.email}</p>
-        </div>
-        <div className="flex flex-col items-start gap-3 sm:items-end">
-          {student.courses.length > 0 && (
-            <ul aria-label="Your programmes" className="flex flex-wrap gap-2">
-              {student.courses.map((c) => (
-                <li key={c} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-ink">
-                  {c}
-                </li>
-              ))}
-            </ul>
-          )}
-          <LinkedInFollow variant="pill" />
-        </div>
-      </section>
       <StudentPortal
         courses={courses}
         lengths={siteConfig.studentBooking.lengths}
@@ -211,6 +194,10 @@ async function Portal({ student }: { student: Student }) {
           ) : null
         }
       />
+      {/* Phones: no room in the bar, so the follow link sits at the bottom. */}
+      <div className="md:hidden">
+        <LinkedInFollow variant="pill" />
+      </div>
     </div>
   );
 }

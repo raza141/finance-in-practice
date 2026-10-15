@@ -1,15 +1,25 @@
 import type { ClassItem, GCourse, GCourseData, GMaterial, GSubmission, GWork } from "../types";
 
+export interface Score {
+  id: string;
+  title: string;
+  pct: number;
+  at: string;
+  link: string | null;
+}
+
 export interface Progress {
   /** Graded mocks, oldest first. */
-  mocks: { id: string; title: string; pct: number; at: string; link: string | null }[];
+  mocks: Score[];
   latest: number | null;
   average: number | null;
   best: number | null;
   /** Latest minus first mock, in percentage points. */
   change: number | null;
-  /** Graded work outside the mocks, by Classroom topic, weakest first. */
-  topics: { name: string; pct: number; count: number }[];
+  /** Every returned mark, by Classroom topic (mocks included) in Classroom's topic order, untagged last as "Other"; scores oldest first. */
+  topics: { name: string; pct: number; count: number; scores: Score[] }[];
+  /** Across every returned mark, not just mocks. */
+  overall: { last: Score | null; average: number | null; best: number | null; count: number };
 }
 
 const DAY = 86_400_000;
@@ -150,21 +160,30 @@ export class ClassFeed {
   }
 
   static progress(items: readonly ClassItem[]): Progress {
-    const graded = items.filter((i): i is ClassItem & { grade: NonNullable<ClassItem["grade"]> } => i.grade !== null);
-    const mocks = graded
-      .filter((i) => i.mock)
-      .map((i) => ({ id: i.id, title: i.title, pct: pct(i.grade), at: i.dueAt ?? i.postedAt, link: i.link }))
-      .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-    const byTopic = new Map<string, number[]>();
-    for (const i of graded.filter((g) => !g.mock)) byTopic.set(i.topic ?? "Other", [...(byTopic.get(i.topic ?? "Other") ?? []), pct(i.grade)]);
+    const graded = items
+      .filter((i): i is ClassItem & { grade: NonNullable<ClassItem["grade"]> } => i.grade !== null)
+      .map((i) => ({ item: i, score: { id: i.id, title: i.title, pct: pct(i.grade), at: i.dueAt ?? i.postedAt, link: i.link } }))
+      .sort((a, b) => Date.parse(a.score.at) - Date.parse(b.score.at));
+    const mocks = graded.filter((g) => g.item.mock).map((g) => g.score);
+    const byTopic = new Map<string, { order: number; scores: Score[] }>();
+    for (const { item, score } of graded) {
+      const name = item.topic ?? "Other";
+      const group = byTopic.get(name) ?? { order: item.topicOrder ?? Number.MAX_SAFE_INTEGER, scores: [] };
+      group.scores.push(score);
+      byTopic.set(name, group);
+    }
     const scores = mocks.map((m) => m.pct);
+    const all = graded.map((g) => g.score.pct);
     return {
       mocks,
       latest: scores.at(-1) ?? null,
       average: avg(scores),
       best: scores.length ? Math.max(...scores) : null,
       change: scores.length >= 2 ? Math.round((scores.at(-1)! - scores[0]) * 10) / 10 : null,
-      topics: [...byTopic].map(([name, xs]) => ({ name, pct: avg(xs)!, count: xs.length })).sort((a, b) => a.pct - b.pct),
+      topics: [...byTopic]
+        .sort(([, a], [, b]) => a.order - b.order)
+        .map(([name, g]) => ({ name, pct: avg(g.scores.map((x) => x.pct))!, count: g.scores.length, scores: g.scores })),
+      overall: { last: graded.at(-1)?.score ?? null, average: avg(all), best: all.length ? Math.max(...all) : null, count: all.length },
     };
   }
 

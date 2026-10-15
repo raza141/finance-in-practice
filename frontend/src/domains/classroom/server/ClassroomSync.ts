@@ -47,15 +47,17 @@ export class ClassroomSync {
 
   private static readonly courses = unstable_cache(async () => (await api()).courses(), ["classroom-courses"], ClassroomSync.OPTIONS);
   private static readonly courseData = unstable_cache(async (courseId: string) => (await api()).courseData(courseId), ["classroom-course-data"], ClassroomSync.OPTIONS);
-  private static readonly student = unstable_cache(
-    async (courseId: string, email: string) => {
-      const client = await api();
-      const userId = await client.studentId(courseId, email);
-      return { userId, submissions: userId ? await client.submissions(courseId, userId) : [] };
-    },
-    ["classroom-student"],
-    ClassroomSync.OPTIONS,
-  );
+  private static async lookup(courseId: string, email: string) {
+    const client = await api();
+    const userId = await client.studentId(courseId, email);
+    return { userId, submissions: userId ? await client.submissions(courseId, userId) : [] };
+  }
+  private static readonly cachedStudent = unstable_cache(ClassroomSync.lookup, ["classroom-student"], ClassroomSync.OPTIONS);
+  /** Cached once found; "not in the class" is asked again each visit, so a student who just joined shows up straight away. */
+  private static async student(courseId: string, email: string) {
+    const cached = await ClassroomSync.cachedStudent(courseId, email);
+    return cached.userId !== null ? cached : ClassroomSync.lookup(courseId, email);
+  }
   private static readonly roster = unstable_cache(
     async (courseId: string) => {
       const client = await api();

@@ -32,11 +32,14 @@ const FPS = 30;
 export function FinanceBackdrop({
   start = "frontier",
   dim = false,
+  glow = true,
   className = "",
 }: {
   start?: BackdropTheme;
   /** Softer, for pages dense with text (contact, instructor). */
   dim?: boolean;
+  /** The cyan glow top left; off under a solid frozen bar (student portal), which would show its edge. */
+  glow?: boolean;
   className?: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -102,7 +105,7 @@ export function FinanceBackdrop({
     <div aria-hidden className={`pointer-events-none overflow-hidden bg-canvas bg-grid-lines ${className}`}>
       <canvas ref={canvas} className={`absolute inset-0 h-full w-full ${dim ? "opacity-55" : ""}`} />
       {/* Keep the content readable: a soft glow top left, fading into the page at the bottom. */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgb(34_211_238/0.1),transparent_55%)]" />
+      {glow && <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgb(34_211_238/0.1),transparent_55%)]" />}
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(11_17_32/0.2),transparent_40%,rgb(11_17_32/0.7))]" />
     </div>
   );
