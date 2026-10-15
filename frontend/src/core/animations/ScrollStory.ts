@@ -27,7 +27,7 @@ export class ScrollStory {
   /** Room left for the floating navbar above a pinned stage. */
   static readonly NAV_PX = 88;
 
-  /** `screens`: how long the pin lasts, in screen heights; by default a little under half a screen per step. */
+  /** `screens`: how long the pin lasts, in screen heights; by default about a third of a screen per step. */
   /**
    * In-page links to the track (e.g. a course's "Pricing" button to #pricing)
    * land near the end of the pin, where every step is already showing, instead
@@ -50,7 +50,7 @@ export class ScrollStory {
     return { revert: () => doc.removeEventListener("click", onClick, true) };
   }
 
-  static pin(track: HTMLElement, stage: HTMLElement, parts: ScrollStoryParts, screens = 1 + 0.45 * parts.steps.length): Revertible[] | null {
+  static pin(track: HTMLElement, stage: HTMLElement, parts: ScrollStoryParts, screens = 1 + 0.35 * parts.steps.length): Revertible[] | null {
     const view = track.ownerDocument.defaultView;
     if (!view?.matchMedia(ScrollStory.MEDIA).matches || parts.steps.length === 0) return null;
     if (stage.scrollHeight > view.innerHeight - ScrollStory.NAV_PX) return null;
@@ -63,7 +63,8 @@ export class ScrollStory {
       height: "100vh",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "center",
+      // Top-aligned like an ordinary section, so nothing looks empty as it scrolls in.
+      justifyContent: "flex-start",
       paddingTop: `${ScrollStory.NAV_PX}px`,
       paddingBottom: "0",
     });
@@ -77,11 +78,12 @@ export class ScrollStory {
     const end = parts.end ?? [];
     const rail = parts.rail ? [parts.rail] : [];
     // A timeline applies a child's start values only when its playhead arrives, so set them all up front.
-    const start = utils.set([...parts.steps], { opacity: 0, translateY: 80, scale: 0.94 });
+    const start = utils.set([...parts.steps], { opacity: 0, translateY: 48, scale: 0.96 });
     const hidden = utils.set([...end], { opacity: 0, translateY: 24 });
     const filled = utils.set(rail, { opacity: 1, scaleX: 0 });
-    // Progress runs from "track top at the top of the screen" to "track bottom at the bottom".
-    const observer = onScroll({ target: track, enter: { target: "top", container: "top" }, leave: { target: "bottom", container: "bottom" }, sync: 0.25 });
+    // Progress runs from "track top enters at the bottom of the screen" to "track bottom at the bottom":
+    // the first card is already arriving while the section scrolls in, the rest while it holds still.
+    const observer = onScroll({ target: track, enter: { target: "top", container: "bottom" }, leave: { target: "bottom", container: "bottom" }, sync: 0.25 });
     const timeline = createTimeline({ autoplay: observer, defaults: { ease: "outQuad" } })
       .add(rail, { scaleX: 1, duration: parts.steps.length * 1000 }, 0)
       .add([...parts.steps], { opacity: 1, translateY: 0, scale: 1, duration: 1000, delay: stagger(900) }, 0);
