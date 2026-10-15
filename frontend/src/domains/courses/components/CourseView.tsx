@@ -9,7 +9,7 @@ import type { Testimonial } from "@/domains/testimonials/types";
 
 import { CourseFormat } from "../services/CourseFormat";
 
-import { ExamGlance } from "./ExamGlance";
+import { ExamGlance, examRows } from "./ExamGlance";
 import type { Course, ModulePriority } from "../types";
 
 const PRIORITY_STYLE: Record<ModulePriority, string> = {
@@ -32,14 +32,19 @@ const STAGE_ICONS = [
   icon("M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"),
 ];
 
+/** One per payment option, by position: clock (by the hour), calendar (monthly), lightning (revision crash course). */
+const OPTION_ICONS = [
+  icon("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2"),
+  icon("M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"),
+  icon("M13 2 4 14h7l-1 8 9-12h-7l1-8Z"),
+];
+
 /** One per way to learn, by position: open book (self-study), presenter at a board (tutor-led), two paths merging (hybrid). */
 const MODE_ICONS = [
   icon("M12 6.5C10.2 5.2 7.8 4.5 4 4.5v13c3.8 0 6.2.7 8 2 1.8-1.3 4.2-2 8-2v-13c-3.8 0-6.2.7-8 2Zm0 0v13"),
   icon("M3 4h18v11H3zM8 20l4-5 4 5M7 9h6M7 12h4"),
   icon("M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 1 6 6M18 3v6a6 6 0 0 1-6 6M3 6l3-3 3 3M15 6l3-3 3 3"),
 ];
-
-const external = (href: string) => (href.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {});
 
 /**
  * The public course page body. Shared by /courses/[slug] and the admin live
@@ -60,18 +65,13 @@ export function CourseView({
   freeResource?: ReactNode;
 }) {
   const difference = course.difference ? CourseFormat.splitFirstLine(course.difference) : null;
-  const facts = [
+  const exam = examRows(course.testimonialTicker);
+  const facts: { label: string; value: string; note?: string }[] = [
     { label: "Format", value: course.duration },
-    { label: "Next start", value: CourseFormat.startDate(course.startDate) },
     { label: "Fee", value: CourseFormat.hourly(course) },
+    // Exam courses: the next window and pass rate here, so the hero keeps one line of numbers. Others: their start date.
+    ...(exam.length > 0 ? exam : [{ label: "Next start", value: CourseFormat.startDate(course.startDate) }]),
   ];
-  // Same short label as the navbar everywhere on the page; the course's own CTA label titles the booking section.
-  const cta = (
-    <ButtonLink href={course.bookingUrl} size="lg" {...external(course.bookingUrl)}>
-      {siteConfig.navCta.label}
-    </ButtonLink>
-  );
-
   const weights = Boolean(course.weightLabel) && course.modules.some((m) => m.weight);
   // Bars share one axis (at least 25% of the exam), so near-equal topics don't all draw full width.
   const weightAxis = Math.max(25, ...course.modules.map((m) => CourseFormat.weightMidpoint(m.weight) ?? 0));
@@ -86,7 +86,6 @@ export function CourseView({
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            {cta}
             {course.method.length > 0 && (
               <ButtonLink href="#method" variant="secondary" size="lg">
                 Method ↓
@@ -116,7 +115,10 @@ export function CourseView({
             {facts.map((fact) => (
               <div key={fact.label} className="flex items-baseline justify-between gap-6 py-3">
                 <dt className="font-mono text-xs tracking-[0.16em] text-muted uppercase">{fact.label}</dt>
-                <dd className="tabular-data text-right font-semibold">{fact.value}</dd>
+                <dd className="tabular-data text-right font-semibold">
+                  {fact.value}
+                  {fact.note && <span className="block text-xs font-normal text-muted">{fact.note}</span>}
+                </dd>
               </div>
             ))}
           </dl>
@@ -284,27 +286,37 @@ export function CourseView({
       {course.options.length > 0 && (
         <section aria-labelledby="options-heading" className="border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            {/* One booking button for the whole section, not one per card. */}
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
-              {cta}
-            </div>
+            <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
             <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
               {course.options.map((option, index) => (
-                <li key={index} className="rounded-xl border border-line bg-surface p-6">
-                  <h3 className="text-lg font-bold">{option.title}</h3>
+                <li
+                  key={index}
+                  className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_12px_40px_-12px_rgba(212,175,55,0.25)]"
+                >
+                  {/* Same build as the method stages: accent bar, big faded number, icon tile. */}
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-gold to-quant opacity-50 transition-opacity group-hover:opacity-100" />
+                  <span aria-hidden className="pointer-events-none absolute top-3 right-5 font-mono text-6xl font-bold text-gold/10 tabular-nums transition-colors group-hover:text-gold/20">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-gold/10 text-gold ring-1 ring-gold/30">
+                    {OPTION_ICONS[index % OPTION_ICONS.length]}
+                  </span>
+                  <p className="mt-5 font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Option {String(index + 1).padStart(2, "0")}</p>
+                  <h3 className="mt-1 text-xl font-bold">{option.title}</h3>
                   {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
                   {option.description && <p className="mt-3 leading-relaxed text-muted">{option.description}</p>}
                   {/* Priced on request (e.g. the revision crash course): ask straight away on WhatsApp. */}
                   {/request/i.test(option.fee) && (
-                    <a
-                      href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
-                    >
-                      Ask on WhatsApp
-                    </a>
+                    <div className="mt-auto pt-5">
+                      <a
+                        href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
+                      >
+                        Ask on WhatsApp
+                      </a>
+                    </div>
                   )}
                 </li>
               ))}
@@ -364,7 +376,6 @@ export function CourseView({
               </h2>
               {course.audience && <p className="mt-4 max-w-3xl text-lg leading-relaxed">{course.audience}</p>}
               {course.notFor && <p className="mt-3 max-w-3xl leading-relaxed text-muted">{course.notFor}</p>}
-              <div className="mt-8">{cta}</div>
             </div>
           </div>
         </section>
