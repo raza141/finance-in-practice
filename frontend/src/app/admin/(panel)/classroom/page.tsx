@@ -27,9 +27,11 @@ const BUTTON = "inline-flex h-10 items-center rounded-md px-4 text-sm font-semib
 const fmt = (n: number | null) => (n === null ? "—" : `${n}%`);
 
 /** Owner: connect Google Classroom (read only), see which classes feed which course, and every student's progress. */
-export default async function AdminClassroomPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
+export default async function AdminClassroomPage({ searchParams }: { searchParams: Promise<{ notice?: string; missing?: string }> }) {
   await AdminAuth.requireOwner();
-  const notice = NOTICES[String((await searchParams).notice)];
+  const query = await searchParams;
+  const notice = NOTICES[String(query.notice)];
+  const missing = query.notice === "missing-scopes" ? String(query.missing ?? "").split(",").filter((m) => /^classroom\.[a-z.]+$/.test(m)) : [];
   const configured = ClassroomSync.isConfigured();
   const connection = configured ? await ClassroomConnection.fromEnv()?.current() : null;
 
@@ -57,6 +59,11 @@ export default async function AdminClassroomPage({ searchParams }: { searchParam
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
           {notice.text}
+          {missing.length > 0 && (
+            <span className="mt-1 block">
+              Google didn&rsquo;t grant: {missing.map((m) => <code key={m} className="mr-2 text-ink">{m}</code>)}
+            </span>
+          )}
         </p>
       )}
 

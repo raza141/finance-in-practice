@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
   try {
     const tokens = await google.exchangeTokens(code, flow.verifier);
     // Google lets people untick boxes: without every scope the feed would be half empty.
-    if (ClassroomConnection.SCOPES.some((s) => !tokens.scopes.includes(s))) return finish("missing-scopes");
+    const missing = ClassroomConnection.SCOPES.filter((s) => !tokens.scopes.includes(s));
+    if (missing.length > 0) {
+      console.error("[classroom] missing scopes", missing, "granted", tokens.scopes);
+      // Scope names only (public), so the page can say exactly which box was missed.
+      return finish(`missing-scopes&missing=${encodeURIComponent(missing.map((m) => m.replace(/^.*\/auth\//, "")).join(","))}`);
+    }
     if (!tokens.refreshToken) return finish("no-refresh-token");
     await store.save(tokens.identity.email, tokens.refreshToken);
   } catch (error) {
