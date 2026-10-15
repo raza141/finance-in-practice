@@ -80,7 +80,8 @@ function PulseBody({ pulse, now }: { pulse: MarketPulse; now: Date }) {
                   {MarketPulseContract.formatChange(s)} <span aria-hidden>{dir.arrow}</span>
                 </td>
                 <td className={`hidden py-2 text-right text-[11px] whitespace-nowrap sm:table-cell ${stale ? "text-gold" : "text-muted"}`}>
-                  {stale ? `STALE · ${MarketPulseContract.formatDate(s.as_of)}` : MarketPulseContract.formatDate(s.as_of)}
+                  {/* Not updated since: say when, plainly (visitors read "stale" as broken). */}
+                  {stale ? `as of ${MarketPulseContract.formatDate(s.as_of)}` : MarketPulseContract.formatDate(s.as_of)}
                 </td>
               </tr>
             );

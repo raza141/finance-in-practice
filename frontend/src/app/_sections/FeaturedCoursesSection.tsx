@@ -84,7 +84,7 @@ export async function FeaturedCoursesSection() {
                     <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour · 30-min diagnostic free
                   </p>
                 ) : null}
-                <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1">
                   <BookButton track={course.category === "FRM" ? "frm" : "cfa"} className="w-full" />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary" className="w-full">
                     Learn more →
