@@ -87,8 +87,9 @@ export function CourseView({
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
           {/* Smaller on phones so all three fit one row. */}
           <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
+            {/* Gold outline: money, quieter than the solid gold navbar button. */}
             {course.options.length > 0 && (
-              <ButtonLink href="#pricing" variant="secondary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
+              <ButtonLink href="#pricing" variant="gold" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
                 Pricing
               </ButtonLink>
             )}

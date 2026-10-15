@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "gold" | "ghost";
 type Size = "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
@@ -10,6 +10,8 @@ const VARIANTS: Record<Variant, string> = {
     "bg-gold text-canvas hover:bg-gold-bright shadow-[0_0_0_1px_rgb(212_175_55/0.4),0_8px_30px_-8px_rgb(212_175_55/0.5)]",
   // Cyan outline = exploration / technical.
   secondary: "border border-quant/60 text-quant hover:border-quant hover:bg-quant/10",
+  // Gold outline = money, quieter than primary (e.g. a course's Pricing jump).
+  gold: "border border-gold/60 text-gold hover:border-gold hover:bg-gold/10",
   ghost: "text-muted hover:text-ink",
 };
 
