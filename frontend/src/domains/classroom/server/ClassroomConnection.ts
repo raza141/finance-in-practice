@@ -22,6 +22,10 @@ export class ClassroomConnection {
     "https://www.googleapis.com/auth/classroom.rosters.readonly",
     "https://www.googleapis.com/auth/classroom.profile.emails",
   ] as const;
+  /** Older names Google may report for the same grant (the console shows "student-submissions"). */
+  static readonly ALIASES: Readonly<Record<string, string>> = {
+    "https://www.googleapis.com/auth/classroom.coursework.students.readonly": "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly",
+  };
   static readonly CALLBACK_PATH = "/api/admin/classroom/callback";
   static readonly STATE_COOKIE = "fip_classroom_oauth";
   static readonly COOKIE_PATH = "/api/admin/classroom";
@@ -30,6 +34,11 @@ export class ClassroomConnection {
     private readonly sql: Sql,
     private readonly key: Buffer,
   ) {}
+
+  /** The scopes we need that aren't in `granted` (either name counts). */
+  static missing(granted: readonly string[]): string[] {
+    return ClassroomConnection.SCOPES.filter((s) => !granted.includes(s) && !granted.includes(ClassroomConnection.ALIASES[s] ?? ""));
+  }
 
   static credentials(env: NodeJS.ProcessEnv = process.env): { id: string; secret: string } | null {
     const id = env.CLASSROOM_CLIENT_ID?.trim();

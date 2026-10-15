@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   try {
     const tokens = await google.exchangeTokens(code, flow.verifier);
     // Google lets people untick boxes: without every scope the feed would be half empty.
-    const missing = ClassroomConnection.SCOPES.filter((s) => !tokens.scopes.includes(s));
+    const missing = ClassroomConnection.missing(tokens.scopes);
     if (missing.length > 0) {
       console.error("[classroom] missing scopes", missing, "granted", tokens.scopes);
       // Scope names only (public), so the page can say exactly which box was missed.
