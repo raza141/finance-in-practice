@@ -44,13 +44,14 @@ export class StudentRepository {
   /**
    * Self-service join, only after Google proved the email: adds the course to
    * the client with that email (filling a missing name or phone), or creates the
-   * client. Either way the client shows as new in admin (seen_at NULL). Returns the client id.
+   * client. Either way the client shows as new in admin (seen_at NULL). `added`:
+   * false when they already had that course (a repeat click on an email link).
    */
-  async join(input: { name: string; email: string; phone: string; course: string }): Promise<string> {
+  async join(input: { name: string; email: string; phone: string; course: string }): Promise<{ id: string; added: boolean }> {
     const email = input.email.toLowerCase();
     const [existing] = (await this.sql`
-      SELECT id FROM clients WHERE lower(email) = ${email} ORDER BY created_at LIMIT 1
-    `) as { id: string }[];
+      SELECT id, ${input.course} = ANY(courses) AS has FROM clients WHERE lower(email) = ${email} ORDER BY created_at LIMIT 1
+    `) as { id: string; has: boolean }[];
     if (existing) {
       await this.sql`
         UPDATE clients SET
@@ -60,14 +61,46 @@ export class StudentRepository {
           updated_at = now()
         WHERE id = ${existing.id}
       `;
-      return existing.id;
+      return { id: existing.id, added: !existing.has };
     }
     const [row] = (await this.sql`
       INSERT INTO clients (name, email, phone, address, courses, seen_at)
       VALUES (${input.name}, ${email}, ${input.phone}, '', ARRAY[${input.course}]::text[], NULL)
       RETURNING id
     `) as { id: string }[];
+    return { id: row.id, added: true };
+  }
+
+  /** Email registration, before the address is proven: parked in 037 until the emailed link is opened. Prunes day-old rows. */
+  async park(input: { name: string; email: string; phone: string; course: string }): Promise<string> {
+    const [, [row]] = (await this.sql.transaction([
+      this.sql`DELETE FROM student_registrations WHERE created_at < now() - interval '1 day'`,
+      this.sql`
+        INSERT INTO student_registrations (name, email, phone, course)
+        VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.phone}, ${input.course})
+        RETURNING id
+      `,
+    ])) as [unknown, { id: string }[]];
     return row.id;
+  }
+
+  /** A parked registration, while its link can still be valid. */
+  async parked(id: string): Promise<{ name: string; email: string; phone: string; course: string } | null> {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+    const [row] = (await this.sql`
+      SELECT name, email, phone, course FROM student_registrations
+      WHERE id = ${id} AND created_at > now() - interval '1 day'
+    `) as { name: string; email: string; phone: string; course: string }[];
+    return row ?? null;
+  }
+
+  /** The enrolled student with this client id (email sign-in links carry the id, not the address). */
+  async enrolledById(id: string): Promise<Student | null> {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+    const [row] = (await this.sql`
+      SELECT id, name, email, courses FROM clients WHERE id = ${id} AND cardinality(courses) > 0
+    `) as StudentRow[];
+    return row ?? null;
   }
 
   async createSession(clientId: string, tokenHash: string, expiresAt: Date): Promise<void> {

@@ -19,6 +19,11 @@ export class StudentApiClient extends BaseApiClient {
     return this.post<{ ok: true }>("/api/student/join", body);
   }
 
+  /** Registration or sign-in without Google: the server emails a link (same answer either way). */
+  emailLink(body: Record<string, string>) {
+    return this.post<{ ok: true }>("/api/student/email-link", body);
+  }
+
   reschedule(uid: string, start: string) {
     return this.post<CreateBookingResponse>(`/api/student/bookings/${encodeURIComponent(uid)}`, { action: "reschedule", start });
   }

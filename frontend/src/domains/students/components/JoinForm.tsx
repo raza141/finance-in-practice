@@ -14,25 +14,54 @@ const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
 const client = new StudentApiClient();
 const { OTHER, EXTRA, LIMITS } = RegistrationContract;
 
-/** "Finish joining" after Google sign-in: enrols at once and opens the portal. `courses` = published titles only. */
-export function JoinForm({ courses, email }: { courses: string[]; email: string }) {
+type FormState = { kind: "editing"; error?: string } | { kind: "sending" } | { kind: "sent"; to: string };
+
+const fieldsOf = (form: HTMLFormElement) => Object.fromEntries([...new FormData(form)].map(([k, v]) => [k, String(v)]));
+const messageOf = (error: unknown) => (error instanceof ApiError ? error.message : "Something went wrong. Please retry.");
+
+/** After the server mailed a link: where to look next. */
+function CheckInbox({ to, lead }: { to: string; lead: string }) {
+  return (
+    <div role="status" className="grid gap-2 rounded-lg border border-quant/30 bg-quant/5 p-4 text-sm">
+      <p className="font-semibold text-ink">Check your inbox</p>
+      <p className="text-ink/90">
+        {lead} <span className="font-semibold">{to}</span>. Open it within 30 minutes on this or any device.
+      </p>
+      <p className="text-xs text-muted">Nothing there after a minute? Look in Spam or Promotions.</p>
+    </div>
+  );
+}
+
+/**
+ * Join form. With `email` (back from Google, address proven): enrols at once and
+ * opens the portal. Without: the visitor types their email and we mail a link
+ * that confirms it first. `courses` = published titles only.
+ */
+export function JoinForm({ courses, email }: { courses: string[]; email?: string }) {
   const router = useRouter();
   const [course, setCourse] = useState("");
-  const [state, setState] = useState<{ kind: "editing"; error?: string } | { kind: "sending" }>({ kind: "editing" });
+  const [state, setState] = useState<FormState>({ kind: "editing" });
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const fields = Object.fromEntries([...new FormData(event.currentTarget)].map(([k, v]) => [k, String(v)]));
+    const fields = fieldsOf(event.currentTarget);
     setState({ kind: "sending" });
     try {
+      if (!email) {
+        await client.emailLink({ ...fields, intent: "register" });
+        setState({ kind: "sent", to: fields.email });
+        return;
+      }
       await client.join(fields);
       // The session cookie is set: /student now renders the signed-in portal.
       router.replace("/student");
       router.refresh();
     } catch (error) {
-      setState({ kind: "editing", error: error instanceof ApiError ? error.message : "Something went wrong. Please retry." });
+      setState({ kind: "editing", error: messageOf(error) });
     }
   }
+
+  if (state.kind === "sent") return <CheckInbox to={state.to} lead="We sent a link to confirm your email to" />;
 
   return (
     <form onSubmit={submit} className="grid gap-4">
@@ -41,13 +70,20 @@ export function JoinForm({ courses, email }: { courses: string[]; email: string 
           <span className={LABEL}>Full name</span>
           <input name="name" required autoComplete="name" minLength={LIMITS.name[0]} maxLength={LIMITS.name[1]} className={FIELD} />
         </label>
-        <div className="grid gap-1.5">
-          <span className={LABEL}>Google account</span>
-          <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
-            <span aria-hidden className="text-quant">✓</span>
-            {email}
-          </p>
-        </div>
+        {email ? (
+          <div className="grid gap-1.5">
+            <span className={LABEL}>Google account</span>
+            <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
+              <span aria-hidden className="text-quant">✓</span>
+              {email}
+            </p>
+          </div>
+        ) : (
+          <label className="grid gap-1.5">
+            <span className={LABEL}>Email</span>
+            <input name="email" type="email" required autoComplete="email" maxLength={LIMITS.email} className={FIELD} />
+          </label>
+        )}
         <label className="grid gap-1.5">
           <span className={LABEL}>Mobile (WhatsApp)</span>
           <input name="phone" type="tel" required autoComplete="tel" maxLength={LIMITS.phone[1]} placeholder="+971 50 123 4567" className={FIELD} />
@@ -96,9 +132,62 @@ export function JoinForm({ courses, email }: { courses: string[]; email: string 
         disabled={state.kind === "sending"}
         className="inline-flex h-11 items-center justify-center rounded-md bg-gold px-6 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
-        {state.kind === "sending" ? "Opening your portal…" : "Join and open my portal"}
+        {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>
       <p className="text-xs text-muted">We only use these details to arrange your lessons.</p>
+    </form>
+  );
+}
+
+/** Sign-in for students without a Google account: we email a link if the address is a student's. */
+export function EmailSignIn() {
+  const [state, setState] = useState<FormState>({ kind: "editing" });
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const fields = fieldsOf(event.currentTarget);
+    setState({ kind: "sending" });
+    try {
+      await client.emailLink({ ...fields, intent: "signin" });
+      setState({ kind: "sent", to: fields.email });
+    } catch (error) {
+      setState({ kind: "editing", error: messageOf(error) });
+    }
+  }
+
+  if (state.kind === "sent") return <CheckInbox to={state.to} lead="If you're registered, a sign-in link is on its way to" />;
+
+  return (
+    <form onSubmit={submit} className="grid gap-2">
+      <label htmlFor="signin-email" className={LABEL}>
+        No Google account? Sign in by email
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="signin-email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          maxLength={LIMITS.email}
+          placeholder="you@example.com"
+          disabled={state.kind === "sending"}
+          className={FIELD}
+        />
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
+        <button
+          type="submit"
+          disabled={state.kind === "sending"}
+          className="shrink-0 rounded-md border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
+        >
+          {state.kind === "sending" ? "Sending…" : "Email me a link"}
+        </button>
+      </div>
+      {state.kind === "editing" && state.error && (
+        <p role="alert" className="text-sm text-gold">
+          {state.error}
+        </p>
+      )}
     </form>
   );
 }

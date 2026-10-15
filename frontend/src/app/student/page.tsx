@@ -11,7 +11,7 @@ import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/Ca
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
 import { ClassroomPanel } from "@/domains/students/components/ClassroomPanel";
-import { JoinForm } from "@/domains/students/components/JoinForm";
+import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { StudentPortal } from "@/domains/students/components/StudentPortal";
 import { StudyPlanTimeline } from "@/domains/students/components/StudyPlanTimeline";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
@@ -35,9 +35,9 @@ const ERRORS: Record<string, string> = {
   google_state: "That sign-in link expired. Please try again.",
   google_failed: "Google sign-in didn't work. Please try again.",
   google_unavailable: "Student sign-in is not available right now. Please message us on WhatsApp.",
+  link_expired: "That email link has expired. Please ask for a new one.",
+  link_failed: "That email link didn't work. Please try again.",
 };
-
-const REGISTER_STEPS = ["Continue with your Google account", "Add your mobile and course", "Your portal opens straight away"];
 
 const PERKS = ["Book 1 to 4 hour sessions in your own time", "Change or cancel a session in two clicks", "Follow your study plan and open your materials"];
 
@@ -179,7 +179,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   // Back on the join view without a valid ticket: it expired (or was used).
   const expired = view === "join" && joining === null;
   const register = joining !== null || view === "register" || view === "join";
-  const courses = joining ? await publicCourses() : [];
+  const courses = register ? await publicCourses() : [];
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
@@ -226,20 +226,17 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
             {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
-            <ol className="grid gap-2 text-sm text-ink/90">
-              {REGISTER_STEPS.map((step, i) => (
-                <li key={step} className="flex gap-2.5">
-                  <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold text-[11px] font-bold text-canvas">
-                    {i + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
+            <p className="text-muted">Two ways to join. Either way, your portal opens straight away.</p>
             {/* A plain link: the route redirects to Google, so no client JS is needed. */}
             <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
               Register with Google
             </ButtonLink>
+            <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+              <span aria-hidden className="h-px flex-1 bg-line" />
+              or with your email
+              <span aria-hidden className="h-px flex-1 bg-line" />
+            </p>
+            <JoinForm courses={courses} />
             <p className="border-t border-line pt-5 text-sm text-muted">
               Already registered?{" "}
               <Link href="/student" className="text-quant hover:underline">
@@ -250,10 +247,11 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
         ) : (
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
-            <p className="text-muted">Already studying with us? Sign in with your Google account.</p>
+            <p className="text-muted">Already studying with us? Sign in with Google, or by email if you registered without Google.</p>
             <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
               Continue with Google
             </ButtonLink>
+            <EmailSignIn />
             <p className="border-t border-line pt-5 text-sm text-muted">
               New here?{" "}
               <Link href="/student?view=register" className="font-semibold text-gold hover:underline">

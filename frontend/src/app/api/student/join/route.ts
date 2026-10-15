@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const parsed = RegistrationContract.parse({ ...(payload as object), email }, published);
     if (!parsed.ok) return reject(400, parsed.error);
     if (parsed.spam) return reject(400, "Unable to process this request.");
-    const clientId = await repo.join(parsed.value);
+    const { id: clientId } = await repo.join(parsed.value);
     await StudentAuth.startSession(clientId, repo);
     store.delete({ name: SignupTicket.COOKIE, path: "/" });
     const { name, email: joined, phone, course } = parsed.value;
