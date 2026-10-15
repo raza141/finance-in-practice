@@ -72,7 +72,7 @@ export const siteConfig = {
 
   /** Public fees, by the hour or by the month (flexible schedule, at home in Abu Dhabi or online). Exam course pages keep theirs in Admin → Courses. */
   fees: {
-    exam: "AED 150 / hour · AED 3,000 / month",
+    exam: "AED 150 / hour · AED 3,000 / month (30 hours)",
     university: "AED 125 / hour · AED 2,000 / month",
   },
 
