@@ -849,6 +849,23 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX private_classrooms_client_idx ON private_classrooms (client_id)`,
     ],
   },
+  {
+    // The owner's read-only Google Classroom connection (one row; the refresh
+    // token is AES-GCM encrypted by the app), each client's Classroom email when
+    // it differs from their portal email, and when they last opened their feed.
+    id: "041_classroom_sync",
+    statements: [
+      `CREATE TABLE classroom_connection (
+        id            smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        google_email  text NOT NULL CHECK (char_length(google_email) <= 254),
+        refresh_token text NOT NULL CHECK (char_length(refresh_token) <= 2000),
+        connected_at  timestamptz NOT NULL DEFAULT now()
+      )`,
+      `ALTER TABLE clients ADD COLUMN classroom_email text
+        CHECK (classroom_email IS NULL OR (char_length(classroom_email) <= 254 AND classroom_email = lower(classroom_email)))`,
+      `ALTER TABLE clients ADD COLUMN feed_seen_at timestamptz`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

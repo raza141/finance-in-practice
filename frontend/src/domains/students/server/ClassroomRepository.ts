@@ -86,6 +86,22 @@ export class ClassroomRepository {
     `;
   }
 
+  /** The Google account the client uses in Classroom when it differs from their portal email (041). */
+  async classroomEmail(clientId: string): Promise<string | null> {
+    if (!UUID.test(clientId)) return null;
+    const [row] = (await this.sql`SELECT classroom_email FROM clients WHERE id = ${clientId}`) as { classroom_email: string | null }[];
+    return row?.classroom_email ?? null;
+  }
+
+  /** Every class link on the website, for matching to Google classes in admin. */
+  async allLinks(): Promise<{ title: string; url: string }[]> {
+    return (await this.sql`
+      SELECT DISTINCT ON (classroom_url) title, classroom_url AS url FROM courses WHERE classroom_url IS NOT NULL
+      UNION ALL
+      SELECT p.title || ' · ' || c.name, p.url FROM private_classrooms p JOIN clients c ON c.id = p.client_id
+    `) as { title: string; url: string }[];
+  }
+
   /** Scoped to the client, so a stray id can't remove another student's class. */
   async removePrivate(clientId: string, id: string): Promise<void> {
     if (!UUID.test(clientId) || !UUID.test(id)) return;

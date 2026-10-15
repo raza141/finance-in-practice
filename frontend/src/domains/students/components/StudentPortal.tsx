@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, use, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { ApiError } from "@/core/http/ApiError";
 import type { SlotWire } from "@/domains/booking/services/BookingContract";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { markFeedSeen } from "@/domains/classroom/actions/classroom";
 
 import { StudentApiClient } from "../services/StudentApiClient";
 import { StudentBookingContract } from "../services/StudentBookingContract";
@@ -25,7 +26,19 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-type Tab = "book" | "sessions" | "plan" | "classroom";
+export type Tab = "overview" | "book" | "sessions" | "plan" | "classroom" | "progress";
+
+/** Lets server-rendered panels (overview, progress) switch tabs; `notes` pre-fills the booking form. */
+const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
+
+export function TabButton({ tab, notes, className, children }: { tab: Tab; notes?: string; className?: string; children: ReactNode }) {
+  const go = use(PortalTabs);
+  return (
+    <button type="button" onClick={() => go(tab, notes)} className={className}>
+      {children}
+    </button>
+  );
+}
 
 const messageOf = (error: unknown) => (error instanceof ApiError ? error.message : "Something went wrong. Please retry.");
 const dayLabel = (iso: string) =>
@@ -45,6 +58,8 @@ export function StudentPortal({
   addresses,
   plan,
   classroom,
+  overview,
+  progress,
 }: {
   courses: string[];
   lengths: readonly number[];
@@ -55,6 +70,10 @@ export function StudentPortal({
   plan: ReactNode;
   /** The Classroom tab, rendered on the server; null hides the tab. */
   classroom: ReactNode | null;
+  /** The first tab: next session, to-do, latest mark and what's new. */
+  overview: ReactNode;
+  /** Mock scores from Classroom; null hides the tab. */
+  progress: ReactNode | null;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
@@ -70,7 +89,8 @@ export function StudentPortal({
   const [moving, setMoving] = useState<StudentSession | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>("book");
+  const [tab, setTab] = useState<Tab>("overview");
+  const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.
   const [version, setVersion] = useState(0);
@@ -173,13 +193,26 @@ export function StudentPortal({
     </p>
   );
   const TABS: [Tab, string][] = [
+    ["overview", "Overview"],
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
     ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
+    ...(progress ? ([["progress", "Progress"]] as [Tab, string][]) : []),
     ["plan", "Study plan & materials"],
   ];
+  const go = (next: Tab, prefill?: string) => {
+    setTab(next);
+    if (prefill) setNotes(prefill);
+    // Opening the class feed once per visit: what's there now stops being "New" next time.
+    if (next === "classroom" && !seen.current) {
+      seen.current = true;
+      void markFeedSeen().catch(() => {});
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
+    <PortalTabs value={go}>
     <div className="grid gap-6">
       <nav aria-label="Student portal" className="sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 p-1.5 backdrop-blur-md">
         {TABS.map(([id, label]) => (
@@ -187,7 +220,7 @@ export function StudentPortal({
             key={id}
             type="button"
             aria-current={tab === id ? "page" : undefined}
-            onClick={() => setTab(id)}
+            onClick={() => go(id)}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm whitespace-nowrap transition-colors ${
               tab === id ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"
             }`}
@@ -197,8 +230,10 @@ export function StudentPortal({
         ))}
       </nav>
 
+      {tab === "overview" && overview}
       {tab === "plan" && plan}
       {tab === "classroom" && classroom}
+      {tab === "progress" && progress}
 
       {tab === "sessions" && (
         <div className="grid gap-6">
@@ -506,5 +541,6 @@ export function StudentPortal({
         </div>
       )}
     </div>
+    </PortalTabs>
   );
 }

@@ -22,6 +22,7 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
+import { saveClassroomEmail } from "@/domains/classroom/actions/classroom";
 import { addPrivateClassroom, decideClassroom, removePrivateClassroom } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
@@ -39,6 +40,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
     text: "Classroom invite hidden from their portal. If they already joined, also remove them in Google Classroom (People).",
     tone: "ok",
   },
+  "classroom-email-saved": { text: "Classroom email saved: their portal reads Classroom with it from now on.", tone: "ok" },
+  "classroom-email-invalid": { text: "Not saved: that doesn't look like an email address.", tone: "warn" },
   "private-added": { text: "Private classroom added: it shows in their portal now.", tone: "ok" },
   "private-removed": { text: "Private classroom removed from their portal. Also remove them in Google Classroom (People).", tone: "ok" },
   "private-refused": {
@@ -58,7 +61,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
   const classroomRepo = ClassroomRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
@@ -67,6 +70,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     StudyPlanRepository.fromEnv()?.forClient(client.id) ?? [],
     classroomRepo?.forClient(client.id, client.courses) ?? [],
     classroomRepo?.privateFor(client.id) ?? [],
+    classroomRepo?.classroomEmail(client.id) ?? null,
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
@@ -106,6 +110,17 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
 
       <section id="classroom" className="mt-12 rounded-lg border border-line p-5">
         <h2 className="text-lg">Google Classroom</h2>
+
+        <form action={saveClassroomEmail} className="mt-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="clientId" value={client.id} />
+          <label className="min-w-64 flex-1 text-sm">
+            <span className="text-muted">Classroom email (only if they joined Classroom with another Google account)</span>
+            <input name="classroomEmail" type="email" defaultValue={classroomEmail ?? ""} placeholder={client.email} className={`${FIELD} mt-1`} />
+          </label>
+          <PendingButton pendingLabel="Saving…" className="h-10 rounded-md border border-line px-4 text-sm hover:border-quant/60">
+            Save
+          </PendingButton>
+        </form>
 
         <h3 className="mt-5 text-sm font-semibold">Private classrooms (only this student)</h3>
         <p className="mt-1 text-sm text-muted">

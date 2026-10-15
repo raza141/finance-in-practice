@@ -75,6 +75,9 @@ export const siteConfig = {
   /** `maxUpcoming`: a student's own upcoming sessions (pending included) before booking more is refused. */
   studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180, 240], maxUpcoming: 4, href: "/student" },
 
+  /** Classroom feed in the portal: mocks below this percentage get a "book a review" prompt (the owner's target, not an official pass mark). */
+  classroom: { targetPct: 70 },
+
   /**
    * Authority metrics. Every figure must be verifiable: these describe the
    * in-house quant engine (see quant-backend/README.md). Add teaching metrics

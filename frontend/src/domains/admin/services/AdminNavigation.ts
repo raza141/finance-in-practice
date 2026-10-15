@@ -20,6 +20,7 @@ export class AdminNavigation {
     { href: "/admin/services", label: "Services", ownerOnly: true },
     { href: "/admin/journal", label: "Blog" },
     { href: "/admin/testimonials", label: "Testimonials" },
+    { href: "/admin/classroom", label: "Classroom", ownerOnly: true },
     { href: "/admin/videos", label: "Videos" },
     { href: "/admin/instructors", label: "Instructors" },
     { href: "/admin/courses", label: "Courses" },

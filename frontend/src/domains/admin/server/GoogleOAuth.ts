@@ -18,6 +18,21 @@ const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 
+/** Extra access beyond sign-in (the owner's Classroom connection). */
+export interface GoogleOAuthOptions {
+  /** Added to "openid email". */
+  scopes?: readonly string[];
+  /** Ask for a refresh token (consent screen every time, so Google always returns one). */
+  offline?: boolean;
+}
+
+export interface GoogleTokens {
+  identity: GoogleIdentity;
+  refreshToken: string | null;
+  /** The scopes the person actually ticked (Google lets them untick some). */
+  scopes: string[];
+}
+
 /**
  * "Sign in with Google" via the OAuth 2.0 authorization-code flow with PKCE.
  * Google only identifies the person; whether they may enter the admin panel
@@ -36,6 +51,7 @@ export class GoogleOAuth {
     /** Admin by default; student sign-in has its own callback (and allowlist). */
     private readonly callbackPath: string = GoogleOAuth.CALLBACK_PATH,
     private readonly fetchImpl: typeof fetch = (input, init) => globalThis.fetch(input, init),
+    private readonly options: GoogleOAuthOptions = {},
   ) {}
 
   /** Null (button hidden) unless both credentials are set. */
@@ -84,17 +100,23 @@ export class GoogleOAuth {
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       response_type: "code",
-      scope: "openid email profile",
+      scope: ["openid email profile", ...(this.options.scopes ?? [])].join(" "),
       state,
       code_challenge: createHash("sha256").update(verifier).digest("base64url"),
       code_challenge_method: "S256",
-      prompt: "select_account",
+      prompt: this.options.offline ? "consent select_account" : "select_account",
+      ...(this.options.offline && { access_type: "offline" }),
     });
     return `${AUTHORIZE_URL}?${params}`;
   }
 
   /** Exchange the callback code for the signed-in Google identity. */
   async exchange(code: string, verifier: string, now: number = Date.now()): Promise<GoogleIdentity> {
+    return (await this.exchangeTokens(code, verifier, now)).identity;
+  }
+
+  /** The identity plus the refresh token and granted scopes (offline flows). */
+  async exchangeTokens(code: string, verifier: string, now: number = Date.now()): Promise<GoogleTokens> {
     const response = await this.fetchImpl(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -112,9 +134,13 @@ export class GoogleOAuth {
       const detail = await response.text().catch(() => "");
       throw new GoogleOAuthError(`token exchange failed (${response.status}) ${detail.slice(0, 200)}`);
     }
-    const { id_token: idToken } = (await response.json()) as { id_token?: string };
-    if (!idToken) throw new GoogleOAuthError("token response had no id_token");
-    return this.identityFrom(idToken, now);
+    const body = (await response.json()) as { id_token?: string; refresh_token?: string; scope?: string };
+    if (!body.id_token) throw new GoogleOAuthError("token response had no id_token");
+    return {
+      identity: this.identityFrom(body.id_token, now),
+      refreshToken: body.refresh_token ?? null,
+      scopes: (body.scope ?? "").split(/\s+/).filter(Boolean),
+    };
   }
 
   /**

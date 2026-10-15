@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
@@ -8,9 +9,12 @@ import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
+import { ClassFeedPanel, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
+import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
 import { ClassroomPanel } from "@/domains/students/components/ClassroomPanel";
+import { PortalOverview } from "@/domains/students/components/PortalOverview";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { StudentPortal } from "@/domains/students/components/StudentPortal";
 import { StudyPlanTimeline } from "@/domains/students/components/StudyPlanTimeline";
@@ -131,6 +135,18 @@ const initialsOf = (name: string) =>
 async function Portal({ student }: { student: Student }) {
   const { courses, sessions, past, addresses, plan, classes, own } = await portalData(student);
   const first = student.name.split(/\s+/)[0];
+  const hasClassroom = classes.length + own.length > 0;
+  // Only approved course classes and the student's own: the same ones they can open.
+  const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
+  const synced = links.length > 0 && (await safely("classroom connection", () => ClassroomSync.isConnected())) === true;
+  // Started now, awaited inside Suspense: Google's answer streams in and never holds up the page.
+  const feed: Promise<FeedResult> = synced
+    ? ClassroomSync.forStudent(student.id, links).then(
+        (f): FeedResult => (f ? { status: "ok", feed: f } : { status: "off" }),
+        (error): FeedResult => (console.error("student: could not load the class feed", error), { status: "error" }),
+      )
+    : Promise.resolve({ status: "off" });
+  const loading = (label: string) => <p className="rounded-3xl border border-white/10 bg-canvas/70 p-6 text-sm text-muted">Loading {label}…</p>;
 
   return (
     <div className="grid gap-6">
@@ -161,8 +177,39 @@ async function Portal({ student }: { student: Student }) {
         past={past}
         addresses={addresses}
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
+        overview={
+          <PortalOverview
+            sessions={sessions}
+            plan={plan}
+            classCards={
+              synced && (
+                <Suspense fallback={loading("your class")}>
+                  <OverviewClassCards result={feed} />
+                </Suspense>
+              )
+            }
+          />
+        }
         // No Classroom yet (e.g. a single session): no tab, nothing to explain.
-        classroom={classes.length + own.length > 0 ? <ClassroomPanel classes={classes} own={own} email={student.email} /> : null}
+        classroom={
+          hasClassroom ? (
+            <div className="grid gap-6">
+              {synced && (
+                <Suspense fallback={loading("what's new in your class")}>
+                  <ClassFeedPanel result={feed} />
+                </Suspense>
+              )}
+              <ClassroomPanel classes={classes} own={own} email={student.email} />
+            </div>
+          ) : null
+        }
+        progress={
+          synced ? (
+            <Suspense fallback={loading("your marks")}>
+              <ProgressPanel result={feed} />
+            </Suspense>
+          ) : null
+        }
       />
     </div>
   );
