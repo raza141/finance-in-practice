@@ -295,6 +295,17 @@ export function CourseView({
                   <h3 className="text-lg font-bold">{option.title}</h3>
                   {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
                   {option.description && <p className="mt-3 leading-relaxed text-muted">{option.description}</p>}
+                  {/* Priced on request (e.g. the revision crash course): ask straight away on WhatsApp. */}
+                  {/request/i.test(option.fee) && (
+                    <a
+                      href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
+                    >
+                      Ask on WhatsApp
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

@@ -70,6 +70,12 @@ export const siteConfig = {
 
   bookingHref: "/#book",
 
+  /** Public fees, by the hour or by the month (flexible schedule, at home in Abu Dhabi or online). Exam course pages keep theirs in Admin → Courses. */
+  fees: {
+    exam: "AED 150 / hour · AED 3,000 / month",
+    university: "AED 125 / hour · AED 2,000 / month",
+  },
+
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
   /** `lengths` must match the durations offered on the Cal.com "session" event (60/120/180/240). */
   /** `maxUpcoming`: a student's own upcoming sessions (pending included) before booking more is refused. */

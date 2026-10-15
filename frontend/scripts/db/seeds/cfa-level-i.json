@@ -16,7 +16,7 @@
   "weightLabel": "Official weight (2027)",
   "startDate": null,
   "duration": "1-on-1 · Abu Dhabi in person or online",
-  "priceMinor": null,
+  "priceMinor": 15000,
   "currency": "AED",
   "isActive": true,
   "method": [
@@ -145,24 +145,19 @@
   ],
   "options": [
     {
-      "title": "CFA Level I Comprehensive Coaching",
+      "title": "Pay by the hour",
+      "fee": "AED 150 / hour",
+      "description": "Book 1 to 4 hours whenever you need them, at your home in Abu Dhabi or live online. Ideal for a difficult topic or a mock review, with no commitment."
+    },
+    {
+      "title": "Monthly coaching",
+      "fee": "AED 3,000 / month",
+      "description": "Regular sessions on a flexible schedule built around your exam date, at your home in Abu Dhabi or live online. Your study plan, Classroom quizzes, mocks and progress stay together in your student portal."
+    },
+    {
+      "title": "Revision crash course",
       "fee": "On request",
-      "description": "End-to-end guidance through the entire CFA Level I curriculum. Includes a customized study plan anchored to your exam date, step-by-step concept breakdowns, and continuous support from day one to exam day. Flexible payment plans available."
-    },
-    {
-      "title": "Targeted Topic Pack",
-      "fee": "On request",
-      "description": "Focused, intensive coaching on high-weight or complex areas (e.g., Fixed Income, FSA). Designed to solidify your understanding of critical concepts, diagnose calculation errors, and improve your scoring in specific problem areas."
-    },
-    {
-      "title": "Final-month revision sprint",
-      "fee": "3000 AED",
-      "description": "An intensive 4-to-6 week program designed for the final stretch before your exam window. Includes thorough mock-exam reviews, strategic time-management techniques, and targeted drills to strengthen your remaining weak areas."
-    },
-    {
-      "title": "Single session",
-      "fee": "150 AED",
-      "description": "A dedicated one-on-one session to tackle specific hurdles, clarify complex formulas, or walk through challenging curriculum questions. Ideal for targeted, immediate help with no long-term commitment."
+      "description": "An intensive revision block before your exam window: full mock reviews, timing strategy and drills on your weakest topics. Dates and fee depend on your exam date."
     }
   ],
   "faqs": [
@@ -184,7 +179,7 @@
     },
     {
       "question": "Can coaching start at any time, and how are sessions priced?",
-      "answer": "Coaching can begin on request, with no fixed cohort start date. Sessions can be booked singly, monthly, or as exam-season support. Fees are discussed after the free Diagnostic Session, because the scope depends on the candidate’s needs."
+      "answer": "Yes, coaching can start at any time, with no fixed cohort date. There are three ways to pay: by the hour (AED 150), monthly (AED 3,000, on a flexible schedule at your home in Abu Dhabi or online), or a revision crash course before the exam, priced on request. Every option starts with the free 30-minute diagnostic."
     },
     {
       "question": "Does coaching guarantee a pass?",

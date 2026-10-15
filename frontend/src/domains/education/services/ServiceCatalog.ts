@@ -1,3 +1,5 @@
+import { siteConfig } from "@/core/config/site";
+
 export type BentoVisual = "code" | "stress" | "curve" | "none";
 
 export interface BentoService {
@@ -11,6 +13,8 @@ export interface BentoService {
   span: 4 | 8 | 12;
   visual: BentoVisual;
   waitlist?: boolean;
+  /** Shown under the summary, e.g. "AED 125 / hour · AED 2,000 / month". */
+  fee?: string;
 }
 
 /** Equity shocks from the quant backend's preset stress scenarios (engines/risk/stress.py). */
@@ -31,6 +35,7 @@ export class ServiceCatalog {
       summary:
         "1-on-1 support for corporate finance, investments and econometrics coursework, dissertations and interviews.",
       tags: ["Coursework", "Dissertations"],
+      fee: siteConfig.fees.university,
       span: 4,
       visual: "none",
     },

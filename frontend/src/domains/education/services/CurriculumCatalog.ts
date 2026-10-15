@@ -1,3 +1,5 @@
+import { siteConfig } from "@/core/config/site";
+
 import type { Pillar, PillarId } from "../types";
 
 /**
@@ -16,6 +18,7 @@ export class CurriculumCatalog {
       outcomes: ["Personal study plan", "Exam-style problem drills", "Formula intuition, not rote"],
       tags: ["Fixed income", "Derivatives", "Quant methods"],
       status: "open",
+      fee: siteConfig.fees.exam,
     },
     {
       id: "university",
@@ -27,6 +30,7 @@ export class CurriculumCatalog {
       outcomes: ["Coursework clarity", "Dissertation guidance", "Interview preparation"],
       tags: ["Corporate finance", "Econometrics"],
       status: "open",
+      fee: siteConfig.fees.university,
     },
     {
       id: "automation",

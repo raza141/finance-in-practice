@@ -12,4 +12,6 @@ export interface Pillar {
   /** Short technical tags rendered in cyan. */
   tags: readonly string[];
   status: PillarStatus;
+  /** Shown under the audience, e.g. "AED 150 / hour · AED 3,000 / month". */
+  fee?: string;
 }

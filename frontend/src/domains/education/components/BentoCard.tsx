@@ -83,6 +83,7 @@ export function BentoCard({ service }: { service: BentoService }) {
           {service.title}
         </h3>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">{service.summary}</p>
+        {service.fee && <p className="tabular-data mt-3 text-sm font-semibold text-gold">{service.fee}</p>}
       </div>
 
       {Visual && (

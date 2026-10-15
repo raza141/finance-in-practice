@@ -31,6 +31,7 @@ export default function ConsultingPage() {
               <span className="font-mono text-xs text-quant">{track.index}</span>
               <h2 className="mt-2 text-lg font-bold">{track.title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">{track.audience}</p>
+              {track.fee && <p className="tabular-data mt-3 text-sm font-semibold text-gold">{track.fee}</p>}
             </li>
           ))}
         </ul>
