@@ -94,12 +94,17 @@ export class ClassroomSync {
       const course = ClassFeed.match(link.url, courses);
       return course ? [{ title: link.title, course }] : [];
     });
-    const loaded = await Promise.all(
+    // One class failing (e.g. Google refuses its roster) leaves the others showing.
+    const settled = await Promise.allSettled(
       matched.map(async ({ title, course }) => {
         const [data, me] = await Promise.all([ClassroomSync.courseData(course.id), ClassroomSync.student(course.id, email)]);
         return { title, joined: me.userId !== null, items: ClassFeed.items(title, data, me.userId, me.submissions, now) };
       }),
     );
+    const failed = settled.filter((r) => r.status === "rejected");
+    failed.forEach((r) => console.error("[classroom] class failed", r.reason));
+    if (matched.length > 0 && failed.length === matched.length) throw failed[0].reason;
+    const loaded = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
     return {
       classes: loaded.map(({ title, joined }) => ({ title, joined })),
       items: loaded.flatMap((l) => l.items).sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt)),

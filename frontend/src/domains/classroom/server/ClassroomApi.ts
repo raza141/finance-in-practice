@@ -56,11 +56,18 @@ export class ClassroomApi {
   /** Everything posted in a class: work, materials, announcements and topic names. */
   async courseData(courseId: string): Promise<GCourseData> {
     const id = encodeURIComponent(courseId);
+    // Each list fails on its own: one refused endpoint empties one section, not the whole feed.
+    const safe = <T>(label: string, load: Promise<T[]>) =>
+      load.catch((error: unknown) => {
+        if (error instanceof ClassroomAuthError) throw error;
+        console.error(`[classroom] ${label} failed for course ${courseId}`, error);
+        return [] as T[];
+      });
     const [work, materials, announcements, topics] = await Promise.all([
-      this.list<GCourseData["work"][number]>(`/courses/${id}/courseWork`, "courseWork", { courseWorkStates: "PUBLISHED" }),
-      this.list<GCourseData["materials"][number]>(`/courses/${id}/courseWorkMaterials`, "courseWorkMaterial", { courseWorkMaterialStates: "PUBLISHED" }),
-      this.list<GCourseData["announcements"][number]>(`/courses/${id}/announcements`, "announcements", { announcementStates: "PUBLISHED" }),
-      this.list<{ topicId: string; name: string }>(`/courses/${id}/topics`, "topic", {}),
+      safe("courseWork", this.list<GCourseData["work"][number]>(`/courses/${id}/courseWork`, "courseWork", { courseWorkStates: "PUBLISHED" })),
+      safe("materials", this.list<GCourseData["materials"][number]>(`/courses/${id}/courseWorkMaterials`, "courseWorkMaterial", { courseWorkMaterialStates: "PUBLISHED" })),
+      safe("announcements", this.list<GCourseData["announcements"][number]>(`/courses/${id}/announcements`, "announcements", { announcementStates: "PUBLISHED" })),
+      safe("topics", this.list<{ topicId: string; name: string }>(`/courses/${id}/topics`, "topic", {})),
     ]);
     return { work, materials, announcements, topics };
   }
