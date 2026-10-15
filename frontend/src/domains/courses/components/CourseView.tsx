@@ -85,15 +85,21 @@ export function CourseView({
             {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          {/* Smaller on phones so all three fit one row. */}
+          <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
+            {course.options.length > 0 && (
+              <ButtonLink href="#pricing" variant="secondary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
+                Pricing
+              </ButtonLink>
+            )}
             {course.method.length > 0 && (
-              <ButtonLink href="#method" variant="secondary" size="lg">
-                Method ↓
+              <ButtonLink href="#method" variant="secondary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
+                Method
               </ButtonLink>
             )}
             {course.modules.length > 0 && (
-              <ButtonLink href="#curriculum" variant="secondary" size="lg">
-                Curriculum ↓
+              <ButtonLink href="#curriculum" variant="secondary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
+                Curriculum
               </ButtonLink>
             )}
             {course.brochureUrl && (
@@ -284,7 +290,7 @@ export function CourseView({
       )}
 
       {course.options.length > 0 && (
-        <section aria-labelledby="options-heading" className="border-t border-line">
+        <section id="pricing" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
             <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
             <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
