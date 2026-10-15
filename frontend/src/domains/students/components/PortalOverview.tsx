@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
 import type { StudentSession, StudyPlanItem } from "../types";
+import { BOOK_BUTTON, BUTTON, JOIN_BUTTON } from "./buttons";
 import { InstallHint } from "./InstallHint";
 import { TabButton } from "./StudentPortal";
 
 const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
 const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
-const LINK = "mt-3 text-sm text-quant hover:underline";
 const when = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" }).format(new Date(iso));
 const dateOf = (ymd: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${ymd}T00:00:00Z`));
@@ -28,21 +28,21 @@ export function PortalOverview({ sessions, plan, classCards }: { sessions: Stude
               {next.course} · {next.address ?? "Online"}
               {next.status === "pending" && <span className="text-gold"> · awaiting confirmation</span>}
             </p>
-            <p className="flex flex-wrap gap-4">
+            <p className="mt-4 flex flex-wrap gap-2">
               {next.meetingUrl && (
-                <a href={next.meetingUrl} target="_blank" rel="noreferrer" className={LINK}>
-                  Join ↗
+                <a href={next.meetingUrl} target="_blank" rel="noreferrer" className={JOIN_BUTTON}>
+                  Join session
                 </a>
               )}
-              <TabButton tab="sessions" className={LINK}>
-                All sessions →
+              <TabButton tab="sessions" className={BUTTON}>
+                All sessions
               </TabButton>
             </p>
           </>
         ) : (
           <>
             <p className="mt-2 text-sm text-muted">{sessions === null ? "Couldn't load your sessions just now." : "Nothing booked yet."}</p>
-            <TabButton tab="book" className="mt-4 inline-flex h-10 items-center rounded-md bg-gold px-4 text-sm font-semibold text-canvas hover:bg-gold-bright">
+            <TabButton tab="book" className={`${BOOK_BUTTON} mt-4`}>
               Book a session
             </TabButton>
           </>
@@ -60,8 +60,8 @@ export function PortalOverview({ sessions, plan, classCards }: { sessions: Stude
         ) : (
           <p className="mt-2 text-sm text-muted">Your instructor adds your plan here.</p>
         )}
-        <TabButton tab="plan" className={LINK}>
-          Plan & materials →
+        <TabButton tab="plan" className={`${BUTTON} mt-4`}>
+          Open study plan
         </TabButton>
       </section>
       <InstallHint />

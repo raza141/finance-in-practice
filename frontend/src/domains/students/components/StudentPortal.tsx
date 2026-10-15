@@ -11,6 +11,7 @@ import { markFeedSeen } from "@/domains/classroom/actions/classroom";
 import { StudentApiClient } from "../services/StudentApiClient";
 import { StudentBookingContract } from "../services/StudentBookingContract";
 import type { SessionMode, StudentSession } from "../types";
+import { BUTTON, JOIN_BUTTON } from "./buttons";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
 
 const DAYS = 14;
@@ -268,8 +269,8 @@ export function StudentPortal({
                     {s.group ? (
                       <p className="flex flex-wrap items-center gap-4">
                         {s.meetingUrl && (
-                          <a href={s.meetingUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                            Join ↗
+                          <a href={s.meetingUrl} target="_blank" rel="noreferrer" className={JOIN_BUTTON}>
+                            Join session
                           </a>
                         )}
                         <span className="text-xs text-muted">Shared with your batch: message your instructor to change it.</span>
@@ -287,11 +288,11 @@ export function StudentPortal({
                     ) : (
                       <p className="flex flex-wrap gap-4">
                         {s.meetingUrl && (
-                          <a href={s.meetingUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                            Join ↗
+                          <a href={s.meetingUrl} target="_blank" rel="noreferrer" className={JOIN_BUTTON}>
+                            Join session
                           </a>
                         )}
-                        <button type="button" onClick={() => startMoving(s)} className="text-quant hover:underline">
+                        <button type="button" onClick={() => startMoving(s)} className={BUTTON}>
                           Change time
                         </button>
                         <button type="button" onClick={() => setConfirmCancel(s.uid)} className="text-muted hover:text-red-300">
@@ -467,8 +468,8 @@ export function StudentPortal({
                           <p className="flex flex-wrap gap-4 text-xs">
                             {mapUrl && !mapLinkInvalid && (
                               <>
-                                <a href={mapUrl} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                                  Check the pin ↗
+                                <a href={mapUrl} target="_blank" rel="noreferrer" className={BUTTON}>
+                                  Check the pin
                                 </a>
                                 <button type="button" onClick={() => setMapUrl("")} className="text-muted hover:text-ink">
                                   Remove pin
@@ -480,9 +481,9 @@ export function StudentPortal({
                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address}, Abu Dhabi`)}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-quant hover:underline"
+                                className={BUTTON}
                               >
-                                Find my address on Google Maps ↗
+                                Find my address on Google Maps
                               </a>
                             )}
                           </p>

@@ -1,4 +1,5 @@
 import type { StudyPlanItem } from "../types";
+import { BUTTON } from "./buttons";
 
 const PLAN_DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
@@ -56,8 +57,8 @@ export function StudyPlanTimeline({ items, programmes }: { items: StudyPlanItem[
                   <p className={`mt-0.5 font-semibold ${item.status === "skipped" ? "text-muted line-through" : "text-ink"}`}>{item.topic}</p>
                   {item.note && <p className="mt-1 text-sm text-ink/80">{item.note}</p>}
                   {item.materialUrl && (
-                    <a href={item.materialUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-quant hover:underline">
-                      Open material ↗
+                    <a href={item.materialUrl} target="_blank" rel="noreferrer" className={`${BUTTON} mt-2`}>
+                      Open material
                     </a>
                   )}
                 </div>
@@ -97,7 +98,6 @@ export function StudyPlanTimeline({ items, programmes }: { items: StudyPlanItem[
                     className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm text-ink transition-colors hover:border-quant/50 hover:text-quant"
                   >
                     <span className="min-w-0 truncate">{m.topic}</span>
-                    <span aria-hidden className="shrink-0 text-quant">↗</span>
                   </a>
                 </li>
               ))}

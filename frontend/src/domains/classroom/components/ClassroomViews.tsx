@@ -1,4 +1,5 @@
 import { siteConfig } from "@/core/config/site";
+import { BUTTON, CLASSROOM_BUTTON } from "@/domains/students/components/buttons";
 import { TabButton } from "@/domains/students/components/StudentPortal";
 
 import { ClassFeed, type Score } from "../services/ClassFeed";
@@ -60,19 +61,13 @@ function Item({ item, fresh }: { item: ClassItem; fresh: boolean }) {
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {item.link && (
-          <a
-            href={item.link}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#1e8e3e] px-3.5 text-sm font-semibold text-white hover:bg-[#188038]"
-          >
-            {item.kind === "quiz" && item.status !== "done" && item.status !== "returned" ? "Start in Classroom" : "Open in Classroom"} <span aria-hidden>↗</span>
+          <a href={item.link} target="_blank" rel="noreferrer" className={CLASSROOM_BUTTON}>
+            {item.kind === "quiz" && item.status !== "done" && item.status !== "returned" ? "Start in Classroom" : "Open in Classroom"}
           </a>
         )}
         {item.files.map((f) => (
-          <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="inline-flex h-9 max-w-64 items-center rounded-md border border-line px-3 text-sm text-ink/90 hover:border-quant/60">
+          <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className={`${BUTTON} max-w-64`}>
             <span className="truncate">{f.title}</span>
-            <span aria-hidden className="ml-1.5 text-muted">↗</span>
           </a>
         ))}
       </div>
@@ -86,94 +81,78 @@ const unavailable = (
   </section>
 );
 
-/** Classroom tab, top: everything posted in the student's classes, with their to-do on the side. */
-export async function ClassFeedPanel({ result }: { result: Promise<FeedResult> }) {
+/** Classroom tab, right-hand bar: the latest posts (quizzes, mocks, homework, files, announcements), newest first. */
+export async function ClassFeedSidebar({ result }: { result: Promise<FeedResult> }) {
   const r = await result;
   if (r.status === "off") return null;
   if (r.status === "error") return unavailable;
   const { feed } = r;
-  const todo = ClassFeed.todo(feed.items);
-  const notJoined = feed.classes.filter((c) => !c.joined);
-  // The latest few up front; everything, older ones too, folds away by topic (native <details>, no JS).
   const shown = feed.items.slice(0, FIRST);
-  const groups = feed.items.length > FIRST ? ClassFeed.byTopic(feed.items) : [];
-  const manyClasses = new Set(groups.map((g) => g.classTitle)).size > 1;
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
-      <section aria-labelledby="feed-heading" className={CARD}>
-        <h2 id="feed-heading" className="text-2xl font-normal italic">
-          New in your class
-        </h2>
-        {notJoined.length > 0 && (
-          <p className="mt-3 rounded-lg border border-gold/40 bg-gold/10 p-3 text-sm text-ink">
-            We can&rsquo;t see you in {notJoined.map((c) => c.title).join(", ")} yet. Join with <span className="font-semibold">{feed.email}</span>{" "}
-            using the button below, or tell your instructor which Google account you use there. Until then you see shared posts only.
-          </p>
-        )}
-        {shown.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">Nothing posted yet. Quizzes, homework and files your instructor posts in Classroom appear here.</p>
-        ) : (
-          <>
-            <ul className="mt-2 divide-y divide-line/60">
-              {shown.map((item) => (
-                <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={ClassFeed.isNew(item, feed.seenAt)} />
-              ))}
-            </ul>
-            {groups.length > 0 && (
-              <div className="border-t border-line/60 pt-4">
-                <h3 className={LABEL}>Everything, by topic</h3>
-                <div className="mt-2 divide-y divide-line/60">
-                  {groups.map((g) => (
-                    <details key={`${g.classTitle}-${g.topic}`} className="group py-1">
-                      <summary className="flex cursor-pointer items-center justify-between gap-3 py-2 text-sm text-ink hover:text-quant">
-                        <span className="font-semibold">
-                          {g.topic}
-                          {manyClasses && <span className="font-normal text-muted"> · {g.classTitle}</span>}
-                        </span>
-                        <span className="shrink-0 text-xs text-muted">
-                          {g.items.length} {g.items.length === 1 ? "post" : "posts"}
-                          <span aria-hidden className="ml-2 inline-block transition-transform group-open:rotate-90">›</span>
-                        </span>
-                      </summary>
-                      <ul className="divide-y divide-line/60">
-                        {g.items.map((item) => (
-                          <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={false} />
-                        ))}
-                      </ul>
-                    </details>
+    <aside aria-labelledby="feed-heading" className={CARD}>
+      <h2 id="feed-heading" className="text-2xl font-normal italic">
+        New in your class
+      </h2>
+      {shown.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">Nothing posted yet. Quizzes, homework and files your instructor posts in Classroom appear here.</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-line/60">
+          {shown.map((item) => (
+            <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={ClassFeed.isNew(item, feed.seenAt)} />
+          ))}
+        </ul>
+      )}
+    </aside>
+  );
+}
+
+/** Classroom tab, under the classrooms: a join reminder when needed, then every post folded by topic (native <details>, no JS). */
+export async function ClassTopics({ result }: { result: Promise<FeedResult> }) {
+  const r = await result;
+  if (r.status !== "ok") return null;
+  const { feed } = r;
+  const notJoined = feed.classes.filter((c) => !c.joined);
+  const groups = ClassFeed.byTopic(feed.items);
+  const manyClasses = new Set(groups.map((g) => g.classTitle)).size > 1;
+  if (notJoined.length === 0 && groups.length === 0) return null;
+  return (
+    <>
+      {notJoined.length > 0 && (
+        <p className="rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm text-ink">
+          You haven&rsquo;t joined {notJoined.map((c) => c.title).join(", ")} yet. Press <span className="font-semibold">Join Google Classroom</span> above with{" "}
+          <span className="font-semibold">{feed.email}</span>, or tell your instructor which Google account you use there. Until then you see the titles of shared
+          posts, but can&rsquo;t open them.
+        </p>
+      )}
+      {groups.length > 0 && (
+        <section aria-labelledby="topics-heading" className={CARD}>
+          <h2 id="topics-heading" className="text-2xl font-normal italic">
+            Everything, by topic
+          </h2>
+          <div className="mt-3 divide-y divide-line/60">
+            {groups.map((g) => (
+              <details key={`${g.classTitle}-${g.topic}`} className="group py-1">
+                <summary className="flex cursor-pointer items-center justify-between gap-3 py-2 text-sm text-ink hover:text-quant">
+                  <span className="font-semibold">
+                    {g.topic}
+                    {manyClasses && <span className="font-normal text-muted"> · {g.classTitle}</span>}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted">
+                    {g.items.length} {g.items.length === 1 ? "post" : "posts"}
+                    <span aria-hidden className="ml-2 inline-block transition-transform group-open:rotate-90">›</span>
+                  </span>
+                </summary>
+                <ul className="divide-y divide-line/60">
+                  {g.items.map((item) => (
+                    <Item key={`${item.classTitle}-${item.id}`} item={item} fresh={false} />
                   ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </section>
-      <aside aria-labelledby="todo-heading" className={`${CARD} lg:sticky lg:top-40`}>
-        <h2 id="todo-heading" className={LABEL}>
-          Your to-do
-        </h2>
-        {todo.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">All done. Nothing waiting to hand in.</p>
-        ) : (
-          <ul className="mt-3 grid gap-3">
-            {todo.map((i) => (
-              <li key={`${i.classTitle}-${i.id}`} className="grid gap-1 text-sm">
-                {i.link ? (
-                  <a href={i.link} target="_blank" rel="noreferrer" className="font-semibold text-ink hover:text-quant">
-                    {i.title} <span aria-hidden className="text-muted">↗</span>
-                  </a>
-                ) : (
-                  <span className="font-semibold text-ink">{i.title}</span>
-                )}
-                <span className={i.status === "missing" ? "text-red-300" : "text-muted"}>
-                  {i.status === "missing" ? "Missing" : i.dueAt ? `Due ${dayTime(i.dueAt)}` : "No due date"} · {i.classTitle}
-                </span>
-              </li>
+                </ul>
+              </details>
             ))}
-          </ul>
-        )}
-      </aside>
-    </div>
+          </div>
+        </section>
+      )}
+    </>
   );
 }
 
@@ -275,7 +254,7 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
                 <span className="flex items-center gap-3">
                   <span className={`font-semibold ${t.pct < TARGET ? "text-gold" : "text-quant"}`}>{t.pct}%</span>
                   {t.pct < TARGET && (
-                    <TabButton tab="book" notes={`Review: ${t.name} (${t.pct}% average)`} className="text-xs text-gold hover:underline">
+                    <TabButton tab="book" notes={`Review: ${t.name} (${t.pct}% average)`} className="inline-flex h-7 items-center rounded-md border border-gold/60 px-2.5 font-mono text-[11px] font-semibold text-gold transition-colors hover:bg-gold/10">
                       Book a review
                     </TabButton>
                   )}
@@ -316,8 +295,8 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
                 <span className="flex items-center gap-4">
                   <span className={`font-semibold ${m.pct < TARGET ? "text-gold" : "text-quant"}`}>{m.pct}%</span>
                   {m.link && (
-                    <a href={m.link} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                      Review ↗
+                    <a href={m.link} target="_blank" rel="noreferrer" className={BUTTON}>
+                      Review
                     </a>
                   )}
                 </span>
@@ -350,8 +329,8 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
         <p className="mt-2 text-3xl font-semibold text-ink">{soon.length}</p>
         <p className="text-sm text-muted">due in the next 7 days{missing.length > 0 && <span className="text-red-300"> · {missing.length} missing</span>}</p>
         {soon[0] && <p className="mt-2 truncate text-sm text-ink/90">Next: {soon[0].title}</p>}
-        <TabButton tab="classroom" className="mt-3 text-sm text-quant hover:underline">
-          Open to-do →
+        <TabButton tab="classroom" className={`${BUTTON} mt-4`}>
+          Open Classroom
         </TabButton>
       </section>
       <section className={card}>
@@ -366,16 +345,16 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
               : "No marks returned yet"}
           {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
         </p>
-        <TabButton tab="progress" className="mt-3 text-sm text-quant hover:underline">
-          See progress →
+        <TabButton tab="progress" className={`${BUTTON} mt-4`}>
+          See progress
         </TabButton>
       </section>
       <section className={card}>
         <h2 className={LABEL}>New in your class</h2>
         <p className="mt-2 text-3xl font-semibold text-ink">{fresh.length}</p>
         <p className="truncate text-sm text-muted">{fresh[0] ? `Latest: ${fresh[0].title}` : "Nothing new since your last visit"}</p>
-        <TabButton tab="classroom" className="mt-3 text-sm text-quant hover:underline">
-          Open Classroom →
+        <TabButton tab="classroom" className={`${BUTTON} mt-4`}>
+          See what&rsquo;s new
         </TabButton>
       </section>
     </>

@@ -9,7 +9,7 @@ import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
-import { ClassFeedPanel, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
+import { ClassFeedSidebar, ClassTopics, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
 import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
@@ -176,13 +176,23 @@ async function Portal({ student }: { student: Student }) {
         // No Classroom yet (e.g. a single session): no tab, nothing to explain.
         classroom={
           hasClassroom ? (
-            <div className="grid gap-6">
-              {synced && (
-                <Suspense fallback={loading("what's new in your class")}>
-                  <ClassFeedPanel result={feed} />
-                </Suspense>
-              )}
+            // Wide: classrooms then everything by topic on the left, latest posts on the right. Phones: classrooms, latest posts, topics.
+            <div className={`grid items-start gap-6 ${synced ? "lg:grid-cols-[1fr_24rem]" : ""}`}>
               <ClassroomPanel classes={classes} own={own} email={student.email} />
+              {synced && (
+                <>
+                  <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+                    <Suspense fallback={loading("what's new in your class")}>
+                      <ClassFeedSidebar result={feed} />
+                    </Suspense>
+                  </div>
+                  <div className="grid gap-6 lg:col-start-1">
+                    <Suspense fallback={null}>
+                      <ClassTopics result={feed} />
+                    </Suspense>
+                  </div>
+                </>
+              )}
             </div>
           ) : null
         }

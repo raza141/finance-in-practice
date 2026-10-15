@@ -1,6 +1,7 @@
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
 import { requestClassroom } from "../actions/classroom";
+import { CLASSROOM_BUTTON } from "./buttons";
 import type { PrivateClassroom, StudentClassroom } from "../types";
 
 const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
@@ -16,8 +17,7 @@ function BoardIcon({ className = "" }: { className?: string }) {
   );
 }
 
-const JOIN =
-  "mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-[#1e8e3e] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#188038]";
+const JOIN = `${CLASSROOM_BUTTON} mt-4`;
 
 /** A class just for this student: the invite is there from the start. */
 function OwnClassCard({ c }: { c: PrivateClassroom }) {
@@ -34,7 +34,7 @@ function OwnClassCard({ c }: { c: PrivateClassroom }) {
       </div>
       <p className="mt-3 text-sm text-ink/80">{c.note || "Your notes, homework and files from your instructor, in one private class."}</p>
       <a href={c.url} target="_blank" rel="noreferrer" className={JOIN}>
-        Open my classroom <span aria-hidden>↗</span>
+        Open my classroom
       </a>
     </li>
   );
@@ -50,17 +50,11 @@ export function ClassroomPanel({ classes, own, email }: { classes: StudentClassr
         <h2 id="classroom-heading" className="text-2xl font-normal italic">
           Your classrooms
         </h2>
-        {own.length > 0 && (
-          <ul aria-label="Just for you" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {own.map((c) => (
-              <OwnClassCard key={c.id} c={c} />
-            ))}
-          </ul>
-        )}
-        {classes.length > 0 && (
-          <>
-          {own.length > 0 && <h3 className="mt-8 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Course classrooms</h3>}
-          <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Every class side by side: private ones first (marked "just for you"), then the course classes. */}
+        <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+          {own.map((c) => (
+            <OwnClassCard key={c.id} c={c} />
+          ))}
             {classes.map((c) => (
               <li
                 key={c.title}
@@ -68,12 +62,19 @@ export function ClassroomPanel({ classes, own, email }: { classes: StudentClassr
                   c.url ? "border-[#34a853]/30 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.22),transparent_60%)]" : "border-line"
                 }`}
               >
-                <BoardIcon className={`h-9 w-9 ${c.url ? "text-[#34a853]" : "text-muted"}`} />
-                <p className="mt-3 font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom</p>
-                <p className="mt-1 text-lg font-semibold text-ink">{c.title}</p>
+                {/* Same header as a private class, so cards side by side line up. */}
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#1e8e3e]/20">
+                    <BoardIcon className={`h-7 w-7 ${c.url ? "text-[#34a853]" : "text-muted"}`} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom · course</p>
+                    <p className="truncate text-lg font-semibold text-ink">{c.title}</p>
+                  </div>
+                </div>
                 {c.url ? (
                   <a href={c.url} target="_blank" rel="noreferrer" className={JOIN}>
-                    Join Google Classroom <span aria-hidden>↗</span>
+                    Join Google Classroom
                   </a>
                 ) : c.access === "none" ? (
                   <form action={requestClassroom.bind(null, c.title)} className="mt-4">
@@ -93,9 +94,7 @@ export function ClassroomPanel({ classes, own, email }: { classes: StudentClassr
                 )}
               </li>
             ))}
-          </ul>
-          </>
-        )}
+        </ul>
         <p className="mt-5 text-sm text-muted">
           Join with <span className="font-semibold text-ink">{email}</span>, the same Google account you signed in with here.
         </p>
