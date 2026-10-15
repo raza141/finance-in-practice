@@ -27,7 +27,7 @@ const data: GCourseData = {
 };
 const subs = [
   { courseWorkId: "m1", userId: "u-ali", state: "RETURNED" as const, assignedGrade: 25 },
-  { courseWorkId: "m2", userId: "u-ali", state: "RETURNED" as const, assignedGrade: 72 },
+  { courseWorkId: "m2", userId: "u-ali", state: "RETURNED" as const, assignedGrade: 72, updateTime: "2026-10-12T09:00:00Z" },
   { courseWorkId: "e1", userId: "u-ali", state: "RETURNED" as const, assignedGrade: 6 },
   { courseWorkId: "hw", userId: "u-ali", state: "CREATED" as const },
   { courseWorkId: "soon", userId: "u-ali", state: "NEW" as const },
@@ -71,6 +71,11 @@ describe("ClassFeed", () => {
     const p = ClassFeed.progress(items);
     expect(p.mocks.map((m) => m.pct)).toEqual([50, 72]);
     expect(p).toMatchObject({ latest: 72, average: 61, best: 72, change: 22, topics: [{ name: "Ethics", pct: 60, count: 1 }] });
+    const week = ClassFeed.week(items, NOW);
+    expect(week.due.map((i) => i.id)).toEqual(["soon"]);
+    expect(week.missing.map((i) => i.id)).toEqual(["hw"]);
+    expect(week.fresh.map((i) => i.id)).toEqual(["soon", "a1", "f1", "hw", "e1"]);
+    expect(week.marks.map((i) => i.id)).toEqual(["m2"]);
     expect(ClassFeed.progress([])).toMatchObject({ mocks: [], latest: null, average: null, change: null });
   });
 });

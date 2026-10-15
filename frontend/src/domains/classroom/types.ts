@@ -61,6 +61,7 @@ export interface GSubmission {
   state?: "NEW" | "CREATED" | "TURNED_IN" | "RETURNED" | "RECLAIMED_BY_STUDENT";
   late?: boolean;
   assignedGrade?: number;
+  updateTime?: string;
 }
 
 export type ClassItemKind = "quiz" | "assignment" | "question" | "material" | "announcement";
@@ -85,6 +86,8 @@ export interface ClassItem {
   status: ClassItemStatus | null;
   late: boolean;
   grade: { points: number; max: number } | null;
+  /** When the mark was returned (the submission's last update), if graded. */
+  gradedAt: string | null;
   /** Under a "Mock exams" topic: counts on the progress chart. */
   mock: boolean;
   files: { title: string; url: string }[];

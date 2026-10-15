@@ -2,8 +2,9 @@ import "server-only";
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-/** "register": a pending row in student_registrations. "signin": an enrolled client. */
-export type EmailLinkKind = "register" | "signin";
+/** "register": a pending row in student_registrations. "signin": an enrolled client. "unsubscribe": stop the weekly email (never signs in). */
+export type EmailLinkKind = "register" | "signin" | "unsubscribe";
+const KINDS: readonly string[] = ["register", "signin", "unsubscribe"];
 
 /**
  * The link we email to prove a typed address belongs to the visitor (no Google).
@@ -15,6 +16,8 @@ export type EmailLinkKind = "register" | "signin";
 export class EmailLink {
   static readonly TTL_MS = 30 * 60 * 1000;
   static readonly PATH = "/api/student/auth/email";
+  /** Unsubscribe links sit in old emails, so they last longer; they can only switch the email off. */
+  static readonly UNSUBSCRIBE_TTL_MS = 60 * 24 * 60 * 60 * 1000;
 
   constructor(private readonly key: Buffer) {}
 
@@ -24,12 +27,13 @@ export class EmailLink {
   }
 
   issue(kind: EmailLinkKind, id: string, now: number = Date.now()): string {
-    const body = Buffer.from(JSON.stringify({ kind, id, exp: now + EmailLink.TTL_MS })).toString("base64url");
+    const ttl = kind === "unsubscribe" ? EmailLink.UNSUBSCRIBE_TTL_MS : EmailLink.TTL_MS;
+    const body = Buffer.from(JSON.stringify({ kind, id, exp: now + ttl })).toString("base64url");
     return `${body}.${this.sign(body)}`;
   }
 
   url(origin: string, kind: EmailLinkKind, id: string): string {
-    return `${origin}${EmailLink.PATH}?t=${this.issue(kind, id)}`;
+    return `${origin}${kind === "unsubscribe" ? "/student/weekly-email" : EmailLink.PATH}?t=${this.issue(kind, id)}`;
   }
 
   /** The kind and id, or null when the token is missing, forged or expired. */
@@ -41,8 +45,8 @@ export class EmailLink {
     if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
     try {
       const { kind, id, exp } = JSON.parse(Buffer.from(body, "base64url").toString()) as Record<string, unknown>;
-      if ((kind !== "register" && kind !== "signin") || typeof id !== "string" || typeof exp !== "number" || exp <= now) return null;
-      return { kind, id };
+      if (typeof kind !== "string" || !KINDS.includes(kind) || typeof id !== "string" || typeof exp !== "number" || exp <= now) return null;
+      return { kind: kind as EmailLinkKind, id };
     } catch {
       return null;
     }

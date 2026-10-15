@@ -58,6 +58,8 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     locale: "en_US",
   },
+  // Home-screen app on iPhone (Android reads app/manifest.ts).
+  appleWebApp: { capable: true, title: "FIP Portal", statusBarStyle: "black" },
   twitter: {
     card: "summary_large_image",
     title: siteConfig.tagline,

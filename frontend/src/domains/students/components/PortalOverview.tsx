@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { StudentSession, StudyPlanItem } from "../types";
+import { InstallHint } from "./InstallHint";
 import { TabButton } from "./StudentPortal";
 
 const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
@@ -62,6 +63,7 @@ export function PortalOverview({ sessions, plan, classCards }: { sessions: Stude
         </TabButton>
       </section>
       {classCards}
+      <InstallHint />
     </div>
   );
 }

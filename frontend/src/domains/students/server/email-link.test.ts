@@ -15,6 +15,12 @@ describe("EmailLink", () => {
     expect(links.read(token, NOW + EmailLink.TTL_MS + 1)).toBeNull();
   });
 
+  it("unsubscribe links last 60 days", () => {
+    const token = links.issue("unsubscribe", ID, NOW);
+    expect(links.read(token, NOW + 59 * 86_400_000)).toEqual({ kind: "unsubscribe", id: ID });
+    expect(links.read(token, NOW + 61 * 86_400_000)).toBeNull();
+  });
+
   it("refuses forged, foreign and signup-ticket tokens", () => {
     const [, signature] = links.issue("signin", ID, NOW).split(".");
     const forged = Buffer.from(JSON.stringify({ kind: "signin", id: "someone-else", exp: NOW + 60_000 })).toString("base64url");

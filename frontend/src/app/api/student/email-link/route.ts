@@ -24,7 +24,7 @@ function reject(status: number, message: string) {
 /** The same answer whether or not we mailed anyone, so the form can't tell who is a student. */
 const sent = () => Response.json({ ok: true }, { headers: NO_STORE });
 
-const COPY: Record<EmailLinkKind, { subject: string; heading: string; line: string; button: string }> = {
+const COPY: Record<Exclude<EmailLinkKind, "unsubscribe">, { subject: string; heading: string; line: string; button: string }> = {
   register: {
     subject: "Confirm your email to open your student portal",
     heading: "Confirm your email",
@@ -40,7 +40,7 @@ const COPY: Record<EmailLinkKind, { subject: string; heading: string; line: stri
 };
 
 /** True once the email is handed to Resend. Outside production the link is logged instead, so testing never mails real people. */
-async function mail(to: string, name: string, kind: EmailLinkKind, url: string): Promise<boolean> {
+async function mail(to: string, name: string, kind: keyof typeof COPY, url: string): Promise<boolean> {
   if (process.env.NODE_ENV !== "production") {
     console.info(`[email-link] ${kind} link for ${to}: ${url}`);
     return true;

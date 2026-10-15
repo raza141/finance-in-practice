@@ -866,6 +866,15 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE clients ADD COLUMN feed_seen_at timestamptz`,
     ],
   },
+  {
+    // Weekly "your week in class" email: students can switch it off; the send
+    // time stops a repeated cron run from emailing twice.
+    id: "042_weekly_digest",
+    statements: [
+      `ALTER TABLE clients ADD COLUMN digest_off boolean NOT NULL DEFAULT false`,
+      `ALTER TABLE clients ADD COLUMN digest_sent_at timestamptz`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

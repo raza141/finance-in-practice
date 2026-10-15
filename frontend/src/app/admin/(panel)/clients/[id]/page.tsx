@@ -22,7 +22,7 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
-import { saveClassroomEmail } from "@/domains/classroom/actions/classroom";
+import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/actions/classroom";
 import { addPrivateClassroom, decideClassroom, removePrivateClassroom } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
@@ -41,6 +41,10 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
     tone: "ok",
   },
   "classroom-email-saved": { text: "Classroom email saved: their portal reads Classroom with it from now on.", tone: "ok" },
+  "digest-sent": { text: "Preview sent to your inbox: it's what they'd get on Sunday.", tone: "ok" },
+  "digest-quiet": { text: "Nothing to send them this week (nothing due, missing, new or marked), so they won't get one.", tone: "ok" },
+  "digest-unavailable": { text: "No preview: Classroom isn't connected or email isn't set up.", tone: "warn" },
+  "digest-failed": { text: "Preview failed. Try again in a minute.", tone: "warn" },
   "classroom-email-invalid": { text: "Not saved: that doesn't look like an email address.", tone: "warn" },
   "private-added": { text: "Private classroom added: it shows in their portal now.", tone: "ok" },
   "private-removed": { text: "Private classroom removed from their portal. Also remove them in Google Classroom (People).", tone: "ok" },
@@ -119,6 +123,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           </label>
           <PendingButton pendingLabel="Saving…" className="h-10 rounded-md border border-line px-4 text-sm hover:border-quant/60">
             Save
+          </PendingButton>
+        </form>
+        <form action={previewWeeklyEmail} className="mt-3 text-sm">
+          <input type="hidden" name="clientId" value={client.id} />
+          <span className="text-muted">Sunday &ldquo;week in class&rdquo; email: </span>
+          <PendingButton pendingLabel="Sending…" className="text-quant hover:underline">
+            Email me a preview
           </PendingButton>
         </form>
 

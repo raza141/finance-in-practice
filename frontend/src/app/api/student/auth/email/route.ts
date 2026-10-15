@@ -27,10 +27,13 @@ export async function GET(request: NextRequest) {
       await StudentAuth.startSession(id, repo);
       const { name, email, phone, course } = registration;
       if (added) await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", email], ["Mobile", phone], ["Course", course], ["Signed up with", "Email link"]], id);
-    } else {
+    } else if (link.kind === "signin") {
       const student = await repo.enrolledById(link.id);
       if (!student) return to("/student?error=link_expired");
       await StudentAuth.startSession(student.id, repo);
+    } else {
+      // An unsubscribe link must never sign anyone in.
+      return to("/student?error=link_expired");
     }
   } catch (error) {
     console.error("[student] email link failed", error);

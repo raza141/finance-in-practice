@@ -81,12 +81,13 @@ export class ClassFeed {
         status,
         late: s?.late === true,
         grade: graded ? { points: s!.assignedGrade!, max: w.maxPoints! } : null,
+        gradedAt: graded ? (s!.updateTime ?? null) : null,
         // A quiz's form opens from Classroom (so the mark lands there), not as a loose file.
         files: ClassFeed.files(w.materials?.filter((m) => !m.form)),
       };
     });
     const materials = data.materials.filter(visible).map(
-      (m): ClassItem => ({ ...base(m), kind: "material", title: m.title, text: ClassFeed.clip(m.description), dueAt: null, status: null, late: false, grade: null }),
+      (m): ClassItem => ({ ...base(m), kind: "material", title: m.title, text: ClassFeed.clip(m.description), dueAt: null, status: null, late: false, grade: null, gradedAt: null }),
     );
     const announcements = data.announcements.filter(visible).map((a): ClassItem => {
       const text = (a.text ?? "").trim();
@@ -99,6 +100,7 @@ export class ClassFeed {
         status: null,
         late: false,
         grade: null,
+        gradedAt: null,
         mock: false,
       };
     });
@@ -118,6 +120,17 @@ export class ClassFeed {
 
   static dueWithin(items: readonly ClassItem[], days: number, now = Date.now()): ClassItem[] {
     return items.filter((i) => i.status === "todo" && i.dueAt !== null && Date.parse(i.dueAt) <= now + days * DAY);
+  }
+
+  /** The weekly email: due in the next 7 days, missing, posted in the last 7, marks returned in the last 7. */
+  static week(items: readonly ClassItem[], now = Date.now()): { due: ClassItem[]; missing: ClassItem[]; fresh: ClassItem[]; marks: ClassItem[] } {
+    const recent = (iso: string | null) => iso !== null && Date.parse(iso) > now - 7 * DAY && Date.parse(iso) <= now;
+    return {
+      due: ClassFeed.dueWithin(items, 7, now).sort((a, b) => Date.parse(a.dueAt!) - Date.parse(b.dueAt!)),
+      missing: items.filter((i) => i.status === "missing"),
+      fresh: items.filter((i) => recent(i.postedAt)),
+      marks: items.filter((i) => i.grade !== null && recent(i.gradedAt)),
+    };
   }
 
   static progress(items: readonly ClassItem[]): Progress {
