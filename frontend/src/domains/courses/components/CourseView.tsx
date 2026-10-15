@@ -87,9 +87,9 @@ export function CourseView({
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
           {/* Smaller on phones so all three fit one row. */}
           <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
-            {/* Gold outline: money, quieter than the solid gold navbar button. */}
+            {/* Solid yellow like the site's other gold buttons: the one money action in the row. */}
             {course.options.length > 0 && (
-              <ButtonLink href="#pricing" variant="gold" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
+              <ButtonLink href="#pricing" variant="primary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
                 Pricing
               </ButtonLink>
             )}
