@@ -1,6 +1,7 @@
 import { animate, createTimeline, stagger, utils } from "animejs";
 
 import { ScrollManager } from "./ScrollManager";
+import { ScrollStory } from "./ScrollStory";
 
 /**
  * Hooks used in markup. Elements carrying `data-anim` are hidden by CSS only
@@ -14,6 +15,9 @@ export const AnimHook = {
   heroCanvas: "hero-canvas",
   bento: "bento",
   reveal: "reveal",
+  storyStep: "story-step",
+  storyRail: "story-rail",
+  storyEnd: "story-end",
 } as const;
 
 type Revertible = { revert: () => unknown };
@@ -127,6 +131,26 @@ export class LandingAnimationController {
         duration: 900,
         ease: "outExpo",
       }),
+    );
+  }
+
+  /**
+   * Scroll story (ScrollStory): where the screen is big enough, the section
+   * pins and its steps rise in with the scroll; elsewhere a plain fade-up.
+   */
+  registerStory(section: HTMLElement): void {
+    if (this.reducedMotion) return;
+    const steps = this.hooks(AnimHook.storyStep, section);
+    const [rail] = this.hooks(AnimHook.storyRail, section);
+    const end = this.hooks(AnimHook.storyEnd, section);
+    const stage = section.querySelector<HTMLElement>("[data-story-stage]");
+    const pinned = stage ? ScrollStory.pin(section, stage, { steps, rail, end }) : null;
+    if (pinned) {
+      this.animations.push(...pinned);
+      return;
+    }
+    this.onEnter(section, () =>
+      animate([...steps, ...(rail ? [rail] : []), ...end], { opacity: [0, 1], translateY: [24, 0], delay: stagger(100), duration: 900, ease: "outExpo" }),
     );
   }
 

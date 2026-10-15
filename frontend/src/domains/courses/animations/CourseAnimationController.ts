@@ -8,6 +8,7 @@ import {
 } from "animejs";
 
 import { ScrollManager } from "@/core/animations/ScrollManager";
+import { ScrollStory } from "@/core/animations/ScrollStory";
 
 /** `data-course-anim` hooks in CourseView. Content is real HTML either way; these only move and fade it. */
 export const CourseAnimHook = {
@@ -17,6 +18,8 @@ export const CourseAnimHook = {
   stage: "stage",
   weights: "weights",
   weightBar: "weight-bar",
+  story: "story",
+  option: "option",
 } as const;
 
 type Revertible = { revert: () => unknown };
@@ -43,9 +46,11 @@ export class CourseAnimationController {
   start(): void {
     if (this.reducedMotion) return;
     this.decodeHero();
-    this.hooks(CourseAnimHook.journey).forEach((journey) =>
-      this.drawJourney(journey),
-    );
+    // Pinned where the screen is big enough (method stages, pricing options); otherwise the method keeps its scroll-drawn line.
+    const pinned = new Set(this.hooks(CourseAnimHook.story).filter((track) => this.pinStory(track)));
+    this.hooks(CourseAnimHook.journey)
+      .filter((journey) => ![...pinned].some((track) => track.contains(journey)))
+      .forEach((journey) => this.drawJourney(journey));
     this.hooks(CourseAnimHook.weights).forEach((list) =>
       this.growWeights(list),
     );
@@ -102,6 +107,19 @@ export class CourseAnimationController {
       );
     });
     this.animations.push(timeline);
+  }
+
+  /** Pins a `story` track through ScrollStory: method stages (with their line) or pricing options. False when it can't pin here. */
+  private pinStory(track: HTMLElement): boolean {
+    const stage = track.querySelector<HTMLElement>("[data-story-stage]");
+    if (!stage) return false;
+    const stages = this.hooks(CourseAnimHook.stage, track);
+    const steps = stages.length > 0 ? stages : this.hooks(CourseAnimHook.option, track);
+    const rail = track.querySelector<HTMLElement>(`[data-course-anim="${CourseAnimHook.journeyLine}"]`);
+    const animations = ScrollStory.pin(track, stage, { steps, rail });
+    if (!animations) return false;
+    this.animations.push(...animations);
+    return true;
   }
 
   private growWeights(list: HTMLElement): void {

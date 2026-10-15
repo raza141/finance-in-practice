@@ -135,6 +135,9 @@ export function CourseView({
       {course.method.length > 0 && (
         <section id="method" aria-labelledby="method-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
+            {/* Scroll story (CourseAnimationController): on big screens the heading and stages pin while the stages arrive. */}
+            <div data-course-anim="story">
+              <div data-story-stage>
             <SectionHeading
               id="method-heading"
               eyebrow="The Finance in Practice method"
@@ -173,6 +176,8 @@ export function CourseView({
                 </li>
               ))}
             </ol>
+              </div>
+            </div>
             {course.modes.length > 0 && (
               <div className="mt-16">
                 <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
@@ -291,13 +296,14 @@ export function CourseView({
       )}
 
       {course.options.length > 0 && (
-        <section id="pricing" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
-          <div className="page-container py-12 lg:py-14">
+        <section id="pricing" data-course-anim="story" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
+          <div data-story-stage className="page-container py-12 lg:py-14">
             <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
             <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
               {course.options.map((option, index) => (
                 <li
                   key={index}
+                  data-course-anim="option"
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_12px_40px_-12px_rgba(212,175,55,0.25)]"
                 >
                   {/* Same build as the method stages: accent bar, big faded number, icon tile. */}

@@ -6,7 +6,7 @@ import { LandingAnimationController } from "./LandingAnimationController";
 
 /**
  * React adapter for `LandingAnimationController`. Sections opt in with
- * `data-sequence="bento" | "counters" | "reveal"`; every
+ * `data-sequence="bento" | "counters" | "reveal" | "story"`; every
  * sequence also reveals its `[data-anim="reveal"]` children.
  *
  * The controller is created inside the effect (not during render) so the
@@ -33,6 +33,9 @@ export function LandingAnimator({ children }: { children: ReactNode }) {
           break;
         case "counters":
           controller.registerCounters(section);
+          break;
+        case "story":
+          controller.registerStory(section);
           break;
       }
     });
