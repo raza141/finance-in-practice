@@ -92,9 +92,13 @@ export class ClassroomSync {
     if (!profile) return null;
     const email = (profile.classroom_email ?? profile.email).toLowerCase();
     const courses = await ClassroomSync.courses();
+    // Two links to one Google class (course class + private class, invite + class link) load it once.
+    const seen = new Set<string>();
     const matched = links.flatMap((link) => {
       const course = ClassFeed.match(link.url, courses);
-      return course ? [{ title: link.title, course }] : [];
+      if (!course || seen.has(course.id)) return [];
+      seen.add(course.id);
+      return [{ title: link.title, course }];
     });
     // One class failing (e.g. Google refuses its roster) leaves the others showing.
     const settled = await Promise.allSettled(
