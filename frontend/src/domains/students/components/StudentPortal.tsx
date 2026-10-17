@@ -61,6 +61,7 @@ export function StudentPortal({
   classroom,
   overview,
   progress,
+  readOnly = false,
 }: {
   courses: string[];
   lengths: readonly number[];
@@ -75,10 +76,14 @@ export function StudentPortal({
   overview: ReactNode;
   /** Mock scores from Classroom; null hides the tab. */
   progress: ReactNode | null;
+  /** An admin viewing as this student: shown as they see it, but nothing is booked, changed or marked seen. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
-  const [days, setDays] = useState<Days>({ status: "loading" });
+  const [days, setDays] = useState<Days>(
+    readOnly ? { status: "error", message: "Free times load only for the student (you are viewing as them)." } : { status: "loading" },
+  );
   const [course, setCourse] = useState(courses[0] ?? "");
   const [topic, setTopic] = useState("");
   const [mode, setMode] = useState<SessionMode>("online");
@@ -97,6 +102,7 @@ export function StudentPortal({
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
+    if (readOnly) return;
     const zone = ZonedCalendar.visitorTimeZone();
     const from = new ZonedCalendar(zone).today();
     let live = true;
@@ -107,7 +113,7 @@ export function StudentPortal({
     return () => {
       live = false;
     };
-  }, [version]);
+  }, [version, readOnly]);
 
   const calendar = new ZonedCalendar(timeZone);
   const when = (start: string, minutes: number) => {
@@ -205,7 +211,7 @@ export function StudentPortal({
     setTab(next);
     if (prefill) setNotes(prefill);
     // Opening the class feed once per visit: what's there now stops being "New" next time.
-    if (next === "classroom" && !seen.current) {
+    if (next === "classroom" && !seen.current && !readOnly) {
       seen.current = true;
       void markFeedSeen().catch(() => {});
     }
@@ -292,10 +298,10 @@ export function StudentPortal({
                             Join session
                           </a>
                         )}
-                        <button type="button" onClick={() => startMoving(s)} className={BUTTON}>
+                        <button type="button" disabled={readOnly} onClick={() => startMoving(s)} className={`${BUTTON} disabled:opacity-50`}>
                           Change time
                         </button>
-                        <button type="button" onClick={() => setConfirmCancel(s.uid)} className="text-muted hover:text-red-300">
+                        <button type="button" disabled={readOnly} onClick={() => setConfirmCancel(s.uid)} className="text-muted hover:text-red-300 disabled:opacity-50">
                           Cancel
                         </button>
                       </p>
@@ -533,7 +539,7 @@ export function StudentPortal({
             {noticeEl}
             <button
               type="submit"
-              disabled={busy || !selection || !course || (mode === "in_person" && mapLinkInvalid)}
+              disabled={readOnly || busy || !selection || !course || (mode === "in_person" && mapLinkInvalid)}
               className="inline-flex h-12 items-center justify-center rounded-md bg-gold px-6 font-mono text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
             >
               {busy ? "Saving…" : moving ? "Move session" : selection ? `Book ${hours(selection.minutes)} session` : "Book session"}

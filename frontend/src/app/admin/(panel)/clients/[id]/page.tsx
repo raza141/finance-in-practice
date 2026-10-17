@@ -90,6 +90,12 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-3xl font-normal tracking-tight italic">{client.name}</h1>
         <div className="flex flex-wrap gap-3">
+          {/* Only enrolled students (a course) have a portal. */}
+          {client.courses.length > 0 && (
+            <Link href={`/admin/view-as/${client.id}`} className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
+              View as student
+            </Link>
+          )}
           <Link href={`/admin/invoices/new?client=${client.id}&type=quote`} className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
             New quote
           </Link>

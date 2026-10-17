@@ -1,30 +1,18 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
-import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
-import { ClassFeedSidebar, ClassTopics, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
-import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
-import { ClassroomPanel } from "@/domains/students/components/ClassroomPanel";
-import { PortalOverview } from "@/domains/students/components/PortalOverview";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
-import { StudentPortal } from "@/domains/students/components/StudentPortal";
-import { StudyPlanTimeline } from "@/domains/students/components/StudyPlanTimeline";
-import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
+import { Portal, safely } from "@/domains/students/components/PortalView";
 import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
-import { StudentRepository } from "@/domains/students/server/StudentRepository";
-import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
-import { StudentSessions } from "@/domains/students/services/StudentSessions";
-import type { Student, StudyPlanItem } from "@/domains/students/types";
 
 export const metadata: Metadata = {
   title: "Student portal",
@@ -48,38 +36,6 @@ const PERKS = [
   "Your Classroom quizzes, mocks and files in one place",
   "See your progress against your target score",
 ];
-
-/** Each source fails on its own: a Cal.com or database hiccup never takes the whole portal down. */
-async function safely<T>(label: string, load: () => Promise<T>): Promise<T | null> {
-  try {
-    return await load();
-  } catch (error) {
-    console.error(`student: could not load ${label}`, error);
-    return null;
-  }
-}
-
-async function portalData(student: Student) {
-  const classrooms = ClassroomRepository.fromEnv();
-  const [courses, bookings, plan, classes, own] = await Promise.all([
-    safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
-    safely("sessions", async (): Promise<CalBookingDetail[]> =>
-      (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
-    ),
-    safely("study plan", async (): Promise<StudyPlanItem[]> => (await StudyPlanRepository.fromEnv()?.forClient(student.id)) ?? []),
-    safely("classrooms", async () => (await classrooms?.forClient(student.id, student.courses)) ?? []),
-    safely("private classrooms", async () => (await classrooms?.privateFor(student.id)) ?? []),
-  ]);
-  return {
-    courses: courses ?? student.courses,
-    sessions: bookings && StudentSessions.upcoming(bookings),
-    past: bookings ? StudentSessions.past(bookings) : [],
-    addresses: bookings ? StudentSessions.addresses(bookings) : [],
-    plan,
-    classes: classes ?? [],
-    own: own ?? [],
-  };
-}
 
 export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
   const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
@@ -139,82 +95,6 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .join("")
     .toUpperCase();
-
-async function Portal({ student }: { student: Student }) {
-  const { courses, sessions, past, addresses, plan, classes, own } = await portalData(student);
-  const hasClassroom = classes.length + own.length > 0;
-  // Only approved course classes and the student's own: the same ones they can open.
-  const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
-  const synced = links.length > 0 && (await safely("classroom connection", () => ClassroomSync.isConnected())) === true;
-  // Started now, awaited inside Suspense: Google's answer streams in and never holds up the page.
-  const feed: Promise<FeedResult> = synced
-    ? ClassroomSync.forStudent(student.id, links).then(
-        (f): FeedResult => (f ? { status: "ok", feed: f } : { status: "off" }),
-        (error): FeedResult => (console.error("student: could not load the class feed", error), { status: "error" }),
-      )
-    : Promise.resolve({ status: "off" });
-  const loading = (label: string) => <p className="rounded-3xl border border-white/10 bg-canvas/70 p-6 text-sm text-muted">Loading {label}…</p>;
-
-  return (
-    <div className="grid gap-6">
-      <StudentPortal
-        courses={courses}
-        lengths={siteConfig.studentBooking.lengths}
-        sessions={sessions}
-        past={past}
-        addresses={addresses}
-        plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
-        overview={
-          <PortalOverview
-            sessions={sessions}
-            plan={plan}
-            classCards={
-              synced && (
-                <Suspense fallback={loading("your class")}>
-                  <OverviewClassCards result={feed} />
-                </Suspense>
-              )
-            }
-          />
-        }
-        // No Classroom yet (e.g. a single session): no tab, nothing to explain.
-        classroom={
-          hasClassroom ? (
-            // Wide: classrooms then everything by topic on the left, latest posts on the right. Phones: classrooms, latest posts, topics.
-            <div className={`grid items-start gap-6 ${synced ? "lg:grid-cols-[1fr_24rem]" : ""}`}>
-              <ClassroomPanel classes={classes} own={own} email={student.email} />
-              {synced && (
-                <>
-                  <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-                    <Suspense fallback={loading("what's new in your class")}>
-                      <ClassFeedSidebar result={feed} />
-                    </Suspense>
-                  </div>
-                  <div className="grid gap-6 lg:col-start-1">
-                    <Suspense fallback={null}>
-                      <ClassTopics result={feed} />
-                    </Suspense>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : null
-        }
-        progress={
-          synced ? (
-            <Suspense fallback={loading("your marks")}>
-              <ProgressPanel result={feed} />
-            </Suspense>
-          ) : null
-        }
-      />
-      {/* Phones: no room in the bar, so the follow link sits at the bottom. */}
-      <div className="md:hidden">
-        <LinkedInFollow variant="pill" />
-      </div>
-    </div>
-  );
-}
 
 /** Published courses only: the public form never lists drafts or internal programmes. */
 async function publicCourses(): Promise<string[]> {

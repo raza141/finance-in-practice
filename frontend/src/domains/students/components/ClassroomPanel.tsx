@@ -44,7 +44,8 @@ function OwnClassCard({ c }: { c: PrivateClassroom }) {
  * The portal's Classroom tab: private classes the owner added for this student
  * first, then one shared Classroom per course or batch (access approved per student).
  */
-export function ClassroomPanel({ classes, own, email }: { classes: StudentClassroom[]; own: PrivateClassroom[]; email: string }) {
+/** `readOnly`: an admin viewing as the student; Request access is shown but can't be sent. */
+export function ClassroomPanel({ classes, own, email, readOnly = false }: { classes: StudentClassroom[]; own: PrivateClassroom[]; email: string; readOnly?: boolean }) {
   return (
     <section aria-labelledby="classroom-heading" className={CARD}>
         <h2 id="classroom-heading" className="text-2xl font-normal italic">
@@ -78,12 +79,14 @@ export function ClassroomPanel({ classes, own, email }: { classes: StudentClassr
                   </a>
                 ) : c.access === "none" ? (
                   <form action={requestClassroom.bind(null, c.title)} className="mt-4">
+                    <fieldset disabled={readOnly}>
                     <PendingButton
                       pendingLabel="Sending…"
                       className="inline-flex h-10 items-center rounded-md border border-[#34a853]/50 px-4 text-sm font-semibold text-ink transition-colors hover:bg-[#34a853]/15"
                     >
                       Request access
                     </PendingButton>
+                    </fieldset>
                   </form>
                 ) : (
                   <p className={`mt-4 text-sm ${c.access === "requested" ? "text-gold" : "text-muted"}`}>
