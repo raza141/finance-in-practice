@@ -1,6 +1,7 @@
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
 import { requestClassroom } from "../actions/classroom";
+import { Batches } from "../services/Batches";
 import { CLASSROOM_BUTTON } from "./buttons";
 import type { PrivateClassroom, StudentClassroom } from "../types";
 
@@ -70,10 +71,17 @@ export function ClassroomPanel({ classes, own, email, readOnly = false }: { clas
                   </span>
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom · course</p>
-                    <p className="truncate text-lg font-semibold text-ink">{c.title}</p>
+                    <p className="truncate text-lg font-semibold text-ink">
+                      {c.title}
+                      {c.batch && c.batch !== Batches.NOT_SURE && <span className="text-muted"> · {c.batch}</span>}
+                    </p>
                   </div>
                 </div>
-                {c.url ? (
+                {c.batched && (!c.batch || c.batch === Batches.NOT_SURE) ? (
+                  <p className="mt-4 text-sm text-muted">Your instructor will place you in a batch for your exam sitting; your class appears here then.</p>
+                ) : !c.hasClass ? (
+                  <p className="mt-4 text-sm text-muted">Your {c.batch} class opens soon. It appears here as soon as it&rsquo;s ready.</p>
+                ) : c.url ? (
                   <a href={c.url} target="_blank" rel="noreferrer" className={JOIN}>
                     Join Google Classroom
                   </a>

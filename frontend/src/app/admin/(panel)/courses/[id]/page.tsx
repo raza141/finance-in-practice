@@ -11,6 +11,7 @@ import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CoursePolicy } from "@/domains/courses/services/CoursePolicy";
 import { saveClassroomLink } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
+import { Batches } from "@/domains/students/services/Batches";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
 
 export const metadata: Metadata = { title: "Edit course" };
@@ -50,9 +51,19 @@ export default async function EditCoursePage({ params, searchParams }: PageProps
       {CoursePolicy.canDelete(admin) && (
         <section id="classroom" className="mt-12 max-w-2xl rounded-lg border border-line p-5">
           <h2 className="text-lg">Google Classroom</h2>
+          {Batches.windows(course.testimonialTicker) ? (
+            <p className="mt-1 text-sm text-muted">
+              An exam course: one class per batch (sitting), not one for the course. Open batches and add their class links in{" "}
+              <Link href="/admin/classroom#batches" className="text-quant hover:underline">
+                Admin → Classroom → Batches
+              </Link>
+              .
+            </p>
+          ) : (
+            <>
           <p className="mt-1 text-sm text-muted">
             Students with this course get a &ldquo;Join Google Classroom&rdquo; button on /student. Never shown on the public course page. In
-            Classroom: Settings → Invite link → copy. New batch? Paste the new class&rsquo;s link.
+            Classroom: Settings → Invite link → copy.
           </p>
           {query.classroom === "saved" && <p className="mt-3 text-sm text-quant">Saved.</p>}
           {query.classroom === "invalid" && <p className="mt-3 text-sm text-gold">Paste a link that starts with https://classroom.google.com/</p>}
@@ -70,6 +81,8 @@ export default async function EditCoursePage({ params, searchParams }: PageProps
               Save link
             </PendingButton>
           </form>
+            </>
+          )}
         </section>
       )}
 

@@ -2,7 +2,8 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
-import type { Student } from "../types";
+import { Batches } from "../services/Batches";
+import type { RegistrationInput, Student } from "../types";
 
 interface StudentRow {
   id: string;
@@ -46,8 +47,20 @@ export class StudentRepository {
    * the client with that email (filling a missing name or phone), or creates the
    * client. Either way the client shows as new in admin (seen_at NULL). `added`:
    * false when they already had that course (a repeat click on an email link).
+   * Their sitting is saved too; a repeat join only replaces "Not sure yet".
    */
-  async join(input: { name: string; email: string; phone: string; course: string }): Promise<{ id: string; added: boolean }> {
+  async join(input: RegistrationInput): Promise<{ id: string; added: boolean }> {
+    const result = await this.enrol(input);
+    if (input.batch) {
+      await this.sql`
+        INSERT INTO client_batches (client_id, course, label) VALUES (${result.id}, ${input.course}, ${input.batch})
+        ON CONFLICT (client_id, course) DO UPDATE SET label = EXCLUDED.label WHERE client_batches.label = ${Batches.NOT_SURE}
+      `;
+    }
+    return result;
+  }
+
+  private async enrol(input: RegistrationInput): Promise<{ id: string; added: boolean }> {
     const email = input.email.toLowerCase();
     const [existing] = (await this.sql`
       SELECT id, ${input.course} = ANY(courses) AS has FROM clients WHERE lower(email) = ${email} ORDER BY created_at LIMIT 1
@@ -72,12 +85,12 @@ export class StudentRepository {
   }
 
   /** Email registration, before the address is proven: parked in 037 until the emailed link is opened. Prunes day-old rows. */
-  async park(input: { name: string; email: string; phone: string; course: string }): Promise<string> {
+  async park(input: RegistrationInput): Promise<string> {
     const [, [row]] = (await this.sql.transaction([
       this.sql`DELETE FROM student_registrations WHERE created_at < now() - interval '1 day'`,
       this.sql`
-        INSERT INTO student_registrations (name, email, phone, course)
-        VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.phone}, ${input.course})
+        INSERT INTO student_registrations (name, email, phone, course, batch)
+        VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.phone}, ${input.course}, ${input.batch})
         RETURNING id
       `,
     ])) as [unknown, { id: string }[]];
@@ -85,12 +98,12 @@ export class StudentRepository {
   }
 
   /** A parked registration, while its link can still be valid. */
-  async parked(id: string): Promise<{ name: string; email: string; phone: string; course: string } | null> {
+  async parked(id: string): Promise<RegistrationInput | null> {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
     const [row] = (await this.sql`
-      SELECT name, email, phone, course FROM student_registrations
+      SELECT name, email, phone, course, batch FROM student_registrations
       WHERE id = ${id} AND created_at > now() - interval '1 day'
-    `) as { name: string; email: string; phone: string; course: string }[];
+    `) as RegistrationInput[];
     return row ?? null;
   }
 

@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { GoogleOAuth } from "@/domains/admin/server/GoogleOAuth";
 import { EmailLink } from "@/domains/students/server/EmailLink";
+import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
+import { Batches } from "@/domains/students/services/Batches";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 
@@ -25,8 +27,17 @@ export async function GET(request: NextRequest) {
       if (!registration) return to("/student?error=link_expired");
       const { id, added } = await repo.join(registration);
       await StudentAuth.startSession(id, repo);
-      const { name, email, phone, course } = registration;
-      if (added) await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", email], ["Mobile", phone], ["Course", course], ["Signed up with", "Email link"]], id);
+      const { name, email, phone, course, batch } = registration;
+      if (added) {
+        const classrooms = ClassroomRepository.fromEnv();
+        const batchRow = batch && classrooms ? [Batches.noticeRow(batch, await classrooms.batchState(course, batch))] : [];
+        await OwnerNotice.send(
+          `New student joined: ${name}`,
+          "New student joined",
+          [["Name", name], ["Email", email], ["Mobile", phone], ["Course", course], ...batchRow, ["Signed up with", "Email link"]],
+          id,
+        );
+      }
     } else if (link.kind === "signin") {
       const student = await repo.enrolledById(link.id);
       if (!student) return to("/student?error=link_expired");

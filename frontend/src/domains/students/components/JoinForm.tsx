@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { ApiError } from "@/core/http/ApiError";
 
+import { Batches } from "../services/Batches";
 import { RegistrationContract } from "../services/RegistrationContract";
 import { StudentApiClient } from "../services/StudentApiClient";
 
@@ -35,9 +36,9 @@ function CheckInbox({ to, lead }: { to: string; lead: string }) {
 /**
  * Join form. With `email` (back from Google, address proven): enrols at once and
  * opens the portal. Without: the visitor types their email and we mail a link
- * that confirms it first. `courses` = published titles only.
+ * that confirms it first. `courses` = published titles only; `batches` = each exam course's sittings.
  */
-export function JoinForm({ courses, email }: { courses: string[]; email?: string }) {
+export function JoinForm({ courses, batches, email }: { courses: string[]; batches: Record<string, string[]>; email?: string }) {
   const router = useRouter();
   const [course, setCourse] = useState("");
   const [state, setState] = useState<FormState>({ kind: "editing" });
@@ -113,6 +114,22 @@ export function JoinForm({ courses, email }: { courses: string[]; email?: string
             </optgroup>
           </select>
         </label>
+        {batches[course] && (
+          <label className="grid gap-1.5">
+            <span className={LABEL}>Exam sitting (your batch)</span>
+            <select key={course} name="batch" required defaultValue="" className={FIELD}>
+              <option value="" disabled>
+                Which exam are you taking?
+              </option>
+              {batches[course].map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+              <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
+            </select>
+          </label>
+        )}
         {course === OTHER && (
           <label className="grid gap-1.5">
             <span className={LABEL}>What would you like to study?</span>

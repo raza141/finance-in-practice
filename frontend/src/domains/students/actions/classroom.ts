@@ -9,6 +9,7 @@ import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { ClassroomRepository } from "../server/ClassroomRepository";
 import { OwnerNotice } from "../server/OwnerNotice";
 import { StudentAuth } from "../server/StudentAuth";
+import { Batches } from "../services/Batches";
 import { ClassroomLink } from "../services/ClassroomLink";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,7 +38,7 @@ export async function requestClassroom(course: string): Promise<void> {
   const repo = classrooms();
   // Only their own course, and only one that has a Classroom.
   const target = (await repo.forClient(student.id, student.courses)).find((c) => c.title === course);
-  if (!target || target.access !== "none") return;
+  if (!target || !target.hasClass || target.access !== "none") return;
   if (await repo.request(student.id, target.title)) {
     await OwnerNotice.send(
       `Classroom request: ${student.name} · ${target.title}`,
@@ -45,7 +46,7 @@ export async function requestClassroom(course: string): Promise<void> {
       [
         ["Student", student.name],
         ["Email", student.email],
-        ["Course", target.title],
+        ["Course", target.batch ? `${target.title} · ${target.batch}` : target.title],
       ],
       student.id,
     );
@@ -104,4 +105,61 @@ export async function removePrivateClassroom(formData: FormData): Promise<void> 
   if (!UUID.test(clientId)) redirect("/admin/clients");
   await classrooms().removePrivate(clientId, String(formData.get("id")));
   redirect(`/admin/clients/${clientId}?notice=private-removed#classroom`);
+}
+
+/** Owner puts a client in a batch (or "Not sure yet") for one of their exam courses. */
+export async function setClientBatch(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const clientId = String(formData.get("clientId"));
+  if (!UUID.test(clientId)) redirect("/admin/clients");
+  const course = String(formData.get("course") ?? "");
+  const label = String(formData.get("batch") ?? "");
+  const repo = classrooms();
+  const allowed = (await repo.batchCourses()).find((c) => c.title === course)?.assignable ?? [];
+  if (label !== Batches.NOT_SURE && !allowed.includes(label)) redirect(`/admin/clients/${clientId}?notice=batch-refused#classroom`);
+  const { moved } = await repo.setBatch(clientId, course, label);
+  revalidatePath("/admin", "layout");
+  redirect(`/admin/clients/${clientId}?notice=${moved ? "batch-moved" : "batch-saved"}#classroom`);
+}
+
+const BATCHES = "/admin/classroom";
+
+/** Owner opens a batch for an exam course and sitting, with its Google class link (or later). */
+export async function openBatch(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const course = String(formData.get("course") ?? "");
+  const label = String(formData.get("label") ?? "");
+  const url = String(formData.get("url") ?? "").trim();
+  const repo = classrooms();
+  const sitting = (await repo.batchCourses()).find((c) => c.title === course)?.windows.find((w) => w.label === label);
+  if (!sitting || (url && !ClassroomLink.isValid(url))) redirect(`${BATCHES}?batch=refused#batches`);
+  if (url) await refuseTaken(repo, url, null);
+  if (!(await repo.openBatch(course, label, sitting.starts, url || null))) redirect(`${BATCHES}?batch=exists#batches`);
+  redirect(`${BATCHES}?batch=opened#batches`);
+}
+
+/** Owner sets (or clears) a batch's Google class link. */
+export async function saveBatchLink(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const id = String(formData.get("id"));
+  const url = String(formData.get("url") ?? "").trim();
+  if (url && !ClassroomLink.isValid(url)) redirect(`${BATCHES}?batch=refused#batches`);
+  const repo = classrooms();
+  if (url) await refuseTaken(repo, url, id);
+  await repo.saveBatchLink(id, url || null);
+  redirect(`${BATCHES}?batch=saved#batches`);
+}
+
+export async function deleteBatch(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const removed = await classrooms().deleteBatch(String(formData.get("id")));
+  redirect(`${BATCHES}?batch=${removed ? "deleted" : "in-use"}#batches`);
+}
+
+/** One Google class, one place: refuse a batch link already used by another batch, a course or a private classroom. */
+async function refuseTaken(repo: ClassroomRepository, url: string, batchId: string | null): Promise<void> {
+  const own = batchId ? (await repo.batches()).find((b) => b.id === batchId) : undefined;
+  const others = (await repo.allLinks()).filter((l) => !own || l.title !== `${own.course} · ${own.label}`);
+  const clash = await ClassroomSync.sameClass(url, others);
+  if (clash) redirect(`${BATCHES}?batch=taken&reason=${encodeURIComponent(`It's already used by ${clash.title}.`)}#batches`);
 }

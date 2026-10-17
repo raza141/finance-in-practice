@@ -7,10 +7,10 @@ import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
-import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { signOutStudent } from "@/domains/students/actions/session";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { Portal, safely } from "@/domains/students/components/PortalView";
+import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
@@ -96,9 +96,9 @@ const initialsOf = (name: string) =>
     .join("")
     .toUpperCase();
 
-/** Published courses only: the public form never lists drafts or internal programmes. */
-async function publicCourses(): Promise<string[]> {
-  return (await safely("published courses", async () => (await CourseRepository.fromEnv()?.active())?.map((c) => c.title) ?? [])) ?? [];
+/** Published courses only (the public form never lists drafts or internal programmes), and each exam course's sittings. */
+async function publicCourses(): Promise<{ titles: string[]; batches: Record<string, string[]> }> {
+  return (await safely("published courses", async () => ClassroomRepository.fromEnv()?.registrationOptions())) ?? { titles: [], batches: {} };
 }
 
 async function SignIn({ error, view }: { error?: string; view?: string }) {
@@ -107,7 +107,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   // Back on the join view without a valid ticket: it expired (or was used).
   const expired = view === "join" && joining === null;
   const register = joining !== null || view === "register" || view === "join";
-  const courses = register ? await publicCourses() : [];
+  const { titles: courses, batches } = register ? await publicCourses() : { titles: [], batches: {} };
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
@@ -148,7 +148,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Almost there</h1>
             <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
-            <JoinForm courses={courses} email={joining} />
+            <JoinForm courses={courses} batches={batches} email={joining} />
           </>
         ) : register ? (
           <>
@@ -164,7 +164,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
               or with your email
               <span aria-hidden className="h-px flex-1 bg-line" />
             </p>
-            <JoinForm courses={courses} />
+            <JoinForm courses={courses} batches={batches} />
             <p className="border-t border-line pt-5 text-sm text-muted">
               Already registered?{" "}
               <Link href="/student" className="text-quant hover:underline">

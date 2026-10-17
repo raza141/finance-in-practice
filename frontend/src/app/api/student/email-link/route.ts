@@ -6,7 +6,7 @@ import { ResendClient } from "@/core/email/ResendClient";
 import { RequestGuard } from "@/core/http/RequestGuard";
 import { GoogleOAuth } from "@/domains/admin/server/GoogleOAuth";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
-import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { EmailLink, type EmailLinkKind } from "@/domains/students/server/EmailLink";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { RegistrationContract } from "@/domains/students/services/RegistrationContract";
@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
 
   const repo = StudentRepository.fromEnv();
   const links = EmailLink.fromEnv();
-  const courses = CourseRepository.fromEnv();
-  if (!repo || !links || !courses) return reject(503, "This is not available right now. Please message us on WhatsApp.");
+  const classrooms = ClassroomRepository.fromEnv();
+  if (!repo || !links || !classrooms) return reject(503, "This is not available right now. Please message us on WhatsApp.");
 
   let body: Record<string, unknown>;
   try {
@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.intent === "register") {
-      const parsed = RegistrationContract.parse(body, (await courses.active()).map((c) => c.title));
+      const { titles, batches } = await classrooms.registrationOptions();
+      const parsed = RegistrationContract.parse(body, titles, batches);
       if (!parsed.ok) return reject(400, parsed.error);
       const id = await repo.park(parsed.value);
       // Every registration is mailed, so saying the send failed reveals nothing about who is a student.

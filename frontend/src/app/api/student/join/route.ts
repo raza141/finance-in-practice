@@ -3,11 +3,12 @@ import type { NextRequest } from "next/server";
 
 import { RequestGuard } from "@/core/http/RequestGuard";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
-import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
 import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
+import { Batches } from "@/domains/students/services/Batches";
 import { RegistrationContract } from "@/domains/students/services/RegistrationContract";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
   if (!email) return reject(401, "Your Google sign-in expired. Please continue with Google again.");
 
   const repo = StudentRepository.fromEnv();
-  const courses = CourseRepository.fromEnv();
-  if (!repo || !courses) return reject(503, "Joining is not available right now. Please message us on WhatsApp.");
+  const classrooms = ClassroomRepository.fromEnv();
+  if (!repo || !classrooms) return reject(503, "Joining is not available right now. Please message us on WhatsApp.");
 
   let payload: unknown;
   try {
@@ -44,15 +45,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const published = (await courses.active()).map((c) => c.title);
-    const parsed = RegistrationContract.parse({ ...(payload as object), email }, published);
+    const { titles, batches } = await classrooms.registrationOptions();
+    const parsed = RegistrationContract.parse({ ...(payload as object), email }, titles, batches);
     if (!parsed.ok) return reject(400, parsed.error);
     if (parsed.spam) return reject(400, "Unable to process this request.");
     const { id: clientId } = await repo.join(parsed.value);
     await StudentAuth.startSession(clientId, repo);
     store.delete({ name: SignupTicket.COOKIE, path: "/" });
-    const { name, email: joined, phone, course } = parsed.value;
-    await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", joined], ["Mobile", phone], ["Course", course]], clientId);
+    const { name, email: joined, phone, course, batch } = parsed.value;
+    const batchRow = batch ? [Batches.noticeRow(batch, await classrooms.batchState(course, batch))] : [];
+    await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", joined], ["Mobile", phone], ["Course", course], ...batchRow], clientId);
     return Response.json({ ok: true }, { headers: NO_STORE });
   } catch (error) {
     console.error("[join] could not enrol", error);

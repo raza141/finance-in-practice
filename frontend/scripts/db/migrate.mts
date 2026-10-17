@@ -875,6 +875,41 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE clients ADD COLUMN digest_sent_at timestamptz`,
     ],
   },
+  {
+    // Batches: an exam course (CFA L1/L2, FRM) runs one Google class per sitting,
+    // e.g. "CFA Level I · Nov 2026". Students pick their sitting; the class comes
+    // from the batch, matched by (course, label) so a student who picked a sitting
+    // before its batch was opened picks it up once it is. The CFA Level I course
+    // class (and any CFA L2 / FRM one) becomes its Nov 2026 batch, with the course's students in it.
+    id: "043_batches",
+    statements: [
+      `CREATE TABLE batches (
+        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        course        text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        label         text NOT NULL CHECK (char_length(label) BETWEEN 1 AND 40),
+        exam_date     date NOT NULL,
+        classroom_url text CHECK (classroom_url ~ '^https://classroom\\.google\\.com/' AND char_length(classroom_url) <= 300),
+        created_at    timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (course, label)
+      )`,
+      `CREATE UNIQUE INDEX batches_classroom_url_key ON batches (classroom_url) WHERE classroom_url IS NOT NULL`,
+      `CREATE TABLE client_batches (
+        client_id uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course    text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        label     text NOT NULL CHECK (char_length(label) BETWEEN 1 AND 40),
+        PRIMARY KEY (client_id, course)
+      )`,
+      `ALTER TABLE student_registrations ADD COLUMN batch text NOT NULL DEFAULT '' CHECK (char_length(batch) <= 40)`,
+      `INSERT INTO batches (course, label, exam_date, classroom_url)
+        SELECT DISTINCT ON (title) title, 'Nov 2026',
+          CASE testimonial_ticker WHEN 'CFA1' THEN DATE '2026-11-10' WHEN 'CFA2' THEN DATE '2026-11-15' ELSE DATE '2026-11-14' END,
+          classroom_url FROM courses
+        WHERE testimonial_ticker IN ('CFA1', 'CFA2', 'FRM1') AND classroom_url IS NOT NULL ORDER BY title, is_active DESC`,
+      `INSERT INTO client_batches (client_id, course, label)
+        SELECT c.id, b.course, b.label FROM clients c JOIN batches b ON b.course = ANY(c.courses)`,
+      `UPDATE courses SET classroom_url = NULL WHERE testimonial_ticker IN ('CFA1', 'CFA2', 'FRM1')`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

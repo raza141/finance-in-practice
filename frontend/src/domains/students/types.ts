@@ -64,6 +64,8 @@ export interface RegistrationInput {
   phone: string;
   /** A published course title, a consultancy, or "Other: <topic>". */
   course: string;
+  /** Exam courses: the sitting picked, e.g. "Nov 2026" or "Not sure yet"; otherwise "". */
+  batch: string;
 }
 
 /** "none": not asked yet. Only "approved" reveals the invite (039_portal_controls). */
@@ -72,8 +74,24 @@ export type ClassroomAccess = "none" | "requested" | "approved" | "removed";
 /** One of the student's courses that has a Google Classroom. `url` only once approved. */
 export interface StudentClassroom {
   title: string;
+  /** An exam course: its class comes from the student's batch (043). */
+  batched: boolean;
+  /** Their sitting, e.g. "Nov 2026" or "Not sure yet"; null when not set (or not an exam course). */
+  batch: string | null;
+  /** A class exists to ask for: the course's, or their batch's once opened with a link. */
+  hasClass: boolean;
   access: ClassroomAccess;
   url: string | null;
+}
+
+/** One Google class per exam course and sitting (043_batches). */
+export interface Batch {
+  id: string;
+  course: string;
+  label: string;
+  examDate: string;
+  classroomUrl: string | null;
+  students: number;
 }
 
 /** A Google Classroom for one student only (040_private_classrooms); visible as soon as the owner adds it. */

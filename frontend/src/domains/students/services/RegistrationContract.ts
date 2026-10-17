@@ -1,4 +1,5 @@
 import type { RegistrationInput } from "../types";
+import { Batches } from "./Batches";
 
 export type RegistrationResult = { ok: true; value: RegistrationInput; spam: boolean } | { ok: false; error: string };
 
@@ -11,8 +12,11 @@ export class RegistrationContract {
   private static readonly EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   private static readonly PHONE = /^\+?[0-9 ()-]+$/;
 
-  /** `courses` = the published course titles a visitor may pick (never drafts or internal ones). */
-  static parse(body: unknown, courses: readonly string[]): RegistrationResult {
+  /**
+   * `courses` = the published course titles a visitor may pick (never drafts or internal ones);
+   * `batches` = the sittings each exam course offers: one of them, or "Not sure yet", is required.
+   */
+  static parse(body: unknown, courses: readonly string[], batches: Readonly<Record<string, readonly string[]>> = {}): RegistrationResult {
     const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
     const text = (key: string) => (typeof b[key] === "string" ? (b[key] as string).trim().replace(/\s+/g, " ") : "");
     const { LIMITS, OTHER } = RegistrationContract;
@@ -39,7 +43,11 @@ export class RegistrationContract {
       return { ok: false, error: "Choose a course, or Other." };
     }
 
+    const sittings = batches[course];
+    const batch = sittings ? text("batch") : "";
+    if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
+
     // Honeypot: a hidden field people never fill. The route answers as usual and saves nothing.
-    return { ok: true, value: { name, email, phone, course }, spam: text("website") !== "" };
+    return { ok: true, value: { name, email, phone, course, batch }, spam: text("website") !== "" };
   }
 }

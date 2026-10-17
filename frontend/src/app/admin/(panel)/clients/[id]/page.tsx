@@ -23,8 +23,9 @@ import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
 import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/actions/classroom";
-import { addPrivateClassroom, decideClassroom, removePrivateClassroom } from "@/domains/students/actions/classroom";
+import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClientBatch } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
+import { Batches } from "@/domains/students/services/Batches";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
 
 export const metadata: Metadata = { title: "Client" };
@@ -48,6 +49,12 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "classroom-email-invalid": { text: "Not saved: that doesn't look like an email address.", tone: "warn" },
   "private-duplicate": { text: "Not added: that link is a Google class already in their portal.", tone: "warn" },
   "classroom-duplicate": { text: "Not approved: this course's Google class is already in their portal as a private classroom.", tone: "warn" },
+  "batch-saved": { text: "Batch saved: their portal shows that batch's class.", tone: "ok" },
+  "batch-moved": {
+    text: "Batch changed: their portal shows the new class, and they ask to join it afresh. Also remove them from the old class in Google Classroom (People).",
+    tone: "ok",
+  },
+  "batch-refused": { text: "Not saved: choose one of the listed sittings.", tone: "warn" },
   "private-added": { text: "Private classroom added: it shows in their portal now.", tone: "ok" },
   "private-removed": { text: "Private classroom removed from their portal. Also remove them in Google Classroom (People).", tone: "ok" },
   "private-refused": {
@@ -67,7 +74,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
   const classroomRepo = ClassroomRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail, batchCourses] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
@@ -77,6 +84,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     classroomRepo?.forClient(client.id, client.courses) ?? [],
     classroomRepo?.privateFor(client.id) ?? [],
     classroomRepo?.classroomEmail(client.id) ?? null,
+    classroomRepo?.batchCourses() ?? [],
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
@@ -188,7 +196,8 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
 
         <h3 className="mt-8 border-t border-line pt-5 text-sm font-semibold">Course classrooms (shared with the batch)</h3>
         <p className="mt-1 text-sm text-muted">
-          One class per course, e.g. CFA Level I. Their portal shows a course&rsquo;s invite only after you approve it here. Courses without a Classroom link (set on the course page) aren&rsquo;t listed.
+          Exam courses (CFA, FRM) have one class per batch: pick theirs, and the class comes from that batch (Admin → Classroom → Batches). Other courses use the
+          Classroom link on the course page. Their portal shows the invite only after you approve it here.
         </p>
         {classrooms.length === 0 ? (
           <p className="mt-4 text-sm text-muted">None of this client&rsquo;s courses has a Classroom yet.</p>
@@ -196,7 +205,30 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           <ul className="mt-4 divide-y divide-line/60 text-sm">
             {classrooms.map((c) => (
               <li key={c.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
-                <span className="flex-1">{c.title}</span>
+                <span className="flex-1">
+                  {c.title}
+                  {c.batched && !c.hasClass && c.batch && c.batch !== Batches.NOT_SURE && <span className="ml-2 text-xs text-gold">batch has no class yet</span>}
+                </span>
+                {c.batched && (
+                  <form action={setClientBatch} className="flex items-center gap-2">
+                    <input type="hidden" name="clientId" value={client.id} />
+                    <input type="hidden" name="course" value={c.title} />
+                    <select name="batch" defaultValue={c.batch ?? ""} required aria-label={`${c.title} batch`} className="h-8 rounded-md border border-line bg-canvas px-2 text-xs">
+                      <option value="" disabled>
+                        Choose batch
+                      </option>
+                      {(batchCourses.find((b) => b.title === c.title)?.assignable ?? []).map((label) => (
+                        <option key={label} value={label}>
+                          {label}
+                        </option>
+                      ))}
+                      <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
+                    </select>
+                    <PendingButton pendingLabel="Saving…" className="h-8 rounded-md border border-line px-3 text-xs hover:bg-white/5">
+                      Save
+                    </PendingButton>
+                  </form>
+                )}
                 <span className={`text-xs ${c.access === "requested" ? "font-semibold text-gold" : c.access === "approved" ? "text-quant" : "text-muted"}`}>
                   {{ none: "Not requested", requested: "Requested access", approved: "Has access", removed: "Access removed" }[c.access]}
                 </span>
