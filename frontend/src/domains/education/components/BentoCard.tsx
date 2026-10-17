@@ -65,7 +65,7 @@ export function BentoCard({ service }: { service: BentoService }) {
   return (
     <article
       id={service.id}
-      data-anim="bento"
+     
       className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#151E32] p-6 transition-colors duration-300 hover:border-quant/30 sm:p-7 ${SPAN[service.span]} ${
         service.waitlist ? "lg:flex-row lg:items-center lg:justify-between lg:gap-10" : ""
       }`}

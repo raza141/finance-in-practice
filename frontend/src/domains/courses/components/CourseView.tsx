@@ -135,25 +135,22 @@ export function CourseView({
       {course.method.length > 0 && (
         <section id="method" aria-labelledby="method-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            {/* Scroll story (CourseAnimationController): on big screens the heading and stages pin while the stages arrive. */}
-            <div data-course-anim="story">
-              <div data-story-stage>
             <SectionHeading
               id="method-heading"
               eyebrow="The Finance in Practice method"
               title={`Every topic goes through ${CourseFormat.count(course.method.length)} ${course.method.length === 1 ? "stage" : "stages"}.`}
             />
-            <ol data-course-anim="journey" className={`relative mt-10 grid gap-4 md:pt-8 ${row(course.method.length)}`}>
-              {/* Journey rail: drawn with the scroll from the first stage to the last (desktop row only). */}
+            <ol className={`relative mt-10 grid gap-4 md:pt-8 ${row(course.method.length)}`}>
+              {/* Journey rail from the first stage to the last (desktop row only). */}
               {course.method.length > 1 && (
                 <span aria-hidden className="absolute top-3 hidden h-0.5 rounded-full bg-line md:block" style={{ left: `${50 / course.method.length}%`, right: `${50 / course.method.length}%` }}>
-                  <span data-course-anim="journey-line" className="block h-full origin-left rounded-full bg-quant shadow-[0_0_10px_rgb(34_211_238/0.7)]" />
+                  <span className="block h-full origin-left rounded-full bg-quant shadow-[0_0_10px_rgb(34_211_238/0.7)]" />
                 </span>
               )}
               {course.method.map((step, index) => (
                 <li
                   key={index}
-                  data-course-anim="stage"
+                 
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/50 hover:shadow-[0_12px_40px_-12px_rgba(34,211,238,0.25)]"
                 >
                   <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-quant to-gold opacity-50 transition-opacity group-hover:opacity-100" />
@@ -176,8 +173,6 @@ export function CourseView({
                 </li>
               ))}
             </ol>
-              </div>
-            </div>
             {course.modes.length > 0 && (
               <div className="mt-16">
                 <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
@@ -223,14 +218,14 @@ export function CourseView({
       {course.modules.length > 0 && (
         <section id="curriculum" aria-labelledby="curriculum-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            <SectionHeading id="curriculum-heading" eyebrow="What we work through" title="Your curriculum, made practical." />
+            <SectionHeading id="curriculum-heading" title="Your curriculum, made practical." />
             {/* Weight map: one tap-to-open row per module, the bar showing its share of the exam.
                 Closed rows keep their details in the HTML, so search engines still read every module. */}
             <div className="mt-10 flex flex-wrap items-baseline justify-between gap-3">
               <p className="font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{weights ? course.weightLabel : "Modules"}</p>
               <p className="text-xs text-muted">Tap a topic to see how we work through it.</p>
             </div>
-            <ol data-course-anim="weights" className="mt-3 divide-y divide-line border-y border-line">
+            <ol className="mt-3 divide-y divide-line border-y border-line">
               {course.modules.map((module, index) => {
                 const share = weights ? CourseFormat.weightMidpoint(module.weight) : null;
                 return (
@@ -249,7 +244,7 @@ export function CourseView({
                           <span className="col-span-2 row-start-2 flex items-center gap-3 md:col-span-1 md:row-start-auto">
                             <span aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-line/60">
                               <span
-                                data-course-anim="weight-bar"
+                               
                                 style={{ width: `${(share / weightAxis) * 100}%` }}
                                 className={`block h-full origin-left rounded-full ${module.priority === "high_priority" ? "bg-gold shadow-[0_0_12px_rgb(212_175_55/0.6)]" : "bg-quant/70"}`}
                               />
@@ -296,14 +291,14 @@ export function CourseView({
       )}
 
       {course.options.length > 0 && (
-        <section id="pricing" data-course-anim="story" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
-          <div data-story-stage className="page-container py-12 lg:py-14">
-            <SectionHeading id="options-heading" eyebrow="Ways to work together" title="Choose how you engage." />
+        <section id="pricing" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
+          <div className="page-container py-12 lg:py-14">
+            <SectionHeading id="options-heading" title="Choose how you engage." />
             <ul className={`mt-10 grid gap-4 ${row(course.options.length)}`}>
               {course.options.map((option, index) => (
                 <li
                   key={index}
-                  data-course-anim="option"
+                 
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_12px_40px_-12px_rgba(212,175,55,0.25)]"
                 >
                   {/* Same build as the method stages: accent bar, big faded number, icon tile. */}
@@ -326,7 +321,7 @@ export function CourseView({
                         href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
                       >
                         Ask on WhatsApp
                       </a>
@@ -344,7 +339,7 @@ export function CourseView({
       {testimonials.length > 0 && (
         <section aria-labelledby="proof-heading" className="border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            <SectionHeading id="proof-heading" eyebrow="Learner feedback" title="From people who took this course." />
+            <SectionHeading id="proof-heading" title="From people who took this course." />
             <div className="mt-10 grid gap-4 md:grid-cols-2">
               {testimonials.map((testimonial, index) => (
                 <OrderBookCard key={testimonial.id} testimonial={testimonial} index={index} />
@@ -367,7 +362,7 @@ export function CourseView({
         <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container grid gap-10 py-12 lg:grid-cols-12 lg:py-14">
             <div className="lg:col-span-4">
-              <SectionHeading id="faq-heading" eyebrow="FAQ" title="Questions, answered." />
+              <SectionHeading id="faq-heading" title="Questions, answered." />
             </div>
             <div className="divide-y divide-line border-y border-line lg:col-span-8">
               {course.faqs.map((faq, index) => (

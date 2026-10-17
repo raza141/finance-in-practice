@@ -1,7 +1,4 @@
-import { animate, createTimeline, stagger, utils } from "animejs";
-
-import { ScrollManager } from "./ScrollManager";
-import { ScrollStory } from "./ScrollStory";
+import { createTimeline, stagger } from "animejs";
 
 /**
  * Hooks used in markup. Elements carrying `data-anim` are hidden by CSS only
@@ -13,20 +10,15 @@ export const AnimHook = {
   heroSubtitle: "hero-subtitle",
   heroCta: "hero-cta",
   heroCanvas: "hero-canvas",
-  bento: "bento",
-  reveal: "reveal",
-  storyStep: "story-step",
-  storyRail: "story-rail",
-  storyEnd: "story-end",
 } as const;
 
 type Revertible = { revert: () => unknown };
 
 /**
- * Owns every anime.js animation on the landing page.
+ * Owns the landing page's one animated moment: the hero on page load.
+ * Sections below it don't animate in; they are simply there.
  *
- * Lifecycle: construct on mount -> `initHero()` -> `register*()` scroll
- * sequences -> `destroy()` on unmount (reverts inline styles and observers).
+ * Lifecycle: construct on mount -> `initHero()` -> `destroy()` on unmount (reverts inline styles).
  * With `prefers-reduced-motion`, every method shows final states instantly.
  */
 export class LandingAnimationController {
@@ -34,7 +26,6 @@ export class LandingAnimationController {
   static readonly BOOTED_CLASS = "anim-booted";
 
   private readonly animations: Revertible[] = [];
-  private readonly scroll = new ScrollManager();
   private readonly reducedMotion: boolean;
 
   constructor(private readonly root: HTMLElement) {
@@ -76,90 +67,11 @@ export class LandingAnimationController {
     this.animations.push(timeline);
   }
 
-  /** Bento cards slide up 40px and fade in, cascading as the grid enters view. */
-  revealBento(container: Element): void {
-    this.onEnter(
-      container,
-      () =>
-        animate(this.hooks(AnimHook.bento, container), {
-          opacity: [0, 1],
-          translateY: [40, 0],
-          delay: stagger(90),
-          duration: 900,
-          ease: "outExpo",
-        }),
-    );
-  }
-
-  /**
-   * Count `[data-count-to]` elements up from 0 with easeOutExpo.
-   * Reads `data-count-decimals`, `data-count-prefix` and `data-count-suffix`.
-   */
-  registerCounters(container: Element): void {
-    const counters = Array.from(container.querySelectorAll<HTMLElement>("[data-count-to]"));
-    this.onEnter(container, () => {
-      for (const el of counters) {
-        const target = Number(el.dataset.countTo);
-        const decimals = Number(el.dataset.countDecimals ?? 0);
-        const format = LandingAnimationController.formatter(decimals);
-        const write = (value: number) => {
-          el.textContent = `${el.dataset.countPrefix ?? ""}${format(value)}${el.dataset.countSuffix ?? ""}`;
-        };
-        const state = { value: 0 };
-        write(0);
-        this.animations.push(
-          animate(state, {
-            value: target,
-            duration: 2200,
-            ease: "outExpo",
-            modifier: utils.round(decimals),
-            onUpdate: () => write(state.value),
-            onComplete: () => write(target),
-          }),
-        );
-      }
-    });
-  }
-
-  /** Generic fade-up for `[data-anim="reveal"]` blocks inside `container`. */
-  registerReveal(container: Element): void {
-    this.onEnter(container, () =>
-      animate(this.hooks(AnimHook.reveal, container), {
-        opacity: [0, 1],
-        translateY: [24, 0],
-        delay: stagger(100),
-        duration: 900,
-        ease: "outExpo",
-      }),
-    );
-  }
-
-  /**
-   * Scroll story (ScrollStory): where the screen is big enough, the section
-   * pins and its steps rise in with the scroll; elsewhere a plain fade-up.
-   */
-  registerStory(section: HTMLElement): void {
-    if (this.reducedMotion) return;
-    const steps = this.hooks(AnimHook.storyStep, section);
-    const [rail] = this.hooks(AnimHook.storyRail, section);
-    const end = this.hooks(AnimHook.storyEnd, section);
-    const stage = section.querySelector<HTMLElement>("[data-story-stage]");
-    const pinned = stage ? ScrollStory.pin(section, stage, { steps, rail, end }) : null;
-    if (pinned) {
-      this.animations.push(...pinned);
-      return;
-    }
-    this.onEnter(section, () =>
-      animate([...steps, ...(rail ? [rail] : []), ...end], { opacity: [0, 1], translateY: [24, 0], delay: stagger(100), duration: 900, ease: "outExpo" }),
-    );
-  }
-
   /**
    * Revert every inline style and drop READY so persistent layout elements
    * (the header lives in the root layout) stay visible on other routes.
    */
   destroy(): void {
-    this.scroll.disconnect();
     this.animations.forEach((animation) => animation.revert());
     this.animations.length = 0;
     this.html.classList.remove(
@@ -170,35 +82,11 @@ export class LandingAnimationController {
 
   // ------------------------------------------------------------------------
 
-  private onEnter(
-    container: Element,
-    play: () => Revertible | void,
-    options?: { threshold?: number },
-  ): void {
-    if (this.reducedMotion) return;
-    this.scroll.onEnter(
-      container,
-      () => {
-        const animation = play();
-        if (animation) this.animations.push(animation);
-      },
-      options,
-    );
-  }
-
   private get html(): HTMLElement {
     return this.root.ownerDocument.documentElement;
   }
 
   private hooks(name: string, scope: ParentNode = this.root): HTMLElement[] {
     return Array.from(scope.querySelectorAll<HTMLElement>(`[data-anim="${name}"]`));
-  }
-
-  private static formatter(decimals: number): (value: number) => string {
-    const nf = new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
-    return (value) => nf.format(value);
   }
 }

@@ -28,7 +28,7 @@ export default async function CoursePdfPage({ params }: PageProps<"/admin/course
   const qr = await QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#0b1120", light: "#ffffff" } });
 
   return (
-    <div data-plain-page className="pt-20 font-body print:pt-0">
+    <div data-plain-page className="pt-20 print:pt-0">
       <style>{PRINT_CSS}</style>
       <AutoPrint />
       <p className="sticky top-0 z-10 flex justify-center gap-4 bg-gold/90 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase print:hidden">

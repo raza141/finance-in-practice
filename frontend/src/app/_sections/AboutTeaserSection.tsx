@@ -10,8 +10,8 @@ export async function AboutTeaserSection() {
   const initials = founder.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("");
 
   return (
-    <section aria-labelledby="about-teaser-heading" data-sequence="reveal" className="border-t border-line">
-      <div data-anim="reveal" className="page-container grid items-center gap-10 py-12 md:grid-cols-[14rem_1fr] lg:py-16">
+    <section aria-labelledby="about-teaser-heading" className="border-t border-line">
+      <div className="page-container grid items-center gap-10 py-12 md:grid-cols-[14rem_1fr] lg:py-16">
         <div className="relative mx-auto aspect-[4/5] w-56 overflow-hidden rounded-[2rem] border border-white/15 bg-surface/60">
           {founder.photo ? (
             <Image src={founder.photo} alt={`Portrait of ${founder.name}`} fill sizes="14rem" unoptimized={!founder.photo.startsWith("/")} className="object-cover" />

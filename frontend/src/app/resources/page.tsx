@@ -71,7 +71,7 @@ export default async function ResourcesPage() {
                     <span className="tabular-data text-lg font-semibold text-ink">{product.price}</span>
                     <a
                       href={`${product.checkoutUrl}${product.checkoutUrl.includes("?") ? "&" : "?"}embed=1`}
-                      className="lemonsqueezy-button inline-flex h-10 items-center rounded-md bg-gold px-4 font-mono text-sm font-semibold text-canvas hover:bg-gold-bright"
+                      className="lemonsqueezy-button inline-flex h-10 items-center rounded-md bg-gold px-4 text-sm font-semibold text-canvas hover:bg-gold-bright"
                     >
                       Buy
                     </a>

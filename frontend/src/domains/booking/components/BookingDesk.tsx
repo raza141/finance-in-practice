@@ -27,7 +27,7 @@ export function BookingDesk({ heading }: { heading: ReactNode }) {
       <div className="min-w-0 lg:col-span-4">
         <div className="lg:sticky lg:top-28">
           {heading}
-          <div data-anim="reveal" className="mt-8 rounded-2xl border border-line bg-surface p-5">
+          <div className="mt-8 rounded-2xl border border-line bg-surface p-5">
             <div className="flex items-center justify-between">
               <p className="font-mono text-xs tracking-[0.16em] text-muted uppercase">Your session</p>
               {selection.booked && <p className="text-xs font-semibold text-gold">Booked ✓</p>}
@@ -53,7 +53,7 @@ export function BookingDesk({ heading }: { heading: ReactNode }) {
         </div>
       </div>
 
-      <div data-anim="reveal" className="min-w-0 lg:col-span-8">
+      <div className="min-w-0 lg:col-span-8">
         <TiltSurface maxTilt={2.5}>
           <QuantBookingWidget onSelection={setSelection} />
         </TiltSurface>

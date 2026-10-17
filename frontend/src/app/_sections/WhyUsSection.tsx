@@ -26,13 +26,13 @@ export async function WhyUsSection() {
   const pulse = await MarketPulseSource.load();
 
   return (
-    <section id="methodology" aria-labelledby="why-heading" data-sequence="reveal" className="border-t border-line">
+    <section id="methodology" aria-labelledby="why-heading" className="border-t border-line">
       <div className="page-container py-12 lg:py-16">
         <SectionHeading id="why-heading" eyebrow="Why learn with us" title="Theory that holds up in real markets" />
 
         {/* Wide screens: the three cards share the Market Pulse card's height, so both columns end on one line. */}
         <div className="mt-8 grid items-start gap-10 lg:grid-cols-2 lg:items-stretch xl:gap-16">
-          <ol data-anim="reveal" className="grid min-w-0 gap-4 lg:auto-rows-fr">
+          <ol className="grid min-w-0 gap-4 lg:auto-rows-fr">
             {POINTS.map((point, i) => (
               <li key={point.title} className="flex gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-6 lg:items-center">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-quant/30 bg-quant/10 text-quant">
@@ -47,7 +47,7 @@ export async function WhyUsSection() {
             ))}
           </ol>
 
-          <div data-anim="reveal" className="min-w-0">
+          <div className="min-w-0">
             <MarketPulseCard pulse={pulse} />
           </div>
         </div>

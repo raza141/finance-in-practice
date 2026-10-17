@@ -60,7 +60,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
   const freeResource = ResourceCatalog.forTicker(course.testimonialTicker);
 
   return (
-    <div data-plain-page className="font-body">
+    <div data-plain-page>
       <JsonLd data={StructuredData.course(course)} />
       <CourseAnimator>
         <CourseView

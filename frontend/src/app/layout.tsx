@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Merriweather, Roboto } from "next/font/google";
+import { Inter, JetBrains_Mono, Merriweather } from "next/font/google";
 import Script from "next/script";
 
 import { Footer } from "@/core/components/layout/Footer";
@@ -19,14 +19,6 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
-});
-
-/** Course-page body text. Not preloaded: the file downloads only on pages that use it. */
-const roboto = Roboto({
-  subsets: ["latin"],
-  display: "swap",
-  preload: false,
-  variable: "--font-roboto",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -83,7 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${merriweather.variable} ${jetbrainsMono.variable} ${roboto.variable}`}
+      className={`${inter.variable} ${merriweather.variable} ${jetbrainsMono.variable}`}
       // Next 16 no longer neutralises CSS smooth scrolling on route changes;
       // this attribute restores instant scroll-to-top between pages.
       data-scroll-behavior="smooth"

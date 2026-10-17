@@ -5,7 +5,7 @@ export function BookingSection() {
     <section
       id="book"
       aria-labelledby="book-heading"
-      data-sequence="reveal"
+     
       className="border-t border-line bg-gradient-to-b from-surface/40 to-transparent"
     >
       <div className="page-container py-12 lg:py-16">

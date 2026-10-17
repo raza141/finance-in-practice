@@ -22,7 +22,6 @@
 /* Font families come from next/font CSS variables set on <html>. */
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-roboto), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-merriweather), ui-serif, Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -98,8 +97,8 @@
     }
   }
 
-  /* Type system: serif display headings, terminal mono for everything
-   * structural (subheadings, form controls, buttons, figures), sans for prose. */
+  /* Type system: serif display headings (h1, h2), Inter for everything else,
+   * terminal mono only for figures (tabular-data) and small data labels. */
   h1,
   h2 {
     @apply font-serif text-ink;
@@ -110,18 +109,9 @@
   h4,
   h5,
   h6 {
-    @apply font-mono text-ink;
-    letter-spacing: -0.01em;
+    @apply font-sans text-ink;
+    letter-spacing: -0.015em;
     text-wrap: balance;
-  }
-
-  input,
-  select,
-  textarea,
-  button,
-  label,
-  legend {
-    @apply font-mono;
   }
 
   :focus-visible {
@@ -134,17 +124,18 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Animation pre-paint state.
+ * Animation pre-paint state (home hero only: the one page-load moment).
  * A tiny inline script adds .anim-ready to <html> before paint (unless the
  * user prefers reduced motion), so animated elements never flash visible.
  * If the JS bundle never boots, the keyframe below reveals content after
  * 2.5s anyway; LandingAnimationController adds .anim-booted to cancel it.
  * ------------------------------------------------------------------------- */
-.anim-ready [data-anim] {
+.anim-ready [data-anim="nav"],
+.anim-ready [data-anim^="hero-"] {
   opacity: 0;
 }
 
-.anim-ready:not(.anim-booted) [data-anim] {
+.anim-ready:not(.anim-booted) :is([data-anim="nav"], [data-anim^="hero-"]) {
   animation: anim-safety-reveal 0.4s ease-out 2.5s forwards;
 }
 

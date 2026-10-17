@@ -30,10 +30,10 @@ async function examCourses(): Promise<Course[]> {
 export async function FeaturedCoursesSection() {
   const courses = await examCourses();
   return (
-    <section aria-labelledby="featured-heading" data-sequence="reveal" className="page-container py-12 lg:py-16">
-      <SectionHeading id="featured-heading" eyebrow="Courses" title="Pick your exam. We'll get you through it." />
+    <section aria-labelledby="featured-heading" className="page-container py-12 lg:py-16">
+      <SectionHeading id="featured-heading" title="Pick your exam. We'll get you through it." />
 
-      <ul data-anim="reveal" className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => {
           const exam = ExamFacts.for(course.testimonialTicker);
           const study = exam?.facts.find((f) => f.label === "typical study")?.value;
@@ -96,7 +96,7 @@ export async function FeaturedCoursesSection() {
           );
         })}
       </ul>
-      <p data-anim="reveal" className="mt-6 text-muted">
+      <p className="mt-6 text-muted">
         Also 1-on-1: university finance, financial modeling, Python automation and more.{" "}
         <Link href="/courses" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
           See all tracks →

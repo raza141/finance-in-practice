@@ -47,7 +47,7 @@ export function LeadForm({ resource, source }: { resource: FreeResource; source:
         <a
           href={state.url}
           download
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-quant/60 px-6 font-mono text-[15px] font-semibold text-quant transition-colors hover:bg-quant/10"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-quant/60 px-6 text-[15px] font-semibold text-quant transition-colors hover:bg-quant/10"
         >
           ↓ Download {resource.title}
         </a>

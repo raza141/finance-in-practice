@@ -20,19 +20,18 @@ const STEPS = [
   },
 ];
 
-/** A scroll story (ScrollStory): on big screens it pins while the three steps rise in; elsewhere a fade-up. */
 export function HowItWorksSection() {
   return (
-    <section aria-labelledby="how-heading" data-sequence="story" className="border-t border-line">
-      <div data-story-stage className="page-container py-12 lg:py-16">
-        <SectionHeading id="how-heading" eyebrow="How it works" title="Three steps to your first session" />
-        {/* Progress rail: fills left to right as the steps arrive. */}
+    <section aria-labelledby="how-heading" className="border-t border-line">
+      <div className="page-container py-12 lg:py-16">
+        <SectionHeading id="how-heading" title="Three steps to your first session" />
+        {/* Progress rail across the three steps. */}
         <div aria-hidden className="mt-8 hidden h-0.5 rounded-full bg-line md:block">
-          <span data-anim="story-rail" className="block h-full origin-left rounded-full bg-gradient-to-r from-quant to-gold" />
+          <span className="block h-full origin-left rounded-full bg-gradient-to-r from-quant to-gold" />
         </div>
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {STEPS.map((step, i) => (
-            <li key={step.title} data-anim="story-step" className="relative rounded-2xl border border-line bg-surface p-6">
+            <li key={step.title} className="relative rounded-2xl border border-line bg-surface p-6">
               <div className="flex items-center gap-4">
                 <span className="grid h-12 w-12 place-items-center rounded-xl border border-gold/40 bg-gold/10 text-gold">
                   <LineIcon d={step.icon} />
@@ -49,7 +48,7 @@ export function HowItWorksSection() {
             </li>
           ))}
         </ol>
-        <div data-anim="story-end" className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
+        <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
           <BookButton size="lg" className="w-full sm:w-auto" />
           <p className="font-mono text-xs tracking-wide text-muted">Free · 30 min · no card needed</p>
         </div>

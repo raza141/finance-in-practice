@@ -147,7 +147,7 @@ export function JoinForm({ courses, batches, email }: { courses: string[]; batch
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="inline-flex h-11 items-center justify-center rounded-md bg-gold px-6 font-mono text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+        className="inline-flex h-11 items-center justify-center rounded-md bg-gold px-6 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
         {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>

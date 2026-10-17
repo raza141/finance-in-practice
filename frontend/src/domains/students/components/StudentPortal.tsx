@@ -540,7 +540,7 @@ export function StudentPortal({
             <button
               type="submit"
               disabled={readOnly || busy || !selection || !course || (mode === "in_person" && mapLinkInvalid)}
-              className="inline-flex h-12 items-center justify-center rounded-md bg-gold px-6 font-mono text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+              className="inline-flex h-12 items-center justify-center rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
             >
               {busy ? "Saving…" : moving ? "Move session" : selection ? `Book ${hours(selection.minutes)} session` : "Book session"}
             </button>
