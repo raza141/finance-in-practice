@@ -150,7 +150,6 @@ export function CourseView({
               {course.method.map((step, index) => (
                 <li
                   key={index}
-                 
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/50 hover:shadow-[0_12px_40px_-12px_rgba(34,211,238,0.25)]"
                 >
                   <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-quant to-gold opacity-50 transition-opacity group-hover:opacity-100" />
@@ -161,8 +160,7 @@ export function CourseView({
                   <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-quant/10 text-quant ring-1 ring-quant/30">
                     {STAGE_ICONS[index % STAGE_ICONS.length]}
                   </span>
-                  <p className="mt-5 font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Stage {String(index + 1).padStart(2, "0")}</p>
-                  <h3 className="mt-1 text-xl font-bold">{step.title}</h3>
+                  <h3 className="mt-5 text-xl font-bold">{step.title}</h3>
                   {step.description && <p className="mt-3 leading-relaxed text-muted">{step.description}</p>}
                   {/* Flow arrow to the next stage, on the desktop row only. */}
                   {index < course.method.length - 1 && (
@@ -193,10 +191,7 @@ export function CourseView({
                           <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-quant/10 text-quant ring-1 ring-quant/30">
                             {MODE_ICONS[index % MODE_ICONS.length]}
                           </span>
-                          <div>
-                            <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Mode {String(index + 1).padStart(2, "0")}</p>
-                            <h4 className="text-xl font-bold">{mode.title}</h4>
-                          </div>
+                          <h4 className="text-xl font-bold">{mode.title}</h4>
                         </div>
                         {body && <p className="mt-5 flex-1 leading-relaxed text-muted">{body}</p>}
                         {bestFor && (
@@ -244,7 +239,6 @@ export function CourseView({
                           <span className="col-span-2 row-start-2 flex items-center gap-3 md:col-span-1 md:row-start-auto">
                             <span aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-line/60">
                               <span
-                               
                                 style={{ width: `${(share / weightAxis) * 100}%` }}
                                 className={`block h-full origin-left rounded-full ${module.priority === "high_priority" ? "bg-gold shadow-[0_0_12px_rgb(212_175_55/0.6)]" : "bg-quant/70"}`}
                               />
@@ -298,19 +292,14 @@ export function CourseView({
               {course.options.map((option, index) => (
                 <li
                   key={index}
-                 
                   className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_12px_40px_-12px_rgba(212,175,55,0.25)]"
                 >
-                  {/* Same build as the method stages: accent bar, big faded number, icon tile. */}
+                  {/* Same build as the method stages minus the number: options are alternatives, not steps. */}
                   <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-gold to-quant opacity-50 transition-opacity group-hover:opacity-100" />
-                  <span aria-hidden className="pointer-events-none absolute top-3 right-5 font-mono text-6xl font-bold text-gold/10 tabular-nums transition-colors group-hover:text-gold/20">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
                   <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-gold/10 text-gold ring-1 ring-gold/30">
                     {OPTION_ICONS[index % OPTION_ICONS.length]}
                   </span>
-                  <p className="mt-5 font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Option {String(index + 1).padStart(2, "0")}</p>
-                  <h3 className="mt-1 text-xl font-bold">{option.title}</h3>
+                  <h3 className="mt-5 text-xl font-bold">{option.title}</h3>
                   {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
                   {option.description && <p className="mt-3 leading-relaxed text-muted">{option.description}</p>}
                   {/* Every card ends on a button, on one line. Monthly or on request needs a chat first, so WhatsApp;
