@@ -17,7 +17,7 @@ export interface ScrollStoryParts {
  * position. Scrolling stays normal (nothing takes over the wheel), and only
  * transform and opacity animate, so the browser does it without re-layout.
  *
- * Pins only on a wide, tall screen where the stage fits under the navbar,
+ * Pins only on a wide, tall screen where the stage fits under the navbar and nearly fills it,
  * measured on the visitor's own screen; otherwise `pin` returns null and the
  * caller keeps its ordinary animation.
  * ponytail: decided once at load; resizing to a smaller window afterwards keeps the pin.
@@ -26,6 +26,8 @@ export class ScrollStory {
   static readonly MEDIA = "(min-width: 1024px) and (min-height: 700px)";
   /** Room left for the floating navbar above a pinned stage. */
   static readonly NAV_PX = 88;
+  /** Smallest share of the screen (under the navbar) a stage must fill to pin. */
+  static readonly MIN_FILL = 0.8;
 
   /** `screens`: how long the pin lasts, in screen heights; by default about a third of a screen per step. */
   /**
@@ -53,7 +55,9 @@ export class ScrollStory {
   static pin(track: HTMLElement, stage: HTMLElement, parts: ScrollStoryParts, screens = 1 + 0.35 * parts.steps.length): Revertible[] | null {
     const view = track.ownerDocument.defaultView;
     if (!view?.matchMedia(ScrollStory.MEDIA).matches || parts.steps.length === 0) return null;
-    if (stage.scrollHeight > view.innerHeight - ScrollStory.NAV_PX) return null;
+    const room = view.innerHeight - ScrollStory.NAV_PX;
+    // Only pin a stage that nearly fills the screen: a shorter one leaves a blank band under it while pinned.
+    if (stage.scrollHeight > room || stage.scrollHeight < room * ScrollStory.MIN_FILL) return null;
 
     const before = { track: track.style.cssText, stage: stage.style.cssText };
     track.style.height = `${screens * 100}vh`;

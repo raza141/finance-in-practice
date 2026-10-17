@@ -318,9 +318,10 @@ export function CourseView({
                   <h3 className="mt-1 text-xl font-bold">{option.title}</h3>
                   {option.fee && <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{option.fee}</p>}
                   {option.description && <p className="mt-3 leading-relaxed text-muted">{option.description}</p>}
-                  {/* Priced on request (e.g. the revision crash course): ask straight away on WhatsApp. */}
-                  {/request/i.test(option.fee) && (
-                    <div className="mt-auto pt-5">
+                  {/* Every card ends on a button, on one line. Monthly or on request needs a chat first, so WhatsApp;
+                      anything else (by the hour) is booked straight from the student portal. */}
+                  <div className="mt-auto pt-5">
+                    {/request|month/i.test(option.fee) ? (
                       <a
                         href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
                         target="_blank"
@@ -329,8 +330,10 @@ export function CourseView({
                       >
                         Ask on WhatsApp
                       </a>
-                    </div>
-                  )}
+                    ) : (
+                      <ButtonLink href="/student?view=register">Book a session</ButtonLink>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
