@@ -1,0 +1,5 @@
+node_modules/
+# The linked WhatsApp session: whoever has this folder can send as the number.
+auth/
+.env
+gateway.pid

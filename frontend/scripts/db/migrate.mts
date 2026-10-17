@@ -910,6 +910,81 @@ const MIGRATIONS: Migration[] = [
       `UPDATE courses SET classroom_url = NULL WHERE testimonial_ticker IN ('CFA1', 'CFA2', 'FRM1')`,
     ],
   },
+  {
+    // WhatsApp: a gateway on the owner's Mac (whatsapp-gateway/) links one number
+    // and sends what the website queues here. whatsapp_link is its one-row state:
+    // the linked number, the owner's link/unlink command, test mode (test_phone:
+    // every message goes to the owner instead) and the heartbeat. enabled_at is when
+    // a number was first linked: bookings, documents and class posts from before it
+    // are never announced. whatsapp_messages is the outbox, one row per message,
+    // dedupe_key making each event's message at most one. A client gets the
+    // "save this number" intro before anything else, per phone number
+    // (whatsapp_intro_phone), and whatsapp_off is their STOP. whatsapp_class_posts
+    // remembers each Classroom post seen: private classes send at once, batch
+    // posts wait for the owner to pick who gets them.
+    id: "044_whatsapp",
+    statements: [
+      `CREATE TABLE whatsapp_link (
+        id            smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        state         text NOT NULL DEFAULT 'offline' CHECK (state IN ('offline', 'connecting', 'pairing', 'connected', 'logged_out')),
+        state_since   timestamptz NOT NULL DEFAULT now(),
+        phone         text CHECK (phone ~ '^[0-9]{8,15}$'),
+        command       text CHECK (command IN ('link', 'unlink')),
+        command_phone text CHECK (command_phone ~ '^[0-9]{8,15}$'),
+        pairing_code  text CHECK (char_length(pairing_code) <= 20),
+        test_phone    text CHECK (test_phone ~ '^[0-9]{8,15}$'),
+        live          boolean NOT NULL DEFAULT false,
+        enabled_at    timestamptz,
+        last_seen_at  timestamptz,
+        last_scan_at  timestamptz,
+        alerted_at    timestamptz,
+        updated_at    timestamptz NOT NULL DEFAULT now()
+      )`,
+      `INSERT INTO whatsapp_link DEFAULT VALUES`,
+      `CREATE TABLE whatsapp_messages (
+        id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        dedupe_key      text NOT NULL UNIQUE CHECK (char_length(dedupe_key) <= 200),
+        kind            text NOT NULL CHECK (kind IN ('intro', 'number', 'booking', 'reminder', 'invoice', 'receipt', 'overdue', 'class', 'nudge')),
+        client_id       uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        phone           text NOT NULL CHECK (phone ~ '^[0-9]{8,15}$'),
+        body            text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 4000),
+        ref             text CHECK (char_length(ref) <= 200),
+        document_token  text CHECK (char_length(document_token) <= 64),
+        attachment_name text CHECK (char_length(attachment_name) <= 160),
+        status          text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sending', 'sent', 'failed', 'unknown', 'cancelled', 'expired')),
+        not_before      timestamptz NOT NULL DEFAULT now(),
+        expires_at      timestamptz,
+        quiet_ok        boolean NOT NULL DEFAULT false,
+        sent_to         text CHECK (char_length(sent_to) <= 15),
+        error           text CHECK (char_length(error) <= 300),
+        created_at      timestamptz NOT NULL DEFAULT now(),
+        claimed_at      timestamptz,
+        sent_at         timestamptz
+      )`,
+      `CREATE INDEX whatsapp_messages_queue_idx ON whatsapp_messages (not_before) WHERE status IN ('queued', 'sending')`,
+      `CREATE INDEX whatsapp_messages_ref_idx ON whatsapp_messages (ref) WHERE ref IS NOT NULL`,
+      `CREATE INDEX whatsapp_messages_created_idx ON whatsapp_messages (created_at DESC)`,
+      `ALTER TABLE clients
+        ADD COLUMN whatsapp_intro_phone text CHECK (char_length(whatsapp_intro_phone) <= 15),
+        ADD COLUMN whatsapp_off boolean NOT NULL DEFAULT false`,
+      `CREATE TABLE whatsapp_class_posts (
+        item_id     text PRIMARY KEY CHECK (char_length(item_id) <= 100),
+        course_id   text NOT NULL CHECK (char_length(course_id) <= 100),
+        class_title text NOT NULL CHECK (char_length(class_title) <= 300),
+        kind        text NOT NULL CHECK (kind IN ('mock', 'assignment', 'material', 'announcement')),
+        title       text NOT NULL CHECK (char_length(title) <= 300),
+        link        text CHECK (char_length(link) <= 500),
+        due_at      timestamptz,
+        recipients  jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(recipients) = 'array'),
+        unmatched   integer NOT NULL DEFAULT 0,
+        status      text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'dismissed', 'auto')),
+        posted_at   timestamptz NOT NULL,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        decided_at  timestamptz
+      )`,
+      `CREATE INDEX whatsapp_class_posts_status_idx ON whatsapp_class_posts (status, posted_at DESC)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

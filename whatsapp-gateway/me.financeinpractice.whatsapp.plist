@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Starts the WhatsApp gateway at login and restarts it if it stops.
+  Install (once):
+    cp me.financeinpractice.whatsapp.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/me.financeinpractice.whatsapp.plist
+  Stop for good:
+    launchctl unload ~/Library/LaunchAgents/me.financeinpractice.whatsapp.plist
+  Log: /tmp/fip-whatsapp.log
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>me.financeinpractice.whatsapp</string>
+  <key>WorkingDirectory</key>
+  <string>/Volumes/Project/Financeinpractice/whatsapp-gateway</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>--env-file=.env</string>
+    <string>gateway.ts</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/fip-whatsapp.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/fip-whatsapp.log</string>
+</dict>
+</plist>
