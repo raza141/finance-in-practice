@@ -48,7 +48,8 @@ export async function FeaturedCoursesSection() {
               <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full bg-quant/10 blur-3xl" />
               <p className="relative font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
               <h3 className="relative mt-2 text-3xl font-black sm:text-4xl">{course.title}</h3>
-              {course.tagline && <p className="relative mt-2 font-serif text-lg text-ink/85 italic">{course.tagline}</p>}
+              {/* Two lines held side by side, so a tagline that wraps doesn't push its card's boxes below the others. */}
+              {course.tagline && <p className="relative mt-2 font-serif text-lg text-ink/85 italic md:min-h-[2lh]">{course.tagline}</p>}
               {next && (
                 <p className="relative mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
                   <span aria-hidden className="relative flex h-2 w-2">

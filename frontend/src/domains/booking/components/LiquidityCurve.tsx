@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import type { TerminalAnimator } from "../animations/TerminalAnimator";
 import { LiquidityCurveGeometry, type ChartBox } from "../services/LiquidityCurveGeometry";
@@ -31,17 +31,28 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
   const bandRef = useRef<SVGPathElement>(null);
   const limitRef = useRef<SVGLineElement>(null);
   const [hover, setHover] = useState<number | null>(null);
+  // Drawn at the box's real width, so on a phone the labels keep their size instead of shrinking with the picture.
+  const [width, setWidth] = useState(BOX.width);
+  useLayoutEffect(() => {
+    const host = svgRef.current?.parentElement;
+    if (!host) return;
+    const observer = new ResizeObserver(() => setWidth(Math.round(host.clientWidth) || BOX.width));
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+  const narrow = width < 480;
+  const box: ChartBox = { ...BOX, width, height: narrow ? 240 : BOX.height };
 
   const geometry = new LiquidityCurveGeometry(
     days.map((d) => d.slots.length),
-    BOX,
+    box,
   );
   const selectedIndex = selectedDate ? days.findIndex((d) => d.date === selectedDate) : -1;
   const focusIndex = hover ?? (selectedIndex >= 0 ? selectedIndex : null);
 
   useEffect(() => {
     if (pathRef.current) animator.drawCurve(pathRef.current, bandRef.current);
-  }, [animator, days]);
+  }, [animator, days, width]);
 
   useEffect(() => {
     if (selectedIndex < 0 || !limitRef.current) return;
@@ -53,13 +64,13 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
     );
     // geometry is derived from days; re-run only when the locked node changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animator, selectedIndex]);
+  }, [animator, selectedIndex, width]);
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * BOX.width;
+    const x = ((event.clientX - rect.left) / rect.width) * box.width;
     setHover(geometry.nearestIndex(x));
   };
 
@@ -98,8 +109,8 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
 
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${BOX.width} ${BOX.height}`}
-        className="mt-2 h-auto min-h-64 w-full touch-none select-none"
+        viewBox={`0 0 ${box.width} ${box.height}`}
+        className="mt-2 h-auto w-full touch-none select-none"
         role="group"
         aria-label="Available diagnostic session slots over the next 14 days"
         onPointerMove={onPointerMove}
@@ -142,13 +153,13 @@ export function LiquidityCurve({ days, selectedDate, animator, onSelect }: Liqui
           </g>
         ))}
 
-        {/* x labels: every other day */}
+        {/* x labels: every other day, every third on a phone */}
         {days.map((d, i) =>
-          i % 2 === 0 ? (
+          i % (narrow ? 3 : 2) === 0 ? (
             <text
               key={d.date}
               x={geometry.xAt(i)}
-              y={BOX.height - 10}
+              y={box.height - 10}
               textAnchor="middle"
               className="fill-muted font-mono text-xs"
             >
