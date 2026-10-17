@@ -46,6 +46,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "digest-unavailable": { text: "No preview: Classroom isn't connected or email isn't set up.", tone: "warn" },
   "digest-failed": { text: "Preview failed. Try again in a minute.", tone: "warn" },
   "classroom-email-invalid": { text: "Not saved: that doesn't look like an email address.", tone: "warn" },
+  "private-duplicate": { text: "Not added: that link is a Google class already in their portal.", tone: "warn" },
+  "classroom-duplicate": { text: "Not approved: this course's Google class is already in their portal as a private classroom.", tone: "warn" },
   "private-added": { text: "Private classroom added: it shows in their portal now.", tone: "ok" },
   "private-removed": { text: "Private classroom removed from their portal. Also remove them in Google Classroom (People).", tone: "ok" },
   "private-refused": {

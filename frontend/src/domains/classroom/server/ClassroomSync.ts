@@ -81,6 +81,23 @@ export class ClassroomSync {
   }
 
   /** The student's feed across their classes; null when Classroom isn't set up or connected. Throws when Google fails. */
+  /**
+   * The first of `links` that leads to the same Google class as `url`: the same link, or (when Classroom
+   * is connected) an invite and a class link of one class. Google unreachable: only exact links are caught.
+   */
+  static async sameClass<T extends ClassLink>(url: string, links: readonly T[]): Promise<T | null> {
+    const exact = links.find((l) => l.url === url);
+    if (exact || links.length === 0) return exact ?? null;
+    try {
+      if (!(await ClassroomSync.isConnected())) return null;
+      const course = ClassFeed.match(url, await ClassroomSync.courses());
+      return course ? (links.find((l) => ClassFeed.match(l.url, [course])) ?? null) : null;
+    } catch (error) {
+      console.error("[classroom] duplicate check skipped", error);
+      return null;
+    }
+  }
+
   static async forStudent(clientId: string, links: readonly ClassLink[], now = Date.now()): Promise<StudentFeed | null> {
     const sql = Database.sql();
     if (!sql || !ClassroomSync.isConfigured() || links.length === 0) return null;

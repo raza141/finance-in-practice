@@ -102,6 +102,19 @@ export class ClassroomRepository {
     `) as { title: string; url: string }[];
   }
 
+  /** Every class link this client has or can be approved for: their courses' (any access) and their private ones. */
+  async linksFor(clientId: string): Promise<{ title: string; url: string; kind: "course" | "private" }[]> {
+    if (!UUID.test(clientId)) return [];
+    return (await this.sql`
+      (SELECT DISTINCT ON (co.title) co.title, co.classroom_url AS url, 'course' AS kind
+       FROM clients cl JOIN courses co ON co.title = ANY(cl.courses)
+       WHERE cl.id = ${clientId} AND co.classroom_url IS NOT NULL
+       ORDER BY co.title, co.is_active DESC)
+      UNION ALL
+      SELECT title, url, 'private' FROM private_classrooms WHERE client_id = ${clientId}
+    `) as { title: string; url: string; kind: "course" | "private" }[];
+  }
+
   /** Scoped to the client, so a stray id can't remove another student's class. */
   async removePrivate(clientId: string, id: string): Promise<void> {
     if (!UUID.test(clientId) || !UUID.test(id)) return;

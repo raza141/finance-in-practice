@@ -4,6 +4,7 @@ import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
 import { OwnerNotice } from "../server/OwnerNotice";
@@ -59,7 +60,15 @@ export async function decideClassroom(formData: FormData): Promise<void> {
   if (!UUID.test(clientId)) redirect("/admin/clients");
   const course = String(formData.get("course") ?? "");
   const status = formData.get("status") === "approved" ? "approved" : "removed";
-  await classrooms().decide(clientId, course, status);
+  const repo = classrooms();
+  if (status === "approved") {
+    // One Google class, one card: refuse when a private class of theirs is the same class.
+    const links = await repo.linksFor(clientId);
+    const own = links.find((l) => l.kind === "course" && l.title === course);
+    const clash = own && (await ClassroomSync.sameClass(own.url, links.filter((l) => l.kind === "private")));
+    if (clash) redirect(`/admin/clients/${clientId}?notice=classroom-duplicate&reason=${encodeURIComponent(`Remove the private "${clash.title}" first.`)}#classroom`);
+  }
+  await repo.decide(clientId, course, status);
   // Re-render the admin layout too, so the Clients badge drops at once.
   revalidatePath("/admin", "layout");
   redirect(`/admin/clients/${clientId}?notice=classroom-${status}#classroom`);
@@ -78,7 +87,14 @@ export async function addPrivateClassroom(formData: FormData): Promise<void> {
   if (!title || title.length > 120 || note.length > 160 || !ClassroomLink.isValid(url)) {
     redirect(`${path}?notice=private-refused#classroom`);
   }
-  await classrooms().addPrivate(clientId, { title, note, url });
+  const repo = classrooms();
+  // One Google class, one card: refuse a class they already get through a course or another private class.
+  const clash = await ClassroomSync.sameClass(url, await repo.linksFor(clientId));
+  if (clash) {
+    const where = clash.kind === "course" ? `the ${clash.title} course (approve it under Course classrooms)` : `the private "${clash.title}"`;
+    redirect(`${path}?notice=private-duplicate&reason=${encodeURIComponent(`It's ${where}.`)}#classroom`);
+  }
+  await repo.addPrivate(clientId, { title, note, url });
   redirect(`${path}?notice=private-added#classroom`);
 }
 
