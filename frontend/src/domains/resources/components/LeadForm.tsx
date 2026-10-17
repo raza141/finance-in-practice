@@ -75,7 +75,7 @@ export function LeadForm({ resource, source }: { resource: FreeResource; source:
         <button
           type="submit"
           disabled={state.kind === "sending"}
-          className="h-12 shrink-0 rounded-md bg-gold px-6 font-mono text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+          className="h-12 shrink-0 rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
         >
           {state.kind === "sending" ? "Sending…" : "Get it free"}
         </button>
