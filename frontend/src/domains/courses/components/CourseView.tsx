@@ -355,8 +355,11 @@ export function CourseView({
       )}
 
       {freeResource && (
-        <section aria-label="Free download" className="border-t border-line">
-          <div className="page-container py-12 lg:py-14">{freeResource}</div>
+        <section aria-labelledby="free-guide-heading" className="border-t border-line">
+          <div className="page-container py-12 lg:py-14">
+            <SectionHeading id="free-guide-heading" eyebrow="Not ready to book yet?" title="Start with the free exam map" />
+            <div className="mt-10">{freeResource}</div>
+          </div>
         </section>
       )}
 
