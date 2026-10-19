@@ -14,7 +14,7 @@ export class OgImage {
   static readonly size = { width: 1200, height: 630 };
   static readonly contentType = "image/png";
 
-  static async render(card: { eyebrow: string; title: string; subtitle: string }): Promise<ImageResponse> {
+  static async render(card: { eyebrow: string; title: string; subtitle: string; titleSize?: number }): Promise<ImageResponse> {
     const logo = await readFile(join(process.cwd(), "public/brand/fip-logo.png"));
     const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
     return new ImageResponse(
@@ -36,7 +36,7 @@ export class OgImage {
           <img src={logoSrc} width={477} height={80} alt="" />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 28, letterSpacing: 6, color: "#22d3ee", textTransform: "uppercase" }}>{card.eyebrow}</div>
-            <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.1, marginTop: 16 }}>{card.title}</div>
+            <div style={{ fontSize: card.titleSize ?? 76, fontWeight: 800, lineHeight: 1.1, marginTop: 16 }}>{card.title}</div>
             <div style={{ fontSize: 34, color: "#94a3b8", marginTop: 20 }}>{card.subtitle}</div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 28 }}>

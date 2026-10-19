@@ -73,6 +73,9 @@ export function RichText({ text, cites = new Map(), className = "" }: { text: st
   return (
     <div className={`space-y-4 leading-relaxed ${className}`}>
       {InlineText.paragraphs(text).map((p, i) => {
+        if (p.kind === "math") {
+          return <div key={i} className="overflow-x-auto py-1" dangerouslySetInnerHTML={{ __html: texToHtml(p.tex, true) }} />;
+        }
         if (p.kind === "p") {
           return (
             <p key={i}>

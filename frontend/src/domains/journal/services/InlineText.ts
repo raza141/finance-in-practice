@@ -7,7 +7,7 @@ export type InlineToken =
   | { kind: "cite"; id: string }
   | { kind: "link"; href: string; children: InlineToken[] };
 
-export type Paragraph = { kind: "p"; lines: string[] } | { kind: "ul" | "ol"; items: string[] };
+export type Paragraph = { kind: "p"; lines: string[] } | { kind: "ul" | "ol"; items: string[] } | { kind: "math"; tex: string };
 
 /**
  * The small markup language of text blocks, parsed into tokens that React
@@ -57,10 +57,16 @@ export class InlineText {
     return InlineText.SAFE_HREF.test(href.trim());
   }
 
-  /** Blank lines separate paragraphs; a run of "- " or "1. " lines is a list. */
+  /** Blank lines separate paragraphs; a run of "- " or "1. " lines is a list; $$…$$ (may span lines) is display maths. */
   static paragraphs(text: string): Paragraph[] {
     return text
       .replace(/\r\n?/g, "\n")
+      .split(/(?<!\\)\$\$([\s\S]+?)\$\$/)
+      .flatMap((part, i): Paragraph[] => (i % 2 === 1 ? [{ kind: "math", tex: part.trim() }] : InlineText.blocks(part)));
+  }
+
+  private static blocks(text: string): Paragraph[] {
+    return text
       .split(/\n\s*\n/)
       .map((chunk) => chunk.split("\n").filter((line) => line.trim() !== ""))
       .filter((lines) => lines.length > 0)

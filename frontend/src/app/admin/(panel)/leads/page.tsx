@@ -53,7 +53,7 @@ export default async function AdminLeadsPage() {
                       {lead.email}
                     </a>
                   </td>
-                  <td className="px-4 py-3">{ResourceCatalog.free(lead.resourceId)?.title ?? lead.resourceId}</td>
+                  <td className="px-4 py-3">{lead.resourceId === "cfa-qotd" ? "Daily CFA question" : (ResourceCatalog.free(lead.resourceId)?.title ?? lead.resourceId)}</td>
                   <td className="px-4 py-3 text-muted">{lead.source || "—"}</td>
                   <td className="px-4 py-3">{lead.marketingOptIn ? "Yes" : "—"}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted">{DATE.format(lead.createdAt)}</td>

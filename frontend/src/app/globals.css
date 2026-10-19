@@ -53,6 +53,46 @@
   }
 }
 
+/* CFA question answers (AnswerPicker): a brief glow, a drawn tick and a small burst; all motion-safe there. */
+@keyframes q-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgb(52 211 153 / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgb(52 211 153 / 0);
+  }
+}
+
+@keyframes q-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(52 211 153 / 0);
+  }
+  40% {
+    box-shadow: 0 0 0 6px rgb(52 211 153 / 0.35);
+  }
+}
+
+@keyframes q-check {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes q-confetti {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--q-angle)) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--q-angle)) translateX(64px) scale(0.6);
+  }
+}
+
 @layer base {
   html {
     color-scheme: dark;

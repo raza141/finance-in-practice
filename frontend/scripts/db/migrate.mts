@@ -985,6 +985,48 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX whatsapp_class_posts_status_idx ON whatsapp_class_posts (status, posted_at DESC)`,
     ],
   },
+  {
+    // CFA question of the day. A question is live once publish_at has passed
+    // (null = draft). Options are [{text, why}], three or four of them.
+    // cfa_question_switch keeps the public pages and the daily email off until
+    // the owner turns them on; leads.unsubscribed_at stops the daily email.
+    id: "045_cfa_questions",
+    statements: [
+      `CREATE TABLE cfa_questions (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code        text NOT NULL UNIQUE CHECK (char_length(code) <= 40),
+        level       smallint NOT NULL CHECK (level IN (1, 2, 3)),
+        topic       text NOT NULL CHECK (topic ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(topic) <= 60),
+        subtopic    text NOT NULL DEFAULT '' CHECK (char_length(subtopic) <= 80),
+        difficulty  text NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
+        slug        text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(slug) BETWEEN 3 AND 80),
+        title       text NOT NULL CHECK (char_length(title) BETWEEN 5 AND 120),
+        description text NOT NULL DEFAULT '' CHECK (char_length(description) <= 200),
+        stem        text NOT NULL CHECK (char_length(stem) BETWEEN 10 AND 5000),
+        options     jsonb NOT NULL CHECK (jsonb_typeof(options) = 'array' AND jsonb_array_length(options) BETWEEN 3 AND 4),
+        correct     smallint NOT NULL CHECK (correct BETWEEN 0 AND 3),
+        formula     text NOT NULL DEFAULT '' CHECK (char_length(formula) <= 2000),
+        solution    text NOT NULL DEFAULT '' CHECK (char_length(solution) <= 10000),
+        trap        text NOT NULL DEFAULT '' CHECK (char_length(trap) <= 2000),
+        image_url   text CHECK (char_length(image_url) <= 500),
+        image_alt   text NOT NULL DEFAULT '' CHECK (char_length(image_alt) <= 300),
+        source      text NOT NULL DEFAULT '' CHECK (char_length(source) <= 200),
+        publish_at  timestamptz,
+        emailed_at  timestamptz,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        updated_at  timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX cfa_questions_live_idx ON cfa_questions (publish_at DESC) WHERE publish_at IS NOT NULL`,
+      `CREATE TABLE cfa_question_switch (
+        id         smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        pages_on   boolean NOT NULL DEFAULT false,
+        emails_on  boolean NOT NULL DEFAULT false,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `INSERT INTO cfa_question_switch DEFAULT VALUES`,
+      `ALTER TABLE leads ADD COLUMN unsubscribed_at timestamptz`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

@@ -48,6 +48,21 @@ export class ResendClient extends BaseApiClient {
     return response.id;
   }
 
+  /** Up to 100 emails in one request (POST /emails/batch), each to one recipient. */
+  async sendBatch(messages: readonly { to: string; message: EmailMessage }[]): Promise<void> {
+    await this.post(
+      "/emails/batch",
+      messages.map(({ to, message }) => ({
+        from: this.config.from,
+        to: [to],
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        ...(this.config.replyTo && { reply_to: this.config.replyTo }),
+      })),
+    );
+  }
+
   /** Resend errors look like `{statusCode, name, message}`. */
   protected static override extractMessage(payload: unknown): string | null {
     if (!payload || typeof payload !== "object") return null;

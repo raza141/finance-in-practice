@@ -1,6 +1,8 @@
 import { siteConfig } from "@/core/config/site";
 import type { Course } from "@/domains/courses/types";
 import type { PublishedArticle } from "@/domains/journal/types";
+import { QuestionTaxonomy } from "@/domains/questions/services/QuestionTaxonomy";
+import type { Question } from "@/domains/questions/types";
 import type { Instructor } from "@/domains/team/types";
 
 export type JsonLdNode = Record<string, unknown>;
@@ -147,6 +149,43 @@ export class StructuredData {
     ]);
   }
 
+  /** /cfa/questions/[topic]/[slug]: a one-question Quiz (Google's education Q&A shape). Text keeps its $…$ maths source. */
+  static question(q: Question): JsonLdNode {
+    const path = QuestionTaxonomy.path(q);
+    const url = `${siteConfig.url}${path}`;
+    const topic = QuestionTaxonomy.topic(q.topic)?.name ?? q.topic;
+    const answer = (i: number) => ({ "@type": "Answer", position: i, text: q.options[i].text });
+    return StructuredData.graph([
+      {
+        "@type": "Quiz",
+        "@id": `${url}#quiz`,
+        name: q.title,
+        url,
+        inLanguage: "en",
+        educationalLevel: QuestionTaxonomy.levelLabel(q.level),
+        about: { "@type": "Thing", name: [topic, q.subtopic].filter(Boolean).join(": ") },
+        ...(q.publishAt && { datePublished: q.publishAt.toISOString() }),
+        dateModified: q.updatedAt.toISOString(),
+        provider: { "@id": StructuredData.ORG_ID },
+        isPartOf: { "@id": StructuredData.SITE_ID },
+        hasPart: [
+          {
+            "@type": "Question",
+            eduQuestionType: "Multiple choice",
+            text: q.stem,
+            suggestedAnswer: q.options.map((_, i) => answer(i)).filter((a) => a.position !== q.correct),
+            acceptedAnswer: { ...answer(q.correct), ...(q.solution && { answerExplanation: { "@type": "Comment", text: q.solution } }) },
+          },
+        ],
+      },
+      StructuredData.breadcrumbs([
+        { name: "CFA Questions", path: "/cfa/questions" },
+        { name: topic, path: `/cfa/questions/${q.topic}` },
+        { name: q.title, path },
+      ]),
+    ]);
+  }
+
   /** Home is always the first crumb. */
   static breadcrumbs(trail: readonly { name: string; path: string }[]): JsonLdNode {
     const items = [{ name: "Home", path: "" }, ...trail];
@@ -171,7 +210,7 @@ export class StructuredData {
     return `${isoDate}T00:00:00+04:00`;
   }
 
-  private static graph(nodes: JsonLdNode[]): JsonLdNode {
+  static graph(nodes: JsonLdNode[]): JsonLdNode {
     return { "@context": "https://schema.org", "@graph": nodes };
   }
 

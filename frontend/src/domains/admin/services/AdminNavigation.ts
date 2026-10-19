@@ -19,6 +19,7 @@ export class AdminNavigation {
     { href: "/admin/leads", label: "Leads", ownerOnly: true },
     { href: "/admin/services", label: "Services", ownerOnly: true },
     { href: "/admin/journal", label: "Blog" },
+    { href: "/admin/questions", label: "CFA questions" },
     { href: "/admin/testimonials", label: "Testimonials" },
     { href: "/admin/classroom", label: "Classroom", ownerOnly: true },
     { href: "/admin/whatsapp", label: "WhatsApp", ownerOnly: true },

@@ -43,8 +43,20 @@ export class LeadRepository {
       ON CONFLICT (email, resource_id) DO UPDATE
         SET requests = leads.requests + 1,
             last_requested_at = now(),
-            marketing_opt_in = leads.marketing_opt_in OR EXCLUDED.marketing_opt_in
+            marketing_opt_in = leads.marketing_opt_in OR EXCLUDED.marketing_opt_in,
+            unsubscribed_at = NULL
     `;
+  }
+
+  /** Who gets a list email (e.g. the daily CFA question): signed up for it and not unsubscribed. */
+  async subscribers(resourceId: string): Promise<{ id: string; email: string }[]> {
+    return (await this.sql`
+      SELECT id, email FROM leads WHERE resource_id = ${resourceId} AND unsubscribed_at IS NULL ORDER BY created_at
+    `) as { id: string; email: string }[];
+  }
+
+  async unsubscribe(id: string): Promise<void> {
+    await this.sql`UPDATE leads SET unsubscribed_at = coalesce(unsubscribed_at, now()) WHERE id = ${id}`;
   }
 
   async recent(limit = 500): Promise<Lead[]> {

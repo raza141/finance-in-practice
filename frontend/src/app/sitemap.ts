@@ -3,6 +3,8 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/core/config/site";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { ArticleRepository } from "@/domains/journal/server/ArticleRepository";
+import { QuestionPages } from "@/domains/questions/server/QuestionPages";
+import { QuestionTaxonomy } from "@/domains/questions/services/QuestionTaxonomy";
 
 // Cached like a page and refreshed every 5 minutes (so scheduled articles appear
 // promptly); course saves and article publishes in admin also revalidate it.
@@ -54,11 +56,37 @@ async function articleEntries(): Promise<MetadataRoute.Sitemap> {
   }
 }
 
+/**
+ * CFA questions: the library, each topic with questions and every permanent
+ * question page. Not /cfa/question-of-the-day: its canonical is the permanent
+ * page. Empty until the owner switches the public pages on.
+ */
+async function questionEntries(): Promise<MetadataRoute.Sitemap> {
+  try {
+    const questions = (await (await QuestionPages.repo())?.liveSummaries()) ?? [];
+    if (questions.length === 0) return [];
+    const topics = [...new Set(questions.map((q) => q.topic))];
+    return [
+      { url: `${siteConfig.url}/cfa/questions`, lastModified: questions[0].publishAt, changeFrequency: "daily", priority: 0.7 },
+      ...topics.map((topic) => ({
+        url: `${siteConfig.url}/cfa/questions/${topic}`,
+        lastModified: questions.find((q) => q.topic === topic)!.publishAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      })),
+      ...questions.map((q) => ({ url: `${siteConfig.url}${QuestionTaxonomy.path(q)}`, lastModified: q.publishAt, changeFrequency: "monthly" as const, priority: 0.5 })),
+    ];
+  } catch (error) {
+    console.error("sitemap: could not load questions", error);
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, priority, changeFrequency }) => ({
     url: `${siteConfig.url}${path}`,
     changeFrequency,
     priority,
   }));
-  return [...pages, ...(await articleEntries()), ...(await courseEntries())];
+  return [...pages, ...(await articleEntries()), ...(await courseEntries()), ...(await questionEntries())];
 }
