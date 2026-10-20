@@ -28,6 +28,7 @@ export const siteConfig = {
     { label: "Courses", href: "/courses" },
     { label: "Blog", href: "/journal" },
     { label: "Resources", href: "/resources" },
+    { label: "Question Bank", href: "/cfa/questions" },
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
@@ -38,6 +39,7 @@ export const siteConfig = {
     { label: "Instructor", href: "/about" },
     { label: "Blog", href: "/journal" },
     { label: "Resources", href: "/resources" },
+    { label: "Question Bank", href: "/cfa/questions" },
     { label: "Contact", href: "/contact" },
     { label: "Student login", href: "/student" },
     { label: "Review us on Google", href: "https://g.page/r/CXVZIOQD9qJXEBM/review" },
