@@ -127,7 +127,10 @@ class WhatsAppLink {
   private sock: WASocket | null = null;
   private pairPhone: string | null = null;
   private stopping = false;
-  private readonly logger = pino({ level: "warn" });
+  private readonly logger = pino({ level: process.env.LOG_LEVEL || "warn" });
+  /** Pairing codes asked for since the owner clicked Link. Each one cancels the last and pings the phone, so cap them. */
+  codes = 0;
+  static readonly MAX_CODES = 3;
 
   constructor(authDir: string) {
     this.authDir = authDir;
@@ -179,6 +182,7 @@ class WhatsAppLink {
         }
         if (!asked) {
           asked = true;
+          this.codes += 1;
           try {
             this.pairingCode = await sock.requestPairingCode(this.pairPhone);
             this.state = "pairing";
@@ -197,6 +201,7 @@ class WhatsAppLink {
       }
       if (update.connection === "close") {
         const code = (update.lastDisconnect?.error as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
+        log(`Connection closed (${code ?? "no code"}: ${update.lastDisconnect?.error?.message ?? "-"})`);
         this.sock = null;
         if (this.stopping) return;
         if (code === DisconnectReason.loggedOut) {
@@ -212,6 +217,11 @@ class WhatsAppLink {
         // creds.me is already set once a code is issued; registered / isNewLogin mean the code was entered.
         const linked = Boolean(sock.authState.creds.registered) || newLogin;
         if (linked) this.pairPhone = null;
+        if (!linked && this.pairPhone && this.codes >= WhatsAppLink.MAX_CODES) {
+          log(`No code entered after ${this.codes} codes: stopped asking. Turn off, then Link again to retry.`);
+          this.state = "logged_out";
+          return;
+        }
         await sleep(code === DisconnectReason.restartRequired ? 500 : 5_000);
         if (!this.sock && !this.stopping) await this.connect(linked ? null : this.pairPhone).catch((e) => log("Reconnect failed", e));
       }
@@ -253,6 +263,11 @@ class WhatsAppLink {
     await rm(this.authDir, { recursive: true, force: true });
     this.state = "logged_out";
     this.phone = null;
+    this.pairingCode = null;
+  }
+
+  forgetPairing(): void {
+    this.pairPhone = null;
     this.pairingCode = null;
   }
 
@@ -336,11 +351,14 @@ class Gateway {
     }
     if (command?.type === "link" && !(this.link.state === "connected" && this.link.phone === command.phone) && !this.pairingFor(command.phone)) {
       log(`Linking +${command.phone} (admin)`);
+      this.link.codes = 0;
       if (this.link.state === "connected") await this.link.logout();
       await this.link.connect(command.phone);
       return 3_000;
     }
-    if (command) return 5_000; // pairing in progress: poll fast so the code shows quickly
+    // The owner withdrew the link (Turn off): a later Link starts a fresh attempt.
+    if (!command && this.link.state === "logged_out" && this.link.pairingPhone) this.link.forgetPairing();
+    if (command) return this.link.state === "logged_out" ? this.config.pollSeconds * 1000 : 5_000; // pairing in progress: poll fast so the code shows quickly
 
     for (const m of reply.messages) {
       try {
