@@ -30,22 +30,22 @@ export async function WhyUsSection() {
       <div className="page-container py-12 lg:py-16">
         <SectionHeading id="why-heading" eyebrow="Why learn with us" title="Theory that holds up in real markets" />
 
-        {/* Wide screens: the three cards share the Market Pulse card's height, so both columns end on one line. */}
+        {/* Wide screens: the reasons panel shares the Market Pulse card's height, so both columns end on one line. */}
         <div className="mt-8 grid items-start gap-10 lg:grid-cols-2 lg:items-stretch xl:gap-16">
-          <ol className="grid min-w-0 gap-4 lg:auto-rows-fr">
-            {POINTS.map((point, i) => (
-              <li key={point.title} className="flex gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-6 lg:items-center">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-quant/30 bg-quant/10 text-quant">
+          {/* One panel, three rows: the reasons aren't a sequence, so no numbering; rows split the Market Pulse height evenly. */}
+          <ul className="flex min-w-0 flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+            {POINTS.map((point) => (
+              <li key={point.title} className="flex flex-1 items-center gap-5 p-6 sm:gap-6 sm:p-8">
+                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-quant/30 bg-quant/10 text-quant">
                   <LineIcon d={point.icon} />
                 </span>
                 <div>
-                  <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">0{i + 1}</p>
-                  <h3 className="text-lg font-bold">{point.title}</h3>
-                  <p className="mt-1.5 leading-relaxed text-muted">{point.body}</p>
+                  <h3 className="text-xl font-bold">{point.title}</h3>
+                  <p className="mt-1.5 max-w-md leading-relaxed text-muted">{point.body}</p>
                 </div>
               </li>
             ))}
-          </ol>
+          </ul>
 
           <div className="min-w-0">
             <MarketPulseCard pulse={pulse} />

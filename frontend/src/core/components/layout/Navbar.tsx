@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, type MouseEvent } from "react";
 
 import { NavLinkAnimator } from "@/core/animations/NavLinkAnimator";
@@ -23,6 +24,8 @@ import { MobileNav } from "./MobileNav";
 export function Navbar() {
   const [animator] = useState(() => new NavLinkAnimator());
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -62,66 +65,71 @@ export function Navbar() {
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-3 py-2 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] backdrop-blur-md">
             <nav aria-label="Primary">
               <ul className="flex items-center">
-                {siteConfig.nav.map((item) => (
-                  // Logo already links home, so "Home" only shows once there is room (xl+).
-                  <li key={item.href} className={`group relative ${item.href === "/" ? "hidden xl:block" : ""}`}>
-                    <Link
-                      href={item.href}
-                      onMouseEnter={onEnter}
-                      onMouseLeave={onLeave}
-                      onFocus={(e) => animator.enter(e.currentTarget)}
-                      onBlur={(e) => animator.leave(e.currentTarget)}
-                      aria-haspopup={item.children ? "true" : undefined}
-                      className="relative flex items-center gap-1 px-2 py-1.5 text-[13px] xl:px-3 font-medium whitespace-nowrap outline-offset-4"
-                    >
-                      <span data-nav-label className="text-[#94A3B8]">
-                        {item.label}
-                      </span>
-                      {item.children && (
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 10 10"
+                {siteConfig.nav.map((item) => {
+                  // The current page keeps its underline lit, so it skips the hover animator (which would dim it on leave).
+                  const active = isActive(item.href);
+                  return (
+                    // Logo already links home, so "Home" only shows once there is room (xl+).
+                    <li key={item.href} className={`group relative ${item.href === "/" ? "hidden xl:block" : ""}`}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        onMouseEnter={active ? undefined : onEnter}
+                        onMouseLeave={active ? undefined : onLeave}
+                        onFocus={active ? undefined : (e) => animator.enter(e.currentTarget)}
+                        onBlur={active ? undefined : (e) => animator.leave(e.currentTarget)}
+                        aria-haspopup={item.children ? "true" : undefined}
+                        className="relative flex items-center gap-1 px-2 py-1.5 text-[13px] xl:px-3 font-medium whitespace-nowrap outline-offset-4"
+                      >
+                        <span data-nav-label className={active ? "text-ink" : "text-[#94A3B8]"}>
+                          {item.label}
+                        </span>
+                        {item.children && (
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 10 10"
+                            aria-hidden
+                            className="text-muted transition-transform duration-200 group-focus-within:rotate-180 group-hover:rotate-180"
+                          >
+                            <path
+                              d="M2 3.5L5 6.5L8 3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                            />
+                          </svg>
+                        )}
+                        <span
+                          data-nav-underline
                           aria-hidden
-                          className="text-muted transition-transform duration-200 group-focus-within:rotate-180 group-hover:rotate-180"
-                        >
-                          <path
-                            d="M2 3.5L5 6.5L8 3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                          />
-                        </svg>
-                      )}
-                      <span
-                        data-nav-underline
-                        aria-hidden
-                        // Initial scale lives in `transform` (not Tailwind's scale-x-0, which
-                        // uses the separate CSS `scale` property and would cancel anime's scaleX).
-                        style={{ transform: "scaleX(0)" }}
-                        className="absolute inset-x-2 bottom-0.5 h-px xl:inset-x-3 origin-center bg-quant shadow-[0_0_8px_rgb(34_211_238/0.8)]"
-                      />
-                    </Link>
+                          // Initial scale lives in `transform` (not Tailwind's scale-x-0, which
+                          // uses the separate CSS `scale` property and would cancel anime's scaleX).
+                          style={{ transform: active ? "scaleX(1)" : "scaleX(0)" }}
+                          className="absolute inset-x-2 bottom-0.5 h-px xl:inset-x-3 origin-center bg-quant shadow-[0_0_8px_rgb(34_211_238/0.8)]"
+                        />
+                      </Link>
 
-                    {item.children && (
-                      // pt-3 bridges the gap so the pointer can travel into the panel.
-                      <div className="invisible absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 transition-[opacity,visibility] duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                        <ul className="min-w-52 rounded-2xl border border-white/10 bg-[#151E32]/95 p-2 shadow-xl backdrop-blur-md">
-                          {item.children.map((child) => (
-                            <li key={child.label}>
-                              <Link
-                                href={child.href}
-                                className="block rounded-lg px-3 py-2 text-[13px] whitespace-nowrap text-muted transition-colors hover:bg-white/5 hover:text-ink"
-                              >
-                                {child.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                      {item.children && (
+                        // pt-3 bridges the gap so the pointer can travel into the panel.
+                        <div className="invisible absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 transition-[opacity,visibility] duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                          <ul className="min-w-52 rounded-2xl border border-white/10 bg-[#151E32]/95 p-2 shadow-xl backdrop-blur-md">
+                            {item.children.map((child) => (
+                              <li key={child.label}>
+                                <Link
+                                  href={child.href}
+                                  className="block rounded-lg px-3 py-2 text-[13px] whitespace-nowrap text-muted transition-colors hover:bg-white/5 hover:text-ink"
+                                >
+                                  {child.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
 
@@ -130,15 +138,22 @@ export function Navbar() {
         </TiltSurface>
 
         <div className="pointer-events-auto flex items-center gap-3 justify-self-end">
+          {/* Portal entry for enrolled students: reads as a door, not another nav link. */}
           <Link
             href={siteConfig.studentBooking.href}
-            className="hidden h-9 items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-4 text-[13px] font-medium text-ink shadow-lg backdrop-blur-md transition-colors hover:border-quant/50 hover:text-quant lg:inline-flex"
+            aria-current={isActive(siteConfig.studentBooking.href) ? "page" : undefined}
+            className="group hidden h-11 items-center gap-2.5 rounded-full border border-gold/30 bg-[#151E32]/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-gold">
-              <circle cx="8" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M2.5 14c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            Student login
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-gold/15 text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[13px] font-semibold text-ink">Student portal</span>
+              <span className="text-[11px] text-muted">Sign in</span>
+            </span>
           </Link>
           <MobileNav />
         </div>

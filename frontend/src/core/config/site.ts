@@ -24,11 +24,11 @@ export const siteConfig = {
   /** Primary navigation. `children` (optional) render as a dropdown on desktop. */
   nav: [
     { label: "Home", href: "/" },
-    { label: "Instructor", href: "/about" },
     { label: "Courses", href: "/courses" },
-    { label: "Blog", href: "/journal" },
-    { label: "Resources", href: "/resources" },
     { label: "Question Bank", href: "/cfa/questions" },
+    { label: "Resources", href: "/resources" },
+    { label: "Blog", href: "/journal" },
+    { label: "Instructor", href: "/about" },
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
