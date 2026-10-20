@@ -5,6 +5,7 @@ import { InlineText } from "@/domains/journal/services/InlineText";
 
 import type { Question } from "../types";
 import { QuestionContract, QuestionValidationError } from "./QuestionContract";
+import { QuestionTaxonomy } from "./QuestionTaxonomy";
 
 function form(overrides: Record<string, string> = {}): FormData {
   const fd = new FormData();
@@ -91,5 +92,11 @@ describe("StructuredData.question", () => {
     expect((part.acceptedAnswer as { position: number }).position).toBe(0);
     expect(part.suggestedAnswer).toHaveLength(2);
     expect(graph[1]["@type"]).toBe("BreadcrumbList");
+  });
+});
+
+describe("exam pace", () => {
+  it("is 90s at Level I, 180s at Level II and none at Level III", () => {
+    expect([1, 2, 3].map(QuestionTaxonomy.examPaceSeconds)).toEqual([90, 180, null]);
   });
 });

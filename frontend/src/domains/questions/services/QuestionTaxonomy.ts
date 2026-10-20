@@ -57,6 +57,14 @@ export class QuestionTaxonomy {
     return QuestionTaxonomy.DIFFICULTY_HINTS[d];
   }
 
+  /**
+   * Seconds per question at real exam pace: Level I is 180 questions in 4h30, Level II
+   * 88 questions in 4h24. Level III mixes essays and item sets, so it has no single pace.
+   */
+  static examPaceSeconds(level: number): number | null {
+    return level === 1 ? 90 : level === 2 ? 180 : null;
+  }
+
   static letter(index: number): string {
     return String.fromCharCode(65 + index);
   }

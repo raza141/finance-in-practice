@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { siteConfig } from "@/core/config/site";
+import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
 import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichText";
 
 import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
@@ -11,11 +12,41 @@ import type { Question, QuestionSummary } from "../types";
 import { AnswerPicker } from "./AnswerPicker";
 import { DifficultyMeter } from "./DifficultyMeter";
 import { QuestionCard } from "./QuestionCard";
+import { ShareBar } from "./ShareBar";
 import { SubscribeForm } from "./SubscribeForm";
 
 /** The formula field is raw LaTeX; tolerate pasted $…$ or $$…$$ around it. */
 function formulaHtml(formula: string): string {
   return texToHtml(formula.trim().replace(/^\$\$?([\s\S]*?)\$\$?$/, "$1"), true);
+}
+
+/** One cell of the spec strip under the title; linked cells open the Question Bank filtered to that value. */
+function Spec({ label, href, note, accent = false, children }: { label: string; href?: string; note?: string; accent?: boolean; children: ReactNode }) {
+  const body = (
+    <>
+      <span className="block text-xs text-muted">{label}</span>
+      <span className={`mt-1 block font-semibold ${accent ? "text-gold" : "text-ink"}`}>{children}</span>
+      {note && <span className="mt-1 block text-xs leading-snug text-muted">{note}</span>}
+    </>
+  );
+  return (
+    <li className="min-w-0">
+      {href ? (
+        <Link
+          href={href}
+          title={`More ${label.toLowerCase()} questions like this`}
+          className="group block h-full px-4 py-3 transition-colors hover:bg-surface-raised"
+        >
+          {body}
+          <span className="mt-1 block text-xs text-quant opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            See similar
+          </span>
+        </Link>
+      ) : (
+        <div className="px-4 py-3">{body}</div>
+      )}
+    </li>
+  );
 }
 
 function Section({ title, children, tone = "border-line" }: { title: string; children: ReactNode; tone?: string }) {
@@ -112,21 +143,34 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
 
       {banner}
 
-      <ul className="mt-6 flex flex-wrap items-center gap-2 font-mono text-[11px] tracking-wider uppercase">
-        {[QuestionTaxonomy.levelLabel(q.level), topic?.name ?? q.topic, q.subtopic].filter(Boolean).map((badge, i) => (
-          <li key={i} className={`rounded-full border px-3 py-1 ${i === 0 ? "border-gold/60 text-gold" : "border-line text-muted"}`}>
-            {badge}
-          </li>
-        ))}
-        <li className="flex items-center gap-2 normal-case tracking-normal">
-          <span className="rounded-full border border-line px-3 py-1 text-muted">
-            <DifficultyMeter difficulty={q.difficulty} label />
-          </span>
-          <span className="font-sans text-xs text-muted">{QuestionTaxonomy.difficultyHint(q.difficulty)}</span>
-        </li>
-      </ul>
+      <CourseAnimator>
+        <h1 className="mt-6 text-3xl leading-tight font-black sm:text-4xl lg:text-[2.625rem]">
+          <span data-course-anim="scramble">{q.title}</span>
+        </h1>
+      </CourseAnimator>
 
-      <h1 className="mt-4 text-3xl leading-tight font-black sm:text-4xl lg:text-5xl">{q.title}</h1>
+      <ul
+        aria-label="About this question"
+        className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-5 [&>li]:bg-surface"
+      >
+        <Spec label="Level" href={`/cfa/questions?level=${q.level}`} accent>
+          {QuestionTaxonomy.levelLabel(q.level)}
+        </Spec>
+        <Spec label="Topic" href={`/cfa/questions?level=${q.level}&topic=${q.topic}`}>
+          {topic?.name ?? q.topic}
+        </Spec>
+        {q.subtopic && <Spec label="Subtopic">{q.subtopic}</Spec>}
+        <Spec label="Difficulty" href={`/cfa/questions?difficulty=${q.difficulty}`} note={QuestionTaxonomy.difficultyHint(q.difficulty)}>
+          <DifficultyMeter difficulty={q.difficulty} label />
+        </Spec>
+        {q.publishAt && (
+          <Spec label="Published">
+            <time dateTime={q.publishAt.toISOString()}>
+              {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Dubai" }).format(q.publishAt)}
+            </time>
+          </Spec>
+        )}
+      </ul>
 
       <section aria-label="Question" className="mt-8 rounded-xl border border-line bg-surface/60 p-5 sm:p-8">
         <p className="font-mono text-[11px] tracking-[0.16em] text-quant">{q.code}</p>
@@ -142,6 +186,8 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
             content: <Inline text={o.text} />,
           }))}
           solution={solution}
+          hint={q.formula ? <div dangerouslySetInnerHTML={{ __html: formulaHtml(q.formula) }} /> : undefined}
+          paceSeconds={QuestionTaxonomy.examPaceSeconds(q.level)}
           next={
             related[0] && !preview ? (
               <Link
@@ -159,7 +205,10 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
         />
       </div>
 
-      {q.source && <p className="mt-8 text-xs text-muted">Covers: {q.source}</p>}
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+        {q.source ? <p className="text-sm text-muted">Covers: {q.source}</p> : <span />}
+        {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} />}
+      </div>
 
       {related.length > 0 && (
         <nav aria-label="Related questions" className="mt-12">

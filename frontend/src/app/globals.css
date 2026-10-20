@@ -73,6 +73,13 @@
   }
 }
 
+@keyframes q-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @keyframes q-check {
   from {
     stroke-dashoffset: 1;
