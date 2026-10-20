@@ -123,15 +123,14 @@ export function AnswerPicker({
             <span id="exam-mode" className="text-sm text-muted">
               Exam mode
             </span>
-            <div role="radiogroup" aria-labelledby="exam-mode" className="inline-flex rounded-lg border border-line bg-canvas p-1">
+            <div role="group" aria-labelledby="exam-mode" className="inline-flex rounded-lg border border-line bg-canvas p-1">
               {LIMITS.map((value) => {
                 const on = limit === value;
                 return (
                   <button
                     key={value ?? "none"}
                     type="button"
-                    role="radio"
-                    aria-checked={on}
+                    aria-pressed={on}
                     onClick={() => chooseLimit(value)}
                     className={`h-8 rounded-md px-3 text-sm transition-colors ${on ? "bg-gold text-canvas font-semibold" : "text-ink/80 hover:bg-surface-raised"}`}
                   >

@@ -62,7 +62,7 @@ export function ShareBar({ url, title }: { url: string; title: string }) {
         </a>
         {native && (
           <button type="button" onClick={share} className={`${button} bg-gold text-canvas hover:bg-gold-bright`}>
-            More…
+            Share
           </button>
         )}
         <button type="button" onClick={copy} className={`${button} border border-line font-normal text-ink/90 hover:border-gold/60`}>

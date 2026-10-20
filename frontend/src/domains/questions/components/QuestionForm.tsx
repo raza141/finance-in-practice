@@ -241,7 +241,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
         <Field label="Common exam trap" hint={MATH_HINT}>
           <textarea {...bind("trap")} rows={3} maxLength={2000} className={`${FIELD} text-sm`} />
         </Field>
-        <Field label="Practitioner insight" hint={`Optional. Two or three sentences from your own practice: where this shows up at work. Shown with your name. ${d.insight.length}/400`}>
+        <Field label="Practitioner insight" hint={`Optional. Two or three sentences from your own practice: where this shows up at work. Shown with your name, before the reader answers, so don't give the answer away. ${d.insight.length}/400`}>
           <textarea {...bind("insight")} rows={3} maxLength={400} className={`${FIELD} text-sm`} />
         </Field>
         <Field label="Covers (LOS)" hint="Optional, e.g. Fixed Income · LOS: calculate and interpret effective duration and convexity.">
