@@ -67,6 +67,7 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
   })).filter((g) => g.questions.length > 0);
   const answered = questions.filter((q) => results[q.code]).length;
   const right = questions.filter((q) => results[q.code] === "right").length;
+  const wrong = questions.filter((q) => results[q.code] === "wrong").length;
   const active = [filters.level, filters.topic, filters.difficulty, needle, hideAnswered].filter(Boolean).length;
 
   const levelCounts = count("level", (q) => String(q.level));
@@ -187,7 +188,8 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
             {answered > 0 && (
               <div className="min-w-48 text-sm text-muted">
                 <p>
-                  You&rsquo;ve answered {answered} of {questions.length}, {right} right
+                  You&rsquo;ve answered {answered} of {questions.length}
+                  {right + wrong > 0 && `, ${right} right`}
                 </p>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
                   <div
