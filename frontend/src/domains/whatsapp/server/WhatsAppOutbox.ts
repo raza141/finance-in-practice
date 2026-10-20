@@ -12,8 +12,7 @@ type LinkRow = {
   state_since: Date;
   phone: string | null;
   command: WhatsAppLink["command"];
-  command_phone: string | null;
-  pairing_code: string | null;
+  pairing_qr: string | null;
   test_phone: string | null;
   live: boolean;
   gateway_on: boolean;
@@ -48,8 +47,7 @@ export class WhatsAppOutbox {
       stateSince: row.state_since,
       phone: row.phone,
       command: row.command,
-      commandPhone: row.command_phone,
-      pairingCode: row.pairing_code,
+      pairingQr: row.pairing_qr,
       testPhone: row.test_phone,
       live: row.live,
       gatewayOn: row.gateway_on,
@@ -120,12 +118,13 @@ export class WhatsAppOutbox {
       UPDATE whatsapp_link SET
         state = ${report.state},
         state_since = CASE WHEN state = ${report.state} THEN state_since ELSE now() END,
-        pairing_code = ${report.state === "pairing" ? (report.pairingCode?.slice(0, 20) ?? null) : null},
+        pairing_qr = ${report.state === "pairing" ? (report.qr?.slice(0, 1000) ?? null) : null},
         phone = coalesce(${phone}, phone),
         enabled_at = CASE WHEN ${phone}::text IS NOT NULL THEN coalesce(enabled_at, now()) ELSE enabled_at END,
         -- The command is done once the gateway shows its result.
         command = CASE
-          WHEN command = 'link' AND ${report.state} = 'connected' AND ${phone}::text = command_phone THEN NULL
+          -- A link while connected is a switch: done once the gateway reconnects (state is the old value here).
+          WHEN command = 'link' AND (${report.expired} OR (${report.state} = 'connected' AND state <> 'connected')) THEN NULL
           WHEN command = 'unlink' AND ${report.state} IN ('logged_out', 'offline') THEN NULL
           ELSE command END,
         last_seen_at = now(), updated_at = now()
@@ -240,20 +239,19 @@ export class WhatsAppOutbox {
 
   // Owner actions.
 
-  async requestLink(phone: string): Promise<void> {
-    await this.sql`UPDATE whatsapp_link SET command = 'link', command_phone = ${phone}, pairing_code = NULL, gateway_on = true, updated_at = now() WHERE id = 1`;
+  async requestLink(): Promise<void> {
+    await this.sql`UPDATE whatsapp_link SET command = 'link', pairing_qr = NULL, gateway_on = true, updated_at = now() WHERE id = 1`;
   }
 
   async requestUnlink(): Promise<void> {
-    await this.sql`UPDATE whatsapp_link SET command = 'unlink', command_phone = NULL, pairing_code = NULL, updated_at = now() WHERE id = 1`;
+    await this.sql`UPDATE whatsapp_link SET command = 'unlink', pairing_qr = NULL, updated_at = now() WHERE id = 1`;
   }
 
-  /** Off also drops a pending link, so the gateway doesn't go back to asking for pairing codes when switched on. */
+  /** Off also drops a pending link, so the gateway doesn't go back to showing QR codes when switched on. */
   async setGatewayOn(on: boolean): Promise<void> {
     await this.sql`
       UPDATE whatsapp_link SET gateway_on = ${on},
         command = CASE WHEN ${on} OR command <> 'link' THEN command END,
-        command_phone = CASE WHEN ${on} OR command <> 'link' THEN command_phone END,
         updated_at = now()
       WHERE id = 1
     `;

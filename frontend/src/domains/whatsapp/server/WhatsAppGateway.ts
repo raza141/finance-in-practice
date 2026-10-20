@@ -15,7 +15,7 @@ import { WhatsAppScanner } from "./WhatsAppScanner";
 const STATES: readonly LinkState[] = ["offline", "connecting", "pairing", "connected", "logged_out"];
 
 export interface GatewayReply {
-  command: { type: "link"; phone: string } | { type: "unlink" } | null;
+  command: { type: "link" } | { type: "unlink" } | null;
   /** The owner's switch: false, the gateway disconnects (keeping the session) and waits. */
   on: boolean;
   messages: GatewayMessage[];
@@ -59,7 +59,7 @@ export class WhatsAppGateway {
       const text = str(x?.text, 200);
       return phone && /^[0-9]{8,15}$/.test(phone) && text !== null ? [{ phone, text }] : [];
     });
-    return { state: b.state as LinkState, phone: str(b.phone, 15), pairingCode: str(b.pairingCode, 20), results, inbound };
+    return { state: b.state as LinkState, phone: str(b.phone, 15), qr: str(b.qr, 1000), expired: b.expired === true, results, inbound };
   }
 
   static async poll(report: GatewayReport, origin: string, now = new Date()): Promise<GatewayReply> {
@@ -83,7 +83,7 @@ export class WhatsAppGateway {
       link = await outbox.link();
     }
     const command: GatewayReply["command"] =
-      link.command === "link" && link.commandPhone ? { type: "link", phone: link.commandPhone } : link.command === "unlink" ? { type: "unlink" } : null;
+      link.command === "link" ? { type: "link" } : link.command === "unlink" ? { type: "unlink" } : null;
     // While a command is pending, nothing is sent from the number that is about to change.
     const messages = command ? [] : await outbox.claim(link, origin, now);
     return { command, on: link.gatewayOn, messages, scan };

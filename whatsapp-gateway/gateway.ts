@@ -3,7 +3,7 @@
  * Baileys (WhatsApp Web's linked-device protocol) and sends what the website
  * queues. Nothing connects in: it polls POST <SITE_URL>/api/whatsapp/gateway,
  * reports its state and results, and gets back the next messages and any
- * link/unlink command from the admin page. Invoices and receipts are printed to
+ * link/unlink command from the admin page (linking shows a QR code there). Invoices and receipts are printed to
  * PDF from their public page with the Mac's own Chrome (headless).
  *
  *   npm start            # reads .env (see .env.example)
@@ -26,7 +26,7 @@ type LinkState = "offline" | "connecting" | "pairing" | "connected" | "logged_ou
 type Result = { id: string; ok: boolean; error?: string; sentTo?: string };
 type Inbound = { phone: string; text: string };
 type Reply = {
-  command: { type: "link"; phone: string } | { type: "unlink" } | null;
+  command: { type: "link" } | { type: "unlink" } | null;
   on: boolean;
   messages: { id: string; to: string; text: string; pdfUrl: string | null; fileName: string | null }[];
   scan: Record<string, string> | null;
@@ -62,7 +62,7 @@ class SiteApi {
     this.config = config;
   }
 
-  async poll(report: { state: LinkState; phone: string | null; pairingCode: string | null; results: Result[]; inbound: Inbound[] }): Promise<Reply> {
+  async poll(report: { state: LinkState; phone: string | null; qr: string | null; expired: boolean; results: Result[]; inbound: Inbound[] }): Promise<Reply> {
     const response = await fetch(`${this.config.site}/api/whatsapp/gateway`, {
       method: "POST",
       headers: { Authorization: `Bearer ${this.config.secret}`, "Content-Type": "application/json" },
@@ -120,43 +120,43 @@ class PdfPrinter {
 class WhatsAppLink {
   state: LinkState = "offline";
   phone: string | null = null;
-  pairingCode: string | null = null;
+  /** The QR to scan while linking (WhatsApp rotates it every ~20 s). */
+  qr: string | null = null;
+  /** Set when a QR round ran out unscanned; reported once so the site drops the Link request. */
+  expired = false;
   readonly inbound: Inbound[] = [];
 
   private readonly authDir: string;
   private sock: WASocket | null = null;
-  private pairPhone: string | null = null;
+  private linking = false;
   private stopping = false;
   private readonly logger = pino({ level: process.env.LOG_LEVEL || "warn" });
-  /** Pairing codes asked for since the owner clicked Link. Each one cancels the last and pings the phone, so cap them. */
-  codes = 0;
-  static readonly MAX_CODES = 3;
 
   constructor(authDir: string) {
     this.authDir = authDir;
   }
 
-  /** The number a pairing code is being requested for, while linking. */
-  get pairingPhone(): string | null {
-    return this.pairPhone;
+  /** A QR round is running. */
+  get isLinking(): boolean {
+    return this.linking;
   }
 
   get hasSession(): boolean {
     return existsSync(join(this.authDir, "creds.json"));
   }
 
-  /** Connects with the saved session; with `pairPhone`, starts fresh and asks WhatsApp for a pairing code for it. */
-  async connect(pairPhone: string | null = null): Promise<void> {
+  /** Connects with the saved session; with `link`, starts fresh and shows QR codes (one round, ~3 minutes). */
+  async connect(link = false): Promise<void> {
     this.close();
     this.stopping = false;
-    this.pairPhone = pairPhone;
-    if (pairPhone) await rm(this.authDir, { recursive: true, force: true });
+    this.linking = link;
+    if (link) await rm(this.authDir, { recursive: true, force: true });
     await mkdir(this.authDir, { recursive: true, mode: 0o700 });
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
-    // The version bundled with Baileys goes stale; WhatsApp then refuses pairing codes ("Couldn't link device").
+    // The version bundled with Baileys goes stale and WhatsApp then refuses to link.
     const { version } = await fetchLatestWaWebVersion({}).catch(() => ({ version: undefined }));
     this.state = "connecting";
-    this.pairingCode = null;
+    this.qr = null;
     const sock = makeWASocket({
       auth: state,
       version,
@@ -166,36 +166,26 @@ class WhatsAppLink {
       syncFullHistory: false,
     });
     this.sock = sock;
-    let asked = false;
     let newLogin = false;
     sock.ev.on("creds.update", saveCreds);
     sock.ev.on("connection.update", async (update) => {
       if (sock !== this.sock) return;
       if (update.isNewLogin) newLogin = true;
       if (update.qr) {
-        // Not linked. Only ask for a code when the owner asked to link a number; never sit showing QR codes.
-        if (!this.pairPhone) {
-          log("Not linked: link a number from the admin WhatsApp page.");
+        // Not linked. QR codes only while the owner is linking from the admin page.
+        if (!this.linking) {
+          log("Not linked: click Link on the admin WhatsApp page.");
           this.state = "logged_out";
           this.close();
           return;
         }
-        if (!asked) {
-          asked = true;
-          this.codes += 1;
-          try {
-            this.pairingCode = await sock.requestPairingCode(this.pairPhone);
-            this.state = "pairing";
-            log(`Pairing code for +${this.pairPhone}: ${this.pairingCode}`);
-          } catch (error) {
-            log("Pairing code request failed", error);
-          }
-        }
+        this.qr = update.qr;
+        this.state = "pairing";
       }
       if (update.connection === "open") {
         this.state = "connected";
-        this.pairingCode = null;
-        this.pairPhone = null;
+        this.qr = null;
+        this.linking = false;
         this.phone = (sock.user?.id ?? "").split(":")[0].split("@")[0] || null;
         log(`Connected as +${this.phone}`);
       }
@@ -203,6 +193,7 @@ class WhatsAppLink {
         const code = (update.lastDisconnect?.error as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
         log(`Connection closed (${code ?? "no code"}: ${update.lastDisconnect?.error?.message ?? "-"})`);
         this.sock = null;
+        this.qr = null;
         if (this.stopping) return;
         if (code === DisconnectReason.loggedOut) {
           log("Logged out by WhatsApp (unlinked on the phone, or banned). Session removed.");
@@ -211,19 +202,20 @@ class WhatsAppLink {
           this.phone = null;
           return;
         }
-        // After pairing WhatsApp asks for a restart (515); other drops are network. Reconnect with the
-        // saved session once linked; while still pairing, ask for a fresh code.
-        this.state = "connecting";
-        // creds.me is already set once a code is issued; registered / isNewLogin mean the code was entered.
         const linked = Boolean(sock.authState.creds.registered) || newLogin;
-        if (linked) this.pairPhone = null;
-        if (!linked && this.pairPhone && this.codes >= WhatsAppLink.MAX_CODES) {
-          log(`No code entered after ${this.codes} codes: stopped asking. Turn off, then Link again to retry.`);
+        if (this.linking && !linked) {
+          // The QR round ran out unscanned: stop until the owner clicks Link again.
+          log("QR not scanned in time: click Link again.");
+          this.linking = false;
+          this.expired = true;
           this.state = "logged_out";
           return;
         }
+        // After scanning WhatsApp asks for a restart (515); other drops are network. Reconnect with the saved session.
+        this.linking = false;
+        this.state = "connecting";
         await sleep(code === DisconnectReason.restartRequired ? 500 : 5_000);
-        if (!this.sock && !this.stopping) await this.connect(linked ? null : this.pairPhone).catch((e) => log("Reconnect failed", e));
+        if (!this.sock && !this.stopping) await this.connect().catch((e) => log("Reconnect failed", e));
       }
     });
     sock.ev.on("messages.upsert", ({ messages, type }) => {
@@ -263,21 +255,16 @@ class WhatsAppLink {
     await rm(this.authDir, { recursive: true, force: true });
     this.state = "logged_out";
     this.phone = null;
-    this.pairingCode = null;
-  }
-
-  forgetPairing(): void {
-    this.pairPhone = null;
-    this.pairingCode = null;
+    this.qr = null;
   }
 
   /** The owner's Off switch: disconnect but keep the session, so On reconnects without pairing. */
   pause(): void {
     this.stopping = true;
-    this.pairPhone = null;
+    this.linking = false;
     this.close();
     this.state = "offline";
-    this.pairingCode = null;
+    this.qr = null;
   }
 
   close(): void {
@@ -322,7 +309,9 @@ class Gateway {
     const inbound = this.link.inbound.splice(0);
     let reply: Reply;
     try {
-      reply = await this.api.poll({ state: this.link.state, phone: this.link.phone, pairingCode: this.link.pairingCode, results, inbound });
+      const expired = this.link.expired;
+      reply = await this.api.poll({ state: this.link.state, phone: this.link.phone, qr: this.link.qr, expired, results, inbound });
+      if (expired) this.link.expired = false;
     } catch (error) {
       this.link.inbound.unshift(...inbound); // try again next poll
       throw error;
@@ -349,16 +338,15 @@ class Gateway {
       await this.link.logout();
       return 1_000;
     }
-    if (command?.type === "link" && !(this.link.state === "connected" && this.link.phone === command.phone) && !this.pairingFor(command.phone)) {
-      log(`Linking +${command.phone} (admin)`);
-      this.link.codes = 0;
+    // Link: one QR round. The site clears the request once linked (or when the round runs out), so a
+    // pending request while connected means "switch to another number".
+    if (command?.type === "link" && !this.link.isLinking) {
+      log("Linking (admin): showing a QR code");
       if (this.link.state === "connected") await this.link.logout();
-      await this.link.connect(command.phone);
+      await this.link.connect(true);
       return 3_000;
     }
-    // The owner withdrew the link (Turn off): a later Link starts a fresh attempt.
-    if (!command && this.link.state === "logged_out" && this.link.pairingPhone) this.link.forgetPairing();
-    if (command) return this.link.state === "logged_out" ? this.config.pollSeconds * 1000 : 5_000; // pairing in progress: poll fast so the code shows quickly
+    if (command) return 5_000; // linking: poll fast so the page shows each new QR
 
     for (const m of reply.messages) {
       try {
@@ -375,10 +363,6 @@ class Gateway {
       await sleep(3_000 + Math.random() * 5_000);
     }
     return reply.messages.length > 0 ? 1_000 : this.config.pollSeconds * 1000;
-  }
-
-  private pairingFor(phone: string): boolean {
-    return this.link.state !== "connected" && this.link.pairingPhone === phone;
   }
 
   /** One gateway per session folder: two would fight over the same linked device. */

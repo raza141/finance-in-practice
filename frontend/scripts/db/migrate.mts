@@ -1034,6 +1034,12 @@ const MIGRATIONS: Migration[] = [
     id: "046_whatsapp_switch",
     statements: [`ALTER TABLE whatsapp_link ADD COLUMN gateway_on boolean NOT NULL DEFAULT true`],
   },
+  {
+    // Linking by QR code (shown on the admin page) instead of a pairing code typed
+    // on the phone. command_phone and pairing_code are no longer used.
+    id: "047_whatsapp_qr",
+    statements: [`ALTER TABLE whatsapp_link ADD COLUMN pairing_qr text CHECK (char_length(pairing_qr) <= 1000)`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

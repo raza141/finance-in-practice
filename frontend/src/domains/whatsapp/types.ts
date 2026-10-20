@@ -24,8 +24,8 @@ export interface WhatsAppLink {
   stateSince: Date;
   phone: string | null;
   command: "link" | "unlink" | null;
-  commandPhone: string | null;
-  pairingCode: string | null;
+  /** The QR to scan while linking. */
+  pairingQr: string | null;
   testPhone: string | null;
   live: boolean;
   /** The owner's On/Off switch: off, the gateway keeps polling but stays disconnected. */
@@ -79,7 +79,9 @@ export interface GatewayReport {
   state: LinkState;
   /** The number linked right now (digits), when connected. */
   phone: string | null;
-  pairingCode: string | null;
+  qr: string | null;
+  /** The QR round ran out unscanned: drop the Link request. */
+  expired: boolean;
   results: { id: string; ok: boolean; error?: string; sentTo?: string }[];
   inbound: { phone: string; text: string }[];
 }

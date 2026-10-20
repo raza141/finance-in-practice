@@ -30,13 +30,10 @@ async function origin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-/** Link (or switch to) a number: the gateway asks WhatsApp for a pairing code, shown on the page. */
-export async function linkNumber(formData: FormData): Promise<void> {
-  const outbox = await owner();
-  const phone = WhatsAppText.phone(String(formData.get("phone") ?? ""));
-  if (!phone) redirect(`${PAGE}?notice=bad-phone`);
-  await outbox.requestLink(phone);
-  redirect(`${PAGE}?notice=linking`);
+/** Link (or switch to) a number: the gateway shows a QR code on the page for about 3 minutes. */
+export async function linkNumber(): Promise<void> {
+  await (await owner()).requestLink();
+  redirect(PAGE);
 }
 
 export async function unlinkNumber(): Promise<void> {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import QRCode from "qrcode";
 
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
@@ -16,6 +17,7 @@ import {
   setMode,
   unlinkNumber,
 } from "@/domains/whatsapp/actions/whatsapp";
+import { AutoRefresh } from "@/domains/whatsapp/components/AutoRefresh";
 import { WhatsAppClassPosts } from "@/domains/whatsapp/server/WhatsAppClassPosts";
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
@@ -24,7 +26,6 @@ import type { MessageRow } from "@/domains/whatsapp/types";
 export const metadata: Metadata = { title: "WhatsApp" };
 
 const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
-  linking: { text: "Asked the gateway for a pairing code. It shows here within a few seconds: refresh the page.", tone: "ok" },
   unlinking: { text: "Unlinking: the gateway logs the number out and stops sending.", tone: "ok" },
   "bad-phone": { text: "That number isn't usable. Type it with the country code, e.g. +971 50 123 4567.", tone: "warn" },
   live: { text: "Live: messages now go to students.", tone: "ok" },
@@ -45,7 +46,7 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
 const STATE_LABEL: Record<string, string> = {
   offline: "Gateway not running",
   connecting: "Connecting",
-  pairing: "Waiting for the pairing code to be entered",
+  pairing: "Waiting for the QR code to be scanned",
   connected: "Connected",
   logged_out: "Logged out",
 };
@@ -91,6 +92,7 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
       : link.state === "offline"
         ? "Connecting"
         : STATE_LABEL[link.state];
+  const qr = link.command === "link" && link.pairingQr ? await QRCode.toString(link.pairingQr, { type: "svg", margin: 2 }) : null;
 
   return (
     <div className="max-w-5xl">
@@ -129,29 +131,26 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
         </div>
         {link.command === "link" && (
           <div className="mt-4 rounded-md border border-quant/40 bg-quant/5 p-4 text-sm">
-            {link.pairingCode ? (
+            <AutoRefresh seconds={5} />
+            {qr ? (
               <>
-                <p>
-                  On the phone with +{link.commandPhone}: WhatsApp → Settings → Linked devices → Link a device → <em>Link with phone number instead</em>,
-                  then type:
-                </p>
-                <p className="mt-2 font-mono text-2xl tracking-[0.3em]">{link.pairingCode}</p>
+                <p>On the phone: WhatsApp → Settings → Linked devices → Link a device, then scan this. It changes every 20 seconds and stops after about 3 minutes.</p>
+                {/* eslint-disable-next-line @next/next/no-img-element -- inline SVG data, nothing to optimise */}
+                <img src={`data:image/svg+xml;utf8,${encodeURIComponent(qr)}`} alt="WhatsApp link QR code" className="mt-3 h-64 w-64 rounded-md bg-white" />
               </>
             ) : (
-              <p>Waiting for the gateway to ask WhatsApp for a code for +{link.commandPhone}{running ? "…" : " (the gateway isn't running)."}</p>
+              <p>Waiting for the gateway to show a QR code{running ? "…" : " (your Mac isn't reachable)."}</p>
             )}
           </div>
         )}
         <div className="mt-5 flex flex-wrap items-end gap-4">
-          <form action={linkNumber} className="flex items-end gap-2">
-            <label className="text-sm">
-              {link.phone ? "Switch to another number" : "Link a number"}
-              <input name="phone" type="tel" required placeholder="+971 50 123 4567" className={FIELD} />
-            </label>
-            <PendingButton pendingLabel="Asking…" className={`${BUTTON} bg-quant text-canvas hover:bg-quant/90`}>
-              Link
-            </PendingButton>
-          </form>
+          {link.command !== "link" && (
+            <form action={linkNumber}>
+              <PendingButton pendingLabel="Asking…" className={`${BUTTON} bg-quant text-canvas hover:bg-quant/90`}>
+                {link.state === "connected" ? "Switch to another number" : "Link (show QR code)"}
+              </PendingButton>
+            </form>
+          )}
           {link.state === "connected" && (
             <form action={unlinkNumber}>
               <PendingButton pendingLabel="Unlinking…" className={`${BUTTON} border border-red-400/50 font-normal text-red-300 hover:bg-red-400/10`}>
