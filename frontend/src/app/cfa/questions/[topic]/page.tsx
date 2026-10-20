@@ -39,13 +39,13 @@ export default async function QuestionTopicPage({ params }: PageProps<"/cfa/ques
       <JsonLd
         data={StructuredData.graph([
           StructuredData.breadcrumbs([
-            { name: "CFA Questions", path: "/cfa/questions" },
+            { name: "Question Bank", path: "/cfa/questions" },
             { name: topic.name, path: `/cfa/questions/${topic.slug}` },
           ]),
         ])}
       />
       <Link href="/cfa/questions" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
-        ← All CFA questions
+        ← Question Bank
       </Link>
       <h1 className="mt-6 text-4xl leading-tight font-black sm:text-5xl">{topic.name} questions</h1>
       <p className="mt-4 max-w-2xl text-lg text-muted">CFA exam-style {topic.name} questions, each with a full worked solution.</p>

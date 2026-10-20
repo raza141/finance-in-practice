@@ -76,7 +76,7 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
   );
 
   return (
-    <article className="page-container max-w-3xl pt-10 pb-16 lg:pt-12">
+    <article className="page-container max-w-6xl pt-10 pb-16 lg:pt-12">
       <nav aria-label="Breadcrumb">
         <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted">
           <li>
@@ -85,16 +85,20 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
             </Link>
           </li>
           <li aria-hidden>→</li>
-          <li>CFA</li>
-          <li aria-hidden>→</li>
           <li>
             <Link href="/cfa/questions" className="hover:text-ink">
-              Questions
+              Question Bank
             </Link>
           </li>
           <li aria-hidden>→</li>
           <li>
-            <Link href={`/cfa/questions/${q.topic}`} className="hover:text-ink">
+            <Link href={`/cfa/questions?level=${q.level}`} className="hover:text-ink">
+              {QuestionTaxonomy.levelLabel(q.level)}
+            </Link>
+          </li>
+          <li aria-hidden>→</li>
+          <li>
+            <Link href={`/cfa/questions?level=${q.level}&topic=${q.topic}`} className="hover:text-ink">
               {topic?.name ?? q.topic}
             </Link>
           </li>
@@ -107,21 +111,25 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
 
       {banner}
 
-      <ul className="mt-6 flex flex-wrap gap-2 font-mono text-[11px] tracking-wider uppercase">
-        {[QuestionTaxonomy.levelLabel(q.level), topic?.name ?? q.topic, q.subtopic, QuestionTaxonomy.difficultyLabel(q.difficulty)]
+      <ul className="mt-6 flex flex-wrap items-center gap-2 font-mono text-[11px] tracking-wider uppercase">
+        {[QuestionTaxonomy.levelLabel(q.level), topic?.name ?? q.topic, q.subtopic]
           .filter(Boolean)
           .map((badge, i) => (
             <li key={i} className={`rounded-full border px-3 py-1 ${i === 0 ? "border-gold/60 text-gold" : "border-line text-muted"}`}>
               {badge}
             </li>
           ))}
+        <li className="flex items-center gap-2 normal-case tracking-normal">
+          <span className="rounded-full border border-line px-3 py-1 tracking-wider text-muted uppercase">Difficulty: {QuestionTaxonomy.difficultyLabel(q.difficulty)}</span>
+          <span className="font-sans text-xs text-muted">{QuestionTaxonomy.difficultyHint(q.difficulty)}</span>
+        </li>
       </ul>
 
-      <h1 className="mt-4 text-3xl leading-tight font-black sm:text-4xl">{q.title}</h1>
+      <h1 className="mt-4 text-3xl leading-tight font-black sm:text-4xl lg:text-5xl">{q.title}</h1>
 
-      <section aria-label="Question" className="mt-8 rounded-xl border border-line bg-surface/60 p-5 sm:p-6">
+      <section aria-label="Question" className="mt-8 rounded-xl border border-line bg-surface/60 p-5 sm:p-8">
         <p className="font-mono text-[11px] tracking-[0.16em] text-quant">{q.code}</p>
-        <RichText text={q.stem} className="mt-3 text-[1.05rem] text-ink" />
+        <RichText text={q.stem} className="mt-3 text-[1.05rem] leading-relaxed text-ink sm:text-lg" />
       </section>
 
       <div className="mt-6">

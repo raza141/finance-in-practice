@@ -68,11 +68,11 @@ export function AnswerPicker({
                   onClick={() => pick(i)}
                   disabled={answered}
                   aria-pressed={picked === i}
-                  className={`flex min-h-14 w-full items-center gap-4 rounded-lg border-2 px-4 py-3 text-left text-ink transition-[transform,border-color,background-color,box-shadow] duration-200 disabled:cursor-default ${tone} ${celebrate ? "motion-safe:animate-[q-glow_1.2s_ease-out]" : ""} ${isCorrect && fresh && !right ? "motion-safe:animate-[q-pulse_1.4s_ease-out]" : ""}`}
+                  className={`flex min-h-16 w-full items-center gap-4 rounded-xl border-2 px-4 py-4 text-left text-[1.05rem] leading-relaxed text-ink sm:gap-5 sm:px-6 sm:text-lg transition-[transform,border-color,background-color,box-shadow] duration-200 disabled:cursor-default ${tone} ${celebrate ? "motion-safe:animate-[q-glow_1.2s_ease-out]" : ""} ${isCorrect && fresh && !right ? "motion-safe:animate-[q-pulse_1.4s_ease-out]" : ""}`}
                 >
                   <span
                     aria-hidden
-                    className={`grid size-9 shrink-0 place-items-center rounded-md border font-mono text-sm font-semibold ${isCorrect ? "border-emerald-400 text-emerald-300" : isWrongPick ? "border-red-400 text-red-300" : "border-line text-muted"}`}
+                    className={`grid size-10 shrink-0 place-items-center rounded-lg border font-mono text-base font-semibold ${isCorrect ? "border-emerald-400 text-emerald-300" : isWrongPick ? "border-red-400 text-red-300" : "border-line text-muted"}`}
                   >
                     {isCorrect ? <Check draw={celebrate} /> : isWrongPick ? "✕" : o.letter}
                   </span>

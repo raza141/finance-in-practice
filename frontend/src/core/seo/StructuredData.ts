@@ -179,7 +179,7 @@ export class StructuredData {
         ],
       },
       StructuredData.breadcrumbs([
-        { name: "CFA Questions", path: "/cfa/questions" },
+        { name: "Question Bank", path: "/cfa/questions" },
         { name: topic, path: `/cfa/questions/${q.topic}` },
         { name: q.title, path },
       ]),

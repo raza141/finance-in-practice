@@ -24,6 +24,15 @@ export class QuestionTaxonomy {
 
   static readonly DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 
+  static readonly LEVELS: readonly (1 | 2 | 3)[] = [1, 2, 3];
+
+  /** What a difficulty means to a candidate; shown next to the badge and in the bank's filter. */
+  static readonly DIFFICULTY_HINTS: Record<Difficulty, string> = {
+    easy: "One concept, one step",
+    medium: "Two or three steps",
+    hard: "Several steps or a common exam trap",
+  };
+
   static topic(slug: string): QuestionTopic | undefined {
     return QuestionTaxonomy.TOPICS.find((t) => t.slug === slug);
   }
@@ -34,6 +43,10 @@ export class QuestionTaxonomy {
 
   static difficultyLabel(d: Difficulty): string {
     return d[0].toUpperCase() + d.slice(1);
+  }
+
+  static difficultyHint(d: Difficulty): string {
+    return QuestionTaxonomy.DIFFICULTY_HINTS[d];
   }
 
   static letter(index: number): string {
