@@ -1027,6 +1027,13 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE leads ADD COLUMN unsubscribed_at timestamptz`,
     ],
   },
+  {
+    // The owner's On/Off switch for WhatsApp. The gateway runs from login (launchd)
+    // and keeps polling; while off it drops the connection (the session stays, no
+    // re-pairing) and nothing is sent.
+    id: "046_whatsapp_switch",
+    statements: [`ALTER TABLE whatsapp_link ADD COLUMN gateway_on boolean NOT NULL DEFAULT true`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

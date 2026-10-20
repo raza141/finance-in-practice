@@ -28,6 +28,8 @@ export interface WhatsAppLink {
   pairingCode: string | null;
   testPhone: string | null;
   live: boolean;
+  /** The owner's On/Off switch: off, the gateway keeps polling but stays disconnected. */
+  gatewayOn: boolean;
   enabledAt: Date | null;
   lastSeenAt: Date | null;
   lastScanAt: Date | null;

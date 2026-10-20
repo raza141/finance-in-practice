@@ -16,6 +16,8 @@ const STATES: readonly LinkState[] = ["offline", "connecting", "pairing", "conne
 
 export interface GatewayReply {
   command: { type: "link"; phone: string } | { type: "unlink" } | null;
+  /** The owner's switch: false, the gateway disconnects (keeping the session) and waits. */
+  on: boolean;
   messages: GatewayMessage[];
   scan: Record<string, string> | null;
 }
@@ -76,7 +78,7 @@ export class WhatsAppGateway {
     await WhatsAppGateway.alertIfDown(outbox, link, now);
 
     let scan: Record<string, string> | null = null;
-    if (report.state === "connected" && (await outbox.claimScan(WhatsAppGateway.SCAN_MINUTES))) {
+    if (report.state === "connected" && link.gatewayOn && (await outbox.claimScan(WhatsAppGateway.SCAN_MINUTES))) {
       scan = (await (await WhatsAppScanner.create(link, origin))?.run(now)) ?? null;
       link = await outbox.link();
     }
@@ -84,7 +86,7 @@ export class WhatsAppGateway {
       link.command === "link" && link.commandPhone ? { type: "link", phone: link.commandPhone } : link.command === "unlink" ? { type: "unlink" } : null;
     // While a command is pending, nothing is sent from the number that is about to change.
     const messages = command ? [] : await outbox.claim(link, origin, now);
-    return { command, messages, scan };
+    return { command, on: link.gatewayOn, messages, scan };
   }
 
   /** "This is our new number" to every client introduced on the old one; by email too when live. */
@@ -114,7 +116,7 @@ export class WhatsAppGateway {
    * ponytail: needs the Mac to be polling; a Mac that is off entirely only shows as "last seen" in admin (no cron, CRON_SECRET is on hold).
    */
   private static async alertIfDown(outbox: WhatsAppOutbox, link: WhatsAppLink, now: Date): Promise<void> {
-    if (link.state === "connected" || !link.enabledAt || link.command) return;
+    if (link.state === "connected" || !link.gatewayOn || !link.enabledAt || link.command) return;
     if (now.getTime() - link.stateSince.getTime() < WhatsAppGateway.ALERT_MINUTES * 60_000) return;
     const to = process.env.EMAIL_REPLY_TO?.trim();
     const resend = ResendClient.fromEnv();

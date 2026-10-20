@@ -44,6 +44,13 @@ export async function unlinkNumber(): Promise<void> {
   redirect(`${PAGE}?notice=unlinking`);
 }
 
+/** The On/Off switch: the gateway on the Mac obeys it at its next poll (within a minute). */
+export async function setGatewayOn(formData: FormData): Promise<void> {
+  const on = formData.get("on") === "1";
+  await (await owner()).setGatewayOn(on);
+  redirect(`${PAGE}?notice=${on ? "switched-on" : "switched-off"}`);
+}
+
 /** Test mode sends everything to the owner's number; live sends to students. */
 export async function setMode(formData: FormData): Promise<void> {
   const outbox = await owner();

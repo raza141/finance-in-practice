@@ -27,6 +27,7 @@ type Result = { id: string; ok: boolean; error?: string; sentTo?: string };
 type Inbound = { phone: string; text: string };
 type Reply = {
   command: { type: "link"; phone: string } | { type: "unlink" } | null;
+  on: boolean;
   messages: { id: string; to: string; text: string; pdfUrl: string | null; fileName: string | null }[];
   scan: Record<string, string> | null;
 };
@@ -252,6 +253,15 @@ class WhatsAppLink {
     this.pairingCode = null;
   }
 
+  /** The owner's Off switch: disconnect but keep the session, so On reconnects without pairing. */
+  pause(): void {
+    this.stopping = true;
+    this.pairPhone = null;
+    this.close();
+    this.state = "offline";
+    this.pairingCode = null;
+  }
+
   close(): void {
     const sock = this.sock;
     this.sock = null;
@@ -275,8 +285,8 @@ class Gateway {
 
   async run(): Promise<void> {
     await this.lock();
-    if (this.link.hasSession) await this.link.connect();
-    else this.link.state = "logged_out";
+    // Connects on the first poll, once the site says the switch is on.
+    this.link.state = this.link.hasSession ? "offline" : "logged_out";
     for (;;) {
       let wait = this.config.pollSeconds * 1000;
       try {
@@ -303,6 +313,19 @@ class Gateway {
     if (reply.scan) log("Scan:", reply.scan);
 
     const command = reply.command;
+    // The site sends no messages and no link command while off ("Link" turns it on).
+    if (!reply.on && command?.type !== "unlink") {
+      if (this.link.state !== "offline" && this.link.state !== "logged_out") {
+        log("Switched off (admin): disconnected, session kept");
+        this.link.pause();
+      }
+      return this.config.pollSeconds * 1000;
+    }
+    if (reply.on && this.link.state === "offline" && this.link.hasSession && !command) {
+      log("Switched on: connecting");
+      await this.link.connect();
+      return 5_000;
+    }
     if (command?.type === "unlink" && this.link.state !== "logged_out") {
       log("Unlinking (admin)");
       await this.link.logout();

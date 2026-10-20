@@ -12,6 +12,7 @@ import {
   remindInvoice,
   retryMessage,
   sendClassPost,
+  setGatewayOn,
   setMode,
   unlinkNumber,
 } from "@/domains/whatsapp/actions/whatsapp";
@@ -37,6 +38,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   reminded: { text: "Reminder queued.", tone: "ok" },
   "not-reminded": { text: "No reminder: the invoice is paid, or the client has no phone number or replied STOP.", tone: "warn" },
   "not-linked": { text: "Link a number first.", tone: "warn" },
+  "switched-on": { text: "Switched on: the gateway reconnects within a minute. Refresh to see it.", tone: "ok" },
+  "switched-off": { text: "Switched off: the gateway disconnects within a minute and nothing is sent. The number stays linked.", tone: "ok" },
 };
 
 const STATE_LABEL: Record<string, string> = {
@@ -80,7 +83,14 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
   ]);
   const seenAgo = link.seenMinutes;
   const running = seenAgo !== null && seenAgo <= 3;
-  const healthy = running && link.state === "connected";
+  const healthy = running && link.gatewayOn && link.state === "connected";
+  const status = !running
+    ? "Mac not reachable (asleep, off or offline): the gateway starts by itself when it's back"
+    : !link.gatewayOn
+      ? "Switched off"
+      : link.state === "offline"
+        ? "Connecting"
+        : STATE_LABEL[link.state];
 
   return (
     <div className="max-w-5xl">
@@ -100,10 +110,19 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
         <div className="flex flex-wrap items-center gap-3">
           <span className={`h-3 w-3 rounded-full ${healthy ? "bg-quant" : "bg-gold"}`} aria-hidden />
           <p className="flex-1 text-sm">
-            <span className="font-semibold">{running ? STATE_LABEL[link.state] : "Gateway not running"}</span>
+            <span className="font-semibold">{status}</span>
             {link.phone && <span className="text-muted"> · {link.state === "connected" ? "linked" : "last linked"}: +{link.phone}</span>}
             <span className="text-muted"> · last seen {seenAgo === null ? "never" : seenAgo < 1 ? "just now" : `${seenAgo} min ago`}</span>
           </p>
+          <form action={setGatewayOn}>
+            <input type="hidden" name="on" value={link.gatewayOn ? "0" : "1"} />
+            <PendingButton
+              pendingLabel="…"
+              className={`${BUTTON} ${link.gatewayOn ? "border border-line font-normal hover:bg-white/5" : "bg-quant text-canvas hover:bg-quant/90"}`}
+            >
+              {link.gatewayOn ? "Turn off" : "Turn on"}
+            </PendingButton>
+          </form>
           <Link href="/admin/whatsapp" className={SMALL + " inline-flex items-center"}>
             Refresh
           </Link>

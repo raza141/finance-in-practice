@@ -16,6 +16,7 @@ type LinkRow = {
   pairing_code: string | null;
   test_phone: string | null;
   live: boolean;
+  gateway_on: boolean;
   enabled_at: Date | null;
   last_seen_at: Date | null;
   last_scan_at: Date | null;
@@ -51,6 +52,7 @@ export class WhatsAppOutbox {
       pairingCode: row.pairing_code,
       testPhone: row.test_phone,
       live: row.live,
+      gatewayOn: row.gateway_on,
       enabledAt: row.enabled_at,
       lastSeenAt: row.last_seen_at,
       lastScanAt: row.last_scan_at,
@@ -187,7 +189,7 @@ export class WhatsAppOutbox {
       WHERE m.status = 'queued' AND m.ref = 'doc:' || d.id AND (d.status = 'void' OR (m.kind = 'overdue' AND d.status <> 'sent'))
     `;
     const test = link.live ? null : link.testPhone;
-    if (link.state !== "connected" || (!link.live && !test)) return [];
+    if (link.state !== "connected" || !link.gatewayOn || (!link.live && !test)) return [];
     const quiet = WhatsAppText.isQuiet(now);
     const rows = (await this.sql`
       WITH next AS (
@@ -239,11 +241,22 @@ export class WhatsAppOutbox {
   // Owner actions.
 
   async requestLink(phone: string): Promise<void> {
-    await this.sql`UPDATE whatsapp_link SET command = 'link', command_phone = ${phone}, pairing_code = NULL, updated_at = now() WHERE id = 1`;
+    await this.sql`UPDATE whatsapp_link SET command = 'link', command_phone = ${phone}, pairing_code = NULL, gateway_on = true, updated_at = now() WHERE id = 1`;
   }
 
   async requestUnlink(): Promise<void> {
     await this.sql`UPDATE whatsapp_link SET command = 'unlink', command_phone = NULL, pairing_code = NULL, updated_at = now() WHERE id = 1`;
+  }
+
+  /** Off also drops a pending link, so the gateway doesn't go back to asking for pairing codes when switched on. */
+  async setGatewayOn(on: boolean): Promise<void> {
+    await this.sql`
+      UPDATE whatsapp_link SET gateway_on = ${on},
+        command = CASE WHEN ${on} OR command <> 'link' THEN command END,
+        command_phone = CASE WHEN ${on} OR command <> 'link' THEN command_phone END,
+        updated_at = now()
+      WHERE id = 1
+    `;
   }
 
   async setMode(live: boolean, testPhone: string | null): Promise<void> {
