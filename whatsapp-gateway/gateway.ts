@@ -18,7 +18,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
-import makeWASocket, { Browsers, DisconnectReason, useMultiFileAuthState } from "baileys";
+import makeWASocket, { Browsers, DisconnectReason, fetchLatestWaWebVersion, useMultiFileAuthState } from "baileys";
 import type { WAMessage, WASocket } from "baileys";
 import pino from "pino";
 
@@ -150,10 +150,13 @@ class WhatsAppLink {
     if (pairPhone) await rm(this.authDir, { recursive: true, force: true });
     await mkdir(this.authDir, { recursive: true, mode: 0o700 });
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
+    // The version bundled with Baileys goes stale; WhatsApp then refuses pairing codes ("Couldn't link device").
+    const { version } = await fetchLatestWaWebVersion({}).catch(() => ({ version: undefined }));
     this.state = "connecting";
     this.pairingCode = null;
     const sock = makeWASocket({
       auth: state,
+      version,
       logger: this.logger,
       browser: Browsers.macOS("Chrome"),
       markOnlineOnConnect: false,
