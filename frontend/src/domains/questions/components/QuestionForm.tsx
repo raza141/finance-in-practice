@@ -11,7 +11,7 @@ import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichTe
 import { saveQuestion, uploadSolutionImage } from "../actions/questions";
 import { QuestionContract } from "../services/QuestionContract";
 import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
-import type { Question } from "../types";
+import type { Difficulty, Question } from "../types";
 
 const MATH_HINT = (
   <>
@@ -274,6 +274,15 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
       <aside aria-label="Preview" className="content-start xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
         <p className="text-[11px] tracking-[0.22em] text-muted uppercase">Preview</p>
         <div className="mt-3 grid gap-5 rounded-xl border border-line bg-surface/60 p-5">
+          <ul className="flex flex-wrap gap-2 font-mono text-[11px] tracking-wider uppercase">
+            {[QuestionTaxonomy.levelLabel(Number(d.level)), QuestionTaxonomy.topic(d.topic)?.name ?? d.topic, d.subtopic.trim(), QuestionTaxonomy.difficultyLabel(d.difficulty as Difficulty)]
+              .filter(Boolean)
+              .map((badge, i) => (
+                <li key={i} className={`rounded-full border px-3 py-1 ${i === 0 ? "border-gold/60 text-gold" : "border-line text-muted"}`}>
+                  {badge}
+                </li>
+              ))}
+          </ul>
           <h2 className="text-2xl font-black">{d.title || "Title"}</h2>
           <RichText text={d.stem || "The question appears here."} className="text-ink" />
           <ol className="grid gap-2">
