@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 
+import { AnswerStore } from "../services/AnswerStore";
+
 const CONFETTI = ["#d4af37", "#22d3ee", "#34d399", "#e6c65a", "#22d3ee", "#34d399", "#d4af37", "#f8fafc"];
 
 /**
@@ -14,11 +16,14 @@ export function AnswerPicker({
   correct,
   options,
   solution,
+  next,
 }: {
   storageKey: string;
   correct: number;
   options: { letter: string; content: ReactNode }[];
   solution: ReactNode;
+  /** Shown beside the solution button once answered, so the reader can keep going. */
+  next?: ReactNode;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [fresh, setFresh] = useState(false);
@@ -27,9 +32,9 @@ export function AnswerPicker({
 
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(storageKey) ?? NaN);
+      const saved = AnswerStore.picked(storageKey);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring the reader's earlier answer after hydration
-      if (Number.isInteger(saved) && saved >= 0 && saved < options.length) setPicked(saved);
+      if (saved !== null && saved >= 0 && saved < options.length) setPicked(saved);
     } catch {}
   }, [storageKey, options.length]);
 
@@ -38,7 +43,7 @@ export function AnswerPicker({
     setPicked(i);
     setFresh(true);
     try {
-      localStorage.setItem(storageKey, String(i));
+      AnswerStore.save(storageKey, i, correct);
     } catch {}
   };
 
@@ -89,7 +94,10 @@ export function AnswerPicker({
                       <span
                         key={k}
                         className="absolute size-1.5 rounded-[1px] opacity-0 animate-[q-confetti_1.1s_ease-out]"
-                        style={{ background: color, ["--q-angle" as string]: `${k * 45 + 10}deg` }}
+                        style={{
+                          background: color,
+                          ["--q-angle" as string]: `${k * 45 + 10}deg`,
+                        }}
                       />
                     ))}
                   </span>
@@ -110,15 +118,18 @@ export function AnswerPicker({
       </p>
 
       {answered && (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls={panelId}
-          className="mt-2 inline-flex h-12 items-center rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright"
-        >
-          {open ? "Hide solution" : "Show full solution"}
-        </button>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls={panelId}
+            className="inline-flex h-12 items-center rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright"
+          >
+            {open ? "Hide solution" : "Show full solution"}
+          </button>
+          {next}
+        </div>
       )}
       <div id={panelId} hidden={!open}>
         {solution}

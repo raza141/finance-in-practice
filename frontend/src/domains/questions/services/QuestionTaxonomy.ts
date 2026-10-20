@@ -13,12 +13,20 @@ export class QuestionTaxonomy {
     { slug: "ethics", name: "Ethical and Professional Standards", code: "ETH" },
     { slug: "quantitative-methods", name: "Quantitative Methods", code: "QM" },
     { slug: "economics", name: "Economics", code: "ECON" },
-    { slug: "financial-statement-analysis", name: "Financial Statement Analysis", code: "FSA" },
+    {
+      slug: "financial-statement-analysis",
+      name: "Financial Statement Analysis",
+      code: "FSA",
+    },
     { slug: "corporate-issuers", name: "Corporate Issuers", code: "CI" },
     { slug: "equity", name: "Equity Investments", code: "EQ" },
     { slug: "fixed-income", name: "Fixed Income", code: "FI" },
     { slug: "derivatives", name: "Derivatives", code: "DER" },
-    { slug: "alternative-investments", name: "Alternative Investments", code: "ALT" },
+    {
+      slug: "alternative-investments",
+      name: "Alternative Investments",
+      code: "ALT",
+    },
     { slug: "portfolio-management", name: "Portfolio Management", code: "PM" },
   ];
 

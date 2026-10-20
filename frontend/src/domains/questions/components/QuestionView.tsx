@@ -9,6 +9,7 @@ import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichTe
 import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
 import type { Question, QuestionSummary } from "../types";
 import { AnswerPicker } from "./AnswerPicker";
+import { DifficultyMeter } from "./DifficultyMeter";
 import { QuestionCard } from "./QuestionCard";
 import { SubscribeForm } from "./SubscribeForm";
 
@@ -112,15 +113,15 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
       {banner}
 
       <ul className="mt-6 flex flex-wrap items-center gap-2 font-mono text-[11px] tracking-wider uppercase">
-        {[QuestionTaxonomy.levelLabel(q.level), topic?.name ?? q.topic, q.subtopic]
-          .filter(Boolean)
-          .map((badge, i) => (
-            <li key={i} className={`rounded-full border px-3 py-1 ${i === 0 ? "border-gold/60 text-gold" : "border-line text-muted"}`}>
-              {badge}
-            </li>
-          ))}
+        {[QuestionTaxonomy.levelLabel(q.level), topic?.name ?? q.topic, q.subtopic].filter(Boolean).map((badge, i) => (
+          <li key={i} className={`rounded-full border px-3 py-1 ${i === 0 ? "border-gold/60 text-gold" : "border-line text-muted"}`}>
+            {badge}
+          </li>
+        ))}
         <li className="flex items-center gap-2 normal-case tracking-normal">
-          <span className="rounded-full border border-line px-3 py-1 tracking-wider text-muted uppercase">Difficulty: {QuestionTaxonomy.difficultyLabel(q.difficulty)}</span>
+          <span className="rounded-full border border-line px-3 py-1 text-muted">
+            <DifficultyMeter difficulty={q.difficulty} label />
+          </span>
           <span className="font-sans text-xs text-muted">{QuestionTaxonomy.difficultyHint(q.difficulty)}</span>
         </li>
       </ul>
@@ -136,8 +137,25 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
         <AnswerPicker
           storageKey={`${preview ? "fip-cfa-preview" : "fip-cfa-q"}:${q.code}`}
           correct={q.correct}
-          options={q.options.map((o, i) => ({ letter: letter(i), content: <Inline text={o.text} /> }))}
+          options={q.options.map((o, i) => ({
+            letter: letter(i),
+            content: <Inline text={o.text} />,
+          }))}
           solution={solution}
+          next={
+            related[0] && !preview ? (
+              <Link
+                href={QuestionTaxonomy.path(related[0])}
+                className="inline-flex h-12 items-center rounded-md border border-line px-6 text-[15px] font-semibold text-ink transition-colors hover:border-quant/60 hover:text-quant"
+              >
+                Try another question
+              </Link>
+            ) : (
+              <Link href="/cfa/questions" className="inline-flex h-12 items-center px-2 text-[15px] text-quant hover:underline">
+                Back to the Question Bank
+              </Link>
+            )
+          }
         />
       </div>
 
@@ -166,9 +184,7 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
         </div>
       </section>
 
-      <p className="mt-10 text-xs leading-relaxed text-muted/80">
-        Original practice question by {siteConfig.name}.
-      </p>
+      <p className="mt-10 text-xs leading-relaxed text-muted/80">Original practice question by {siteConfig.name}.</p>
     </article>
   );
 }
