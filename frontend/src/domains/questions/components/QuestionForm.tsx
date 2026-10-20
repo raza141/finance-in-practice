@@ -59,6 +59,7 @@ function draftOf(q: Question | null, nextSlot: string): Draft {
     formula: q?.formula ?? "",
     solution: q?.solution ?? "",
     trap: q?.trap ?? "",
+    insight: q?.insight ?? "",
     imageUrl: q?.imageUrl ?? "",
     imageAlt: q?.imageAlt ?? "",
     source: q?.source ?? "",
@@ -240,6 +241,9 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
         <Field label="Common exam trap" hint={MATH_HINT}>
           <textarea {...bind("trap")} rows={3} maxLength={2000} className={`${FIELD} text-sm`} />
         </Field>
+        <Field label="Practitioner insight" hint={`Optional. Two or three sentences from your own practice: where this shows up at work. Shown with your name. ${d.insight.length}/400`}>
+          <textarea {...bind("insight")} rows={3} maxLength={400} className={`${FIELD} text-sm`} />
+        </Field>
         <Field label="Covers (LOS)" hint="Optional, e.g. Fixed Income · LOS: calculate and interpret effective duration and convexity.">
           <input {...bind("source")} maxLength={200} className={FIELD} />
         </Field>
@@ -316,6 +320,12 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
             <div className="border-l-2 border-gold/60 pl-3 text-sm">
               <p className="text-muted">Common exam trap</p>
               <RichText text={d.trap} />
+            </div>
+          )}
+          {d.insight && (
+            <div className="border-l-2 border-quant/60 pl-3 text-sm">
+              <p className="text-muted">Practitioner insight</p>
+              <p>{d.insight}</p>
             </div>
           )}
         </div>

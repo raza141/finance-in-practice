@@ -51,6 +51,8 @@ describe("QuestionContract", () => {
     expect(() => QuestionContract.parse(form({ topic: "astrology" }))).toThrow(/topic/);
     expect(() => QuestionContract.parse(form({ imageUrl: "https://x.blob/a.jpg" }))).toThrow(/Describe/);
     expect(() => QuestionContract.parse(form({ publishAt: "" }))).toThrow(/goes live/);
+    expect(() => QuestionContract.parse(form({ insight: "x".repeat(401) }))).toThrow(QuestionValidationError);
+    expect(QuestionContract.parse(form({ insight: "  From the desk.  " })).insight).toBe("From the desk.");
   });
 
   it("round-trips GST and schedules the next free day at 07:00", () => {
@@ -92,6 +94,11 @@ describe("StructuredData.question", () => {
     expect((part.acceptedAnswer as { position: number }).position).toBe(0);
     expect(part.suggestedAnswer).toHaveLength(2);
     expect(graph[1]["@type"]).toBe("BreadcrumbList");
+    expect(graph[0].author).toBeUndefined();
+
+    const author = { id: "lead", name: "A. Instructor", role: "Lead Instructor", bio: "", education: [], background: "", highlights: [], sortOrder: 0, isActive: true };
+    const credited = (StructuredData.question(q, author)["@graph"] as Record<string, unknown>[])[0];
+    expect(credited.author).toMatchObject({ "@type": "Person", name: "A. Instructor", "@id": expect.stringContaining("/about#lead") });
   });
 });
 

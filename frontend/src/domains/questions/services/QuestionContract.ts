@@ -10,7 +10,9 @@ const GST_OFFSET_MS = 4 * 60 * 60 * 1000;
 export class QuestionContract {
   static parse(form: FormData): QuestionInput {
     const str = (name: string, max: number) => {
-      const value = String(form.get(name) ?? "").replace(/\r\n?/g, "\n").trim();
+      const value = String(form.get(name) ?? "")
+        .replace(/\r\n?/g, "\n")
+        .trim();
       if (value.length > max) throw new QuestionValidationError(`${name} is too long (max ${max} characters).`);
       return value;
     };
@@ -62,6 +64,7 @@ export class QuestionContract {
       formula: str("formula", 2000),
       solution: str("solution", 10000),
       trap: str("trap", 2000),
+      insight: str("insight", 400),
       imageUrl,
       imageAlt: imageUrl ? imageAlt : "",
       source: str("source", 200),

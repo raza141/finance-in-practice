@@ -1040,6 +1040,12 @@ const MIGRATIONS: Migration[] = [
     id: "047_whatsapp_qr",
     statements: [`ALTER TABLE whatsapp_link ADD COLUMN pairing_qr text CHECK (char_length(pairing_qr) <= 1000)`],
   },
+  {
+    // The owner's practitioner insight on a question: two or three sentences from
+    // practice, shown with the instructor's byline.
+    id: "048_cfa_question_insight",
+    statements: [`ALTER TABLE cfa_questions ADD COLUMN insight text NOT NULL DEFAULT '' CHECK (char_length(insight) <= 400)`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

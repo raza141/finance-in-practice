@@ -149,8 +149,11 @@ export class StructuredData {
     ]);
   }
 
-  /** /cfa/questions/[topic]/[slug]: a one-question Quiz (Google's education Q&A shape). Text keeps its $…$ maths source. */
-  static question(q: Question): JsonLdNode {
+  /**
+   * /cfa/questions/[topic]/[slug]: a one-question Quiz (Google's education Q&A shape). Text keeps its $…$ maths source.
+   * The author is the instructor whose byline the page shows, tied to their /about entry.
+   */
+  static question(q: Question, author?: Instructor): JsonLdNode {
     const path = QuestionTaxonomy.path(q);
     const url = `${siteConfig.url}${path}`;
     const topic = QuestionTaxonomy.topic(q.topic)?.name ?? q.topic;
@@ -167,6 +170,7 @@ export class StructuredData {
         ...(q.publishAt && { datePublished: q.publishAt.toISOString() }),
         dateModified: q.updatedAt.toISOString(),
         provider: { "@id": StructuredData.ORG_ID },
+        ...(author && { author: { "@type": "Person", "@id": StructuredData.personId(author), name: author.name, url: `${siteConfig.url}/about` } }),
         isPartOf: { "@id": StructuredData.SITE_ID },
         hasPart: [
           {

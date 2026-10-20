@@ -21,6 +21,8 @@ export interface QuestionInput {
   formula: string;
   solution: string;
   trap: string;
+  /** Two or three sentences from practice, shown with the instructor's byline. */
+  insight: string;
   imageUrl: string | null;
   imageAlt: string;
   source: string;

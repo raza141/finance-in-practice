@@ -5,6 +5,7 @@ import { JsonLd } from "@/core/components/seo/JsonLd";
 import { StructuredData } from "@/core/seo/StructuredData";
 import { QuestionView } from "@/domains/questions/components/QuestionView";
 import { QuestionPages } from "@/domains/questions/server/QuestionPages";
+import { InstructorRepository } from "@/domains/team/server/InstructorRepository";
 
 // Rendered on first request and cached (ISR); saving in admin revalidates it at
 // once, and a scheduled question goes live within five minutes of its time.
@@ -25,11 +26,12 @@ export default async function QuestionPage({ params }: PageProps<"/cfa/questions
   const { topic, slug } = await params;
   const q = await QuestionPages.bySlug(topic, slug);
   if (!q) notFound();
-  const related = (await (await QuestionPages.repo())?.related(q)) ?? [];
+  const repo = await QuestionPages.repo();
+  const [related, [author]] = await Promise.all([repo?.related(q) ?? [], InstructorRepository.published()]);
   return (
     <>
-      <JsonLd data={StructuredData.question(q)} />
-      <QuestionView q={q} related={related} />
+      <JsonLd data={StructuredData.question(q, author)} />
+      <QuestionView q={q} related={related} author={author} />
     </>
   );
 }

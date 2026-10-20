@@ -21,6 +21,7 @@ interface QuestionRow {
   formula: string;
   solution: string;
   trap: string;
+  insight: string;
   image_url: string | null;
   image_alt: string;
   source: string;
@@ -101,12 +102,12 @@ export class QuestionRepository {
     const prefix = QuestionRepository.codePrefix(q);
     const [row] = (await this.sql`
       INSERT INTO cfa_questions (code, level, topic, subtopic, difficulty, slug, title, description, stem, options, correct,
-                                 formula, solution, trap, image_url, image_alt, source, publish_at)
+                                 formula, solution, trap, insight, image_url, image_alt, source, publish_at)
       VALUES (
         (SELECT ${prefix} || lpad((coalesce(max(substring(code, ${prefix.length + 1})::int), 0) + 1)::text, 3, '0')
            FROM cfa_questions WHERE code LIKE ${`${prefix}%`}),
         ${q.level}, ${q.topic}, ${q.subtopic}, ${q.difficulty}, ${q.slug}, ${q.title}, ${q.description}, ${q.stem},
-        ${JSON.stringify(q.options)}::jsonb, ${q.correct}, ${q.formula}, ${q.solution}, ${q.trap}, ${q.imageUrl}, ${q.imageAlt},
+        ${JSON.stringify(q.options)}::jsonb, ${q.correct}, ${q.formula}, ${q.solution}, ${q.trap}, ${q.insight}, ${q.imageUrl}, ${q.imageAlt},
         ${q.source}, ${q.publishAt}
       )
       RETURNING id
@@ -124,7 +125,7 @@ export class QuestionRepository {
              FROM cfa_questions c WHERE c.code LIKE ${`${prefix}%`}) END,
         level = ${q.level}, topic = ${q.topic}, subtopic = ${q.subtopic}, difficulty = ${q.difficulty}, slug = ${q.slug},
         title = ${q.title}, description = ${q.description}, stem = ${q.stem}, options = ${JSON.stringify(q.options)}::jsonb,
-        correct = ${q.correct}, formula = ${q.formula}, solution = ${q.solution}, trap = ${q.trap}, image_url = ${q.imageUrl},
+        correct = ${q.correct}, formula = ${q.formula}, solution = ${q.solution}, trap = ${q.trap}, insight = ${q.insight}, image_url = ${q.imageUrl},
         image_alt = ${q.imageAlt}, source = ${q.source}, publish_at = ${q.publishAt}, updated_at = now()
       WHERE id = ${id}
     `;
@@ -173,6 +174,7 @@ export class QuestionRepository {
       formula: r.formula,
       solution: r.solution,
       trap: r.trap,
+      insight: r.insight,
       imageUrl: r.image_url,
       imageAlt: r.image_alt,
       source: r.source,

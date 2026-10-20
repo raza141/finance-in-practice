@@ -1,10 +1,12 @@
 import "katex/dist/katex.min.css";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { siteConfig } from "@/core/config/site";
 import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
+import type { Instructor } from "@/domains/team/types";
 import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichText";
 
 import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
@@ -49,6 +51,29 @@ function Spec({ label, href, note, accent = false, children }: { label: string; 
   );
 }
 
+/** "Written by" with photo (or initials), role and a link to the instructor page. */
+function Byline({ author, className = "" }: { author: Instructor; className?: string }) {
+  const initials = author.name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+  return (
+    <p className={`flex items-center gap-3 ${className}`}>
+      <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-surface-raised font-serif text-sm font-bold text-ink/90">
+        {author.photo ? <Image src={author.photo} alt="" fill sizes="44px" unoptimized={!author.photo.startsWith("/")} className="object-cover" /> : initials}
+      </span>
+      <span className="text-sm leading-snug">
+        <span className="text-muted">Written by </span>
+        <Link href="/about" className="font-semibold text-ink hover:text-quant">
+          {author.name}
+        </Link>
+        <span className="block text-muted">{author.role}</span>
+      </span>
+    </p>
+  );
+}
+
 function Section({ title, children, tone = "border-line" }: { title: string; children: ReactNode; tone?: string }) {
   return (
     <section className={`border-l-2 pl-4 ${tone}`}>
@@ -63,7 +88,20 @@ function Section({ title, children, tone = "border-line" }: { title: string; chi
  * admin preview all render this. Everything is server-rendered (KaTeX included);
  * only AnswerPicker runs in the browser.
  */
-export function QuestionView({ q, related, banner, preview = false }: { q: Question; related: QuestionSummary[]; banner?: ReactNode; preview?: boolean }) {
+export function QuestionView({
+  q,
+  related,
+  banner,
+  author,
+  preview = false,
+}: {
+  q: Question;
+  related: QuestionSummary[];
+  banner?: ReactNode;
+  /** The instructor credited on the page; the insight carries their byline. */
+  author?: Instructor;
+  preview?: boolean;
+}) {
   const topic = QuestionTaxonomy.topic(q.topic);
   const letter = QuestionTaxonomy.letter;
   const answer = q.options[q.correct];
@@ -205,10 +243,19 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
         />
       </div>
 
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
-        {q.source ? <p className="text-sm text-muted">Covers: {q.source}</p> : <span />}
-        {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} />}
-      </div>
+      {q.insight && (
+        <section aria-labelledby="practitioner-insight" className="mt-12 rounded-2xl border border-quant/30 bg-quant/[0.04] p-6 sm:p-8">
+          <h2 id="practitioner-insight" className="font-sans text-base font-semibold text-quant">
+            Practitioner insight
+          </h2>
+          <blockquote className="mt-3 max-w-3xl font-serif text-lg leading-[1.75] text-ink sm:text-xl">{q.insight}</blockquote>
+          {author && <Byline author={author} className="mt-5" />}
+        </section>
+      )}
+
+      {q.source && <p className="mt-8 text-sm text-muted">Covers: {q.source}</p>}
+
+      {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} title={q.title} />}
 
       {related.length > 0 && (
         <nav aria-label="Related questions" className="mt-12">
@@ -233,7 +280,11 @@ export function QuestionView({ q, related, banner, preview = false }: { q: Quest
         </div>
       </section>
 
-      <p className="mt-10 text-xs leading-relaxed text-muted/80">Original practice question by {siteConfig.name}.</p>
+      {author && !q.insight ? (
+        <Byline author={author} className="mt-10" />
+      ) : (
+        <p className="mt-10 text-xs leading-relaxed text-muted/80">Original practice question by {siteConfig.name}.</p>
+      )}
     </article>
   );
 }

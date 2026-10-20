@@ -5,6 +5,10 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { AnswerStore } from "../services/AnswerStore";
 
+/** Exam-mode limits a reader can pick; null counts up against exam pace instead. */
+const LIMITS: readonly (number | null)[] = [null, 60, 90, 120];
+const LIMIT_KEY = "fip-cfa-timer";
+
 const CONFETTI = ["#d4af37", "#22d3ee", "#34d399", "#e6c65a", "#22d3ee", "#34d399", "#d4af37", "#f8fafc"];
 
 /**
@@ -39,6 +43,9 @@ export function AnswerPicker({
   const [showHint, setShowHint] = useState(false);
   const [restored, setRestored] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [limit, setLimit] = useState<number | null>(null);
+  const [round, setRound] = useState(0);
+  const startedAt = useRef(0);
   const panelId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -53,14 +60,32 @@ export function AnswerPicker({
     } catch {}
   }, [storageKey, options.length]);
 
-  // The clock runs from page load until the pick.
+  // The reader's exam-mode choice carries across questions.
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(LIMIT_KEY));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring the reader's timer choice after hydration
+      if (LIMITS.includes(saved)) setLimit(saved);
+    } catch {}
+  }, []);
+
+  // The clock runs from page load, restarting on each exam-mode change, until the pick.
   useEffect(() => {
     if (picked !== null) return;
-    const started = Date.now() - seconds * 1000;
-    const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+    startedAt.current = Date.now();
+    const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - startedAt.current) / 1000)), 1000);
     return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- restart only when answered state changes
-  }, [picked]);
+  }, [picked, round]);
+
+  const chooseLimit = (value: number | null) => {
+    setLimit(value);
+    setRound((r) => r + 1);
+    setSeconds(0);
+    try {
+      if (value === null) localStorage.removeItem(LIMIT_KEY);
+      else localStorage.setItem(LIMIT_KEY, String(value));
+    } catch {}
+  };
 
   // Opening the solution lets its sections arrive one after another.
   useEffect(() => {
@@ -91,8 +116,32 @@ export function AnswerPicker({
           <p aria-hidden className="text-sm text-muted">
             {answered ? "Your answer" : "Select one answer"}
           </p>
-          {!restored && <Clock seconds={seconds} pace={paceSeconds} stopped={answered} />}
+          {!restored && <Clock seconds={seconds} pace={paceSeconds} limit={limit} stopped={answered} />}
         </div>
+        {!answered && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <span id="exam-mode" className="text-sm text-muted">
+              Exam mode
+            </span>
+            <div role="radiogroup" aria-labelledby="exam-mode" className="inline-flex rounded-lg border border-line bg-canvas p-1">
+              {LIMITS.map((value) => {
+                const on = limit === value;
+                return (
+                  <button
+                    key={value ?? "none"}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => chooseLimit(value)}
+                    className={`h-8 rounded-md px-3 text-sm transition-colors ${on ? "bg-gold text-canvas font-semibold" : "text-ink/80 hover:bg-surface-raised"}`}
+                  >
+                    {value === null ? "No limit" : value < 120 ? `${value}s` : `${value / 60} min`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <ul className="grid gap-3">
           {options.map((o, i) => {
             const isCorrect = answered && i === correct;
@@ -175,8 +224,11 @@ export function AnswerPicker({
         {answered && !restored && (
           <span className="text-muted">
             {" "}
-            You took {clock(seconds)}
-            {paceSeconds !== null && (over ? `, ${clock(seconds - paceSeconds)} over exam pace.` : ", inside exam pace.")}
+            {limit !== null
+              ? seconds <= limit
+                ? `You answered with ${clock(limit - seconds)} to spare.`
+                : `You answered after time ran out, at ${clock(seconds)}.`
+              : `You took ${clock(seconds)}${paceSeconds !== null ? (over ? `, ${clock(seconds - paceSeconds)} over exam pace.` : ", inside exam pace.") : "."}`}
           </span>
         )}
       </p>
@@ -210,13 +262,18 @@ function Check({ draw }: { draw: boolean }) {
   );
 }
 
-/** Elapsed time against exam pace: a ring that fills to the target and turns red past it. */
-function Clock({ seconds, pace, stopped }: { seconds: number; pace: number | null; stopped: boolean }) {
-  const over = pace !== null && seconds > pace;
-  const share = pace ? Math.min(seconds / pace, 1) : 0;
+/**
+ * With a limit, a countdown whose ring drains and turns red in the last 15 seconds;
+ * without one, elapsed time against exam pace, the ring filling to the target.
+ */
+function Clock({ seconds, pace, limit, stopped }: { seconds: number; pace: number | null; limit: number | null; stopped: boolean }) {
+  const left = limit !== null ? Math.max(limit - seconds, 0) : 0;
+  const target = limit ?? pace;
+  const warn = limit !== null ? left <= 15 : pace !== null && seconds > pace;
+  const share = limit !== null ? left / limit : pace ? Math.min(seconds / pace, 1) : 0;
   return (
-    <p className={`flex items-center gap-2 font-mono text-sm tabular-nums ${over ? "text-red-300" : stopped ? "text-muted" : "text-ink/90"}`}>
-      {pace !== null && (
+    <p className={`flex items-center gap-2 font-mono text-sm tabular-nums ${warn && !stopped ? "text-red-300" : stopped ? "text-muted" : "text-ink/90"}`}>
+      {target !== null && (
         <svg viewBox="0 0 20 20" className="size-5 -rotate-90" aria-hidden>
           <circle cx="10" cy="10" r="8" fill="none" strokeWidth="2.5" className="stroke-line" />
           <circle
@@ -229,14 +286,23 @@ function Clock({ seconds, pace, stopped }: { seconds: number; pace: number | nul
             strokeDasharray="1"
             strokeDashoffset={1 - share}
             strokeLinecap="round"
-            className={`transition-[stroke-dashoffset] duration-1000 ease-linear motion-reduce:transition-none ${over ? "stroke-red-400" : "stroke-gold"}`}
+            className={`transition-[stroke-dashoffset] duration-1000 ease-linear motion-reduce:transition-none ${warn ? "stroke-red-400" : "stroke-gold"}`}
           />
         </svg>
       )}
-      <span>
-        {clock(seconds)}
-        {pace !== null && <span className="text-muted"> / {clock(pace)} exam pace</span>}
-      </span>
+      {limit !== null ? (
+        <span>{left > 0 ? `${clock(left)} left` : "Time's up"}</span>
+      ) : (
+        <span>
+          {clock(seconds)}
+          {pace !== null && <span className="text-muted"> / {clock(pace)} exam pace</span>}
+        </span>
+      )}
+      {limit !== null && left === 0 && !stopped && (
+        <span role="status" className="sr-only">
+          Time&rsquo;s up. You can still answer.
+        </span>
+      )}
     </p>
   );
 }
