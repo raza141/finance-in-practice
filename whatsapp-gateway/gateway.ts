@@ -314,14 +314,14 @@ class Gateway {
 
     const command = reply.command;
     // The site sends no messages and no link command while off ("Link" turns it on).
-    if (!reply.on && command?.type !== "unlink") {
+    if (reply.on === false && command?.type !== "unlink") {
       if (this.link.state !== "offline" && this.link.state !== "logged_out") {
         log("Switched off (admin): disconnected, session kept");
         this.link.pause();
       }
       return this.config.pollSeconds * 1000;
     }
-    if (reply.on && this.link.state === "offline" && this.link.hasSession && !command) {
+    if (reply.on !== false && this.link.state === "offline" && this.link.hasSession && !command) {
       log("Switched on: connecting");
       await this.link.connect();
       return 5_000;
