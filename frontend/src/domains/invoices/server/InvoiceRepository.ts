@@ -4,9 +4,11 @@ import { randomBytes } from "node:crypto";
 
 import { Database, type Sql } from "@/core/db/Database";
 
+import { DocumentAccess } from "../services/DocumentAccess";
 import { InvoiceMath } from "../services/InvoiceMath";
 import type {
   BankDetails,
+  ClientDocument,
   ConsultancySections,
   Currency,
   CurrencyStats,
@@ -628,6 +630,57 @@ export class InvoiceRepository {
       debitMinor: Number(row.debit),
       creditMinor: Number(row.credit),
     }));
+  }
+
+  /**
+   * A client's issued invoices, receipts and credit notes for their portal, newest first,
+   * with the hours and sessions their lines bill. Never drafts, quotes or voided documents.
+   */
+  async forClient(clientId: string): Promise<ClientDocument[]> {
+    if (!UUID.test(clientId)) return [];
+    const units = (unit: string) =>
+      `(SELECT coalesce(sum((i->>'quantity')::numeric), 0) FROM jsonb_array_elements(d.items) i WHERE i->>'unit' = '${unit}')`;
+    const rows = (await this.sql.query(
+      `SELECT d.id, d.doc_type, d.number, d.status, d.currency, d.total_minor, d.issue_date::text AS issue_date, d.due_date::text AS due_date,
+         d.token, d.sent_at, d.paid_at, d.voided_at, d.link_valid_until, d.related_id,
+         ${BALANCE}::int AS balance_minor, ${units("hour")} AS hours, ${units("session")} AS sessions
+       FROM invoices d
+       WHERE d.client_id = $1 AND d.doc_type IN ('invoice', 'receipt', 'credit_note') AND d.status IN ('sent', 'paid')
+       ORDER BY d.issue_date DESC, d.created_at DESC LIMIT ${InvoiceRepository.PAGE}`,
+      [clientId],
+    )) as (Pick<InvoiceRow, "id" | "number" | "status" | "currency" | "total_minor" | "issue_date" | "due_date" | "token" | "sent_at" | "paid_at" | "voided_at" | "link_valid_until"> & {
+      doc_type: ClientDocument["docType"];
+      related_id: string | null;
+      balance_minor: number;
+      hours: string;
+      sessions: string;
+    })[];
+    return rows.map((row) => {
+      // A payment receipt mirrors its invoice's payment; a credit note gives hours back.
+      const sign = row.doc_type === "credit_note" ? -1 : row.doc_type === "receipt" && row.related_id ? 0 : 1;
+      const expired = DocumentAccess.isExpired({
+        docType: row.doc_type,
+        status: row.status,
+        sentAt: row.sent_at,
+        paidAt: row.paid_at,
+        voidedAt: row.voided_at,
+        dueDate: row.due_date,
+        linkValidUntil: row.link_valid_until,
+      });
+      return {
+        id: row.id,
+        docType: row.doc_type,
+        number: row.number,
+        status: row.status,
+        currency: row.currency,
+        totalMinor: Number(row.total_minor),
+        balanceMinor: row.doc_type === "invoice" ? Math.max(0, Number(row.balance_minor)) : 0,
+        issueDate: row.issue_date ?? "",
+        token: expired ? null : row.token,
+        hours: sign * Number(row.hours),
+        sessions: sign * Number(row.sessions),
+      };
+    });
   }
 
   async logEvent(documentId: string, actor: string, event: string, detail = ""): Promise<void> {

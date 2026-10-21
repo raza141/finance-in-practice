@@ -300,6 +300,24 @@ export interface LedgerEntry {
   creditMinor: number;
 }
 
+/** An issued document as its client sees it in the student portal: no notes, events or proofs. */
+export interface ClientDocument {
+  id: string;
+  docType: Extract<DocumentType, "invoice" | "receipt" | "credit_note">;
+  number: string | null;
+  status: InvoiceStatus;
+  currency: Currency;
+  totalMinor: number;
+  /** Still to pay (invoices only; 0 otherwise). */
+  balanceMinor: number;
+  issueDate: string;
+  /** The public link, or null once it has expired (DocumentAccess). */
+  token: string | null;
+  /** Quantities on its `hour` and `session` lines; negative on a credit note. Payment receipts carry 0 (their invoice counts). */
+  hours: number;
+  sessions: number;
+}
+
 export interface ClientDashboard {
   total: number;
   newThisMonth: number;

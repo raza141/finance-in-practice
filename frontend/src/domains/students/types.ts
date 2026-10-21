@@ -1,3 +1,5 @@
+import type { ClientDocument, Currency, ItemUnit } from "@/domains/invoices/types";
+
 /** An enrolled student: a client the owner gave at least one course in admin Clients. */
 export interface Student {
   id: string;
@@ -101,4 +103,62 @@ export interface PrivateClassroom {
   /** One line about the class, e.g. "AP Statistics: notes, homework and mocks". */
   note: string;
   url: string;
+}
+
+/** One Dubai calendar month of the student's account: time studied, booked ahead, money billed and paid. */
+export interface AccountMonth {
+  /** YYYY-MM. */
+  month: string;
+  minutesTaken: number;
+  sessionsTaken: number;
+  /** Upcoming sessions (accepted or awaiting confirmation) starting this month. */
+  minutesBooked: number;
+  sessionsBooked: number;
+  billed: { currency: Currency; minor: number }[];
+  paid: { currency: Currency; minor: number }[];
+}
+
+/** All-time money in one currency (never added across currencies). */
+export interface AccountMoney {
+  currency: Currency;
+  chargedMinor: number;
+  paidMinor: number;
+  creditedMinor: number;
+  /** What is still owed; negative = in credit. */
+  balanceMinor: number;
+}
+
+/** Hours or sessions on their invoices against those taken: what is left of a prepaid block. */
+export interface PrepaidBlock {
+  unit: "hour" | "session";
+  billed: number;
+  used: number;
+}
+
+export interface StudentPlan {
+  unit: ItemUnit;
+  feeMinor: number;
+  currency: Currency;
+}
+
+/** The student portal's Account tab (StudentAccount.build). */
+export interface StudentAccountView {
+  /** Oldest first: the last months up to this one, then next month. */
+  months: AccountMonth[];
+  /** Null when Cal.com couldn't be read: unknown, not zero. */
+  taken: { minutes: number; sessions: number } | null;
+  money: AccountMoney[];
+  prepaid: PrepaidBlock[];
+  plan: StudentPlan | null;
+  next: {
+    month: string;
+    minutesBooked: number;
+    sessionsBooked: number;
+    /** Average minutes a month over the last full months they studied (up to 3); null without history. */
+    paceMinutes: number | null;
+    /** The plan fee for next month at that pace (or at what is booked); null without a usable plan. */
+    estimateMinor: number | null;
+  };
+  /** Null when the documents couldn't be read. */
+  documents: ClientDocument[] | null;
 }

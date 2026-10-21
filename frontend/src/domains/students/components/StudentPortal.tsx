@@ -27,7 +27,7 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "overview" | "book" | "sessions" | "plan" | "classroom" | "progress";
+export type Tab = "overview" | "book" | "sessions" | "account" | "plan" | "classroom" | "progress";
 
 /** Lets server-rendered panels (overview, progress) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
@@ -58,6 +58,7 @@ export function StudentPortal({
   past,
   addresses,
   plan,
+  account,
   classroom,
   overview,
   progress,
@@ -70,6 +71,8 @@ export function StudentPortal({
   addresses: string[];
   /** The study plan and materials tab, rendered on the server. */
   plan: ReactNode;
+  /** Hours studied, money paid and owed, next month: rendered on the server. */
+  account: ReactNode;
   /** The Classroom tab, rendered on the server; null hides the tab. */
   classroom: ReactNode | null;
   /** The first tab: next session, to-do, latest mark and what's new. */
@@ -203,6 +206,7 @@ export function StudentPortal({
     ["overview", "Overview"],
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
+    ["account", "Hours & payments"],
     ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
     ...(progress ? ([["progress", "Progress"]] as [Tab, string][]) : []),
     ["plan", "Study plan & materials"],
@@ -239,6 +243,7 @@ export function StudentPortal({
 
       {tab === "overview" && overview}
       {tab === "plan" && plan}
+      {tab === "account" && account}
       {tab === "classroom" && classroom}
       {tab === "progress" && progress}
 
