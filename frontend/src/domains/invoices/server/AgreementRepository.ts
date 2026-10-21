@@ -107,6 +107,15 @@ export class AgreementRepository {
     await this.sql`UPDATE client_agreements SET archived_at = now() WHERE client_id = ${clientId} AND quote_id = ${quoteId} AND archived_at IS NULL`;
   }
 
+  /** Live agreements the student hasn't accepted in their portal yet, with the client's name, for the dashboard. */
+  async unaccepted(): Promise<{ clientId: string; clientName: string }[]> {
+    const rows = (await this.sql`
+      SELECT a.client_id, c.name FROM client_agreements a JOIN clients c ON c.id = a.client_id
+      WHERE a.archived_at IS NULL AND a.accepted_at IS NULL ORDER BY a.created_at DESC LIMIT 50
+    `) as { client_id: string; name: string }[];
+    return rows.map((r) => ({ clientId: r.client_id, clientName: r.name }));
+  }
+
   /** Ends an agreement: it is no longer offered on new documents. */
   async archive(clientId: string, id: string): Promise<boolean> {
     if (!UUID.test(clientId) || !UUID.test(id)) return false;

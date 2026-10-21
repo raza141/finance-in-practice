@@ -6,6 +6,7 @@ import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/Ca
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ScheduleBoard } from "@/domains/schedule/components/ScheduleBoard";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { Schedule } from "@/domains/schedule/services/Schedule";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 
@@ -67,8 +68,10 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
 
   return (
     <div className="max-w-7xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Schedule</h1>
+      <PageHeader
+        title="Schedule"
+        description="The website only offers times that are free here: your Cal.com working hours, minus bookings, your Google or Apple calendar, and time blocked on this page. Click a past session to set the hours studied."
+        actions={
         <nav aria-label="Week" className="flex items-center gap-2 text-sm">
           <Link href={week(-7)} className="rounded-md border border-line px-3 py-1.5 hover:border-quant" aria-label="Previous week">
             ←
@@ -83,11 +86,8 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
             {label(weekStart)} – {label(weekEnd)}
           </span>
         </nav>
-      </div>
-      <p className="mt-2 max-w-3xl text-sm text-muted">
-        The website only offers times that are free here: your Cal.com working hours, minus website bookings, minus anything in
-        your Google or Apple calendar, minus time blocked on this page.
-      </p>
+        }
+      />
       {warnings.map((w) => (
         <p key={w} role="alert" className="mt-3 text-sm text-gold">
           {w}

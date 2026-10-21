@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { LeadRepository } from "@/domains/resources/server/LeadRepository";
 import { ResourceCatalog } from "@/domains/resources/services/ResourceCatalog";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Leads" };
 
@@ -24,11 +25,10 @@ export default async function AdminLeadsPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-3xl font-normal tracking-tight italic">Leads</h1>
-      <p className="mt-2 text-sm text-muted">
-        {leads.length} download{leads.length === 1 ? "" : "s"} · {optedIn} agreed to exam tips. Only email people who opted in about anything beyond the
-        resource they asked for.
-      </p>
+      <PageHeader
+        title="Leads"
+        description={`${leads.length} download${leads.length === 1 ? "" : "s"} · ${optedIn} agreed to exam tips. Only email people who opted in about anything beyond the resource they asked for.`}
+      />
 
       {leads.length === 0 ? (
         <p className="mt-10 rounded-lg border border-dashed border-line px-6 py-10 text-center text-muted">No leads yet.</p>

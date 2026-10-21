@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { DashboardMetrics } from "@/domains/admin/services/DashboardMetrics";
-import { IncomeChart, Panel, StatCard } from "@/domains/admin/components/DashboardCards";
+import { IncomeChart, NeedsYou, Panel, StatCard } from "@/domains/admin/components/DashboardCards";
+import { PageHeader, PRIMARY_ACTION, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { AdminInbox } from "@/domains/admin/server/AdminInbox";
+import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
+import { TermsRepository } from "@/domains/settings/server/TermsRepository";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { badgeFor, formatDubai, StatusBadge } from "@/domains/invoices/components/AdminBits";
@@ -19,10 +23,11 @@ export const metadata: Metadata = { title: "Dashboard" };
 
 const ACTIONS = [
   ["New invoice", "/admin/invoices/new"],
-  ["Add client / contract", "/admin/clients"],
+  ["New quote", "/admin/invoices/new?type=quote"],
+  ["Add client", "/admin/clients?new=1"],
   ["Block time", "/admin/schedule"],
-  ["Write article", "/admin/journal"],
 ] as const;
+const TIME = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" });
 
 /** A source's value, or the fallback (logged) when it failed, so one outage doesn't blank the dashboard. */
 async function safely<T>(promise: Promise<T> | undefined, fallback: T, source: string): Promise<T> {
@@ -51,7 +56,7 @@ export default async function AdminDashboardPage() {
   const now = new Date();
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
 
-  const [money, awaiting, people, recentClients, sessions, testimonials, articleCounts, inReview] = await Promise.all([
+  const [money, awaiting, people, recentClients, sessions, testimonials, articleCounts, inReview, inbox, unaccepted, terms] = await Promise.all([
     safely(invoices.dashboard(), { currencies: [], drafts: 0, quotesAwaiting: 0, recurringDue: 0, paidByMonth: [] }, "Invoice totals"),
     safely(invoices.awaitingPayment(), [], "Awaiting payment"),
     safely(clients?.dashboard(), null, "Client totals"),
@@ -60,6 +65,10 @@ export default async function AdminDashboardPage() {
     safely(TestimonialRepository.fromEnv()?.counts(), null, "Testimonials"),
     safely(articles?.counts(), null, "Articles"),
     safely(articles?.pendingReviews(), 0, "Article reviews"),
+    safely(AdminInbox.counts(), { clients: 0, pendingBookings: 0, hourRequests: 0 }, "Inbox counts"),
+    safely(AgreementRepository.fromEnv()?.unaccepted(), [], "Unaccepted agreements"),
+    // Unknown counts as published: never nag on a hiccup.
+    safely(TermsRepository.fromEnv()?.latest().then((t) => t !== null), true, "Terms"),
   ]);
 
   const amounts = (pick: (c: (typeof money.currencies)[number]) => number) =>
@@ -71,30 +80,70 @@ export default async function AdminDashboardPage() {
   const main = money.currencies.length === 1 ? money.currencies[0] : null;
   const change = main ? DashboardMetrics.change(main.paidThisMonthMinor, main.paidLastMonthMinor) : null;
   const chart = DashboardMetrics.incomeChart(money.paidByMonth, today);
-  const upcoming = sessions.filter((s) => s.status !== "cancelled" && s.status !== "rejected").slice(0, 5);
+  const upcoming = sessions.filter((s) => s.status !== "cancelled" && s.status !== "rejected").slice(0, 6);
+  const live = sessions.filter((s) => s.status !== "cancelled" && s.status !== "rejected");
+  const todays = live.filter((s) => new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).dateOf(new Date(s.start)) === today);
+  const attention = [
+    { count: inbox.pendingBookings, text: inbox.pendingBookings === 1 ? "booking to confirm" : "bookings to confirm", href: "/admin/schedule" },
+    { count: inbox.hourRequests, text: inbox.hourRequests === 1 ? "request for more hours" : "requests for more hours", href: "/admin/hours" },
+    { count: inbox.clients, text: inbox.clients === 1 ? "new student or Classroom request" : "new students or Classroom requests", href: "/admin/clients" },
+    { count: overdueCount, text: overdueCount === 1 ? "invoice overdue" : "invoices overdue", href: "/admin/invoices" },
+    { count: terms ? 0 : 1, text: "terms not published: students can't book", href: "/admin/settings/terms" },
+    { count: unaccepted.length, text: unaccepted.length === 1 ? "agreement not accepted yet" : "agreements not accepted yet", href: unaccepted.length === 1 ? `/admin/clients/${unaccepted[0].clientId}#agreements` : "/admin/clients" },
+    { count: money.quotesAwaiting, text: money.quotesAwaiting === 1 ? "quote waiting for a reply" : "quotes waiting for a reply", href: "/admin/invoices?type=quote" },
+    { count: money.drafts, text: money.drafts === 1 ? "draft not issued" : "drafts not issued", href: "/admin/invoices" },
+    { count: testimonials?.pending ?? 0, text: "testimonials to review", href: "/admin/testimonials?status=pending" },
+    { count: inReview, text: "articles in review", href: "/admin/journal?show=review" },
+  ];
   const monthName = new Date(`${today}T12:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC", month: "long" });
 
   return (
     <div className="max-w-6xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-normal tracking-tight italic">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted">{InvoiceEmails.day(today)} · figures for {monthName} (Dubai time)</p>
-        </div>
-        <nav aria-label="Quick actions" className="flex flex-wrap gap-2">
-          {ACTIONS.map(([label, href], i) => (
-            <Link
-              key={href}
-              href={href}
-              className={i === 0 ? "h-9 rounded-md bg-gold px-3 py-2 text-sm font-medium text-canvas hover:bg-gold-bright" : "h-9 rounded-md border border-line px-3 py-2 text-sm text-muted hover:text-ink"}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={`${InvoiceEmails.day(today)} · money figures for ${monthName}, Dubai time`}
+        actions={ACTIONS.map(([label, href], i) => (
+          <Link key={href} href={href} className={i === 0 ? PRIMARY_ACTION : SECONDARY_ACTION}>
+            {label}
+          </Link>
+        ))}
+      />
 
-      <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <NeedsYou items={attention} />
+
+      <section aria-labelledby="today" className="mt-6 rounded-xl border border-line bg-surface p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="today" className="text-xs font-medium text-muted">
+            Today&rsquo;s sessions
+          </h2>
+          <Link href="/admin/schedule" className="text-xs text-quant hover:underline">
+            Schedule
+          </Link>
+        </div>
+        {!cal ? (
+          <p className="mt-3 text-sm text-muted">Cal.com is not configured.</p>
+        ) : todays.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No sessions today.</p>
+        ) : (
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {todays.map((s) => (
+              <li key={s.uid} className="flex items-center gap-3 rounded-lg border border-line px-3 py-2.5">
+                <span className="tabular-data text-lg text-quant">{TIME.format(new Date(s.start))}</span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm text-ink">{s.attendees[0]?.name ?? s.title}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {s.metadata?.course || s.title}
+                    {s.status === "pending" && <span className="text-gold"> · to confirm</span>}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <h2 className="mt-10 text-sm text-muted">Money and clients</h2>
+      <ul className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <li>
           <StatCard
             label={`Income · ${monthName}`}

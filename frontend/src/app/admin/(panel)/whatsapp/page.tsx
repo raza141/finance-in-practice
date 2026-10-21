@@ -22,6 +22,7 @@ import { WhatsAppClassPosts } from "@/domains/whatsapp/server/WhatsAppClassPosts
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
 import type { MessageRow } from "@/domains/whatsapp/types";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "WhatsApp" };
 
@@ -96,12 +97,10 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-3xl font-normal tracking-tight italic">WhatsApp</h1>
-      <p className="mt-2 text-sm text-muted">
-        Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, reminders the day before and an hour before,
-        invoices and receipts (with the PDF), one reminder 5 days after an invoice is due, and posts in private classes. Batch-class posts wait
-        below for you to choose who gets them. No messages 22:00–08:00 (Dubai) except the hour-before reminder.
-      </p>
+      <PageHeader
+        title="WhatsApp"
+        description="Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, reminders (the day before and an hour before), invoices and receipts with the PDF, one reminder 5 days after an invoice is due, and private-class posts. Batch-class posts wait below for you to choose who gets them. Quiet 22:00–08:00 (Dubai) except the hour-before reminder."
+      />
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
           {notice.text}

@@ -9,6 +9,7 @@ import { ServiceRepository } from "@/domains/catalogue/server/ServiceRepository"
 import { CatalogueContract } from "@/domains/catalogue/services/CatalogueContract";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Services" };
 
@@ -38,8 +39,7 @@ export default async function AdminServicesPage({ searchParams }: PageProps<"/ad
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-3xl font-normal tracking-tight italic">Services</h1>
-      <p className="mt-2 text-sm text-muted">What you sell, with a code, and the prices for each way it is billed. Documents copy them when a line is added.</p>
+      <PageHeader title="Services & prices" description="What you sell, with a code, and the prices for each way it is billed. Documents copy them when a line is added." />
 
       {!archived && (
         <details className="mt-8 rounded-lg border border-line p-5" open={services.length === 0 && !q}>

@@ -11,6 +11,7 @@ import { ClassroomSync, type ClassOverview } from "@/domains/classroom/server/Cl
 import { siteConfig } from "@/core/config/site";
 import { deleteBatch, openBatch, saveBatchLink } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Classroom" };
 
@@ -71,11 +72,15 @@ export default async function AdminClassroomPage({
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-3xl font-normal tracking-tight italic">Google Classroom</h1>
-      <p className="mt-2 text-sm text-muted">
-        Read only: the website shows each student what you post in Classroom (quizzes, homework, files, announcements), their to-do and the marks you
-        return. Mocks are the work under a topic named &ldquo;Mock exams&rdquo;. Updates appear within 5 minutes.
-      </p>
+      <PageHeader
+        title="Google Classroom"
+        description={
+          <>
+            Read only: each student&rsquo;s portal shows what you post in Classroom, their to-do and the marks you return. Mocks are the work under a topic
+            named &ldquo;Mock exams&rdquo;. Updates appear within 5 minutes.
+          </>
+        }
+      />
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
           {notice.text}

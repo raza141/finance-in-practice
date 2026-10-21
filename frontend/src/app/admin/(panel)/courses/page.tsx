@@ -8,6 +8,7 @@ import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseContract } from "@/domains/courses/services/CourseContract";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import { CoursePolicy } from "@/domains/courses/services/CoursePolicy";
+import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Courses" };
 
@@ -26,19 +27,15 @@ export default async function AdminCoursesPage() {
 
   return (
     <div className="max-w-6xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Courses</h1>
-        <Link
-          href="/admin/courses/new"
-          className="inline-flex h-10 items-center rounded-md bg-gold px-4 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright"
-        >
-          + New course
-        </Link>
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        Published courses are live at /courses/&lt;slug&gt;; drafts return “not found”. Changes appear on the site immediately.
-        {!canPublish && " As an editor you can create and edit drafts; an owner publishes them."}
-      </p>
+      <PageHeader
+        title="Courses"
+        description={`Published courses are live at /courses/<slug>; drafts return “not found”. Changes appear on the site immediately.${canPublish ? "" : " As an editor you can create and edit drafts; an owner publishes them."}`}
+        actions={
+          <Link href="/admin/courses/new" className={PRIMARY_ACTION}>
+            New course
+          </Link>
+        }
+      />
 
       {courses.length === 0 ? (
         <p className="mt-10 text-muted">No courses yet.</p>

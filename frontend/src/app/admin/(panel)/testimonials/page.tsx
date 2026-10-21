@@ -5,6 +5,7 @@ import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ModerationCard } from "@/domains/testimonials/components/ModerationCard";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
 import { TestimonialContract } from "@/domains/testimonials/services/TestimonialContract";
+import { PageHeader, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Testimonials" };
 
@@ -25,15 +26,15 @@ export default async function AdminTestimonialsPage({ searchParams }: PageProps<
 
   return (
     <div className="max-w-4xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Testimonials</h1>
-        <Link href="/testimonials/submit" className="text-sm text-quant hover:underline">
-          Public form ↗
-        </Link>
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        Only approved testimonials appear on the home page. Changes go live immediately.
-      </p>
+      <PageHeader
+        title="Testimonials"
+        description="Only approved testimonials appear on the home page. Changes go live immediately."
+        actions={
+          <Link href="/testimonials/submit" target="_blank" className={SECONDARY_ACTION}>
+            Open the public form
+          </Link>
+        }
+      />
 
       <nav aria-label="Filter by status" className="mt-6 flex gap-1 border-b border-line">
         {TestimonialContract.STATUSES.map((s) => (

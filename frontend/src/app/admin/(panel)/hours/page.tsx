@@ -13,6 +13,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 import { Capacity } from "@/domains/students/services/Capacity";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Hours & pay" };
 
@@ -46,24 +47,21 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-normal tracking-tight italic">Hours &amp; pay</h1>
-          <p className="mt-2 text-sm text-muted">
-            1-on-1 hours you taught each client in {MONTH.format(new Date(`${month}-01T00:00:00Z`))}, with your corrections, against what they pay. Group classes and the free
-            diagnostic are left out.
-          </p>
-        </div>
-        <form className="flex items-end gap-2">
-          <label className="text-xs text-muted">
-            Month
-            <input name="month" type="month" defaultValue={month} className={`${FIELD} mt-1 py-1.5`} />
-          </label>
-          <button type="submit" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
-            Show
-          </button>
-        </form>
-      </div>
+      <PageHeader
+        title="Hours & pay"
+        description={`1-on-1 hours you taught each client in ${MONTH.format(new Date(`${month}-01T00:00:00Z`))}, with your corrections, against what they pay. Group classes and the free diagnostic are left out.`}
+        actions={
+          <form className="flex items-end gap-2">
+            <label className="text-xs text-muted">
+              Month
+              <input name="month" type="month" defaultValue={month} className={`${FIELD} mt-1 py-1.5`} />
+            </label>
+            <button type="submit" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+              Show
+            </button>
+          </form>
+        }
+      />
 
       <p className="mt-6 text-lg text-ink">
         {hours(taught)} taught{booked > 0 && `, ${hours(booked)} still booked`}, across {rows.filter((r) => r.minutesTaught + r.minutesBooked > 0).length} students

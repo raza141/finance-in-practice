@@ -5,6 +5,7 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { setInstructorActive } from "@/domains/team/actions/instructors";
 import { InstructorRepository } from "@/domains/team/server/InstructorRepository";
+import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Instructors" };
 
@@ -22,16 +23,15 @@ export default async function AdminInstructorsPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Instructors</h1>
-        <Link
-          href="/admin/instructors/new"
-          className="inline-flex h-10 items-center rounded-md bg-gold px-4 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright"
-        >
-          + New instructor
-        </Link>
-      </div>
-      <p className="mt-2 text-sm text-muted">Published instructors appear on /about in this order. Changes appear immediately.</p>
+      <PageHeader
+        title="Instructors"
+        description="Published instructors appear on /about in this order. Changes appear immediately."
+        actions={
+          <Link href="/admin/instructors/new" className={PRIMARY_ACTION}>
+            New instructor
+          </Link>
+        }
+      />
 
       {instructors.length === 0 ? (
         <p className="mt-10 text-muted">No instructors yet.</p>

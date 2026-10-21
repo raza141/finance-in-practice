@@ -13,6 +13,7 @@ import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { DocumentType } from "@/domains/invoices/types";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+import { PageHeader, PRIMARY_ACTION, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -51,29 +52,30 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps<"/ad
 
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Billing</h1>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/admin/invoices/banks" className={LINK}>
-            Bank accounts
-          </Link>
-          <Link href="/admin/invoices/confirm" className={LINK}>
-            Send a confirmation
-          </Link>
-          <Link href="/admin/invoices/receipt" className={LINK}>
-            Quick receipt
-          </Link>
-          <Link href="/admin/invoices/new?type=quote" className={LINK}>
-            New quote
-          </Link>
-          <Link href="/admin/invoices/new" className="h-10 rounded-md bg-quant/15 px-4 py-2 text-sm font-medium text-quant hover:bg-quant/25">
-            New invoice
-          </Link>
-        </div>
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        Drafts stay private. Issuing assigns the next number for its type and freezes the document; corrections are a void and a new draft, or a credit note.
-      </p>
+      <PageHeader
+        title="Billing & quotes"
+        description="Drafts stay private. Issuing assigns the next number and freezes the document; corrections are a void and a new draft, or a credit note."
+        actions={
+          <>
+            <Link href="/admin/invoices/confirm" className={SECONDARY_ACTION}>
+              Send a confirmation
+            </Link>
+            <Link href="/admin/invoices/receipt" className={SECONDARY_ACTION}>
+              Quick receipt
+            </Link>
+            <Link href="/admin/invoices/new?type=quote" className={SECONDARY_ACTION}>
+              New quote
+            </Link>
+            <Link href="/admin/invoices/new" className={PRIMARY_ACTION}>
+              New invoice
+            </Link>
+          </>
+        }
+      >
+        <Link href="/admin/invoices/banks" className="mt-2 inline-block text-xs text-quant hover:underline">
+          Bank accounts
+        </Link>
+      </PageHeader>
       {query.notice === "recurring" && (
         <p role="status" className="mt-4 text-sm text-quant">
           {Number(query.count) > 0

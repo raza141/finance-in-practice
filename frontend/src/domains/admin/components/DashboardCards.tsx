@@ -6,7 +6,7 @@ import type { Currency } from "@/domains/invoices/types";
 
 import type { ChartBar } from "../services/DashboardMetrics";
 
-const LABEL = "block font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
+const LABEL = "block text-xs font-medium text-muted";
 
 /** One headline figure; the whole card links to where it is managed. */
 export function StatCard({ label, value, sub, href, tone = "ink" }: { label: string; value: ReactNode; sub?: ReactNode; href: string; tone?: "ink" | "gold" | "quant" }) {
@@ -63,5 +63,41 @@ export function IncomeChart({ currency, bars }: { currency: Currency; bars: read
         Paid invoices, {currency}. Peak {InvoiceMath.money(max === 1 ? 0 : max, currency)}.
       </figcaption>
     </figure>
+  );
+}
+
+export interface Attention {
+  count: number;
+  /** "bookings to confirm": read after the count. */
+  text: string;
+  href: string;
+}
+
+/** The dashboard's first row: only what needs the owner, each linking to where it's done. Gold means "needs you". */
+export function NeedsYou({ items }: { items: readonly Attention[] }) {
+  const open = items.filter((i) => i.count > 0);
+  return (
+    <section aria-labelledby="needs-you" className="mt-8">
+      <h2 id="needs-you" className="text-sm text-muted">
+        Needs you
+      </h2>
+      {open.length === 0 ? (
+        <p className="mt-2 rounded-xl border border-line bg-surface p-5 text-sm text-muted">Nothing is waiting on you right now.</p>
+      ) : (
+        <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {open.map((item) => (
+            <li key={item.href + item.text}>
+              <Link
+                href={item.href}
+                className="group flex h-full items-baseline gap-3 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3.5 transition-colors hover:border-gold/70 hover:bg-gold/10"
+              >
+                <span className="tabular-data text-2xl leading-none text-gold">{item.count}</span>
+                <span className="text-sm text-ink/90 group-hover:text-ink">{item.text}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

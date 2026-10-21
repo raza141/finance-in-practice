@@ -7,6 +7,7 @@ import { setQuestionSwitch } from "@/domains/questions/actions/questions";
 import { QuestionRepository } from "@/domains/questions/server/QuestionRepository";
 import { QuestionContract } from "@/domains/questions/services/QuestionContract";
 import { QuestionTaxonomy } from "@/domains/questions/services/QuestionTaxonomy";
+import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "CFA questions" };
 
@@ -49,16 +50,20 @@ export default async function AdminQuestionsPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">CFA questions</h1>
-        <Link href="/admin/questions/new" className="inline-flex h-10 items-center rounded-md bg-gold px-4 text-sm font-medium text-canvas">
-          New question
-        </Link>
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        The newest live question is the Question of the Day at <code>/cfa/question-of-the-day</code>. Schedule questions ahead: each goes live at its
-        time (GST) without you doing anything. In each LinkedIn post, link the question&rsquo;s own page (its permanent link, shown below).
-      </p>
+      <PageHeader
+        title="CFA questions"
+        description={
+          <>
+            The newest live question is the Question of the Day at <code>/cfa/question-of-the-day</code>. Schedule questions ahead: each goes live at its time
+            (GST) on its own. In each LinkedIn post, link the question&rsquo;s own page (its permanent link, below).
+          </>
+        }
+        actions={
+          <Link href="/admin/questions/new" className={PRIMARY_ACTION}>
+            New question
+          </Link>
+        }
+      />
 
       <div className="mt-6 grid gap-3">
         <Switch

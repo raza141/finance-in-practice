@@ -10,6 +10,8 @@ export interface InboxCounts {
   clients: number;
   /** Website bookings waiting for the owner to confirm or decline. */
   pendingBookings: number;
+  /** Students asking for more hours on their monthly allowance. */
+  hourRequests: number;
 }
 
 /** What needs the owner's attention, for the badges in the admin menu. */
@@ -37,11 +39,13 @@ export class AdminInbox {
     const [db, bookings] = await Promise.allSettled([
       sql
         ? (sql`
-            SELECT count(*)::int AS clients FROM (
-              SELECT id FROM clients WHERE seen_at IS NULL
-              UNION SELECT client_id FROM classroom_access WHERE status = 'requested'
-            ) waiting
-          ` as unknown as Promise<{ clients: number }[]>)
+            SELECT
+              (SELECT count(*)::int FROM (
+                SELECT id FROM clients WHERE seen_at IS NULL
+                UNION SELECT client_id FROM classroom_access WHERE status = 'requested'
+              ) waiting) AS clients,
+              (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests
+          ` as unknown as Promise<{ clients: number; hour_requests: number }[]>)
         : Promise.resolve([]),
       AdminInbox.pendingBookings(),
     ]);
@@ -51,6 +55,7 @@ export class AdminInbox {
     return {
       clients: row?.clients ?? 0,
       pendingBookings: bookings.status === "fulfilled" ? bookings.value : 0,
+      hourRequests: row?.hour_requests ?? 0,
     };
   }
 

@@ -7,6 +7,7 @@ import { removeVideo } from "@/domains/resources/actions/videos";
 import { VideoForm } from "@/domains/resources/components/VideoForm";
 import { VideoRepository } from "@/domains/resources/server/VideoRepository";
 import { YouTubeLink } from "@/domains/resources/services/YouTubeLink";
+import { PageHeader, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Videos" };
 
@@ -25,17 +26,20 @@ export default async function AdminVideosPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Videos</h1>
-        <Link href="/resources" className="text-sm text-quant hover:underline">
-          Resources page ↗
-        </Link>
-      </div>
-      <p className="mt-2 text-sm text-muted">
-        Upload to YouTube, then paste the link here: it shows on the Resources page straight away. Only a thumbnail loads until a
-        visitor presses play, so videos don&rsquo;t slow the site. For students only, post the video in Google Classroom instead:
-        &ldquo;Unlisted&rdquo; videos can still be watched by anyone who gets the link.
-      </p>
+      <PageHeader
+        title="Videos"
+        description={
+          <>
+            Upload to YouTube, then paste the link here: it shows on the Resources page straight away. For students only, post it in Google Classroom
+            instead: &ldquo;Unlisted&rdquo; videos can still be watched by anyone with the link.
+          </>
+        }
+        actions={
+          <Link href="/resources" target="_blank" className={SECONDARY_ACTION}>
+            Open the Resources page
+          </Link>
+        }
+      />
 
       <div className="mt-8">
         <VideoForm />

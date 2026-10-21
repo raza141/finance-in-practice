@@ -40,7 +40,7 @@ export function SessionLogEditor({
   const hidden = (name: string, value: string) => <input type="hidden" name={name} value={value} />;
 
   return (
-    <section id="sessions" className="mt-12 rounded-lg border border-line p-5">
+    <section id="sessions" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
       <h2 className="text-lg">Sessions &amp; hours</h2>
       <p className="mt-1 text-sm text-muted">
         To correct a session that ran longer or shorter than booked, open it on the{" "}

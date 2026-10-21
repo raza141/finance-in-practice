@@ -8,7 +8,7 @@ import type { StudyPlanItem } from "../types";
 /** The admin side of a student's study plan: what they see under "Your study plan" on /student. */
 export function StudyPlanEditor({ clientId, items }: { clientId: string; items: StudyPlanItem[] }) {
   return (
-    <section id="study-plan" className="mt-12 rounded-lg border border-line p-5">
+    <section id="study-plan" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
       <h2 className="text-lg">Study plan</h2>
       <p className="mt-1 text-sm text-muted">
         The student sees this timeline after signing in at /student. For materials, link a Google Drive file shared with their email, and only

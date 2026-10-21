@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { PasswordForm } from "@/domains/admin/components/PasswordForm";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -10,7 +11,7 @@ export default async function AdminAccountPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-3xl font-normal tracking-tight italic">Account</h1>
+      <PageHeader title="Account" description="Your sign-in details and password." />
 
       <dl className="mt-8 grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
         <dt className="text-muted">Name</dt>
@@ -22,7 +23,7 @@ export default async function AdminAccountPage() {
       </dl>
 
       <section aria-labelledby="password-heading" className="mt-10">
-        <h2 id="password-heading" className="font-mono text-xs tracking-[0.22em] text-muted uppercase">
+        <h2 id="password-heading" className="text-sm font-medium text-ink">
           {admin.hasPassword ? "Change password" : "Set a password"}
         </h2>
         <p className="mt-2 mb-5 text-sm text-muted">

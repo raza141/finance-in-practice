@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FIELD } from "@/domains/admin/components/FormField";
+import { PageHeader, PRIMARY_ACTION, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { AdminInbox } from "@/domains/admin/server/AdminInbox";
@@ -112,28 +113,114 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   const reason = typeof query.reason === "string" ? query.reason : null;
   const ledger = Ledger.running(entries);
 
+  const allowance =
+    bookings &&
+    Allowance.forDate({
+      agreements,
+      requests: hourRequests,
+      bookings: StudentSessions.applyLog(bookings, sessionLog),
+      manual: sessionLog.flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
+      date: today,
+      freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
+    });
+  // The closing balance per currency (never added across).
+  const balances = [...new Map(ledger.map((row) => [row.currency, row.balanceMinor])).entries()];
+  const agreement = agreements[0];
+  const pendingRequests = hourRequests.filter((r) => r.status === "pending").length;
+  const JUMPS = [
+    ["agreements", "Agreements"],
+    ["sessions", "Hours"],
+    ["account", "Account"],
+    ["documents", "Documents"],
+    ["study-plan", "Study plan"],
+    ["classroom", "Classroom"],
+    ["details", "Details"],
+  ] as const;
+
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       <Link href="/admin/clients" className="text-sm text-muted hover:text-ink">
         ← Clients
       </Link>
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">{client.name}</h1>
-        <div className="flex flex-wrap gap-3">
-          {/* Only enrolled students (a course) have a portal. */}
-          {client.courses.length > 0 && (
-            <Link href={`/admin/view-as/${client.id}`} className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
-              View as student
-            </Link>
-          )}
-          <Link href={`/admin/invoices/new?client=${client.id}&type=quote`} className="h-10 rounded-md border border-line px-4 py-2 text-sm text-muted hover:text-ink">
-            New quote
-          </Link>
-          <Link href={`/admin/invoices/new?client=${client.id}`} className="h-10 rounded-md bg-quant/15 px-4 py-2 text-sm font-medium text-quant hover:bg-quant/25">
-            New invoice
-          </Link>
-        </div>
+      <div className="mt-3">
+        <PageHeader
+          title={client.name}
+          description={[client.email, client.phone, client.courses.join(", ")].filter(Boolean).join(" · ")}
+          actions={
+            <>
+              {/* Only enrolled students (a course) have a portal. */}
+              {client.courses.length > 0 && (
+                <Link href={`/admin/view-as/${client.id}`} className={SECONDARY_ACTION}>
+                  View as student
+                </Link>
+              )}
+              <Link href={`/admin/invoices/new?client=${client.id}&type=quote`} className={SECONDARY_ACTION}>
+                New quote
+              </Link>
+              <Link href={`/admin/invoices/new?client=${client.id}`} className={PRIMARY_ACTION}>
+                New invoice
+              </Link>
+            </>
+          }
+        />
       </div>
+
+      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <dt className="text-xs text-muted">Balance</dt>
+          <dd className="tabular-data mt-1 text-lg">
+            {balances.length === 0
+              ? "Nothing issued"
+              : balances.map(([currency, minor]) => (
+                  <span key={currency} className={`block ${minor > 0 ? "text-gold" : "text-quant"}`}>
+                    {minor > 0 ? `${InvoiceMath.money(minor, currency)} to pay` : minor < 0 ? `${InvoiceMath.money(-minor, currency)} in credit` : "All paid"}
+                  </span>
+                ))}
+          </dd>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <dt className="text-xs text-muted">Agreement</dt>
+          <dd className="mt-1 text-sm">
+            {agreement ? (
+              <>
+                <span className="block text-ink">
+                  {InvoiceMath.money(agreement.rateMinor, agreement.currency)} {InvoiceContract.UNITS[agreement.unit].toLowerCase()}
+                  {agreement.hoursPerMonth !== null && ` · ${agreement.hoursPerMonth} h a month`}
+                </span>
+                <span className={`block text-xs ${agreement.acceptedAt ? "text-quant" : "text-gold"}`}>
+                  {agreement.acceptedAt ? "Accepted" : "Not accepted yet"}
+                  {agreement.endsOn && ` · ends ${InvoiceEmails.day(agreement.endsOn)}`}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">{InvoiceContract.planSummary(client) || "None: catalogue prices apply"}</span>
+            )}
+          </dd>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <dt className="text-xs text-muted">Hours this agreement month</dt>
+          <dd className="mt-1 text-sm">
+            {allowance ? (
+              <>
+                <span className={`tabular-data block text-lg ${allowance.leftMinutes < 0 ? "text-gold" : "text-ink"}`}>
+                  {Math.round(((allowance.takenMinutes + allowance.bookedMinutes) / 60) * 10) / 10} of {Math.round(((allowance.includedMinutes + allowance.extraMinutes) / 60) * 10) / 10} h
+                </span>
+                {pendingRequests > 0 && <span className="block text-xs text-gold">Asks for more hours</span>}
+              </>
+            ) : (
+              <span className="text-muted">No monthly hours limit</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+
+      <nav aria-label="Sections" className="sticky top-0 z-10 -mx-1 mt-5 flex gap-1 overflow-x-auto border-b border-line bg-canvas/95 px-1 py-2 backdrop-blur">
+        {JUMPS.map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="shrink-0 rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-raised hover:text-ink">
+            {label}
+          </a>
+        ))}
+      </nav>
 
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
@@ -142,137 +229,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         </p>
       )}
 
-      <div className="mt-8">
-        <ClientForm key={client.id} client={client} courses={courses.map((c) => c.title)} />
-      </div>
-
-      <StudyPlanEditor clientId={client.id} items={plan} />
-
-      <section id="classroom" className="mt-12 rounded-lg border border-line p-5">
-        <h2 className="text-lg">Google Classroom</h2>
-
-        <form action={saveClassroomEmail} className="mt-4 flex flex-wrap items-end gap-3">
-          <input type="hidden" name="clientId" value={client.id} />
-          <label className="min-w-64 flex-1 text-sm">
-            <span className="text-muted">Classroom email (only if they joined Classroom with another Google account)</span>
-            <input name="classroomEmail" type="email" defaultValue={classroomEmail ?? ""} placeholder={client.email} className={`${FIELD} mt-1`} />
-          </label>
-          <PendingButton pendingLabel="Saving…" className="h-10 rounded-md border border-line px-4 text-sm hover:border-quant/60">
-            Save
-          </PendingButton>
-        </form>
-        <form action={previewWeeklyEmail} className="mt-3 text-sm">
-          <input type="hidden" name="clientId" value={client.id} />
-          <span className="text-muted">Sunday &ldquo;week in class&rdquo; email: </span>
-          <PendingButton pendingLabel="Sending…" className="text-quant hover:underline">
-            Email me a preview
-          </PendingButton>
-        </form>
-
-        <h3 className="mt-5 text-sm font-semibold">Private classrooms (only this student)</h3>
-        <p className="mt-1 text-sm text-muted">
-          For mentorship and one-to-one subjects: create a class in Google Classroom, copy its invite link (Settings → Invite link) and add it here. It
-          shows in their portal straight away, no request needed.
-        </p>
-        {privateClasses.length > 0 && (
-          <ul className="mt-4 divide-y divide-line/60 text-sm">
-            {privateClasses.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
-                <span className="min-w-0 flex-1">
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-quant hover:underline">
-                    {c.title}
-                  </a>
-                  {c.note && <span className="block text-xs text-muted">{c.note}</span>}
-                </span>
-                <form action={removePrivateClassroom}>
-                  <input type="hidden" name="clientId" value={client.id} />
-                  <input type="hidden" name="id" value={c.id} />
-                  <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
-                    Remove
-                  </PendingButton>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-        <form action={addPrivateClassroom} className="mt-4 grid items-end gap-3 sm:grid-cols-2">
-          <input type="hidden" name="clientId" value={client.id} />
-          <label className="text-xs text-muted">
-            Class name
-            <input name="title" required maxLength={120} placeholder="e.g. AP Statistics" className={`${FIELD} mt-1`} />
-          </label>
-          <label className="text-xs text-muted">
-            Invite link
-            <input name="url" required type="url" placeholder="https://classroom.google.com/c/…" className={`${FIELD} mt-1`} />
-          </label>
-          <label className="text-xs text-muted sm:col-span-2">
-            One line for the student (optional)
-            <input name="note" maxLength={160} placeholder="e.g. Your notes, homework and practice tests" className={`${FIELD} mt-1`} />
-          </label>
-          <PendingButton pendingLabel="Adding…" className="h-9 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant hover:bg-quant/25 sm:justify-self-start">
-            Add private classroom
-          </PendingButton>
-        </form>
-
-        <h3 className="mt-8 border-t border-line pt-5 text-sm font-semibold">Course classrooms (shared with the batch)</h3>
-        <p className="mt-1 text-sm text-muted">
-          Exam courses (CFA, FRM) have one class per batch: pick theirs, and the class comes from that batch (Admin → Classroom → Batches). Other courses use the
-          Classroom link on the course page. Their portal shows the invite only after you approve it here.
-        </p>
-        {classrooms.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">None of this client&rsquo;s courses has a Classroom yet.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-line/60 text-sm">
-            {classrooms.map((c) => (
-              <li key={c.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
-                <span className="flex-1">
-                  {c.title}
-                  {c.batched && !c.hasClass && c.batch && c.batch !== Batches.NOT_SURE && <span className="ml-2 text-xs text-gold">batch has no class yet</span>}
-                </span>
-                {c.batched && (
-                  <form action={setClientBatch} className="flex items-center gap-2">
-                    <input type="hidden" name="clientId" value={client.id} />
-                    <input type="hidden" name="course" value={c.title} />
-                    <select name="batch" defaultValue={c.batch ?? ""} required aria-label={`${c.title} batch`} className="h-8 rounded-md border border-line bg-canvas px-2 text-xs">
-                      <option value="" disabled>
-                        Choose batch
-                      </option>
-                      {(batchCourses.find((b) => b.title === c.title)?.assignable ?? []).map((label) => (
-                        <option key={label} value={label}>
-                          {label}
-                        </option>
-                      ))}
-                      <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
-                    </select>
-                    <PendingButton pendingLabel="Saving…" className="h-8 rounded-md border border-line px-3 text-xs hover:bg-white/5">
-                      Save
-                    </PendingButton>
-                  </form>
-                )}
-                <span className={`text-xs ${c.access === "requested" ? "font-semibold text-gold" : c.access === "approved" ? "text-quant" : "text-muted"}`}>
-                  {{ none: "Not requested", requested: "Requested access", approved: "Has access", removed: "Access removed" }[c.access]}
-                </span>
-                <form action={decideClassroom}>
-                  <input type="hidden" name="clientId" value={client.id} />
-                  <input type="hidden" name="course" value={c.title} />
-                  <input type="hidden" name="status" value={c.access === "approved" ? "removed" : "approved"} />
-                  {c.access === "approved" ? (
-                    <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
-                      Remove access
-                    </PendingButton>
-                  ) : (
-                    <PendingButton pendingLabel="Approving…" className="h-8 rounded-md bg-quant/15 px-3 text-xs font-medium text-quant hover:bg-quant/25">
-                      Approve
-                    </PendingButton>
-                  )}
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section id="agreements" className="mt-12 rounded-lg border border-line p-5">
+      <section id="agreements" className="mt-8 scroll-mt-16 rounded-lg border border-line p-5">
         <h2 className="text-lg">Agreements</h2>
         <p className="mt-1 text-sm text-muted">
           An agreed rate for one service, basis and currency over dates. On a new document it is offered for that service, never applied without you picking it.
@@ -402,19 +359,10 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         log={sessionLog}
         today={today}
         requests={hourRequests}
-        allowance={
-          bookings &&
-          Allowance.forDate({
-            agreements,
-            requests: hourRequests,
-            bookings: StudentSessions.applyLog(bookings, sessionLog),
-            manual: sessionLog.flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
-            date: today,
-            freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
-          })
-        }
+        allowance={allowance}
       />
 
+      <section id="account" className="scroll-mt-16">
       <div className="mt-12 mb-4 flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-lg">Account</h2>
         <form action={`/admin/statement/${client.id}`} target="_blank" className="flex items-end gap-2">
@@ -460,7 +408,9 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           </table>
         </div>
       )}
+      </section>
 
+      <section id="documents" className="scroll-mt-16">
       <h2 className="mt-12 mb-4 text-lg">Documents</h2>
       {invoices.length === 0 ? (
         <p className="text-sm text-muted">No documents for this client yet.</p>
@@ -479,6 +429,140 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           ))}
         </ul>
       )}
+      </section>
+
+      <StudyPlanEditor clientId={client.id} items={plan} />
+
+      <section id="classroom" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
+        <h2 className="text-lg">Google Classroom</h2>
+
+        <form action={saveClassroomEmail} className="mt-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="clientId" value={client.id} />
+          <label className="min-w-64 flex-1 text-sm">
+            <span className="text-muted">Classroom email (only if they joined Classroom with another Google account)</span>
+            <input name="classroomEmail" type="email" defaultValue={classroomEmail ?? ""} placeholder={client.email} className={`${FIELD} mt-1`} />
+          </label>
+          <PendingButton pendingLabel="Saving…" className="h-10 rounded-md border border-line px-4 text-sm hover:border-quant/60">
+            Save
+          </PendingButton>
+        </form>
+        <form action={previewWeeklyEmail} className="mt-3 text-sm">
+          <input type="hidden" name="clientId" value={client.id} />
+          <span className="text-muted">Sunday &ldquo;week in class&rdquo; email: </span>
+          <PendingButton pendingLabel="Sending…" className="text-quant hover:underline">
+            Email me a preview
+          </PendingButton>
+        </form>
+
+        <h3 className="mt-5 text-sm font-semibold">Private classrooms (only this student)</h3>
+        <p className="mt-1 text-sm text-muted">
+          For mentorship and one-to-one subjects: create a class in Google Classroom, copy its invite link (Settings → Invite link) and add it here. It
+          shows in their portal straight away, no request needed.
+        </p>
+        {privateClasses.length > 0 && (
+          <ul className="mt-4 divide-y divide-line/60 text-sm">
+            {privateClasses.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <a href={c.url} target="_blank" rel="noreferrer" className="text-quant hover:underline">
+                    {c.title}
+                  </a>
+                  {c.note && <span className="block text-xs text-muted">{c.note}</span>}
+                </span>
+                <form action={removePrivateClassroom}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="id" value={c.id} />
+                  <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
+                    Remove
+                  </PendingButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={addPrivateClassroom} className="mt-4 grid items-end gap-3 sm:grid-cols-2">
+          <input type="hidden" name="clientId" value={client.id} />
+          <label className="text-xs text-muted">
+            Class name
+            <input name="title" required maxLength={120} placeholder="e.g. AP Statistics" className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted">
+            Invite link
+            <input name="url" required type="url" placeholder="https://classroom.google.com/c/…" className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted sm:col-span-2">
+            One line for the student (optional)
+            <input name="note" maxLength={160} placeholder="e.g. Your notes, homework and practice tests" className={`${FIELD} mt-1`} />
+          </label>
+          <PendingButton pendingLabel="Adding…" className="h-9 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant hover:bg-quant/25 sm:justify-self-start">
+            Add private classroom
+          </PendingButton>
+        </form>
+
+        <h3 className="mt-8 border-t border-line pt-5 text-sm font-semibold">Course classrooms (shared with the batch)</h3>
+        <p className="mt-1 text-sm text-muted">
+          Exam courses (CFA, FRM) have one class per batch: pick theirs, and the class comes from that batch (Admin → Classroom → Batches). Other courses use the
+          Classroom link on the course page. Their portal shows the invite only after you approve it here.
+        </p>
+        {classrooms.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">None of this client&rsquo;s courses has a Classroom yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line/60 text-sm">
+            {classrooms.map((c) => (
+              <li key={c.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
+                <span className="flex-1">
+                  {c.title}
+                  {c.batched && !c.hasClass && c.batch && c.batch !== Batches.NOT_SURE && <span className="ml-2 text-xs text-gold">batch has no class yet</span>}
+                </span>
+                {c.batched && (
+                  <form action={setClientBatch} className="flex items-center gap-2">
+                    <input type="hidden" name="clientId" value={client.id} />
+                    <input type="hidden" name="course" value={c.title} />
+                    <select name="batch" defaultValue={c.batch ?? ""} required aria-label={`${c.title} batch`} className="h-8 rounded-md border border-line bg-canvas px-2 text-xs">
+                      <option value="" disabled>
+                        Choose batch
+                      </option>
+                      {(batchCourses.find((b) => b.title === c.title)?.assignable ?? []).map((label) => (
+                        <option key={label} value={label}>
+                          {label}
+                        </option>
+                      ))}
+                      <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
+                    </select>
+                    <PendingButton pendingLabel="Saving…" className="h-8 rounded-md border border-line px-3 text-xs hover:bg-white/5">
+                      Save
+                    </PendingButton>
+                  </form>
+                )}
+                <span className={`text-xs ${c.access === "requested" ? "font-semibold text-gold" : c.access === "approved" ? "text-quant" : "text-muted"}`}>
+                  {{ none: "Not requested", requested: "Requested access", approved: "Has access", removed: "Access removed" }[c.access]}
+                </span>
+                <form action={decideClassroom}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="course" value={c.title} />
+                  <input type="hidden" name="status" value={c.access === "approved" ? "removed" : "approved"} />
+                  {c.access === "approved" ? (
+                    <PendingButton pendingLabel="Removing…" className="h-8 rounded-md border border-red-400/50 px-3 text-xs text-red-300 hover:bg-red-400/10">
+                      Remove access
+                    </PendingButton>
+                  ) : (
+                    <PendingButton pendingLabel="Approving…" className="h-8 rounded-md bg-quant/15 px-3 text-xs font-medium text-quant hover:bg-quant/25">
+                      Approve
+                    </PendingButton>
+                  )}
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <details id="details" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
+        <summary className="cursor-pointer text-sm text-quant">Edit details: name, contact, courses, payment plan</summary>
+        <div className="mt-5">
+          <ClientForm key={client.id} client={client} courses={courses.map((c) => c.title)} />
+        </div>
+      </details>
 
       <details className="mt-12 rounded-lg border border-red-400/30 p-5">
         <summary className="text-sm text-red-300/90">Delete this client…</summary>

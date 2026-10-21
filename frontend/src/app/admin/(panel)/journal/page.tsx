@@ -10,6 +10,7 @@ import { JournalDates } from "@/domains/journal/services/JournalDates";
 import { JournalFramework } from "@/domains/journal/services/JournalFramework";
 import { JournalTaxonomy } from "@/domains/journal/services/JournalTaxonomy";
 import type { ArticleListItem } from "@/domains/journal/types";
+import { PageHeader } from "@/domains/admin/components/PageHeader";
 
 export const metadata: Metadata = { title: "Blog" };
 
@@ -47,15 +48,13 @@ export default async function AdminJournalPage({ searchParams }: PageProps<"/adm
 
   return (
     <div className="max-w-6xl">
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-normal tracking-tight italic">Blog</h1>
-        <p className="text-sm text-muted">
-          {admin.role === "owner" ? "You publish directly; editors' articles wait for your review." : "Submit finished drafts for an owner to review."}
-        </p>
-      </div>
+      <PageHeader
+        title="Blog"
+        description={admin.role === "owner" ? "You publish directly; editors' articles wait for your review." : "Submit finished drafts for an owner to review."}
+      />
 
       <form action={createArticle} className="mt-6 rounded-xl border border-line bg-surface/50 p-5">
-        <p className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">New article: choose its format</p>
+        <p className="text-sm font-medium text-ink">New article: choose its format</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {JournalTaxonomy.FORMATS.map((format) => (
             <label key={format} className="cursor-pointer rounded-lg border border-line p-3 has-checked:border-quant has-checked:bg-quant/10">
