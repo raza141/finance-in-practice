@@ -683,6 +683,22 @@ export class InvoiceRepository {
     });
   }
 
+  /** Per saved client and currency, one Dubai month (YYYY-MM): what was invoiced (by issue date) and paid (by payment date). */
+  async monthByClient(month: string): Promise<{ clientId: string; currency: Currency; invoicedMinor: number; paidMinor: number }[]> {
+    if (!/^\d{4}-\d{2}$/.test(month)) return [];
+    const rows = (await this.sql`
+      SELECT client_id, currency, sum(invoiced)::bigint AS invoiced, sum(paid)::bigint AS paid FROM (
+        SELECT d.client_id, d.currency, d.total_minor AS invoiced, 0 AS paid FROM invoices d
+        WHERE d.client_id IS NOT NULL AND d.status IN ('sent', 'paid') AND to_char(d.issue_date, 'YYYY-MM') = ${month}
+          AND (d.doc_type = 'invoice' OR (d.doc_type = 'receipt' AND d.related_id IS NULL))
+        UNION ALL
+        SELECT i.client_id, i.currency, 0, p.amount_minor FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id
+        WHERE i.client_id IS NOT NULL AND to_char(p.paid_on, 'YYYY-MM') = ${month}
+      ) x GROUP BY client_id, currency
+    `) as { client_id: string; currency: Currency; invoiced: string; paid: string }[];
+    return rows.map((r) => ({ clientId: r.client_id, currency: r.currency, invoicedMinor: Number(r.invoiced), paidMinor: Number(r.paid) }));
+  }
+
   async logEvent(documentId: string, actor: string, event: string, detail = ""): Promise<void> {
     await this.sql`
       INSERT INTO document_events (document_id, actor, event, detail) VALUES (${documentId}, ${actor.slice(0, 120)}, ${event.slice(0, 40)}, ${detail.slice(0, 300)})

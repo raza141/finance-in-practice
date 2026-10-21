@@ -47,6 +47,9 @@ export class RegistrationContract {
     const batch = sittings ? text("batch") : "";
     if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
 
+    // The terms box on the form: registering records the version they accepted (StudentRepository.join).
+    if (text("acceptTerms") !== "yes") return { ok: false, error: "Please accept the terms and conditions." };
+
     // Honeypot: a hidden field people never fill. The route answers as usual and saves nothing.
     return { ok: true, value: { name, email, phone, course, batch }, spam: text("website") !== "" };
   }

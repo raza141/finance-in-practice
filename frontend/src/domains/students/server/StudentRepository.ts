@@ -51,6 +51,10 @@ export class StudentRepository {
    */
   async join(input: RegistrationInput): Promise<{ id: string; added: boolean }> {
     const result = await this.enrol(input);
+    // The form requires the terms box (RegistrationContract): record the live version they accepted.
+    await this.sql`
+      UPDATE clients SET terms_accepted_at = now(), terms_version = (SELECT id FROM site_terms ORDER BY created_at DESC LIMIT 1) WHERE id = ${result.id}
+    `;
     if (input.batch) {
       await this.sql`
         INSERT INTO client_batches (client_id, course, label) VALUES (${result.id}, ${input.course}, ${input.batch})

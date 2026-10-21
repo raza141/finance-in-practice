@@ -10,6 +10,10 @@ import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
+import { TermsRepository } from "@/domains/settings/server/TermsRepository";
+
+import { acceptTerms } from "../actions/account";
+import { HourRequestRepository } from "../server/HourRequestRepository";
 import { SessionLogRepository } from "../server/SessionLogRepository";
 import { StudentRepository } from "../server/StudentRepository";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
@@ -17,6 +21,7 @@ import { StudentAccount } from "../services/StudentAccount";
 import { StudentSessions } from "../services/StudentSessions";
 import type { Student, StudentAccountView, StudyPlanItem } from "../types";
 import { AccountPanel, AccountSummaryCard } from "./AccountPanel";
+import { BOOK_BUTTON } from "./buttons";
 import { ClassroomPanel } from "./ClassroomPanel";
 import { PortalOverview } from "./PortalOverview";
 import { StudentPortal } from "./StudentPortal";
@@ -35,7 +40,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
@@ -49,6 +54,8 @@ async function portalData(student: Student) {
     safely("plan", async () => (await ClientRepository.fromEnv()?.byId(student.id)) ?? null),
     safely("agreements", async () => (await AgreementRepository.fromEnv()?.forClient(student.id)) ?? []),
     safely("session log", async () => (await SessionLogRepository.fromEnv()?.forClient(student.id)) ?? []),
+    safely("hour requests", async () => (await HourRequestRepository.fromEnv()?.forClient(student.id)) ?? []),
+    safely("terms", async () => (await TermsRepository.fromEnv()?.acceptedCurrent(student.id)) ?? true),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -59,6 +66,7 @@ async function portalData(student: Student) {
         documents,
         bookings,
         agreements: agreements ?? [],
+        requests: requests ?? [],
         manual: (log ?? []).flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
         // The public booking link's event (NEXT_PUBLIC_CAL_LINK = user/slug) is the free diagnostic.
         freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
@@ -74,12 +82,14 @@ async function portalData(student: Student) {
     classes: classes ?? [],
     own: own ?? [],
     account,
+    // Unknown (database hiccup): don't nag.
+    termsAccepted: termsAccepted ?? true,
   };
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, classes, own, account } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -95,6 +105,24 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
 
   return (
     <div className="grid gap-6">
+      {!termsAccepted && (
+        <section role="status" className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-gold/10 p-5 text-sm">
+          <p className="text-ink">
+            Please review our{" "}
+            <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
+              terms and conditions
+            </a>{" "}
+            and accept them to keep booking.
+          </p>
+          {!readOnly && (
+            <form action={acceptTerms}>
+              <button type="submit" className={BOOK_BUTTON}>
+                I accept the terms
+              </button>
+            </form>
+          )}
+        </section>
+      )}
       <StudentPortal
         readOnly={readOnly}
         courses={courses}
@@ -103,7 +131,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         past={past}
         addresses={addresses}
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
-        account={<AccountPanel account={account} />}
+        account={<AccountPanel account={account} readOnly={readOnly} />}
         overview={
           <PortalOverview
             sessions={sessions}

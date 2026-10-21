@@ -4,9 +4,13 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import type { Agreement, ClientDocument, Currency, LedgerEntry } from "@/domains/invoices/types";
 
-import type { AccountAgreement, AccountMoney, AccountMonth, PrepaidBlock, StudentAccountView, StudentPlan } from "../types";
+import type { AccountAgreement, AccountMoney, AccountMonth, HourRequest, PrepaidBlock, StudentAccountView, StudentPlan } from "../types";
+import { Allowance } from "./Allowance";
 
-type AgreementLike = Pick<Agreement, "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope">;
+type AgreementLike = Pick<
+  Agreement,
+  "id" | "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope" | "hoursPerMonth" | "acceptedAt"
+>;
 
 /** The parts of a Cal.com booking the account reads. */
 interface BookingLike {
@@ -28,6 +32,8 @@ interface AccountSources {
   agreements?: readonly AgreementLike[];
   /** Sessions the owner logged by hand (never booked in Cal.com): 1-on-1 time, billable. */
   manual?: readonly { date: string; minutes: number }[];
+  /** Asks for more hours on a monthly allowance. */
+  requests?: readonly HourRequest[];
   /** The free diagnostic's event slug: studied, but never taken from paid hours. */
   freeSlug?: string;
   now?: Date;
@@ -44,7 +50,7 @@ export class StudentAccount {
   static readonly MONTHS = 6;
   static readonly PACE_MONTHS = 3;
 
-  static build({ entries, documents, bookings, plan, agreements = [], manual = [], freeSlug, now = new Date() }: AccountSources): StudentAccountView {
+  static build({ entries, documents, bookings, plan, agreements = [], manual = [], requests = [], freeSlug, now = new Date() }: AccountSources): StudentAccountView {
     const calendar = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE);
     const monthOf = (iso: string) => calendar.dateOf(new Date(iso)).slice(0, 7);
     const current = calendar.dateOf(now).slice(0, 7);
@@ -84,7 +90,7 @@ export class StudentAccount {
         if (b.status === "accepted" && ended) {
           taken.minutes += minutes;
           taken.sessions += 1;
-          if ((b.attendees?.length ?? 0) <= 1 && !(freeSlug && b.eventType?.slug === freeSlug)) {
+          if (Allowance.billable(b, freeSlug)) {
             billable.minutes += minutes;
             billable.sessions += 1;
           }
@@ -113,6 +119,12 @@ export class StudentAccount {
         if (a.startsOn.slice(0, 7) <= row.month && (!a.endsOn || row.month <= a.endsOn.slice(0, 7))) StudentAccount.add(row.agreed, a.currency, a.rateMinor);
       }
     }
+    // Hourly or per-session: what the 1-on-1 time taken comes to beyond what was invoiced, at this month's rate.
+    const coversNow = (a: AgreementLike) => a.startsOn.slice(0, 7) <= current && (!a.endsOn || current <= a.endsOn.slice(0, 7));
+    const nowAgreement = live.find((a) => (a.unit === "hour" || a.unit === "session") && coversNow(a));
+    const nowBasis = nowAgreement ? { unit: nowAgreement.unit, feeMinor: nowAgreement.rateMinor, currency: nowAgreement.currency } : plan;
+    const uninvoiced = taken ? StudentAccount.uninvoiced(nowBasis, documents ?? [], billable) : null;
+
     // The fee basis for next month: a monthly agreement covering it, any other live agreement, then the client's plan.
     const covers = (a: AgreementLike) => a.startsOn.slice(0, 7) <= nextMonth && (!a.endsOn || nextMonth <= a.endsOn.slice(0, 7));
     const basis = live.find((a) => a.unit === "month" && covers(a)) ?? live.find((a) => a.unit !== "month" && covers(a));
@@ -127,6 +139,8 @@ export class StudentAccount {
       prepaid: taken ? StudentAccount.prepaid(documents ?? [], billable) : [],
       plan,
       agreements: live.map((a) => StudentAccount.agreement(a, current)),
+      allowance: taken ? Allowance.forMonth({ agreements: live, requests, bookings: bookings ?? [], manual, month: current, freeSlug, now }) : null,
+      uninvoiced,
       next: {
         month: nextMonth,
         minutesBooked: next.minutesBooked,
@@ -176,6 +190,21 @@ export class StudentAccount {
       full.push(month);
     }
     return Math.round(full.reduce((sum, month) => sum + (takenByMonth.get(month) ?? 0), 0) / full.length);
+  }
+
+  /** Hours (or sessions) taken beyond those on their invoices, priced at the hourly or per-session rate; null when none or not billed that way. */
+  static uninvoiced(
+    basis: StudentPlan | null,
+    documents: readonly ClientDocument[],
+    taken: { minutes: number; sessions: number },
+  ): StudentAccountView["uninvoiced"] {
+    if (!basis || basis.feeMinor <= 0 || (basis.unit !== "hour" && basis.unit !== "session")) return null;
+    if (basis.unit === "hour") {
+      const minutes = taken.minutes - Math.round(documents.reduce((sum, d) => sum + d.hours, 0) * 60);
+      return minutes > 0 ? { unit: "hour", quantity: Math.round((minutes / 60) * 100) / 100, amountMinor: Math.round((minutes / 60) * basis.feeMinor), currency: basis.currency } : null;
+    }
+    const sessions = taken.sessions - documents.reduce((sum, d) => sum + d.sessions, 0);
+    return sessions > 0 ? { unit: "session", quantity: sessions, amountMinor: sessions * basis.feeMinor, currency: basis.currency } : null;
   }
 
   /** Hours or sessions their invoices billed (credit notes give back) against the billable ones taken. Only units that were billed show. */

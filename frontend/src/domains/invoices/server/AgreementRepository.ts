@@ -20,6 +20,8 @@ interface AgreementRow {
   schedule: string;
   scope: string;
   archived_at: Date | null;
+  hours_per_month: string | null;
+  accepted_at: Date | null;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,7 +29,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Dates as text so they stay YYYY-MM-DD regardless of the server's timezone.
 const SELECT = `
   SELECT a.id, a.client_id, a.service_id, s.code AS service_code, s.name AS service_name, a.unit, a.currency, a.rate_minor,
-    a.starts_on::text AS starts_on, a.ends_on::text AS ends_on, a.payment_terms, a.terms_days, a.schedule, a.scope, a.archived_at
+    a.starts_on::text AS starts_on, a.ends_on::text AS ends_on, a.payment_terms, a.terms_days, a.schedule, a.scope, a.archived_at,
+    a.hours_per_month, a.accepted_at
   FROM client_agreements a JOIN services s ON s.id = a.service_id`;
 
 /**
@@ -70,9 +73,9 @@ export class AgreementRepository {
   async create(clientId: string, input: AgreementInput): Promise<string | null> {
     if (!UUID.test(clientId)) return null;
     const [row] = (await this.sql`
-      INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, ends_on, payment_terms, terms_days, schedule, scope)
+      INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, ends_on, payment_terms, terms_days, schedule, scope, hours_per_month)
       SELECT ${clientId}, ${input.serviceId}, ${input.unit}, ${input.currency}, ${input.rateMinor}, ${input.startsOn}, ${input.endsOn},
-             ${input.paymentTerms}, ${input.termsDays}, ${input.schedule}, ${input.scope}
+             ${input.paymentTerms}, ${input.termsDays}, ${input.schedule}, ${input.scope}, ${input.hoursPerMonth}
       WHERE EXISTS (SELECT 1 FROM services WHERE id = ${input.serviceId} AND ${input.unit} = ANY (units))
       RETURNING id
     `) as { id: string }[];
@@ -84,6 +87,20 @@ export class AgreementRepository {
     if (!UUID.test(clientId) || !UUID.test(id)) return false;
     const rows = await this.sql`
       UPDATE client_agreements SET archived_at = now() WHERE id = ${id} AND client_id = ${clientId} AND archived_at IS NULL RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  /**
+   * The student accepts their own agreement in the portal, with the terms
+   * version they were shown (null before any version is published in admin).
+   * Only once, and only a live one of theirs.
+   */
+  async accept(clientId: string, id: string, termsVersion: string | null): Promise<boolean> {
+    if (!UUID.test(clientId) || !UUID.test(id)) return false;
+    const rows = await this.sql`
+      UPDATE client_agreements SET accepted_at = now(), accepted_terms = ${termsVersion}
+      WHERE id = ${id} AND client_id = ${clientId} AND archived_at IS NULL AND accepted_at IS NULL RETURNING id
     `;
     return rows.length > 0;
   }
@@ -105,6 +122,8 @@ export class AgreementRepository {
       schedule: row.schedule,
       scope: row.scope,
       archivedAt: row.archived_at,
+      hoursPerMonth: row.hours_per_month === null ? null : Number(row.hours_per_month),
+      acceptedAt: row.accepted_at,
     };
   }
 }

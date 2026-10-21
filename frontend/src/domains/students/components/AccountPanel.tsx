@@ -1,7 +1,8 @@
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { ClientDocument, Currency } from "@/domains/invoices/types";
 
-import type { AccountAgreement, AccountMoney, AccountMonth, StudentAccountView, StudentPlan } from "../types";
+import type { AccountAgreement, AccountMoney, AccountMonth, MonthAllowance, StudentAccountView, StudentPlan } from "../types";
+import { AcceptAgreementForm, RequestHoursForm } from "./AccountForms";
 import { BOOK_BUTTON, BUTTON } from "./buttons";
 import { TabButton } from "./StudentPortal";
 
@@ -10,6 +11,7 @@ const LABEL = "text-sm text-muted";
 const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 const MONTH_LONG = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const ACCEPTED = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Dubai" });
 const monthDate = (ym: string) => new Date(`${ym}-01T00:00:00Z`);
 
 /** "1.5 h"; "0 h" stays plain. */
@@ -42,7 +44,11 @@ export function AccountSummaryCard({ account }: { account: StudentAccountView | 
       {account && now ? (
         <>
           <p className="mt-2 text-xl font-semibold text-ink">
-            {account.taken ? `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}` : "Hours unavailable just now"}
+            {!account.taken
+              ? "Hours unavailable just now"
+              : account.allowance
+                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left in ${MONTH.format(monthDate(now.month))}`
+                : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`}
           </p>
           <p className="text-sm text-muted">
             {account.money.length === 0
@@ -71,11 +77,12 @@ export function AccountSummaryCard({ account }: { account: StudentAccountView | 
  * The portal's Account tab: what they owe, hours studied, what is left of
  * hours paid up front, a month-by-month record and a look at next month.
  */
-export function AccountPanel({ account }: { account: StudentAccountView | null }) {
+export function AccountPanel({ account, readOnly = false }: { account: StudentAccountView | null; readOnly?: boolean }) {
   if (!account) {
     return <p className={`${CARD} text-sm text-muted`}>Couldn&rsquo;t load your account right now. Please refresh in a minute.</p>;
   }
-  const { money, taken, prepaid, plan, next, months, documents, agreements } = account;
+  const { money, taken, prepaid, plan, next, months, documents, agreements, allowance, uninvoiced } = account;
+  const third = allowance ? <AllowanceCard allowance={allowance} readOnly={readOnly} /> : prepaid.length > 0 ? <Prepaid account={account} /> : null;
   return (
     <div className="grid gap-6">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -85,7 +92,14 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
           </h2>
           {money.length === 0 ? (
             <p className="mt-2 text-2xl font-semibold text-ink">No invoices yet</p>
-          ) : (
+          ) : null}
+          {uninvoiced && (
+            <p className="mt-3 text-sm text-muted">
+              {uninvoiced.quantity} {uninvoiced.unit === "hour" ? "h" : uninvoiced.quantity === 1 ? "session" : "sessions"} taken that no invoice covers yet
+              {money.every((m) => m.currency !== uninvoiced.currency) && `: ${InvoiceMath.money(uninvoiced.amountMinor, uninvoiced.currency)}`}.
+            </p>
+          )}
+          {money.length === 0 ? null : (
             money.map((m) => {
               const { text, tone } = balanceText(m);
               return (
@@ -96,6 +110,12 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
                     <dd className="text-right text-ink">{InvoiceMath.money(m.chargedMinor, m.currency)}</dd>
                     <dt className="text-muted">Paid</dt>
                     <dd className="text-right text-ink">{InvoiceMath.money(m.paidMinor, m.currency)}</dd>
+                    {uninvoiced && uninvoiced.currency === m.currency && (
+                      <>
+                        <dt className="text-muted">Not invoiced yet</dt>
+                        <dd className="text-right text-gold">{InvoiceMath.money(uninvoiced.amountMinor, uninvoiced.currency)}</dd>
+                      </>
+                    )}
                     {m.creditedMinor > 0 && (
                       <>
                         <dt className="text-muted">Credited back</dt>
@@ -130,64 +150,115 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
           )}
         </section>
 
-        {prepaid.length > 0 ? (
-          <section className={CARD} aria-labelledby="prepaid-heading">
-            <h2 id="prepaid-heading" className={LABEL}>
-              Left of what you paid for
-            </h2>
-            {prepaid.map((p) => {
-              const left = Math.round((p.billed - p.used) * 100) / 100;
-              const unit = p.unit === "hour" ? "h" : left === 1 ? "session" : "sessions";
-              const share = Math.min(1, Math.max(0, p.used / p.billed));
-              return (
-                <div key={p.unit} className="mt-2">
-                  <p className={`text-3xl font-semibold tabular-nums ${left < 0 ? "text-gold" : "text-ink"}`}>
-                    {left < 0 ? `${-left} ${unit} over` : `${left} ${unit}`}
-                  </p>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-line/60" role="img" aria-label={`${p.used} of ${p.billed} used`}>
-                    <div className="h-full rounded-full bg-quant" style={{ width: `${share * 100}%` }} />
-                  </div>
-                  <p className="mt-2 text-sm text-muted">
-                    {p.used} of {p.billed} {p.unit === "hour" ? "hours" : "sessions"} used
-                  </p>
-                </div>
-              );
-            })}
-          </section>
-        ) : (
-          <NextMonth next={next} plan={plan} />
-        )}
+        {third ?? <NextMonth next={next} plan={plan} />}
       </div>
 
-      {agreements.length > 0 && <Agreements agreements={agreements} current={months.at(-2)!.month} />}
+      {agreements.length > 0 && <Agreements agreements={agreements} current={months.at(-2)!.month} readOnly={readOnly} />}
 
       <MonthRecord months={months} known={taken !== null} />
 
-      <div className={`grid items-start gap-6 ${prepaid.length > 0 ? "lg:grid-cols-[22rem_1fr]" : ""}`}>
-        {prepaid.length > 0 && <NextMonth next={next} plan={plan} />}
+      <div className={`grid items-start gap-6 ${third ? "lg:grid-cols-[22rem_1fr]" : ""}`}>
+        {third && <NextMonth next={next} plan={plan} />}
         <Documents documents={documents} />
       </div>
     </div>
   );
 }
 
+/** Hours or sessions invoiced up front against those used. */
+function Prepaid({ account }: { account: StudentAccountView }) {
+  const { prepaid } = account;
+  return (
+      <section className={CARD} aria-labelledby="prepaid-heading">
+        <h2 id="prepaid-heading" className={LABEL}>
+          Left of what you paid for
+        </h2>
+        {prepaid.map((p) => {
+          const left = Math.round((p.billed - p.used) * 100) / 100;
+          const unit = p.unit === "hour" ? "h" : left === 1 ? "session" : "sessions";
+          const share = Math.min(1, Math.max(0, p.used / p.billed));
+          return (
+            <div key={p.unit} className="mt-2">
+              <p className={`text-3xl font-semibold tabular-nums ${left < 0 ? "text-gold" : "text-ink"}`}>
+                {left < 0 ? `${-left} ${unit} over` : `${left} ${unit}`}
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-line/60" role="img" aria-label={`${p.used} of ${p.billed} used`}>
+                <div className="h-full rounded-full bg-quant" style={{ width: `${share * 100}%` }} />
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                {p.used} of {p.billed} {p.unit === "hour" ? "hours" : "sessions"} used
+              </p>
+            </div>
+          );
+        })}
+      </section>
+  );
+}
+
+/** This month's hours on a monthly agreement: used, booked, left, and the way to ask for more. */
+function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; readOnly: boolean }) {
+  const total = allowance.includedMinutes + allowance.extraMinutes;
+  const share = (minutes: number) => `${Math.min(100, (minutes / Math.max(total, 1)) * 100)}%`;
+  const over = allowance.leftMinutes < 0;
+  const name = MONTH_LONG.format(monthDate(allowance.month)).split(" ")[0];
+  return (
+    <section className={CARD} aria-labelledby="allowance-heading">
+      <h2 id="allowance-heading" className={LABEL}>
+        Your hours in {name}
+      </h2>
+      <p className={`mt-2 text-3xl font-semibold tabular-nums ${over ? "text-gold" : "text-ink"}`}>
+        {over ? `${hoursOf(-allowance.leftMinutes)} over` : `${hoursOf(allowance.leftMinutes)} left`}
+      </p>
+      <div
+        className="mt-3 flex h-2 overflow-hidden rounded-full bg-line/60"
+        role="img"
+        aria-label={`${hoursOf(allowance.takenMinutes)} studied and ${hoursOf(allowance.bookedMinutes)} booked of ${hoursOf(total)}`}
+      >
+        <div className="h-full bg-quant" style={{ width: share(allowance.takenMinutes) }} />
+        <div className="h-full bg-gold/70" style={{ width: share(allowance.bookedMinutes) }} />
+      </div>
+      <p className="mt-2 text-sm text-muted">
+        {hoursOf(allowance.takenMinutes)} studied, {hoursOf(allowance.bookedMinutes)} booked, of {hoursOf(allowance.includedMinutes)} a month
+        {allowance.extraMinutes > 0 &&
+          ` + ${hoursOf(allowance.extraMinutes)} extra${allowance.extraBilledMinutes > 0 ? ` (${hoursOf(allowance.extraBilledMinutes)} to pay)` : ""}`}
+        . Unused hours don&rsquo;t carry over.
+      </p>
+      <div className="mt-4 border-t border-line/60 pt-4">
+        {allowance.pending ? (
+          <p className="text-sm text-gold">You asked for {allowance.pending.hours} more hours: waiting for your instructor.</p>
+        ) : (
+          <RequestHoursForm month={allowance.month} readOnly={readOnly} />
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** What was agreed with them: rate, dates (e.g. until the exam) and, for monthly fees, what is still to come. */
-function Agreements({ agreements, current }: { agreements: AccountAgreement[]; current: string }) {
+function Agreements({ agreements, current, readOnly }: { agreements: AccountAgreement[]; current: string; readOnly: boolean }) {
   return (
     <section className={`${CARD} sm:p-8`} aria-labelledby="agreement-heading">
       <h2 id="agreement-heading" className="text-2xl font-normal italic">
         {agreements.length === 1 ? "Your agreement" : "Your agreements"}
       </h2>
       <ul className="mt-4 divide-y divide-line/60">
-        {agreements.map((a, i) => (
-          <li key={i} className="grid gap-x-8 gap-y-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+        {agreements.map((a) => (
+          <li key={a.id} className="grid gap-x-8 gap-y-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
               <p className="text-lg text-ink">{a.serviceName}</p>
               <p className="text-sm text-muted">
                 <span className="text-ink tabular-nums">{InvoiceMath.money(a.rateMinor, a.currency)}</span> {PER[a.unit]}, from {DAY.format(new Date(`${a.startsOn}T00:00:00Z`))}
                 {a.endsOn ? ` to ${DAY.format(new Date(`${a.endsOn}T00:00:00Z`))}` : ", no end date"}
               </p>
+              {a.hoursPerMonth !== null && <p className="mt-1 text-sm text-ink">{a.hoursPerMonth} hours a month included</p>}
               {a.scope && <p className="mt-1 text-sm text-muted">{a.scope}</p>}
+              <div className="mt-3">
+                {a.acceptedAt ? (
+                  <p className="text-xs text-quant">Accepted on {ACCEPTED.format(a.acceptedAt)}</p>
+                ) : (
+                  <AcceptAgreementForm agreementId={a.id} readOnly={readOnly} />
+                )}
+              </div>
             </div>
             {a.monthsLeft !== null && a.remainingMinor !== null && (
               <div className="sm:text-right">

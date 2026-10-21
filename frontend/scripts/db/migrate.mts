@@ -1068,6 +1068,44 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX session_log_client_idx ON session_log (client_id)`,
     ],
   },
+  {
+    // Monthly allowances and acceptance. An agreement can include hours a month
+    // (unused hours don't carry over); the student accepts it in their portal,
+    // recorded with the terms version they saw. site_terms keeps every published
+    // version of the terms page (the newest is live). hour_requests: a student
+    // who used their allowance asks for more; the owner approves it as included
+    // ("free"), as extra to pay ("billed"), or declines.
+    id: "050_allowances_terms",
+    statements: [
+      `CREATE TABLE site_terms (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        body       text NOT NULL CHECK (char_length(body) BETWEEN 50 AND 40000),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        created_by uuid REFERENCES admin_users (id) ON DELETE SET NULL
+      )`,
+      `ALTER TABLE client_agreements
+        ADD COLUMN hours_per_month numeric(5, 2) CHECK (hours_per_month > 0 AND hours_per_month <= 300),
+        ADD COLUMN accepted_at timestamptz,
+        ADD COLUMN accepted_terms uuid REFERENCES site_terms (id) ON DELETE SET NULL`,
+      `ALTER TABLE clients
+        ADD COLUMN terms_accepted_at timestamptz,
+        ADD COLUMN terms_version uuid REFERENCES site_terms (id) ON DELETE SET NULL`,
+      `CREATE TABLE hour_requests (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id    uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        agreement_id uuid NOT NULL REFERENCES client_agreements (id) ON DELETE CASCADE,
+        month        text NOT NULL CHECK (month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+        hours        numeric(5, 2) NOT NULL CHECK (hours > 0 AND hours <= 100),
+        note         text NOT NULL DEFAULT '' CHECK (char_length(note) <= 300),
+        status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'free', 'billed', 'declined')),
+        created_at   timestamptz NOT NULL DEFAULT now(),
+        decided_at   timestamptz
+      )`,
+      `CREATE INDEX hour_requests_client_idx ON hour_requests (client_id, month)`,
+      // At most one open request per agreement and month: asking twice never doubles up.
+      `CREATE UNIQUE INDEX hour_requests_pending_idx ON hour_requests (agreement_id, month) WHERE status = 'pending'`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

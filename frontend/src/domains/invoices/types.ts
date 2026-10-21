@@ -111,6 +111,8 @@ export interface AgreementInput {
   schedule: string;
   /** Scope or included services. */
   scope: string;
+  /** Monthly agreements: hours included each month (unused hours don't carry over); null = no limit. */
+  hoursPerMonth: number | null;
 }
 
 export interface Agreement extends AgreementInput {
@@ -119,6 +121,8 @@ export interface Agreement extends AgreementInput {
   serviceCode: string;
   serviceName: string;
   archivedAt: Date | null;
+  /** When the student accepted it in their portal; null = not yet. */
+  acceptedAt: Date | null;
 }
 
 export type ApprovalMethod = "email" | "whatsapp" | "signed" | "verbal" | "other";

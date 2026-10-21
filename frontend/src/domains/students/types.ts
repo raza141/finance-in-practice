@@ -158,7 +158,10 @@ export interface SessionLogEntry {
 export type SessionLogInput = Omit<SessionLogEntry, "id">;
 
 /** An agreement as the student sees it. */
-export type AccountAgreement = Pick<Agreement, "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope"> & {
+export type AccountAgreement = Pick<
+  Agreement,
+  "id" | "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope" | "hoursPerMonth" | "acceptedAt"
+> & {
   /** Monthly with an end date: months after this one up to the end month (inclusive). */
   monthsLeft: number | null;
   remainingMinor: number | null;
@@ -175,6 +178,10 @@ export interface StudentAccountView {
   plan: StudentPlan | null;
   /** Live agreements (not ended before this month), newest first. */
   agreements: AccountAgreement[];
+  /** This month's hours on a monthly agreement with a limit; null without one (or when sessions couldn't be read). */
+  allowance: MonthAllowance | null;
+  /** Hourly or per-session: time taken that no invoice covers yet, at their rate. */
+  uninvoiced: { unit: "hour" | "session"; quantity: number; amountMinor: number; currency: Currency } | null;
   next: {
     month: string;
     minutesBooked: number;
@@ -186,4 +193,36 @@ export interface StudentAccountView {
   };
   /** Null when the documents couldn't be read. */
   documents: ClientDocument[] | null;
+}
+
+export type HourRequestStatus = "pending" | "free" | "billed" | "declined";
+
+/** A student's ask for more hours once their month's allowance is used (050_allowances_terms). */
+export interface HourRequest {
+  id: string;
+  agreementId: string;
+  /** YYYY-MM. */
+  month: string;
+  hours: number;
+  note: string;
+  /** "free": approved as included; "billed": approved as extra to pay. */
+  status: HourRequestStatus;
+  createdAt: Date;
+}
+
+/** One month of a monthly agreement's hours: included, extra approved, used (1-on-1 only) and left. */
+export interface MonthAllowance {
+  agreementId: string;
+  serviceName: string;
+  month: string;
+  includedMinutes: number;
+  /** Approved requests, included or billed. */
+  extraMinutes: number;
+  extraBilledMinutes: number;
+  takenMinutes: number;
+  /** Upcoming sessions this month. */
+  bookedMinutes: number;
+  /** Negative = over. */
+  leftMinutes: number;
+  pending: HourRequest | null;
 }

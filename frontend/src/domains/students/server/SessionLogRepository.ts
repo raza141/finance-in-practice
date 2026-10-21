@@ -33,6 +33,16 @@ export class SessionLogRepository {
     return rows.map((r) => ({ id: r.id, bookingUid: r.booking_uid, onDate: r.on_date, minutes: r.minutes, note: r.note }));
   }
 
+  /** Every client's log for one month's view: corrections for these bookings, and hand-logged days in `month` (YYYY-MM). */
+  async forBookingsAndMonth(bookingUids: readonly string[], month: string): Promise<(SessionLogEntry & { clientId: string })[]> {
+    if (!/^\d{4}-\d{2}$/.test(month)) return [];
+    const rows = (await this.sql`
+      SELECT id, client_id, booking_uid, on_date::text AS on_date, minutes, note FROM session_log
+      WHERE booking_uid = ANY (${[...bookingUids]}::text[]) OR to_char(on_date, 'YYYY-MM') = ${month}
+    `) as (LogRow & { client_id: string })[];
+    return rows.map((r) => ({ id: r.id, clientId: r.client_id, bookingUid: r.booking_uid, onDate: r.on_date, minutes: r.minutes, note: r.note }));
+  }
+
   /** A booking's real length replaces any earlier one; a hand-logged session is added. */
   async save(clientId: string, input: SessionLogInput): Promise<void> {
     if (!UUID.test(clientId)) return;

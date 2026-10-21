@@ -136,6 +136,16 @@ export function JoinForm({ courses, batches, email }: { courses: string[]; batch
             <input name="topic" required minLength={LIMITS.topic[0]} maxLength={LIMITS.topic[1]} placeholder="e.g. AP Statistics, corporate finance" className={FIELD} />
           </label>
         )}
+        <label className="flex items-start gap-2.5 text-sm text-ink/90">
+          <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
+          <span>
+            I accept the{" "}
+            <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
+              terms and conditions
+            </a>
+            .
+          </span>
+        </label>
         {/* Honeypot: hidden from people, filled by bots. */}
         <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       </fieldset>

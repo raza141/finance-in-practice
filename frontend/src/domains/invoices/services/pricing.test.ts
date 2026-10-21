@@ -44,6 +44,8 @@ const agreement: Agreement = {
   schedule: "",
   scope: "",
   archivedAt: null,
+  hoursPerMonth: null,
+  acceptedAt: null,
 };
 
 const line = (fields: Partial<InvoiceItem>): InvoiceItem => ({ description: "CFA Level I tutoring", unit: "month", quantity: 1, unitMinor: 150_000, amountMinor: 150_000, ...fields });

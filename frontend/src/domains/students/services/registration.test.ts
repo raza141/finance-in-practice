@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { RegistrationContract } from "./RegistrationContract";
 
 const COURSES = ["CFA Level I", "FRM Part I"];
-const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I" };
+const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", acceptTerms: "yes" };
 
 describe("RegistrationContract", () => {
   it("normalises a valid sign-up", () => {
@@ -36,6 +36,7 @@ describe("RegistrationContract", () => {
     ["a short phone", { phone: "12345" }],
     ["letters in the phone", { phone: "+971 call me" }],
     ["no name", { name: " " }],
+    ["the terms unticked", { acceptTerms: "" }],
   ])("refuses %s", (_, patch) => {
     expect(RegistrationContract.parse({ ...VALID, ...patch }, COURSES).ok).toBe(false);
   });

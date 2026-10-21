@@ -2,10 +2,11 @@ import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import type { CalBookingDetail } from "@/domains/booking/server/CalComClient";
 
+import { decideHourRequest } from "../actions/account";
 import { removeSessionLog, saveSessionLog } from "../actions/sessionLog";
 import { SessionLogContract } from "../services/SessionLogContract";
 import { StudentSessions } from "../services/StudentSessions";
-import type { SessionLogEntry } from "../types";
+import type { HourRequest, MonthAllowance, SessionLogEntry } from "../types";
 
 const WHEN = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" });
 const DAY = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -22,13 +23,20 @@ export function SessionLogEditor({
   bookings,
   log,
   today,
+  requests,
+  allowance,
 }: {
   clientId: string;
   /** Null: Cal.com couldn't be read. */
   bookings: CalBookingDetail[] | null;
   log: SessionLogEntry[];
   today: string;
+  requests: HourRequest[];
+  /** This month's hours on a monthly agreement with a limit; null without one. */
+  allowance: MonthAllowance | null;
 }) {
+  const pending = requests.filter((r) => r.status === "pending");
+  const decided = requests.filter((r) => r.status !== "pending").slice(0, 6);
   // Ended, accepted sessions, newest first (every one Cal.com returned).
   const past = StudentSessions.past(bookings ?? [], undefined, Infinity);
   const byUid = new Map(log.flatMap((l) => (l.bookingUid ? [[l.bookingUid, l] as const] : [])));
@@ -42,6 +50,48 @@ export function SessionLogEditor({
         Set the hours actually studied when a session ran longer or shorter than booked (0 if it didn&rsquo;t happen), and log sessions agreed outside
         Cal.com. Their Hours &amp; payments tab counts these hours; Cal.com is not changed.
       </p>
+
+      {allowance && (
+        <p className={`mt-4 text-sm ${allowance.leftMinutes < 0 ? "text-gold" : "text-ink"}`}>
+          This month: {hours(allowance.takenMinutes)} h studied + {hours(allowance.bookedMinutes)} h booked of {hours(allowance.includedMinutes)} h
+          {allowance.extraMinutes > 0 && ` + ${hours(allowance.extraMinutes)} h extra`} ·{" "}
+          {allowance.leftMinutes < 0 ? `${hours(-allowance.leftMinutes)} h over` : `${hours(allowance.leftMinutes)} h left`}
+        </p>
+      )}
+
+      {pending.map((r) => (
+        <div key={r.id} className="mt-4 rounded-md border border-gold/40 bg-gold/5 p-3 text-sm">
+          <p className="text-ink">
+            Asks for <strong>{r.hours} more hours</strong> in {r.month}
+            {r.note && <span className="text-muted"> · &ldquo;{r.note}&rdquo;</span>}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(
+              [
+                ["free", "Approve, included"],
+                ["billed", "Approve, extra to pay"],
+                ["declined", "Decline"],
+              ] as const
+            ).map(([status, label]) => (
+              <form key={status} action={decideHourRequest}>
+                {hidden("clientId", clientId)}
+                {hidden("requestId", r.id)}
+                {hidden("status", status)}
+                <PendingButton pendingLabel="Saving…" className={status === "declined" ? "h-9 px-3 text-sm text-red-300/90 hover:underline" : SMALL}>
+                  {label}
+                </PendingButton>
+              </form>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted">&ldquo;Extra to pay&rdquo; only marks it: add the hours to their next invoice.</p>
+        </div>
+      ))}
+      {decided.length > 0 && (
+        <p className="mt-3 text-xs text-muted">
+          Earlier requests:{" "}
+          {decided.map((r) => `${r.month} ${r.hours} h ${r.status === "free" ? "included" : r.status === "billed" ? "to pay" : "declined"}`).join(", ")}
+        </p>
+      )}
 
       {bookings === null ? (
         <p className="mt-4 text-sm text-gold">Couldn&rsquo;t load their Cal.com sessions just now.</p>

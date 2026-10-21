@@ -363,10 +363,15 @@ export class InvoiceContract {
     if (schedule.length > 200) errors.schedule = "Up to 200 characters.";
     const scope = text("scope");
     if (scope.length > 500) errors.scope = "Up to 500 characters.";
+    // Hours included a month: monthly agreements only; empty = no limit.
+    const hoursRaw = text("hoursPerMonth").replace(",", ".");
+    const hoursPerMonth = hoursRaw ? Number(hoursRaw) : null;
+    if (hoursRaw && (!/^\d+(\.\d{1,2})?$/.test(hoursRaw) || !hoursPerMonth || hoursPerMonth > 300)) errors.hoursPerMonth = "Hours a month: above 0, up to 300.";
+    else if (hoursPerMonth !== null && unit !== "month") errors.hoursPerMonth = "Hours included a month only apply to monthly agreements.";
     if (Object.keys(errors).length > 0 || typeof terms === "string" || !rateMinor) return { ok: false, errors };
     return {
       ok: true,
-      input: { serviceId, unit, currency, rateMinor, startsOn, endsOn: endsOn || null, paymentTerms: terms.terms, termsDays: terms.days, schedule, scope },
+      input: { serviceId, unit, currency, rateMinor, startsOn, endsOn: endsOn || null, paymentTerms: terms.terms, termsDays: terms.days, schedule, scope, hoursPerMonth },
     };
   }
 

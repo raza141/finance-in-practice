@@ -25,7 +25,10 @@ import { siteConfig } from "@/core/config/site";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { SessionLogEditor } from "@/domains/students/components/SessionLogEditor";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
+import { HourRequestRepository } from "@/domains/students/server/HourRequestRepository";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
+import { Allowance } from "@/domains/students/services/Allowance";
+import { StudentSessions } from "@/domains/students/services/StudentSessions";
 import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/actions/classroom";
 import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClientBatch } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
@@ -80,7 +83,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
   const classroomRepo = ClassroomRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail, batchCourses, bookings, sessionLog] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail, batchCourses, bookings, sessionLog, hourRequests] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
@@ -101,6 +104,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       console.error("admin: could not load the session log", error);
       return [];
     }),
+    HourRequestRepository.fromEnv()?.forClient(client.id) ?? [],
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
@@ -288,7 +292,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
                     {a.paymentTerms && ` · ${InvoiceContract.termsLabel(a.paymentTerms, a.termsDays)}`}
                     {a.schedule && ` · ${a.schedule}`}
                   </span>
+                  {a.hoursPerMonth !== null && <span className="block text-xs text-ink">{a.hoursPerMonth} h a month included</span>}
                   {a.scope && <span className="block text-xs text-muted">{a.scope}</span>}
+                  <span className={`block text-xs ${a.acceptedAt ? "text-quant" : "text-gold"}`}>
+                    {a.acceptedAt ? `Accepted in the portal ${InvoiceEmails.day(a.acceptedAt.toISOString().slice(0, 10))}` : "Waiting for the student to accept it in their portal"}
+                  </span>
                 </span>
                 <form action={endAgreement}>
                   <input type="hidden" name="clientId" value={client.id} />
@@ -372,6 +380,10 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
                 Billing schedule (optional)
                 <input name="schedule" maxLength={200} placeholder="e.g. Billed on the 1st of each month" className={`${FIELD} mt-1`} />
               </label>
+              <label className="text-xs text-muted">
+                Hours included a month (monthly only)
+                <input name="hoursPerMonth" inputMode="decimal" placeholder="e.g. 30" className={`${FIELD} mt-1`} />
+              </label>
               <label className="text-xs text-muted sm:col-span-2">
                 Scope / included (optional)
                 <input name="scope" maxLength={500} placeholder="e.g. 8 sessions a month, mock exams included" className={`${FIELD} mt-1`} />
@@ -384,7 +396,24 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         )}
       </section>
 
-      <SessionLogEditor clientId={client.id} bookings={bookings} log={sessionLog} today={today} />
+      <SessionLogEditor
+        clientId={client.id}
+        bookings={bookings}
+        log={sessionLog}
+        today={today}
+        requests={hourRequests}
+        allowance={
+          bookings &&
+          Allowance.forMonth({
+            agreements,
+            requests: hourRequests,
+            bookings: StudentSessions.applyLog(bookings, sessionLog),
+            manual: sessionLog.flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
+            month: today.slice(0, 7),
+            freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
+          })
+        }
+      />
 
       <div className="mt-12 mb-4 flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-lg">Account</h2>

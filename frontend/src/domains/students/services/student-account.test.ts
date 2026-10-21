@@ -131,7 +131,7 @@ describe("StudentAccount", () => {
   });
 
   describe("agreements", () => {
-    const cfa = { serviceName: "CFA Level I tuition", unit: "month" as const, rateMinor: 300_000, currency: "AED" as const, scope: "" };
+    const cfa = { id: "a1", serviceName: "CFA Level I tuition", unit: "month" as const, rateMinor: 300_000, currency: "AED" as const, scope: "", hoursPerMonth: null, acceptedAt: null };
 
     it("shows the agreed fee in each covered month, months left to the exam and what is still to come", () => {
       const view = StudentAccount.build({
@@ -180,5 +180,18 @@ describe("StudentAccount", () => {
     expect(view.taken).toEqual({ minutes: 180, sessions: 2 });
     expect(view.months.at(-2)).toMatchObject({ minutesTaken: 180, sessionsTaken: 2 });
     expect(view.prepaid).toEqual([{ unit: "hour", billed: 10, used: 3 }]);
+  });
+
+  it("prices 1-on-1 hours beyond the invoiced ones at the hourly rate, as not invoiced yet", () => {
+    const sources = {
+      entries: [],
+      bookings: [booking("2026-10-01T10:00:00Z", 2), booking("2026-10-08T10:00:00Z", 3), booking("2026-10-28T10:00:00Z", 3)],
+      plan: { unit: "hour" as const, feeMinor: 30_000, currency: "AED" as const },
+      now: NOW,
+    };
+    // 5 h taken (the 28th hasn't happened), 2 invoiced: 3 h x AED 300.
+    expect(StudentAccount.build({ ...sources, documents: [doc({ hours: 2 })] }).uninvoiced).toEqual({ unit: "hour", quantity: 3, amountMinor: 90_000, currency: "AED" });
+    expect(StudentAccount.build({ ...sources, documents: [doc({ hours: 5 })] }).uninvoiced).toBeNull();
+    expect(StudentAccount.build({ ...sources, documents: [], plan: { unit: "month", feeMinor: 300_000, currency: "AED" } }).uninvoiced).toBeNull();
   });
 });

@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { LegalPage, type LegalSection } from "@/core/components/ui/LegalPage";
 import { siteConfig } from "@/core/config/site";
+import { TermsRepository, type TermsVersion } from "@/domains/settings/server/TermsRepository";
+import { TermsText } from "@/domains/settings/services/TermsText";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -12,9 +14,22 @@ export const metadata: Metadata = {
 
 const UPDATED = "11 October 2026";
 
+const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Dubai" });
+
+/** The newest version published in admin (Settings → Terms), or null: the built-in text below applies. */
+async function published(): Promise<TermsVersion | null> {
+  try {
+    return (await TermsRepository.fromEnv()?.latest()) ?? null;
+  } catch (error) {
+    console.error("terms: could not load the published version", error);
+    return null;
+  }
+}
+
 // Payment, rescheduling and scope mirror the default invoice terms (SettingsContract.INVOICE_TERMS); change both together.
-export default function TermsPage() {
+export default async function TermsPage() {
   const { whatsapp } = siteConfig.contact;
+  const version = await published();
 
   const sections: LegalSection[] = [
     {
@@ -137,17 +152,38 @@ export default function TermsPage() {
     },
   ];
 
+  const live: LegalSection[] | null = version
+    ? TermsText.parse(version.body).map((section) => ({
+        heading: section.heading,
+        body: (
+          <>
+            {section.blocks.map((block, i) =>
+              block.kind === "p" ? (
+                <p key={i}>{block.text}</p>
+              ) : (
+                <ul key={i}>
+                  {block.items.map((item, j) => (
+                    <li key={j}>{item}</li>
+                  ))}
+                </ul>
+              ),
+            )}
+          </>
+        ),
+      }))
+    : null;
+
   return (
     <LegalPage
       title="Terms of Service"
-      updated={UPDATED}
+      updated={version ? DAY.format(version.createdAt) : UPDATED}
       intro={
         <p>
           Plain terms for 1-on-1 tutoring. How we handle your data is in our{" "}
           <Link href="/privacy" className="text-quant underline underline-offset-2">Privacy Policy</Link>.
         </p>
       }
-      sections={sections}
+      sections={live ?? sections}
     />
   );
 }
