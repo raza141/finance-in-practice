@@ -96,7 +96,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       console.error("admin: could not load Cal.com sessions", error);
       return null;
     }),
-    SessionLogRepository.fromEnv()?.forClient(client.id) ?? [],
+    // Never takes the client page down (e.g. before 049_session_log is applied).
+    (SessionLogRepository.fromEnv()?.forClient(client.id) ?? Promise.resolve([])).catch((error) => {
+      console.error("admin: could not load the session log", error);
+      return [];
+    }),
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
