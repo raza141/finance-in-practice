@@ -96,9 +96,10 @@ export class PackageRepository {
    * and a priced package starts a new one (billed as the package bills), sent to
    * their portal to accept. Custom starts none: the owner agrees it and sends the
    * agreement. An open request closes. `firstOnly` (registration): only when they
-   * have no package yet, so a second course never replaces it. Null when nothing changed.
+   * have no package yet, so a second course never replaces it. `priceMinor`: an agreed
+   * price for this client in place of the package's. Null when nothing changed.
    */
-  async assign(clientId: string, packageId: string, startsOn: string, { firstOnly = false } = {}): Promise<Package | null> {
+  async assign(clientId: string, packageId: string, startsOn: string, { firstOnly = false, priceMinor = null }: { firstOnly?: boolean; priceMinor?: number | null } = {}): Promise<Package | null> {
     if (!UUID.test(clientId) || !UUID.test(packageId)) return null;
     const changed = await this.sql`
       UPDATE clients SET package_id = ${packageId}, requested_package_id = NULL, package_requested_at = NULL, updated_at = now()
@@ -113,7 +114,7 @@ export class PackageRepository {
       `,
       this.sql`
         INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, scope, hours_per_month)
-        SELECT ${clientId}, s.id, p.billing, p.currency, p.price_minor, ${startsOn},
+        SELECT ${clientId}, s.id, p.billing, p.currency, COALESCE(${priceMinor}::integer, p.price_minor), ${startsOn},
                p.name || CASE p.billing WHEN 'hour' THEN ': by the hour' WHEN 'month' THEN ': ' || p.hours || ' live hours a month' ELSE ': ' || p.hours || ' live hours' END,
                p.hours
         FROM packages p, services s

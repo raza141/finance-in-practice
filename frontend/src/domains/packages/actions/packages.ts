@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
+import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
@@ -73,6 +74,8 @@ export async function applyPackage(formData: FormData): Promise<void> {
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const raw = String(formData.get("startsOn") ?? "");
   const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(raw) && raw <= today ? raw : today;
-  const applied = await repo.assign(clientId, packageId, startsOn);
+  // An agreed price for this client (more or less than the package); blank keeps the package's.
+  const priceMinor = InvoiceMath.parseMajor(String(formData.get("price") ?? ""));
+  const applied = await repo.assign(clientId, packageId, startsOn, { priceMinor: priceMinor || null });
   redirect(`/admin/clients/${clientId}?notice=${applied ? "package-applied" : "package-refused"}`);
 }
