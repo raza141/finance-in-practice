@@ -82,6 +82,31 @@ export class AgreementRepository {
     return row?.id ?? null;
   }
 
+  /**
+   * The agreement an accepted quote creates, already accepted (with the terms
+   * version). Once per quote: accepting again changes nothing. Null when the
+   * service doesn't offer that basis.
+   */
+  async createFromQuote(clientId: string, input: AgreementInput, quoteId: string, termsVersion: string | null): Promise<string | null> {
+    if (!UUID.test(clientId) || !UUID.test(quoteId)) return null;
+    const [row] = (await this.sql`
+      INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, ends_on, payment_terms, terms_days, schedule, scope,
+                                     hours_per_month, quote_id, accepted_at, accepted_terms)
+      SELECT ${clientId}, ${input.serviceId}, ${input.unit}, ${input.currency}, ${input.rateMinor}, ${input.startsOn}, ${input.endsOn},
+             ${input.paymentTerms}, ${input.termsDays}, ${input.schedule}, ${input.scope}, ${input.hoursPerMonth}, ${quoteId}, now(), ${termsVersion}
+      WHERE EXISTS (SELECT 1 FROM services WHERE id = ${input.serviceId} AND ${input.unit} = ANY (units))
+      ON CONFLICT (quote_id) WHERE quote_id IS NOT NULL DO NOTHING
+      RETURNING id
+    `) as { id: string }[];
+    return row?.id ?? null;
+  }
+
+  /** A revised quote was accepted: the agreement the earlier version created ends. */
+  async archiveFromQuote(clientId: string, quoteId: string): Promise<void> {
+    if (!UUID.test(clientId) || !UUID.test(quoteId)) return;
+    await this.sql`UPDATE client_agreements SET archived_at = now() WHERE client_id = ${clientId} AND quote_id = ${quoteId} AND archived_at IS NULL`;
+  }
+
   /** Ends an agreement: it is no longer offered on new documents. */
   async archive(clientId: string, id: string): Promise<boolean> {
     if (!UUID.test(clientId) || !UUID.test(id)) return false;

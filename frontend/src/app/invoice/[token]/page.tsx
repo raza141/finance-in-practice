@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { DocumentView } from "@/domains/invoices/components/DocumentView";
 import { OnePagePrint } from "@/domains/invoices/components/OnePagePrint";
 import { PrintButton } from "@/domains/invoices/components/PrintButton";
+import { QuoteAcceptPanel } from "@/domains/invoices/components/QuoteAcceptPanel";
 import { ViewBeacon } from "@/domains/invoices/components/ViewBeacon";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { DocumentAccess } from "@/domains/invoices/services/DocumentAccess";
 import { DocumentFormat } from "@/domains/invoices/services/DocumentFormat";
+import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
+import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 
 // Holds a client's personal data: never indexed, and the secret URL never leaks as a referrer.
@@ -46,6 +50,17 @@ export default async function PublicDocumentPage({ params }: PageProps<"/invoice
         <PrintButton className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-700" />
       </div>
       <DocumentView doc={doc} settings={settings} />
+      {/* A sent quote, still valid (Dubai date): the client accepts it here. */}
+      {doc.docType === "quote" && doc.status === "sent" && doc.dueDate >= new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today() && (
+        <div className="mx-auto mt-6 max-w-3xl">
+          <QuoteAcceptPanel token={doc.token} agreement={doc.agreement !== null} />
+        </div>
+      )}
+      {doc.docType === "quote" && doc.status === "accepted" && doc.acceptance && (
+        <p className="mx-auto mt-6 max-w-3xl rounded-md bg-emerald-50 p-4 text-sm text-emerald-800 print:hidden">
+          Accepted by {doc.acceptance.approver} on {InvoiceEmails.day(doc.acceptance.acceptedAt.toISOString().slice(0, 10))}.
+        </p>
+      )}
       <ViewBeacon token={doc.token} />
     </div>
   );

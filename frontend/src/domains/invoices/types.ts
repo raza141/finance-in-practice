@@ -93,6 +93,18 @@ export interface InvoiceInput {
   sections: ConsultancySections;
   /** Repeats monthly: "Create this month's drafts" copies it forward. */
   recurring: boolean;
+  /** Quotes only: the quote is an agreement; accepting it online creates the client agreement. */
+  agreement: QuoteAgreement | null;
+}
+
+/** What a quote agrees beyond its lines: when it runs and the hours included a month (051_quote_agreements). */
+export interface QuoteAgreement {
+  /** YYYY-MM-DD. */
+  startsOn: string;
+  /** YYYY-MM-DD, e.g. the exam date; null = open. */
+  endsOn: string | null;
+  /** Monthly lines: hours included each month (unused hours don't carry over); null = no limit. */
+  hoursPerMonth: number | null;
 }
 
 /** An agreed rate for one client, service, basis and currency over dates (migration 032). */
@@ -125,7 +137,7 @@ export interface Agreement extends AgreementInput {
   acceptedAt: Date | null;
 }
 
-export type ApprovalMethod = "email" | "whatsapp" | "signed" | "verbal" | "other";
+export type ApprovalMethod = "email" | "whatsapp" | "signed" | "verbal" | "other" | "online";
 
 /** How a quote was accepted, recorded by hand. A link is a pointer to evidence, never proof by itself. */
 export interface QuoteAcceptanceInput {

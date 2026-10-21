@@ -281,6 +281,7 @@ export async function logShare(id: string, channel: ShareChannel): Promise<void>
 async function paymentReceipt(repo: InvoiceRepository, invoice: Invoice, paymentId: string, amountMinor: number, paidOn: string, settings: BillingSettings): Promise<void> {
   const id = await repo.createDraft(
     {
+      agreement: null,
       docType: "receipt",
       relatedId: invoice.id,
       bookingUid: null,
@@ -399,6 +400,8 @@ async function copyAsDraft(repo: InvoiceRepository, source: Invoice, mode: CopyM
           ? ZonedCalendar.addDays(today(), 14)
           : source.dueDate;
   const input: InvoiceInput = {
+    // A revised quote keeps its agreement block; an invoice made from it doesn't.
+    agreement: docType === "quote" ? source.agreement : null,
     docType,
     relatedId: mode === "invoice-from-quote" || mode === "credit-note" ? source.id : null,
     bookingUid: nextMonth ? null : source.bookingUid,
@@ -571,6 +574,7 @@ export async function saveQuickReceipt(_state: QuickReceiptFormState, formData: 
   const unitMinor = Math.round((payment.amountMinor * 10_000) / (10_000 + taxRateBp));
   const input = applyVat(
     {
+      agreement: null,
       docType: "receipt",
       relatedId: null,
       bookingUid: null,

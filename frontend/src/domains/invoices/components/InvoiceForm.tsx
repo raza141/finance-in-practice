@@ -72,6 +72,7 @@ export function InvoiceForm({
   const isInvoice = docType === "invoice";
   const isCredit = docType === "credit_note";
   const isQuote = docType === "quote";
+  const [isAgreement, setIsAgreement] = useState(initial.agreement !== null);
   const [state, action, saving] = useActionState<InvoiceFormState, FormData>(saveInvoice, {});
   // Disabled until hydrated, or text typed before hydration is overwritten by the initial state.
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
@@ -391,6 +392,40 @@ export function InvoiceForm({
           {errors.sections && (
             <p role="alert" className="text-xs text-gold sm:col-span-2">
               {errors.sections}
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {isQuote && (
+        <fieldset disabled={pending} className="grid gap-4 rounded-lg border border-line p-4 sm:grid-cols-3">
+          <legend className="px-1 text-sm text-quant">Agreement</legend>
+          <label className="flex items-start gap-2.5 text-sm sm:col-span-3">
+            <input type="checkbox" name="isAgreement" checked={isAgreement} onChange={(e) => setIsAgreement(e.target.checked)} className="mt-0.5 accent-quant" />
+            <span>
+              This quote is an agreement
+              <span className="block text-xs text-muted">
+                The client accepts it online from the quote link, with your terms and conditions; their agreement is created from it (the monthly line&rsquo;s
+                service and rate). To change it later, revise the quote and send the new version.
+              </span>
+            </span>
+          </label>
+          {isAgreement && (
+            <>
+              <Field label="Starts on">
+                <input name="agreementStartsOn" type="date" required defaultValue={initial.agreement?.startsOn ?? today} className={FIELD} />
+              </Field>
+              <Field label="Ends on (optional)" hint="e.g. the exam date">
+                <input name="agreementEndsOn" type="date" defaultValue={initial.agreement?.endsOn ?? ""} className={FIELD} />
+              </Field>
+              <Field label="Hours included a month (optional)" hint="Monthly lines; unused hours don't carry over">
+                <input name="agreementHours" inputMode="decimal" placeholder="e.g. 30" defaultValue={initial.agreement?.hoursPerMonth ?? ""} className={FIELD} />
+              </Field>
+            </>
+          )}
+          {errors.agreement && (
+            <p role="alert" className="text-xs text-gold sm:col-span-3">
+              {errors.agreement}
             </p>
           )}
         </fieldset>

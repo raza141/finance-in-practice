@@ -360,7 +360,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
                   <label className="text-xs text-muted">
                     How
                     <select name="method" defaultValue="whatsapp" className={`${FIELD} mt-1`}>
-                      {Object.entries(InvoiceContract.APPROVAL_METHODS).map(([value, name]) => (
+                      {Object.entries(InvoiceContract.APPROVAL_METHODS).filter(([value]) => value !== "online").map(([value, name]) => (
                         <option key={value} value={value}>
                           {name}
                         </option>

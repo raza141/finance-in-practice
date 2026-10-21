@@ -28,6 +28,7 @@ import type {
   PaymentTerms,
   QuoteAcceptance,
   QuoteAcceptanceInput,
+  QuoteAgreement,
 } from "../types";
 
 interface InvoiceRow {
@@ -65,6 +66,7 @@ interface InvoiceRow {
   layout: DocumentLayout;
   sections: Partial<ConsultancySections>;
   recurring: boolean;
+  agreement: QuoteAgreement | null;
   recurs_from: string | null;
   supersedes_id: string | null;
   supersedes_number: string | null;
@@ -276,14 +278,14 @@ export class InvoiceRepository {
       INSERT INTO invoices (token, doc_type, related_id, booking_uid, client_id, client_name, client_email, client_phone, client_address,
                             currency, items, subtotal_minor, discount_minor, tax_rate_bp, tax_minor, total_minor, trn,
                             due_date, notes, payment_instructions, bank_account_id, bank, payment_terms, terms_days, payment_link, layout,
-                            sections, recurring, recurs_from, supersedes_id)
+                            sections, recurring, recurs_from, supersedes_id, agreement)
       VALUES (${randomBytes(32).toString("base64url")}, ${input.docType}, ${input.relatedId}, ${input.bookingUid}, ${input.clientId},
               ${input.clientName}, ${input.clientEmail}, ${input.clientPhone}, ${input.clientAddress}, ${input.currency},
               ${JSON.stringify(input.items)}::jsonb, ${t.subtotalMinor}, ${t.discountMinor}, ${input.taxRateBp},
               ${t.taxMinor}, ${t.totalMinor}, ${input.trn}, ${input.dueDate}, ${input.notes},
               ${input.paymentInstructions}, ${input.bankAccountId}, ${bank && JSON.stringify(bank)}::jsonb, ${input.paymentTerms},
               ${input.termsDays}, ${input.paymentLink}, ${input.layout}, ${JSON.stringify(input.sections)}::jsonb, ${input.recurring}, ${links.recursFrom ?? null},
-              ${links.supersedesId ?? null})
+              ${links.supersedesId ?? null}, ${input.agreement && JSON.stringify(input.agreement)}::jsonb)
       RETURNING id
     `) as { id: string }[];
     await this.logEvent(row.id, actor, "created");
@@ -303,7 +305,8 @@ export class InvoiceRepository {
         total_minor = ${t.totalMinor}, trn = ${input.trn}, due_date = ${input.dueDate}, notes = ${input.notes},
         payment_instructions = ${input.paymentInstructions}, bank_account_id = ${input.bankAccountId},
         bank = ${bank && JSON.stringify(bank)}::jsonb, payment_terms = ${input.paymentTerms}, terms_days = ${input.termsDays}, payment_link = ${input.paymentLink},
-        layout = ${input.layout}, sections = ${JSON.stringify(input.sections)}::jsonb, recurring = ${input.recurring}, updated_at = now()
+        layout = ${input.layout}, sections = ${JSON.stringify(input.sections)}::jsonb, recurring = ${input.recurring},
+        agreement = ${input.agreement && JSON.stringify(input.agreement)}::jsonb, updated_at = now()
       WHERE id = ${id} AND status = 'draft'
       RETURNING id
     `;
@@ -699,6 +702,17 @@ export class InvoiceRepository {
     return rows.map((r) => ({ clientId: r.client_id, currency: r.currency, invoicedMinor: Number(r.invoiced), paidMinor: Number(r.paid) }));
   }
 
+  /** A client's sent quotes still open to accept (valid until today or later, Dubai), newest first: offered in their portal. */
+  async openQuotes(clientId: string): Promise<{ number: string | null; token: string; totalMinor: number; currency: Currency; validUntil: string; agreement: boolean }[]> {
+    if (!UUID.test(clientId)) return [];
+    const rows = (await this.sql`
+      SELECT number, token, total_minor, currency, due_date::text AS due_date, agreement IS NOT NULL AS agreement FROM invoices
+      WHERE client_id = ${clientId} AND doc_type = 'quote' AND status = 'sent' AND due_date >= (now() AT TIME ZONE 'Asia/Dubai')::date
+      ORDER BY created_at DESC LIMIT 5
+    `) as { number: string | null; token: string; total_minor: number; currency: Currency; due_date: string; agreement: boolean }[];
+    return rows.map((r) => ({ number: r.number, token: r.token, totalMinor: Number(r.total_minor), currency: r.currency, validUntil: r.due_date, agreement: r.agreement }));
+  }
+
   async logEvent(documentId: string, actor: string, event: string, detail = ""): Promise<void> {
     await this.sql`
       INSERT INTO document_events (document_id, actor, event, detail) VALUES (${documentId}, ${actor.slice(0, 120)}, ${event.slice(0, 40)}, ${detail.slice(0, 300)})
@@ -762,7 +776,7 @@ export class InvoiceRepository {
   private static readonly COLUMNS = `d.id, d.doc_type, d.number_seq, d.number, d.related_id, d.payment_id, d.token, d.status, d.booking_uid,
     d.client_id, d.client_name, d.client_email, d.client_phone, d.client_address, d.currency, d.items, d.subtotal_minor, d.discount_minor,
     d.tax_rate_bp, d.tax_minor, d.total_minor, d.trn, d.due_date::text AS due_date, d.notes, d.payment_instructions, d.bank_account_id,
-    d.bank, d.payment_terms, d.terms_days, d.payment_link, d.layout, d.sections, d.recurring, d.recurs_from, d.supersedes_id, d.link_valid_until,
+    d.bank, d.payment_terms, d.terms_days, d.payment_link, d.layout, d.sections, d.recurring, d.agreement, d.recurs_from, d.supersedes_id, d.link_valid_until,
     (SELECT r.number FROM invoices r WHERE r.id = d.supersedes_id) AS supersedes_number,
     (SELECT json_build_object('acceptedAt', a.accepted_at, 'approver', a.approver, 'method', a.method, 'notes', a.notes,
        'evidenceUrl', a.evidence_url, 'recordedBy', a.recorded_by, 'recordedAt', a.recorded_at)
@@ -845,6 +859,7 @@ export class InvoiceRepository {
       layout: row.layout,
       sections: { scope: "", deliverables: "", expenses: "", assumptions: "", ...row.sections },
       recurring: row.recurring,
+      agreement: row.agreement,
       recursFrom: row.recurs_from,
       supersedesId: row.supersedes_id,
       supersedesNumber: row.supersedes_number,

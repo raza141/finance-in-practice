@@ -19,6 +19,7 @@ import type {
   PaymentTerms,
   PricingSource,
   QuoteAcceptanceInput,
+  QuoteAgreement,
 } from "../types";
 import { InvoiceMath } from "./InvoiceMath";
 
@@ -124,6 +125,7 @@ export class InvoiceContract {
     signed: "Signed quote",
     verbal: "Verbal / call",
     other: "Other",
+    online: "Accepted online",
   };
   /** Bases billed as one fixed amount: the quantity is always 1 and the form hides it. */
   static readonly FIXED_UNITS: readonly ItemUnit[] = ["fee", "milestone"];
@@ -247,7 +249,10 @@ export class InvoiceContract {
       errors.items = "Milestones belong to the consultancy layout: switch the layout, or bill the line another way.";
     }
 
-    if (Object.keys(errors).length > 0 || typeof items === "string" || discount === null || taxRateBp === null) {
+    const agreement = typeof items === "string" ? null : InvoiceContract.parseQuoteAgreement(fields, docType, items);
+    if (typeof agreement === "string") errors.agreement = agreement;
+
+    if (Object.keys(errors).length > 0 || typeof items === "string" || discount === null || taxRateBp === null || typeof agreement === "string") {
       return { ok: false, errors };
     }
     return {
@@ -276,8 +281,27 @@ export class InvoiceContract {
         layout,
         sections: layout === "consultancy" ? sections : { scope: "", deliverables: "", expenses: "", assumptions: "" },
         recurring: fields.recurring === "on",
+        agreement: agreement ?? null,
       },
     };
+  }
+
+  /**
+   * A quote's agreement block ("This quote is an agreement"): start, optional end
+   * (e.g. the exam), optional hours a month (monthly lines only). Null when unticked.
+   */
+  static parseQuoteAgreement(fields: Record<string, unknown>, docType: DocumentType, items: readonly InvoiceItem[]): QuoteAgreement | null | string {
+    if (docType !== "quote" || fields.isAgreement !== "on") return null;
+    const text = InvoiceContract.text(fields);
+    const startsOn = text("agreementStartsOn");
+    if (!InvoiceContract.isIsoDate(startsOn)) return "Agreement: choose the start date.";
+    const endsOn = text("agreementEndsOn");
+    if (endsOn && (!InvoiceContract.isIsoDate(endsOn) || endsOn < startsOn)) return "Agreement: the end date is on or after the start, or empty.";
+    const raw = text("agreementHours").replace(",", ".");
+    const hoursPerMonth = raw ? Number(raw) : null;
+    if (raw && (!/^\d+(\.\d{1,2})?$/.test(raw) || !hoursPerMonth || hoursPerMonth > 300)) return "Agreement: hours a month above 0, up to 300.";
+    if (hoursPerMonth !== null && !items.some((i) => i.unit === "month")) return "Agreement: hours a month need a monthly line.";
+    return { startsOn, endsOn: endsOn || null, hoursPerMonth };
   }
 
   /**

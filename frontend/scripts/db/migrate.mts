@@ -1106,6 +1106,19 @@ const MIGRATIONS: Migration[] = [
       `CREATE UNIQUE INDEX hour_requests_pending_idx ON hour_requests (agreement_id, month) WHERE status = 'pending'`,
     ],
   },
+  {
+    // A quote can be an agreement: its dates and hours a month (invoices.agreement).
+    // The client accepts it online from the quote link (method 'online'), which
+    // creates the client agreement (client_agreements.quote_id, at most one per quote).
+    id: "051_quote_agreements",
+    statements: [
+      `ALTER TABLE invoices ADD COLUMN agreement jsonb CHECK (agreement IS NULL OR (doc_type = 'quote' AND jsonb_typeof(agreement) = 'object'))`,
+      `ALTER TABLE client_agreements ADD COLUMN quote_id uuid REFERENCES invoices (id) ON DELETE SET NULL`,
+      `CREATE UNIQUE INDEX client_agreements_quote_idx ON client_agreements (quote_id) WHERE quote_id IS NOT NULL`,
+      `ALTER TABLE quote_acceptances DROP CONSTRAINT quote_acceptances_method_check`,
+      `ALTER TABLE quote_acceptances ADD CONSTRAINT quote_acceptances_method_check CHECK (method IN ('email', 'whatsapp', 'signed', 'verbal', 'other', 'online'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

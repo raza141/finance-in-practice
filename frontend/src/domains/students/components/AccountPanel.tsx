@@ -79,7 +79,16 @@ export function AccountSummaryCard({ account }: { account: StudentAccountView | 
  * The portal's Account tab: what they owe, hours studied, what is left of
  * hours paid up front, a month-by-month record and a look at next month.
  */
-export function AccountPanel({ account, readOnly = false }: { account: StudentAccountView | null; readOnly?: boolean }) {
+export interface QuoteOffer {
+  number: string | null;
+  token: string;
+  totalMinor: number;
+  currency: Currency;
+  validUntil: string;
+  agreement: boolean;
+}
+
+export function AccountPanel({ account, offers = [], readOnly = false }: { account: StudentAccountView | null; offers?: QuoteOffer[]; readOnly?: boolean }) {
   if (!account) {
     return <p className={`${CARD} text-sm text-muted`}>Couldn&rsquo;t load your account right now. Please refresh in a minute.</p>;
   }
@@ -154,6 +163,31 @@ export function AccountPanel({ account, readOnly = false }: { account: StudentAc
 
         {third ?? <NextMonth next={next} plan={plan} />}
       </div>
+
+      {offers.length > 0 && (
+        <section className="rounded-3xl border border-gold/40 bg-gold/10 p-6" aria-labelledby="offers-heading">
+          <h2 id="offers-heading" className="text-2xl font-normal italic">
+            Waiting for your answer
+          </h2>
+          <ul className="mt-3 divide-y divide-line/60">
+            {offers.map((o) => (
+              <li key={o.token} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <span className="text-ink">
+                  {o.agreement ? "Agreement" : "Quote"} {o.number} · {InvoiceMath.money(o.totalMinor, o.currency)}
+                  <span className="block text-xs text-muted">Valid until {DAY.format(dayDate(o.validUntil))}</span>
+                </span>
+                {readOnly ? (
+                  <span className="text-xs text-muted">The student accepts it from the link</span>
+                ) : (
+                  <a href={`/invoice/${o.token}`} target="_blank" rel="noreferrer" className={BOOK_BUTTON}>
+                    Review and accept
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {agreements.length > 0 && <Agreements agreements={agreements} readOnly={readOnly} />}
 

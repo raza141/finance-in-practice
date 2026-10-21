@@ -205,6 +205,20 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         </>
       )}
 
+      {invoice.agreement && (
+        <TextBlock
+          title="Agreement"
+          text={[
+            `Runs from ${InvoiceEmails.day(invoice.agreement.startsOn)}${invoice.agreement.endsOn ? ` to ${InvoiceEmails.day(invoice.agreement.endsOn)}` : ", with no end date"}. Each month runs from the start date (e.g. the 17th to the 16th).`,
+            invoice.agreement.hoursPerMonth !== null &&
+              `${invoice.agreement.hoursPerMonth} hours of 1-on-1 sessions are included each month. Unused hours don't carry over; more hours need approval and may be charged at the agreed rate.`,
+            "Accepting this quote online, with the terms and conditions, makes it your agreement. No signature is needed.",
+          ]
+            .filter(Boolean)
+            .join("\n")}
+        />
+      )}
+
       <div className="print:mt-auto">
         {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && !paid && (
           <section className="mt-10 break-inside-avoid print:mt-4">

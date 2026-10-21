@@ -39,6 +39,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
   // The client's usual terms, else the business default (an agreement picked on a line can set them).
   const terms = InvoiceContract.resolveTerms(null, client || null, { terms: settings.terms.default, days: settings.terms.days });
   const initial: InvoiceInput = {
+    agreement: null,
     docType,
     relatedId: null,
     bookingUid: prefill?.bookingUid ?? null,
