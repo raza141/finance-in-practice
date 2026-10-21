@@ -46,6 +46,29 @@ export class StudentSessions {
       .slice(0, limit);
   }
 
+  /**
+   * The owner's record of what actually happened (049_session_log) laid over
+   * ended bookings: a new length (the end moves), or 0 to drop one that didn't
+   * take place. Upcoming bookings stay as booked.
+   */
+  static applyLog<T extends { uid: string; start: string; end: string }>(
+    bookings: readonly T[],
+    log: readonly { bookingUid: string | null; minutes: number }[],
+    now: Date = new Date(),
+  ): T[] {
+    const minutes = new Map(log.flatMap((l) => (l.bookingUid ? [[l.bookingUid, l.minutes] as const] : [])));
+    return bookings.flatMap((b) => {
+      const actual = minutes.get(b.uid);
+      if (actual === undefined || Date.parse(b.end) > now.getTime()) return [b];
+      if (actual === 0) return [];
+      const end = Date.parse(b.start) + actual * 60_000;
+      // Logged longer just after it ended: keep it in the past (start earlier) so it never shows as upcoming.
+      return end <= now.getTime()
+        ? [{ ...b, end: new Date(end).toISOString() }]
+        : [{ ...b, start: new Date(Date.parse(b.end) - actual * 60_000).toISOString() }];
+    });
+  }
+
   /** Distinct in-person addresses, most recent first, to offer again on the next booking. */
   static addresses(bookings: readonly BookingLike[]): string[] {
     const seen = new Map<string, string>();

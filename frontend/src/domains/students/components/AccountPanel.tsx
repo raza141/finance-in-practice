@@ -1,7 +1,7 @@
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { ClientDocument, Currency } from "@/domains/invoices/types";
 
-import type { AccountMoney, AccountMonth, StudentAccountView, StudentPlan } from "../types";
+import type { AccountAgreement, AccountMoney, AccountMonth, StudentAccountView, StudentPlan } from "../types";
 import { BOOK_BUTTON, BUTTON } from "./buttons";
 import { TabButton } from "./StudentPortal";
 
@@ -75,7 +75,7 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
   if (!account) {
     return <p className={`${CARD} text-sm text-muted`}>Couldn&rsquo;t load your account right now. Please refresh in a minute.</p>;
   }
-  const { money, taken, prepaid, plan, next, months, documents } = account;
+  const { money, taken, prepaid, plan, next, months, documents, agreements } = account;
   return (
     <div className="grid gap-6">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -123,7 +123,7 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
           ) : (
             <p className="mt-2 text-sm text-muted">Couldn&rsquo;t load your sessions just now.</p>
           )}
-          {plan && plan.feeMinor > 0 && (
+          {agreements.length === 0 && plan && plan.feeMinor > 0 && (
             <p className="mt-4 border-t border-line/60 pt-3 text-sm text-muted">
               Your plan: <span className="text-ink">{InvoiceMath.money(plan.feeMinor, plan.currency)}</span> {PER[plan.unit]}
             </p>
@@ -159,6 +159,8 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
         )}
       </div>
 
+      {agreements.length > 0 && <Agreements agreements={agreements} current={months.at(-2)!.month} />}
+
       <MonthRecord months={months} known={taken !== null} />
 
       <div className={`grid items-start gap-6 ${prepaid.length > 0 ? "lg:grid-cols-[22rem_1fr]" : ""}`}>
@@ -166,6 +168,43 @@ export function AccountPanel({ account }: { account: StudentAccountView | null }
         <Documents documents={documents} />
       </div>
     </div>
+  );
+}
+
+/** What was agreed with them: rate, dates (e.g. until the exam) and, for monthly fees, what is still to come. */
+function Agreements({ agreements, current }: { agreements: AccountAgreement[]; current: string }) {
+  return (
+    <section className={`${CARD} sm:p-8`} aria-labelledby="agreement-heading">
+      <h2 id="agreement-heading" className="text-2xl font-normal italic">
+        {agreements.length === 1 ? "Your agreement" : "Your agreements"}
+      </h2>
+      <ul className="mt-4 divide-y divide-line/60">
+        {agreements.map((a, i) => (
+          <li key={i} className="grid gap-x-8 gap-y-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <p className="text-lg text-ink">{a.serviceName}</p>
+              <p className="text-sm text-muted">
+                <span className="text-ink tabular-nums">{InvoiceMath.money(a.rateMinor, a.currency)}</span> {PER[a.unit]}, from {DAY.format(new Date(`${a.startsOn}T00:00:00Z`))}
+                {a.endsOn ? ` to ${DAY.format(new Date(`${a.endsOn}T00:00:00Z`))}` : ", no end date"}
+              </p>
+              {a.scope && <p className="mt-1 text-sm text-muted">{a.scope}</p>}
+            </div>
+            {a.monthsLeft !== null && a.remainingMinor !== null && (
+              <div className="sm:text-right">
+                <p className="text-2xl font-semibold text-ink tabular-nums">
+                  {a.monthsLeft} {a.monthsLeft === 1 ? "month" : "months"} left
+                </p>
+                <p className="text-sm text-muted">
+                  {a.monthsLeft > 0
+                    ? `after ${MONTH_LONG.format(monthDate(current)).split(" ")[0]}: ${InvoiceMath.money(a.remainingMinor, a.currency)} to come`
+                    : "This is the last month"}
+                </p>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -198,6 +237,7 @@ function NextMonth({ next, plan }: { next: StudentAccountView["next"]; plan: Stu
 function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean }) {
   const peak = Math.max(60, ...months.map((m) => m.minutesTaken + m.minutesBooked));
   const last = months.length - 1;
+  const hasAgreed = months.some((m) => m.agreed.length > 0);
   return (
     <section className={`${CARD} sm:p-8`} aria-labelledby="months-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -242,7 +282,7 @@ function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean
       )}
 
       <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[34rem] text-sm tabular-nums">
+        <table className="w-full min-w-[38rem] text-sm tabular-nums">
           <thead>
             <tr className="border-b border-line text-left text-xs text-muted">
               <th scope="col" className="py-2 font-normal">
@@ -254,6 +294,11 @@ function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean
               <th scope="col" className="py-2 text-right font-normal">
                 Hours
               </th>
+              {hasAgreed && (
+                <th scope="col" className="py-2 text-right font-normal">
+                  Agreed
+                </th>
+              )}
               <th scope="col" className="py-2 text-right font-normal">
                 Invoiced
               </th>
@@ -276,6 +321,7 @@ function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean
                   {known ? hoursOf(m.minutesTaken) : "–"}
                   {m.minutesBooked > 0 && <span className="text-gold"> +{hoursOf(m.minutesBooked)}</span>}
                 </td>
+                {hasAgreed && <td className="py-2.5 text-right text-muted">{amounts(m.agreed)}</td>}
                 <td className="py-2.5 text-right text-ink">{amounts(m.billed)}</td>
                 <td className="py-2.5 text-right text-ink">{amounts(m.paid)}</td>
               </tr>
@@ -283,7 +329,10 @@ function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted">Hours count sessions booked through this portal or your booking link. Months run on UAE time.</p>
+      <p className="mt-3 text-xs text-muted">
+        Hours are the time you actually studied, as your instructor records it; sessions you book count on their own. Months run on UAE time.
+        {hasAgreed && " The invoice is what you pay for a month, which can be less than agreed."}
+      </p>
     </section>
   );
 }

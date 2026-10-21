@@ -21,7 +21,11 @@ import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
+import { siteConfig } from "@/core/config/site";
+import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { SessionLogEditor } from "@/domains/students/components/SessionLogEditor";
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
+import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/actions/classroom";
 import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClientBatch } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
@@ -35,6 +39,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "agreement-ended": { text: "Agreement ended. Documents that used it keep their rates.", tone: "ok" },
   "agreement-refused": { text: "Agreement not added.", tone: "warn" },
   "plan-saved": { text: "Study plan saved.", tone: "ok" },
+  "hours-saved": { text: "Hours saved: their Hours & payments tab shows them now.", tone: "ok" },
+  "hours-refused": { text: "Hours not saved.", tone: "warn" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
   "classroom-approved": { text: "Classroom access approved: the join button now shows in their portal.", tone: "ok" },
   "classroom-removed": {
@@ -74,7 +80,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const invoiceRepo = InvoiceRepository.fromEnv();
   const classroomRepo = ClassroomRepository.fromEnv();
-  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail, batchCourses] = await Promise.all([
+  const [invoices, courses, entries, agreements, services, plan, classrooms, privateClasses, classroomEmail, batchCourses, bookings, sessionLog] = await Promise.all([
     invoiceRepo?.list({ clientId: client.id }) ?? [],
     CourseRepository.fromEnv()?.all() ?? [],
     invoiceRepo?.ledger(client.id) ?? [],
@@ -85,6 +91,12 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     classroomRepo?.privateFor(client.id) ?? [],
     classroomRepo?.classroomEmail(client.id) ?? null,
     classroomRepo?.batchCourses() ?? [],
+    // Null (not empty) when Cal.com is unreachable, so the editor says so.
+    (CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(client.email) ?? Promise.resolve([])).catch((error) => {
+      console.error("admin: could not load Cal.com sessions", error);
+      return null;
+    }),
+    SessionLogRepository.fromEnv()?.forClient(client.id) ?? [],
     AdminInbox.markSeen(client.id),
   ]);
   const query = await searchParams;
@@ -367,6 +379,8 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           </details>
         )}
       </section>
+
+      <SessionLogEditor clientId={client.id} bookings={bookings} log={sessionLog} today={today} />
 
       <div className="mt-12 mb-4 flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-lg">Account</h2>

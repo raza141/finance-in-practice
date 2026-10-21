@@ -1046,6 +1046,28 @@ const MIGRATIONS: Migration[] = [
     id: "048_cfa_question_insight",
     statements: [`ALTER TABLE cfa_questions ADD COLUMN insight text NOT NULL DEFAULT '' CHECK (char_length(insight) <= 400)`],
   },
+  {
+    // The time a student actually studied, set by the owner: a Cal.com booking's
+    // real length (booked 1 h, studied 2; 0 = didn't happen), or a session never
+    // booked in Cal.com (on_date instead of booking_uid). Read by the portal's
+    // Hours & payments tab; nothing is written back to Cal.com.
+    id: "049_session_log",
+    statements: [
+      `CREATE TABLE session_log (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id   uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        booking_uid text CHECK (char_length(booking_uid) BETWEEN 1 AND 100),
+        on_date     date,
+        minutes     integer NOT NULL CHECK (minutes BETWEEN 0 AND 600),
+        note        text NOT NULL DEFAULT '' CHECK (char_length(note) <= 200),
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        updated_at  timestamptz NOT NULL DEFAULT now(),
+        CHECK ((booking_uid IS NULL) <> (on_date IS NULL))
+      )`,
+      `CREATE UNIQUE INDEX session_log_booking_idx ON session_log (client_id, booking_uid) WHERE booking_uid IS NOT NULL`,
+      `CREATE INDEX session_log_client_idx ON session_log (client_id)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

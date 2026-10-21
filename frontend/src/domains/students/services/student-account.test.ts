@@ -129,4 +129,56 @@ describe("StudentAccount", () => {
     const fresh = StudentAccount.build({ entries: [], documents: [], bookings: [], plan: { unit: "hour", feeMinor: 30_000, currency: "AED" }, now: NOW });
     expect(fresh.next.estimateMinor).toBeNull();
   });
+
+  describe("agreements", () => {
+    const cfa = { serviceName: "CFA Level I tuition", unit: "month" as const, rateMinor: 300_000, currency: "AED" as const, scope: "" };
+
+    it("shows the agreed fee in each covered month, months left to the exam and what is still to come", () => {
+      const view = StudentAccount.build({
+        entries: [entry("2026-10-01", "invoice", "AED", 250_000, 0)],
+        documents: [],
+        bookings: [],
+        plan: { unit: "hour", feeMinor: 30_000, currency: "AED" },
+        agreements: [{ ...cfa, startsOn: "2026-09-01", endsOn: "2027-02-15" }],
+        now: NOW,
+      });
+      const month = (m: string) => view.months.find((x) => x.month === m)!;
+      expect(month("2026-08").agreed).toEqual([]);
+      expect(month("2026-09").agreed).toEqual([{ currency: "AED", minor: 300_000 }]);
+      // Invoiced less than agreed: both show.
+      expect(month("2026-10")).toMatchObject({ agreed: [{ currency: "AED", minor: 300_000 }], billed: [{ currency: "AED", minor: 250_000 }] });
+      // Nov, Dec, Jan, Feb.
+      expect(view.agreements[0]).toMatchObject({ monthsLeft: 4, remainingMinor: 1_200_000 });
+      // The monthly agreement wins over the hourly client plan.
+      expect(view.plan).toEqual({ unit: "month", feeMinor: 300_000, currency: "AED" });
+      expect(view.next.estimateMinor).toBe(300_000);
+    });
+
+    it("counts a future agreement from its first month, ends at zero, and drops agreements already over", () => {
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2027-01-01", endsOn: "2027-03-31" }, "2026-10")).toMatchObject({ monthsLeft: 3, remainingMinor: 900_000 });
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: "2026-10-31" }, "2026-10")).toMatchObject({ monthsLeft: 0 });
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: null }, "2026-10")).toMatchObject({ monthsLeft: null });
+      expect(StudentAccount.agreement({ ...cfa, unit: "hour", startsOn: "2026-01-01", endsOn: "2027-01-01" }, "2026-10")).toMatchObject({ monthsLeft: null });
+      const over = StudentAccount.build({ entries: [], documents: [], bookings: [], plan: null, agreements: [{ ...cfa, startsOn: "2026-01-01", endsOn: "2026-09-30" }], now: NOW });
+      expect(over.agreements).toEqual([]);
+      expect(over.plan).toBeNull();
+    });
+  });
+
+  it("adds hand-logged sessions to studied and paid-for hours, skipping zero-length ones", () => {
+    const view = StudentAccount.build({
+      entries: [],
+      documents: [doc({ hours: 10 })],
+      bookings: [booking("2026-10-01T10:00:00Z", 1)],
+      manual: [
+        { date: "2026-10-05", minutes: 120 },
+        { date: "2026-10-06", minutes: 0 },
+      ],
+      plan: null,
+      now: NOW,
+    });
+    expect(view.taken).toEqual({ minutes: 180, sessions: 2 });
+    expect(view.months.at(-2)).toMatchObject({ minutesTaken: 180, sessionsTaken: 2 });
+    expect(view.prepaid).toEqual([{ unit: "hour", billed: 10, used: 3 }]);
+  });
 });

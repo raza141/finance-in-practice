@@ -1,0 +1,151 @@
+import { FIELD } from "@/domains/admin/components/FormField";
+import { PendingButton } from "@/domains/admin/components/PendingButton";
+import type { CalBookingDetail } from "@/domains/booking/server/CalComClient";
+
+import { removeSessionLog, saveSessionLog } from "../actions/sessionLog";
+import { SessionLogContract } from "../services/SessionLogContract";
+import { StudentSessions } from "../services/StudentSessions";
+import type { SessionLogEntry } from "../types";
+
+const WHEN = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" });
+const DAY = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const hours = (minutes: number) => String(Math.round((minutes / 60) * 100) / 100);
+const SMALL = "h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink";
+
+/**
+ * The admin side of the hours a student studied: each past Cal.com session with
+ * the time actually spent (booked 1 h, studied 2; 0 = didn't happen), and
+ * sessions never booked in Cal.com. The student sees the result under Hours & payments.
+ */
+export function SessionLogEditor({
+  clientId,
+  bookings,
+  log,
+  today,
+}: {
+  clientId: string;
+  /** Null: Cal.com couldn't be read. */
+  bookings: CalBookingDetail[] | null;
+  log: SessionLogEntry[];
+  today: string;
+}) {
+  // Ended, accepted sessions, newest first (every one Cal.com returned).
+  const past = StudentSessions.past(bookings ?? [], undefined, Infinity);
+  const byUid = new Map(log.flatMap((l) => (l.bookingUid ? [[l.bookingUid, l] as const] : [])));
+  const manual = log.filter((l) => l.onDate);
+  const hidden = (name: string, value: string) => <input type="hidden" name={name} value={value} />;
+
+  return (
+    <section id="sessions" className="mt-12 rounded-lg border border-line p-5">
+      <h2 className="text-lg">Sessions &amp; hours</h2>
+      <p className="mt-1 text-sm text-muted">
+        Set the hours actually studied when a session ran longer or shorter than booked (0 if it didn&rsquo;t happen), and log sessions agreed outside
+        Cal.com. Their Hours &amp; payments tab counts these hours; Cal.com is not changed.
+      </p>
+
+      {bookings === null ? (
+        <p className="mt-4 text-sm text-gold">Couldn&rsquo;t load their Cal.com sessions just now.</p>
+      ) : past.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">No past Cal.com sessions yet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-line/60">
+          {past.map((b) => {
+            const booked = b.minutes;
+            const entry = byUid.get(b.uid);
+            return (
+              <li key={b.uid} className="grid items-center gap-2 py-3 text-sm sm:grid-cols-[1fr_auto]">
+                <div>
+                  <p className="text-ink">{WHEN.format(new Date(b.start))}</p>
+                  <p className="text-xs text-muted">
+                    {b.course} · booked {hours(booked)} h{b.group && " · group"}
+                    {entry && <span className="text-gold">{entry.minutes === 0 ? " · didn't happen" : ` · studied ${hours(entry.minutes)} h`}</span>}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={saveSessionLog} className="flex flex-wrap items-center gap-2">
+                    {hidden("clientId", clientId)}
+                    {hidden("bookingUid", b.uid)}
+                    <input
+                      name="hours"
+                      inputMode="decimal"
+                      required
+                      aria-label="Hours studied"
+                      defaultValue={hours(entry?.minutes ?? booked)}
+                      className={`${FIELD} w-20 py-1.5`}
+                    />
+                    <span className="text-xs text-muted">h</span>
+                    <input
+                      name="note"
+                      aria-label="Note"
+                      placeholder="Note (optional)"
+                      maxLength={SessionLogContract.NOTE}
+                      defaultValue={entry?.note ?? ""}
+                      className={`${FIELD} w-44 py-1.5`}
+                    />
+                    <PendingButton pendingLabel="Saving…" className={SMALL}>
+                      Save
+                    </PendingButton>
+                  </form>
+                  {entry && (
+                    <form action={removeSessionLog}>
+                      {hidden("clientId", clientId)}
+                      {hidden("logId", entry.id)}
+                      <PendingButton pendingLabel="Resetting…" className="text-xs text-muted hover:text-ink hover:underline">
+                        Back to booked
+                      </PendingButton>
+                    </form>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {manual.length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm text-muted">Logged by hand</h3>
+          <ul className="mt-2 divide-y divide-line/60 text-sm">
+            {manual.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <span className="text-ink">
+                  {DAY.format(new Date(`${l.onDate}T00:00:00Z`))} · {hours(l.minutes)} h
+                  {l.note && <span className="text-muted"> · {l.note}</span>}
+                </span>
+                <form action={removeSessionLog}>
+                  {hidden("clientId", clientId)}
+                  {hidden("logId", l.id)}
+                  <PendingButton pendingLabel="Removing…" className="text-xs text-red-300/90 hover:underline">
+                    Remove
+                  </PendingButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm text-quant">+ Log a session not booked in Cal.com</summary>
+        <form action={saveSessionLog} className="mt-3 flex flex-wrap items-end gap-3">
+          {hidden("clientId", clientId)}
+          <label className="text-xs text-muted">
+            Day
+            <input name="onDate" type="date" required max={today} defaultValue={today} className={`${FIELD} mt-1`} />
+          </label>
+          <label className="text-xs text-muted">
+            Hours
+            <input name="hours" inputMode="decimal" required placeholder="1.5" className={`${FIELD} mt-1 w-24`} />
+          </label>
+          <label className="min-w-48 flex-1 text-xs text-muted">
+            Note (optional)
+            <input name="note" maxLength={SessionLogContract.NOTE} placeholder="e.g. Extra revision on WhatsApp call" className={`${FIELD} mt-1`} />
+          </label>
+          <PendingButton pendingLabel="Logging…" className={SMALL}>
+            Log session
+          </PendingButton>
+        </form>
+      </details>
+    </section>
+  );
+}

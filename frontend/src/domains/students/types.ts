@@ -1,4 +1,4 @@
-import type { ClientDocument, Currency, ItemUnit } from "@/domains/invoices/types";
+import type { Agreement, ClientDocument, Currency, ItemUnit } from "@/domains/invoices/types";
 
 /** An enrolled student: a client the owner gave at least one course in admin Clients. */
 export interface Student {
@@ -116,6 +116,8 @@ export interface AccountMonth {
   sessionsBooked: number;
   billed: { currency: Currency; minor: number }[];
   paid: { currency: Currency; minor: number }[];
+  /** Monthly agreements covering this month: the agreed fee (the invoice may be less). */
+  agreed: { currency: Currency; minor: number }[];
 }
 
 /** All-time money in one currency (never added across currencies). */
@@ -141,6 +143,27 @@ export interface StudentPlan {
   currency: Currency;
 }
 
+/** The owner's record of time actually studied (049_session_log): a booking's real length, or a session never booked in Cal.com. */
+export interface SessionLogEntry {
+  id: string;
+  /** Set for a Cal.com booking; null for a session logged by hand. */
+  bookingUid: string | null;
+  /** YYYY-MM-DD, for a session logged by hand. */
+  onDate: string | null;
+  /** 0 = it didn't happen. */
+  minutes: number;
+  note: string;
+}
+
+export type SessionLogInput = Omit<SessionLogEntry, "id">;
+
+/** An agreement as the student sees it. */
+export type AccountAgreement = Pick<Agreement, "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope"> & {
+  /** Monthly with an end date: months after this one up to the end month (inclusive). */
+  monthsLeft: number | null;
+  remainingMinor: number | null;
+};
+
 /** The student portal's Account tab (StudentAccount.build). */
 export interface StudentAccountView {
   /** Oldest first: the last months up to this one, then next month. */
@@ -150,6 +173,8 @@ export interface StudentAccountView {
   money: AccountMoney[];
   prepaid: PrepaidBlock[];
   plan: StudentPlan | null;
+  /** Live agreements (not ended before this month), newest first. */
+  agreements: AccountAgreement[];
   next: {
     month: string;
     minutesBooked: number;

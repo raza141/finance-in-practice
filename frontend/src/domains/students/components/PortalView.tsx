@@ -5,10 +5,12 @@ import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ClassFeedSidebar, ClassTopics, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
 import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
+import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
+import { SessionLogRepository } from "../server/SessionLogRepository";
 import { StudentRepository } from "../server/StudentRepository";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
 import { StudentAccount } from "../services/StudentAccount";
@@ -33,7 +35,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, bookings, plan, classes, own, entries, documents, client] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
@@ -45,13 +47,19 @@ async function portalData(student: Student) {
     safely("account", async () => (invoices ? invoices.ledger(student.id) : null)),
     safely("documents", async () => (invoices ? invoices.forClient(student.id) : null)),
     safely("plan", async () => (await ClientRepository.fromEnv()?.byId(student.id)) ?? null),
+    safely("agreements", async () => (await AgreementRepository.fromEnv()?.forClient(student.id)) ?? []),
+    safely("session log", async () => (await SessionLogRepository.fromEnv()?.forClient(student.id)) ?? []),
   ]);
+  // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
+  const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
   // No ledger: the money can't be shown, so no account (rather than "all paid").
   const account: StudentAccountView | null = entries
     ? StudentAccount.build({
         entries,
         documents,
         bookings,
+        agreements: agreements ?? [],
+        manual: (log ?? []).flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
         // The public booking link's event (NEXT_PUBLIC_CAL_LINK = user/slug) is the free diagnostic.
         freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
         plan: client?.planUnit && client.planFeeMinor ? { unit: client.planUnit, feeMinor: client.planFeeMinor, currency: client.planCurrency } : null,

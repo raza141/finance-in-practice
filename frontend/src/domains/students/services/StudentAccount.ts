@@ -2,9 +2,11 @@ import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
-import type { ClientDocument, Currency, LedgerEntry } from "@/domains/invoices/types";
+import type { Agreement, ClientDocument, Currency, LedgerEntry } from "@/domains/invoices/types";
 
-import type { AccountMoney, AccountMonth, PrepaidBlock, StudentAccountView, StudentPlan } from "../types";
+import type { AccountAgreement, AccountMoney, AccountMonth, PrepaidBlock, StudentAccountView, StudentPlan } from "../types";
+
+type AgreementLike = Pick<Agreement, "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope">;
 
 /** The parts of a Cal.com booking the account reads. */
 interface BookingLike {
@@ -20,7 +22,12 @@ interface AccountSources {
   /** Null: couldn't be read. */
   documents: readonly ClientDocument[] | null;
   bookings: readonly BookingLike[] | null;
+  /** The client's payment plan in admin Clients; a live agreement wins over it. */
   plan: StudentPlan | null;
+  /** Live (not archived) agreements. */
+  agreements?: readonly AgreementLike[];
+  /** Sessions the owner logged by hand (never booked in Cal.com): 1-on-1 time, billable. */
+  manual?: readonly { date: string; minutes: number }[];
   /** The free diagnostic's event slug: studied, but never taken from paid hours. */
   freeSlug?: string;
   now?: Date;
@@ -37,7 +44,7 @@ export class StudentAccount {
   static readonly MONTHS = 6;
   static readonly PACE_MONTHS = 3;
 
-  static build({ entries, documents, bookings, plan, freeSlug, now = new Date() }: AccountSources): StudentAccountView {
+  static build({ entries, documents, bookings, plan, agreements = [], manual = [], freeSlug, now = new Date() }: AccountSources): StudentAccountView {
     const calendar = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE);
     const monthOf = (iso: string) => calendar.dateOf(new Date(iso)).slice(0, 7);
     const current = calendar.dateOf(now).slice(0, 7);
@@ -45,7 +52,7 @@ export class StudentAccount {
     const shown = [...Array.from({ length: StudentAccount.MONTHS }, (_, i) => InvoiceMath.addMonths(`${current}-01`, i - StudentAccount.MONTHS + 1).slice(0, 7)), nextMonth];
 
     const months = new Map<string, AccountMonth>(
-      shown.map((month) => [month, { month, minutesTaken: 0, sessionsTaken: 0, minutesBooked: 0, sessionsBooked: 0, billed: [], paid: [] }]),
+      shown.map((month) => [month, { month, minutesTaken: 0, sessionsTaken: 0, minutesBooked: 0, sessionsBooked: 0, billed: [], paid: [], agreed: [] }]),
     );
     // Every month with a session, not only those shown: the pace needs the full history.
     const takenByMonth = new Map<string, number>();
@@ -55,6 +62,20 @@ export class StudentAccount {
     // ponytail: Cal.com returns the latest 100 bookings, so all-time totals undercount past ~100 sessions; page through bookingsFor if a student gets there.
     if (bookings) {
       taken = { minutes: 0, sessions: 0 };
+      for (const session of manual) {
+        if (session.minutes <= 0) continue;
+        const month = session.date.slice(0, 7);
+        taken.minutes += session.minutes;
+        taken.sessions += 1;
+        billable.minutes += session.minutes;
+        billable.sessions += 1;
+        takenByMonth.set(month, (takenByMonth.get(month) ?? 0) + session.minutes);
+        const row = months.get(month);
+        if (row) {
+          row.minutesTaken += session.minutes;
+          row.sessionsTaken += 1;
+        }
+      }
       for (const b of bookings) {
         const minutes = Math.max(0, Math.round((Date.parse(b.end) - Date.parse(b.start)) / 60_000));
         const month = monthOf(b.start);
@@ -86,6 +107,17 @@ export class StudentAccount {
       if (entry.kind === "payment") StudentAccount.add(row.paid, entry.currency, entry.creditMinor);
     }
 
+    const live = agreements.filter((a) => !a.endsOn || a.endsOn.slice(0, 7) >= current);
+    for (const a of live.filter((x) => x.unit === "month")) {
+      for (const row of months.values()) {
+        if (a.startsOn.slice(0, 7) <= row.month && (!a.endsOn || row.month <= a.endsOn.slice(0, 7))) StudentAccount.add(row.agreed, a.currency, a.rateMinor);
+      }
+    }
+    // The fee basis for next month: a monthly agreement covering it, any other live agreement, then the client's plan.
+    const covers = (a: AgreementLike) => a.startsOn.slice(0, 7) <= nextMonth && (!a.endsOn || nextMonth <= a.endsOn.slice(0, 7));
+    const basis = live.find((a) => a.unit === "month" && covers(a)) ?? live.find((a) => a.unit !== "month" && covers(a));
+    if (basis) plan = { unit: basis.unit, feeMinor: basis.rateMinor, currency: basis.currency };
+
     const next = months.get(nextMonth)!;
     const paceMinutes = StudentAccount.pace(takenByMonth, current);
     return {
@@ -94,6 +126,7 @@ export class StudentAccount {
       money: StudentAccount.money(entries),
       prepaid: taken ? StudentAccount.prepaid(documents ?? [], billable) : [],
       plan,
+      agreements: live.map((a) => StudentAccount.agreement(a, current)),
       next: {
         month: nextMonth,
         minutesBooked: next.minutesBooked,
@@ -103,6 +136,18 @@ export class StudentAccount {
       },
       documents: documents ? [...documents] : null,
     };
+  }
+
+  /** Monthly with an end: months after `current` up to the end month, and what they add up to. */
+  static agreement(a: AgreementLike, current: string): AccountAgreement {
+    if (a.unit !== "month" || !a.endsOn) return { ...a, monthsLeft: null, remainingMinor: null };
+    const [y1, m1] = current.split("-").map(Number);
+    const [y2, m2] = a.endsOn.slice(0, 7).split("-").map(Number);
+    const [ys, ms] = a.startsOn.slice(0, 7).split("-").map(Number);
+    // Not started yet: count from its first month.
+    const from = Math.max(y1 * 12 + m1 + 1, ys * 12 + ms);
+    const monthsLeft = Math.max(0, y2 * 12 + m2 - from + 1);
+    return { ...a, monthsLeft, remainingMinor: monthsLeft * a.rateMinor };
   }
 
   /** Charged, paid, credited and owed per currency, from the same ledger as the client's statement. */
