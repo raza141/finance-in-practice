@@ -6,9 +6,14 @@ type Doc = Pick<Invoice, "docType" | "status" | "trn" | "dueDate">;
 
 /** Titles, derived statuses and file names for billing documents. Pure. */
 export class DocumentFormat {
+  /** "Invoice", "Quote"…; a quote that carries agreement terms is an "Agreement" (number stays FIP-QUO). */
+  static label(doc: Pick<Invoice, "docType"> & { agreement?: Invoice["agreement"] }): string {
+    return doc.docType === "quote" && doc.agreement ? "Agreement" : SettingsContract.DOCUMENT_TYPES[doc.docType];
+  }
+
   /** The printed title. A document issued with a TRN and VAT is a tax document; quotes never are. */
-  static title(doc: Pick<Invoice, "docType" | "trn" | "taxRateBp">): string {
-    const label = SettingsContract.DOCUMENT_TYPES[doc.docType];
+  static title(doc: Pick<Invoice, "docType" | "trn" | "taxRateBp"> & { agreement?: Invoice["agreement"] }): string {
+    const label = DocumentFormat.label(doc);
     return doc.trn && doc.taxRateBp > 0 && doc.docType !== "quote" ? `Tax ${label.toLowerCase()}` : label;
   }
 
@@ -35,8 +40,8 @@ export class DocumentFormat {
   }
 
   /** "Invoice-FIP-INV-2026-0002-Khawla-Abdullah", the saved PDF's name (the page title). */
-  static filename(doc: Pick<Invoice, "docType" | "number" | "clientName">): string {
-    const type = SettingsContract.DOCUMENT_TYPES[doc.docType].replace(/\s+/g, "-");
+  static filename(doc: Pick<Invoice, "docType" | "number" | "clientName"> & { agreement?: Invoice["agreement"] }): string {
+    const type = DocumentFormat.label(doc).replace(/\s+/g, "-");
     const client = doc.clientName.trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
     return [type, doc.number ?? "Draft", client].filter(Boolean).join("-");
   }

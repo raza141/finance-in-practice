@@ -8,6 +8,8 @@ import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
+import { PackageCard } from "@/domains/packages/components/PackageCard";
+import { PackageRepository } from "@/domains/packages/server/PackageRepository";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
@@ -17,12 +19,10 @@ import { HourRequestRepository } from "../server/HourRequestRepository";
 import { SessionLogRepository } from "../server/SessionLogRepository";
 import { StudentRepository } from "../server/StudentRepository";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
-import { BillingBasis } from "../services/BillingBasis";
 import { StudentAccount } from "../services/StudentAccount";
 import { StudentSessions } from "../services/StudentSessions";
 import type { Student, StudentAccountView, StudyPlanItem } from "../types";
 import { AccountPanel, AccountSummaryCard } from "./AccountPanel";
-import { BasisCard } from "./BasisCard";
 import { BOOK_BUTTON } from "./buttons";
 import { ClassroomPanel } from "./ClassroomPanel";
 import { PortalOverview } from "./PortalOverview";
@@ -42,7 +42,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, basis] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
@@ -59,11 +59,11 @@ async function portalData(student: Student) {
     safely("hour requests", async () => (await HourRequestRepository.fromEnv()?.forClient(student.id)) ?? []),
     safely("terms", async () => (await TermsRepository.fromEnv()?.acceptedCurrent(student.id)) ?? true),
     safely("open quotes", async () => (invoices ? invoices.openQuotes(student.id) : [])),
-    safely("billing basis", async () => (await StudentRepository.fromEnv()?.basis(student.id)) ?? null),
+    safely("package", async () => (await PackageRepository.fromEnv()?.ofClient(student.id)) ?? null),
+    safely("packages", async () => (await PackageRepository.fromEnv()?.active()) ?? []),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
-  const clientPlan = client?.planUnit && client.planFeeMinor ? { unit: client.planUnit, feeMinor: client.planFeeMinor, currency: client.planCurrency } : null;
   // No ledger: the money can't be shown, so no account (rather than "all paid").
   const account: StudentAccountView | null = entries
     ? StudentAccount.build({
@@ -75,7 +75,7 @@ async function portalData(student: Student) {
         manual: (log ?? []).flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
         // The public booking link's event (NEXT_PUBLIC_CAL_LINK = user/slug) is the free diagnostic.
         freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
-        plan: clientPlan,
+        plan: client?.planUnit && client.planFeeMinor ? { unit: client.planUnit, feeMinor: client.planFeeMinor, currency: client.planCurrency } : null,
       })
     : null;
   return {
@@ -91,13 +91,13 @@ async function portalData(student: Student) {
     termsAccepted: termsAccepted ?? true,
     offers: offers ?? [],
     // Unknown (database hiccup): no card rather than a wrong one.
-    basis: basis && { ...basis, state: BillingBasis.state(account ?? { plan: clientPlan, agreements: [] }, basis.requested) },
+    pkg: pkg && { ...pkg, packages: packages ?? [] },
   };
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, basis } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -131,7 +131,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
           )}
         </section>
       )}
-      {basis && <BasisCard state={basis.state} prices={basis.prices} requestedAt={basis.requestedAt} readOnly={readOnly} />}
+      {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
       <StudentPortal
         readOnly={readOnly}
         courses={courses}

@@ -139,11 +139,6 @@ export class CourseContract {
 
     const priceMinor = CourseContract.parsePrice(text("price"));
     if (priceMinor === "invalid") errors.priceMinor = "Enter an amount like 4500 or 999.50, or leave it blank.";
-    const monthlyFeeMinor = CourseContract.parsePrice(text("monthlyFee"));
-    if (monthlyFeeMinor === "invalid") errors.monthlyFeeMinor = "Enter an amount like 3000, or leave it blank.";
-    const hoursText = text("monthlyHours");
-    const monthlyHours = hoursText === "" ? null : /^\d{1,3}$/.test(hoursText) && Number(hoursText) >= 1 && Number(hoursText) <= 400 ? Number(hoursText) : NaN;
-    if (Number.isNaN(monthlyHours)) errors.monthlyHours = "Whole hours from 1 to 400, or leave it blank.";
 
     const currency = text("currency").toUpperCase() || "AED";
     if (!/^[A-Z]{3}$/.test(currency)) errors.currency = "Use a 3-letter currency code.";
@@ -189,8 +184,6 @@ export class CourseContract {
         startDate: startDate || null,
         duration,
         priceMinor: priceMinor as number | null,
-        monthlyFeeMinor: monthlyFeeMinor as number | null,
-        monthlyHours,
         currency,
         method: method as MethodStep[],
         modes: modes as MethodStep[],

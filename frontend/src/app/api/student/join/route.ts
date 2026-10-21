@@ -9,7 +9,7 @@ import { SignupTicket } from "@/domains/students/server/SignupTicket";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { Batches } from "@/domains/students/services/Batches";
-import { BillingBasis } from "@/domains/students/services/BillingBasis";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
 import { RegistrationContract } from "@/domains/students/services/RegistrationContract";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -46,16 +46,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { titles, batches } = await classrooms.registrationOptions();
-    const parsed = RegistrationContract.parse({ ...(payload as object), email }, titles, batches);
+    const { titles, batches, packages } = await classrooms.registrationOptions();
+    const parsed = RegistrationContract.parse({ ...(payload as object), email }, titles, batches, packages);
     if (!parsed.ok) return reject(400, parsed.error);
     if (parsed.spam) return reject(400, "Unable to process this request.");
-    const { id: clientId } = await repo.join(parsed.value);
+    const { id: clientId, package: chosen } = await repo.join(parsed.value);
     await StudentAuth.startSession(clientId, repo);
     store.delete({ name: SignupTicket.COOKIE, path: "/" });
-    const { name, email: joined, phone, course, batch, basis } = parsed.value;
+    const { name, email: joined, phone, course, batch } = parsed.value;
     const batchRow = batch ? [Batches.noticeRow(batch, await classrooms.batchState(course, batch))] : [];
-    await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", joined], ["Mobile", phone], ["Course", course], ...batchRow, ["Wants to pay", BillingBasis.LABELS[basis]]], clientId);
+    await OwnerNotice.send(`New student joined: ${name}`, "New student joined", [["Name", name], ["Email", joined], ["Mobile", phone], ["Course", course], ...batchRow, ...PackageTable.noticeRows(chosen)], clientId);
     return Response.json({ ok: true }, { headers: NO_STORE });
   } catch (error) {
     console.error("[join] could not enrol", error);

@@ -56,7 +56,7 @@ export class AdminNavigation {
         { href: "/admin/invoices", label: "Billing & quotes", icon: "receipt", ownerOnly: true },
         { href: "/admin/leads", label: "Leads", icon: "inbox", ownerOnly: true },
         { href: "/admin/services", label: "Services & prices", icon: "tag", ownerOnly: true },
-        { href: "/admin/pricing", label: "Pricing", icon: "chart", comingSoon: true },
+        { href: "/admin/pricing", label: "Pricing", icon: "chart", ownerOnly: true },
       ],
     },
     {

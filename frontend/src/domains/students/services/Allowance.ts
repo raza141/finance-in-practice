@@ -38,15 +38,26 @@ export class Allowance {
     return Allowance.dateOf(iso).slice(0, 7);
   }
 
-  /** The monthly agreement with an hours limit running on `date`, with its month that contains it. */
+  /**
+   * The agreement with an hours limit running on `date`, with its month that contains it.
+   * A package's hours (hoursPerMonth holds its total) last for the whole agreement: one period, start to end.
+   */
   static covering<T extends AllowanceAgreement>(agreements: readonly T[], date: string): { agreement: T; period: Period } | null {
     for (const agreement of agreements) {
-      if (agreement.unit !== "month" || agreement.hoursPerMonth === null) continue;
-      const period = AgreementPeriod.at(agreement, date);
+      if (agreement.hoursPerMonth === null) continue;
+      const period =
+        agreement.unit === "month"
+          ? AgreementPeriod.at(agreement, date)
+          : agreement.unit === "package" && date >= agreement.startsOn && (!agreement.endsOn || date <= agreement.endsOn)
+            ? { index: 0, start: agreement.startsOn, end: agreement.endsOn ?? Allowance.OPEN_END }
+            : null;
       if (period) return { agreement, period };
     }
     return null;
   }
+
+  /** A package with no end date: its period's end. */
+  static readonly OPEN_END = "9999-12-31";
 
   /** The allowance of the agreement month containing `date`, or null when no agreement with an hours limit covers it. */
   static forDate({
@@ -87,6 +98,7 @@ export class Allowance {
     return {
       agreementId: agreement.id,
       serviceName: agreement.serviceName,
+      package: agreement.unit === "package",
       month,
       periodStart: period.start,
       periodEnd: period.end,

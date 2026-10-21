@@ -1,15 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { ApiError } from "@/core/http/ApiError";
+import { Cart, type CartPick } from "@/domains/packages/services/Cart";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
+import type { Package, PricingCourse } from "@/domains/packages/types";
 
 import { Batches } from "../services/Batches";
-import { BillingBasis } from "../services/BillingBasis";
 import { RegistrationContract } from "../services/RegistrationContract";
 import { StudentApiClient } from "../services/StudentApiClient";
-import type { CoursePrices } from "../types";
 
 const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
@@ -38,23 +39,23 @@ function CheckInbox({ to, lead }: { to: string; lead: string }) {
 /**
  * Join form. With `email` (back from Google, address proven): enrols at once and
  * opens the portal. Without: the visitor types their email and we mail a link
- * that confirms it first. `courses` = published titles only; `batches` = each exam course's sittings;
- * `prices` = each course's hourly and monthly price, shown on the hourly / monthly choice.
+ * that confirms it first. `courses` = published courses with their sittings;
+ * `packages` = the live packages. `picked` (on /pricing): course and package are
+ * already chosen and go as hidden fields. Without it the form asks, starting from
+ * the pick saved on /pricing (after the Google round trip, for one).
  */
-export function JoinForm({
-  courses,
-  batches,
-  prices,
-  email,
-}: {
-  courses: string[];
-  batches: Record<string, string[]>;
-  prices: Record<string, CoursePrices>;
-  email?: string;
-}) {
+export function JoinForm({ courses, packages, email, picked }: { courses: PricingCourse[]; packages: Package[]; email?: string; picked?: CartPick }) {
   const router = useRouter();
-  const [course, setCourse] = useState("");
+  // What they picked on /pricing (read after hydration), until they change it here.
+  const saved = Cart.parse(useSyncExternalStore(Cart.subscribe, Cart.snapshot, () => null));
+  const [ownCourse, setCourse] = useState<string | null>(null);
+  const [ownPackage, setPackageId] = useState<string | null>(null);
+  const course = picked?.course ?? ownCourse ?? saved?.course ?? "";
+  const packageId = picked?.packageId ?? ownPackage ?? saved?.packageId ?? "";
   const [state, setState] = useState<FormState>({ kind: "editing" });
+
+  const sittings = courses.find((c) => c.title === course)?.sittings ?? [];
+  const offered = PackageTable.forCourse(packages, sittings.length > 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,6 +68,7 @@ export function JoinForm({
         return;
       }
       await client.join(fields);
+      Cart.clear();
       // The session cookie is set: /student now renders the signed-in portal.
       router.replace("/student");
       router.refresh();
@@ -102,39 +104,46 @@ export function JoinForm({
           <span className={LABEL}>Mobile (WhatsApp)</span>
           <input name="phone" type="tel" required autoComplete="tel" maxLength={LIMITS.phone[1]} placeholder="+971 50 123 4567" className={FIELD} />
         </label>
-        <label className="grid gap-1.5">
-          <span className={LABEL}>Course</span>
-          <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={FIELD}>
-            <option value="" disabled>
-              Choose a course
-            </option>
-            <optgroup label="Exam courses">
-              {courses.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Consultancy">
-              {EXTRA.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Anything else">
-              <option value={OTHER}>School, university or other subject</option>
-            </optgroup>
-          </select>
-        </label>
-        {batches[course] && (
+        {picked ? (
+          <>
+            <input type="hidden" name="course" value={picked.course} />
+            <input type="hidden" name="package" value={picked.packageId} />
+          </>
+        ) : (
+          <label className="grid gap-1.5">
+            <span className={LABEL}>Course</span>
+            <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={FIELD}>
+              <option value="" disabled>
+                Choose a course
+              </option>
+              <optgroup label="Exam courses">
+                {courses.map((c) => (
+                  <option key={c.title} value={c.title}>
+                    {c.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Consultancy">
+                {EXTRA.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Anything else">
+                <option value={OTHER}>School, university or other subject</option>
+              </optgroup>
+            </select>
+          </label>
+        )}
+        {sittings.length > 0 && (
           <label className="grid gap-1.5">
             <span className={LABEL}>Exam sitting (your batch)</span>
             <select key={course} name="batch" required defaultValue="" className={FIELD}>
               <option value="" disabled>
                 Which exam are you taking?
               </option>
-              {batches[course].map((b) => (
+              {sittings.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
@@ -149,28 +158,38 @@ export function JoinForm({
             <input name="topic" required minLength={LIMITS.topic[0]} maxLength={LIMITS.topic[1]} placeholder="e.g. AP Statistics, corporate finance" className={FIELD} />
           </label>
         )}
-        <fieldset className="grid gap-1.5">
-          <legend className={`${LABEL} mb-1.5`}>How do you want to pay?</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(["hour", "month"] as const).map((basis) => {
-              const { amount, detail } = BillingBasis.price(basis, prices[course] ?? null);
-              return (
+        {!picked && course && offered.length > 0 && (
+          <fieldset className="grid gap-1.5">
+            <legend className={`${LABEL} mb-1.5`}>Package</legend>
+            <div className="grid gap-2">
+              {offered.map((p) => (
                 <label
-                  key={basis}
-                  className="flex cursor-pointer items-start gap-2.5 rounded-md border border-line p-3 transition-colors has-[:checked]:border-quant/70 has-[:checked]:bg-quant/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-quant/60"
+                  key={p.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border border-line p-3 transition-colors has-[:checked]:border-quant/70 has-[:checked]:bg-quant/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-quant/60"
                 >
-                  <input type="radio" name="basis" value={basis} required className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
-                  <span className="grid gap-0.5">
-                    <span className="text-sm font-semibold text-ink">{BillingBasis.LABELS[basis]}</span>
-                    <span className="text-sm text-ink/90 tabular-nums">{amount}</span>
-                    <span className="text-xs text-muted">{detail}</span>
+                  <input
+                    type="radio"
+                    name="package"
+                    value={p.id}
+                    required
+                    checked={packageId === p.id}
+                    onChange={() => setPackageId(p.id)}
+                    className="h-4 w-4 shrink-0 accent-[var(--color-quant)]"
+                  />
+                  <span className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                    <span className="font-semibold text-ink">{p.name}</span>
+                    <span className="text-muted tabular-nums">
+                      {PackageTable.isCustom(p) ? PackageTable.price(p) : `${PackageTable.hours(p)}, ${PackageTable.price(p)}`}
+                    </span>
                   </span>
                 </label>
-              );
-            })}
-          </div>
-          <span className="text-xs text-muted">You can switch later from your portal.</span>
-        </fieldset>
+              ))}
+            </div>
+            <a href="/pricing" className="text-xs text-quant underline-offset-2 hover:underline">
+              Compare packages
+            </a>
+          </fieldset>
+        )}
         <label className="flex items-start gap-2.5 text-sm text-ink/90">
           <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
           <span>
@@ -178,7 +197,7 @@ export function JoinForm({
             <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
               terms and conditions
             </a>
-            .
+            {offered.some((p) => p.id === packageId && !PackageTable.isCustom(p)) && ", and this package as my agreement"}.
           </span>
         </label>
         {/* Honeypot: hidden from people, filled by bots. */}
@@ -196,7 +215,7 @@ export function JoinForm({
       >
         {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>
-      <p className="text-xs text-muted">We only use these details to arrange your lessons.</p>
+      <p className="text-xs text-muted">We only use these details to arrange your lessons, and message you on WhatsApp to confirm.</p>
     </form>
   );
 }

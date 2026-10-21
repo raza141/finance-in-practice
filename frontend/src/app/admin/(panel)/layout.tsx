@@ -14,7 +14,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
   const inbox = admin.role === "owner" ? await AdminInbox.counts() : null;
   const badges: NavBadges = inbox
     ? {
-        "/admin/clients": { count: inbox.clients + inbox.basisRequests, label: "new students, Classroom or hourly / monthly requests to look at" },
+        "/admin/clients": { count: inbox.clients, label: "new students, Classroom or package requests to look at" },
         "/admin/schedule": { count: inbox.pendingBookings, label: "bookings waiting for confirmation" },
         "/admin/hours": { count: inbox.hourRequests, label: "requests for more hours" },
       }

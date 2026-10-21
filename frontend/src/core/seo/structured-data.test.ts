@@ -30,8 +30,6 @@ const COURSE: Course = {
   startDate: "2026-11-01",
   duration: "8 weeks · 16 live sessions",
   priceMinor: 150000,
-  monthlyFeeMinor: null,
-  monthlyHours: null,
   currency: "AED",
   isActive: true,
   method: [],

@@ -363,8 +363,6 @@ export interface ClientInput {
 
 export interface Client extends ClientInput {
   id: string;
-  /** Hourly or monthly, as the student asked in the portal or at registration; null = nothing to answer. */
-  requestedBasis: "hour" | "month" | null;
 }
 
 export interface BankDetails {

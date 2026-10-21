@@ -5,6 +5,7 @@ import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
 import type { BankDetails, ConfirmationInput, Invoice } from "../types";
+import { DocumentFormat } from "./DocumentFormat";
 import { InvoiceContract } from "./InvoiceContract";
 import { InvoiceMath } from "./InvoiceMath";
 
@@ -172,7 +173,7 @@ export class InvoiceEmails {
 
   /** Summary plus a link to the printable document page. Only for issued documents. */
   static document(doc: Invoice, url: string, settings: BillingSettings): EmailMessage {
-    const label = SettingsContract.DOCUMENT_TYPES[doc.docType];
+    const label = DocumentFormat.label(doc);
     const values = InvoiceEmails.placeholders(doc, url, settings);
     const number = values.number;
     const isInvoice = doc.docType === "invoice";

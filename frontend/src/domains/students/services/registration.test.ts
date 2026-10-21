@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import { RegistrationContract } from "./RegistrationContract";
 
 const COURSES = ["CFA Level I", "FRM Part I"];
-const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", acceptTerms: "yes", basis: "hour" };
+const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", acceptTerms: "yes" };
 
 describe("RegistrationContract", () => {
   it("normalises a valid sign-up", () => {
     expect(RegistrationContract.parse(VALID, COURSES)).toEqual({
       ok: true,
       spam: false,
-      value: { name: "Ali Kenan", email: "ali.kenan@gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", batch: "", basis: "hour" },
+      value: { name: "Ali Kenan", email: "ali.kenan@gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", batch: "", packageId: null },
     });
     const other = RegistrationContract.parse({ ...VALID, course: "Other", topic: "AP Statistics" }, COURSES);
     expect(other.ok && other.value.course).toBe("Other: AP Statistics");
@@ -39,6 +39,16 @@ describe("RegistrationContract", () => {
     ["the terms unticked", { acceptTerms: "" }],
   ])("refuses %s", (_, patch) => {
     expect(RegistrationContract.parse({ ...VALID, ...patch }, COURSES).ok).toBe(false);
+  });
+
+  it("requires a package the course offers: any for an exam course, only Custom otherwise", () => {
+    const batches = { "CFA Level I": ["Nov 2026"] };
+    const packages = [{ id: "p12", hours: 12 }, { id: "custom", hours: null }];
+    const parse = (patch: object) => RegistrationContract.parse({ ...VALID, batch: "Nov 2026", ...patch }, COURSES, batches, packages);
+    expect(parse({ package: "p12" })).toMatchObject({ ok: true, value: { packageId: "p12" } });
+    expect(parse({ package: "" }).ok).toBe(false);
+    expect(parse({ course: "FRM Part I", package: "p12" }).ok).toBe(false);
+    expect(parse({ course: "FRM Part I", package: "custom" })).toMatchObject({ ok: true, value: { packageId: "custom" } });
   });
 
   it("flags the honeypot without failing", () => {

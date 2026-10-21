@@ -114,7 +114,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const money = (minor: number) => InvoiceMath.money(minor, doc.currency);
   const balance = DocumentFormat.balance(doc);
-  const label = SettingsContract.DOCUMENT_TYPES[doc.docType];
+  const label = DocumentFormat.label(doc);
   const isInvoice = doc.docType === "invoice";
   const isQuickReceipt = doc.docType === "receipt" && !doc.relatedId;
   const id = { id: doc.id };

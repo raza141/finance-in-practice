@@ -5,6 +5,8 @@ import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
+import type { Package } from "@/domains/packages/types";
 import type { Testimonial } from "@/domains/testimonials/types";
 
 import { CourseFormat } from "../services/CourseFormat";
@@ -56,14 +58,19 @@ export function CourseView({
   testimonials,
   booking,
   freeResource,
+  packages = [],
 }: {
   course: Course;
   testimonials: readonly Testimonial[];
   /** The #book section body: the live booking widget, or a stand-in in the preview. */
   booking: ReactNode;
+  /** The live packages (exam courses): shown as the pricing instead of the course's own options. */
+  packages?: readonly Package[];
   /** Optional lead magnet, shown before the FAQ. */
   freeResource?: ReactNode;
 }) {
+  // Exam courses sell the packages from /pricing; other courses keep their own options.
+  const offered = course.testimonialTicker ? packages : [];
   const difference = course.difference ? CourseFormat.splitFirstLine(course.difference) : null;
   const exam = examRows(course.testimonialTicker);
   const facts: { label: string; value: string; note?: string }[] = [
@@ -88,7 +95,7 @@ export function CourseView({
           {/* Smaller on phones so all three fit one row. */}
           <div className="mt-8 flex flex-wrap gap-2 sm:gap-3">
             {/* Solid yellow like the site's other gold buttons: the one money action in the row. */}
-            {course.options.length > 0 && (
+            {(offered.length > 0 || course.options.length > 0) && (
               <ButtonLink href="#pricing" variant="primary" className="px-3 sm:h-12 sm:px-6 sm:text-[15px]">
                 Pricing
               </ButtonLink>
@@ -284,7 +291,38 @@ export function CourseView({
         </section>
       )}
 
-      {course.options.length > 0 && (
+      {offered.length > 0 && (
+        <section id="pricing" aria-labelledby="packages-heading" className="scroll-mt-28 border-t border-line">
+          <div className="page-container py-12 lg:py-14">
+            <SectionHeading id="packages-heading" title="Choose your package." lede="The package you choose is your agreement. Register in one step on the next page." />
+            <ul className={`mt-10 grid gap-4 ${row(offered.length)}`}>
+              {offered.map((p) => (
+                <li key={p.id} className={`flex flex-col rounded-2xl border bg-surface p-6 ${p.featured ? "border-gold/60" : "border-line"}`}>
+                  <h3 className="text-xl font-bold">{p.name}</h3>
+                  <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{PackageTable.price(p)}</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {PackageTable.hours(p)}
+                    {p.hours !== null && p.hours > 1 && `, ${PackageTable.perHour(p)}`}
+                  </p>
+                  {p.tagline && <p className="mt-3 leading-relaxed text-muted">{p.tagline}</p>}
+                  <div className="mt-auto pt-5">
+                    <ButtonLink href={`/pricing?course=${course.slug}&package=${p.id}#checkout`} variant={p.featured ? "primary" : "secondary"}>
+                      Choose {p.name}
+                    </ButtonLink>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-sm">
+              <a href={`/pricing?course=${course.slug}`} className="text-quant underline-offset-2 hover:underline">
+                Compare what each package includes
+              </a>
+            </p>
+          </div>
+        </section>
+      )}
+
+      {offered.length === 0 && course.options.length > 0 && (
         <section id="pricing" aria-labelledby="options-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
             <SectionHeading id="options-heading" title="Choose how you engage." />

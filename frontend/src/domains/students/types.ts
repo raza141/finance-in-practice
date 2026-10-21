@@ -68,18 +68,8 @@ export interface RegistrationInput {
   course: string;
   /** Exam courses: the sitting picked, e.g. "Nov 2026" or "Not sure yet"; otherwise "". */
   batch: string;
-  /** How they want to pay: hourly at the course's rate, or monthly (the owner sends the agreement). */
-  basis: BillingBasis;
-}
-
-export type BillingBasis = "hour" | "month";
-
-/** A course's prices as a student choosing hourly or monthly sees them; null = on request / agreed per student. */
-export interface CoursePrices {
-  hourMinor: number | null;
-  monthMinor: number | null;
-  monthHours: number | null;
-  currency: string;
+  /** The package picked (053_packages); null only while no package is published. */
+  packageId: string | null;
 }
 
 /** "none": not asked yet. Only "approved" reveals the invite (039_portal_controls). */
@@ -230,6 +220,8 @@ export interface HourRequest {
 export interface MonthAllowance {
   agreementId: string;
   serviceName: string;
+  /** A package's hours: one period for the whole agreement (periodEnd = Allowance.OPEN_END when it has no end). */
+  package: boolean;
   /** YYYY-MM of the agreement month's start: the key requests use. */
   month: string;
   /** The agreement month, e.g. 17 Oct – 16 Nov (YYYY-MM-DD, inclusive). */

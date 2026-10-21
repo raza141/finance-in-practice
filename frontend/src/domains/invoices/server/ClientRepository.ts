@@ -17,14 +17,13 @@ interface ClientRow {
   plan_notes: string;
   payment_terms: Client["paymentTerms"];
   terms_days: number | null;
-  requested_basis: "hour" | "month" | null;
 }
 
 /** Contact details only: what the invoice form and website bookings know about a new client. */
 type NewClient = Pick<ClientInput, "name" | "email" | "phone" | "address">;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLUMNS = "id, name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes, payment_terms, terms_days, requested_basis";
+const COLUMNS = "id, name, email, phone, address, courses, plan_unit, plan_fee_minor, plan_currency, plan_notes, payment_terms, terms_days";
 
 /**
  * Saved clients, with their courses and payment plan (migrations 013, 014).
@@ -47,30 +46,6 @@ export class ClientRepository {
     if (!UUID.test(id)) return null;
     const [row] = (await this.sql`SELECT ${this.sql.unsafe(COLUMNS)} FROM clients WHERE id = ${id}`) as ClientRow[];
     return row ? ClientRepository.toClient(row) : null;
-  }
-
-  /**
-   * The owner's answer to an hourly / monthly request. "hour": the plan becomes their first priced
-   * course's hourly rate (false when no course has one); "dismiss" just closes it.
-   * Monthly is answered with a quote: accepting it closes the request.
-   */
-  async answerBasis(id: string, answer: "hour" | "dismiss"): Promise<boolean> {
-    if (!UUID.test(id)) return false;
-    const rows =
-      answer === "dismiss"
-        ? await this.sql`UPDATE clients SET requested_basis = NULL, requested_at = NULL WHERE id = ${id} RETURNING id`
-        : await this.sql`
-            UPDATE clients c SET plan_unit = 'hour', plan_fee_minor = co.price_minor, plan_currency = co.currency,
-              requested_basis = NULL, requested_at = NULL, updated_at = now()
-            FROM (
-              SELECT price_minor, currency FROM courses, clients me
-              WHERE me.id = ${id} AND title = ANY (me.courses) AND price_minor > 0 AND currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')
-              ORDER BY array_position(me.courses, title) LIMIT 1
-            ) co
-            WHERE c.id = ${id}
-            RETURNING c.id
-          `;
-    return rows.length > 0;
   }
 
   /** The most recently added clients. */
@@ -176,7 +151,6 @@ export class ClientRepository {
       planNotes: row.plan_notes,
       paymentTerms: row.payment_terms,
       termsDays: row.terms_days,
-      requestedBasis: row.requested_basis,
     };
   }
 }

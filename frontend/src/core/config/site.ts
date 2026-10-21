@@ -25,6 +25,7 @@ export const siteConfig = {
   nav: [
     { label: "Home", href: "/" },
     { label: "Courses", href: "/courses" },
+    { label: "Pricing", href: "/pricing" },
     { label: "Question Bank", href: "/cfa/questions" },
     { label: "Resources", href: "/resources" },
     { label: "Blog", href: "/journal" },
@@ -35,6 +36,7 @@ export const siteConfig = {
   footerNav: [
     { label: "Home", href: "/" },
     { label: "Courses", href: "/courses" },
+    { label: "Pricing", href: "/pricing" },
     { label: "Methodology", href: "/#methodology" },
     { label: "Instructor", href: "/about" },
     { label: "Blog", href: "/journal" },
@@ -74,7 +76,7 @@ export const siteConfig = {
 
   /** Public fees, by the hour or by the month (flexible schedule, at home in Abu Dhabi or online). Exam course pages keep theirs in Admin → Courses. */
   fees: {
-    exam: "AED 150 / hour · AED 3,000 / month (30 hours)",
+    exam: "AED 150 / hour · 12 hours AED 1,500 · 30 hours AED 3,000",
     university: "AED 125 / hour · AED 2,000 / month (20 hours)",
   },
 

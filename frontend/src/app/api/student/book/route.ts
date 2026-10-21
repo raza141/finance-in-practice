@@ -33,7 +33,7 @@ function reject(status: number, error: string, message: string) {
  *   Name and email come from the signed-in student's client record, never the body.
  *   200 -> { uid, start, end, status }  (status "pending" when the event needs confirmation)
  */
-/** The booking's month allowance (monthly agreements with an hours limit), with the owner's corrections applied; null = no limit. */
+/** The booking's allowance (a package, or a monthly agreement with an hours limit), with the owner's corrections applied; null = no limit. */
 async function allowanceFor(clientId: string, existing: CalBookingDetail[], start: string) {
   const [agreements, requests, log] = await Promise.all([
     AgreementRepository.fromEnv()?.forClient(clientId) ?? [],
@@ -85,12 +85,13 @@ export async function POST(request: NextRequest) {
     const allowance = await allowanceFor(student.id, existing, booking.start);
     if (allowance && allowance.leftMinutes < booking.minutes) {
       const left = Math.max(0, allowance.leftMinutes) / 60;
+      const hours = allowance.package ? "your package's hours" : "this month's hours";
       return reject(
         409,
         "ALLOWANCE_USED",
         left > 0
-          ? `Only ${Math.round(left * 100) / 100} h are left of this month's hours. Book a shorter session, or ask for more hours under Hours & payments.`
-          : "You've used this month's hours. Ask for more hours under Hours & payments, and book once your instructor approves.",
+          ? `Only ${Math.round(left * 100) / 100} h are left of ${hours}. Book a shorter session, or ask for more hours under Hours & payments.`
+          : `You've used ${hours}. Ask for more hours under Hours & payments, or a new package, and book once your instructor approves.`,
       );
     }
     const result = await new BookingGateway(cal, BlockRepository.fromEnv()).book(

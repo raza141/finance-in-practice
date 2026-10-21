@@ -49,7 +49,7 @@ export function AccountSummaryCard({ account }: { account: StudentAccountView | 
             {!account.taken
               ? "Hours unavailable just now"
               : account.allowance
-                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left until ${SHORT.format(dayDate(account.allowance.periodEnd))}`
+                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left ${account.allowance.package ? "in your package" : `until ${SHORT.format(dayDate(account.allowance.periodEnd))}`}`
                 : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`}
           </p>
           <p className="text-sm text-muted">
@@ -236,7 +236,9 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
   const total = allowance.includedMinutes + allowance.extraMinutes;
   const share = (minutes: number) => `${Math.min(100, (minutes / Math.max(total, 1)) * 100)}%`;
   const over = allowance.leftMinutes < 0;
-  const name = `${SHORT.format(dayDate(allowance.periodStart))} – ${SHORT.format(dayDate(allowance.periodEnd))}`;
+  const name = allowance.package
+    ? `your package, since ${SHORT.format(dayDate(allowance.periodStart))}`
+    : `${SHORT.format(dayDate(allowance.periodStart))} – ${SHORT.format(dayDate(allowance.periodEnd))}`;
   return (
     <section className={CARD} aria-labelledby="allowance-heading">
       <h2 id="allowance-heading" className={LABEL}>
@@ -254,10 +256,11 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
         <div className="h-full bg-gold/70" style={{ width: share(allowance.bookedMinutes) }} />
       </div>
       <p className="mt-2 text-sm text-muted">
-        {hoursOf(allowance.takenMinutes)} studied, {hoursOf(allowance.bookedMinutes)} booked, of {hoursOf(allowance.includedMinutes)} a month
+        {hoursOf(allowance.takenMinutes)} studied, {hoursOf(allowance.bookedMinutes)} booked, of {hoursOf(allowance.includedMinutes)}{" "}
+        {allowance.package ? "in your package" : "a month"}
         {allowance.extraMinutes > 0 &&
           ` + ${hoursOf(allowance.extraMinutes)} extra${allowance.extraBilledMinutes > 0 ? ` (${hoursOf(allowance.extraBilledMinutes)} to pay)` : ""}`}
-        . Unused hours don&rsquo;t carry over.
+        .{!allowance.package && " Unused hours don\u2019t carry over."}
       </p>
       <div className="mt-4 border-t border-line/60 pt-4">
         {allowance.pending ? (
@@ -286,7 +289,11 @@ function Agreements({ agreements, readOnly }: { agreements: AccountAgreement[]; 
                 <span className="text-ink tabular-nums">{InvoiceMath.money(a.rateMinor, a.currency)}</span> {PER[a.unit]}, from {DAY.format(new Date(`${a.startsOn}T00:00:00Z`))}
                 {a.endsOn ? ` to ${DAY.format(new Date(`${a.endsOn}T00:00:00Z`))}` : ", no end date"}
               </p>
-              {a.hoursPerMonth !== null && <p className="mt-1 text-sm text-ink">{a.hoursPerMonth} hours a month included</p>}
+              {a.hoursPerMonth !== null && (
+                <p className="mt-1 text-sm text-ink">
+                  {a.hoursPerMonth} hours {a.unit === "package" ? "in the package" : "a month included"}
+                </p>
+              )}
               {a.scope && <p className="mt-1 text-sm text-muted">{a.scope}</p>}
               <div className="mt-3">
                 {a.acceptedAt ? (

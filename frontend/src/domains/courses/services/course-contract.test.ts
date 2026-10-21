@@ -43,12 +43,6 @@ describe("CourseContract", () => {
     });
   });
 
-  it("reads the monthly fee and hours, blank as not offered", () => {
-    expect(CourseContract.parse({ ...VALID, monthlyFee: "3,000", monthlyHours: "30" })).toMatchObject({ ok: true, input: { monthlyFeeMinor: 300_000, monthlyHours: 30 } });
-    expect(CourseContract.parse(VALID)).toMatchObject({ ok: true, input: { monthlyFeeMinor: null, monthlyHours: null } });
-    expect(CourseContract.parse({ ...VALID, monthlyHours: "0" })).toMatchObject({ ok: false, errors: { monthlyHours: expect.any(String) } });
-  });
-
   it("treats blanks as on request, AED, #book and no ticker", () => {
     const result = CourseContract.parse({ ...VALID, startDate: "", price: " ", currency: "", brochureUrl: "", bookingUrl: "", testimonialTicker: "" });
     expect(result.ok && result.input).toMatchObject({

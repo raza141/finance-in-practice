@@ -1,6 +1,8 @@
+import type { Package } from "@/domains/packages/types";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
+
 import type { RegistrationInput } from "../types";
 import { Batches } from "./Batches";
-import { BillingBasis } from "./BillingBasis";
 
 export type RegistrationResult = { ok: true; value: RegistrationInput; spam: boolean } | { ok: false; error: string };
 
@@ -16,8 +18,14 @@ export class RegistrationContract {
   /**
    * `courses` = the published course titles a visitor may pick (never drafts or internal ones);
    * `batches` = the sittings each exam course offers: one of them, or "Not sure yet", is required.
+   * `packages` = the live packages: one the course offers is required (exam courses: any; others: Custom).
    */
-  static parse(body: unknown, courses: readonly string[], batches: Readonly<Record<string, readonly string[]>> = {}): RegistrationResult {
+  static parse(
+    body: unknown,
+    courses: readonly string[],
+    batches: Readonly<Record<string, readonly string[]>> = {},
+    packages: readonly Pick<Package, "id" | "hours">[] = [],
+  ): RegistrationResult {
     const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
     const text = (key: string) => (typeof b[key] === "string" ? (b[key] as string).trim().replace(/\s+/g, " ") : "");
     const { LIMITS, OTHER } = RegistrationContract;
@@ -48,13 +56,14 @@ export class RegistrationContract {
     const batch = sittings ? text("batch") : "";
     if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
 
-    const basis = text("basis");
-    if (!BillingBasis.isBasis(basis)) return { ok: false, error: "Choose hourly or monthly." };
+    const packageId = text("package");
+    const offered = PackageTable.forCourse(packages, !!sittings);
+    if (offered.length > 0 && !offered.some((p) => p.id === packageId)) return { ok: false, error: "Choose a package." };
 
     // The terms box on the form: registering records the version they accepted (StudentRepository.join).
     if (text("acceptTerms") !== "yes") return { ok: false, error: "Please accept the terms and conditions." };
 
     // Honeypot: a hidden field people never fill. The route answers as usual and saves nothing.
-    return { ok: true, value: { name, email, phone, course, batch, basis }, spam: text("website") !== "" };
+    return { ok: true, value: { name, email, phone, course, batch, packageId: offered.length > 0 ? packageId : null }, spam: text("website") !== "" };
   }
 }

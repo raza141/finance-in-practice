@@ -9,6 +9,7 @@ import { BookingPanel } from "@/domains/booking/components/BookingPanel";
 import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
 import { CourseView } from "@/domains/courses/components/CourseView";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { PackageRepository } from "@/domains/packages/server/PackageRepository";
 import { FreeResourceBlock } from "@/domains/resources/components/FreeResourceBlock";
 import { ResourceCatalog } from "@/domains/resources/services/ResourceCatalog";
 import { TestimonialRepository } from "@/domains/testimonials/server/TestimonialRepository";
@@ -40,6 +41,16 @@ async function loadTestimonials(course: Course): Promise<Testimonial[]> {
   }
 }
 
+/** Live packages for the pricing section; none if the query fails. */
+async function loadPackages() {
+  try {
+    return (await PackageRepository.fromEnv()?.active()) ?? [];
+  } catch (error) {
+    console.error("courses: could not load packages", error);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const course = await loadCourse((await params).slug);
   if (!course) return { title: "Course not found", robots: { index: false } };
@@ -66,6 +77,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
         <CourseView
           course={course}
           testimonials={await loadTestimonials(course)}
+          packages={await loadPackages()}
           freeResource={freeResource && <FreeResourceBlock resource={freeResource} source={course.slug} />}
           booking={
             <BookingPanel

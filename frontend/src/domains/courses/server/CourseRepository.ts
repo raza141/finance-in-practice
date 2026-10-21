@@ -27,8 +27,6 @@ interface CourseRow {
   start_date: string | null;
   duration: string;
   price_minor: number | null;
-  monthly_fee_minor: string | number | null;
-  monthly_hours: number | null;
   currency: string;
   is_active: boolean;
   method: unknown;
@@ -61,7 +59,6 @@ export class CourseRepository {
   /** Every column a Course needs; updated_by stays admin-side. */
   private static readonly COLUMNS = `id, slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
     cta_label, booking_url, coaching_label, practice_label, weight_label, start_date::text AS start_date, duration, price_minor,
-    monthly_fee_minor, monthly_hours,
     currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title, seo_description, testimonial_ticker`;
 
   constructor(private readonly sql: Sql) {}
@@ -115,12 +112,12 @@ export class CourseRepository {
       const [row] = (await this.sql`
         INSERT INTO courses (slug, title, category, eyebrow, tagline, summary, audience, not_for, difference, disclaimer,
                              cta_label, booking_url, coaching_label, practice_label, weight_label, start_date, duration, price_minor,
-                             monthly_fee_minor, monthly_hours, currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title,
+                             currency, is_active, method, modes, modules, options, faqs, brochure_url, seo_title,
                              seo_description, testimonial_ticker, updated_by)
         VALUES (${input.slug}, ${input.title}, ${input.category}, ${input.eyebrow}, ${input.tagline}, ${input.summary}, ${input.audience},
                 ${input.notFor}, ${input.difference}, ${input.disclaimer}, ${input.ctaLabel}, ${input.bookingUrl},
                 ${input.coachingLabel}, ${input.practiceLabel}, ${input.weightLabel}, ${input.startDate}, ${input.duration},
-                ${input.priceMinor}, ${input.monthlyFeeMinor}, ${input.monthlyHours}, ${input.currency}, ${isActive}, ${JSON.stringify(input.method)}::jsonb, ${JSON.stringify(input.modes)}::jsonb,
+                ${input.priceMinor}, ${input.currency}, ${isActive}, ${JSON.stringify(input.method)}::jsonb, ${JSON.stringify(input.modes)}::jsonb,
                 ${JSON.stringify(input.modules)}::jsonb, ${JSON.stringify(input.options)}::jsonb,
                 ${JSON.stringify(input.faqs)}::jsonb, ${input.brochureUrl}, ${input.seoTitle}, ${input.seoDescription},
                 ${input.testimonialTicker}, ${adminId})
@@ -144,8 +141,7 @@ export class CourseRepository {
           difference = ${input.difference}, disclaimer = ${input.disclaimer}, cta_label = ${input.ctaLabel},
           booking_url = ${input.bookingUrl}, coaching_label = ${input.coachingLabel},
           practice_label = ${input.practiceLabel}, weight_label = ${input.weightLabel}, start_date = ${input.startDate}, duration = ${input.duration},
-          price_minor = ${input.priceMinor}, monthly_fee_minor = ${input.monthlyFeeMinor}, monthly_hours = ${input.monthlyHours},
-          currency = ${input.currency}, is_active = ${isActive},
+          price_minor = ${input.priceMinor}, currency = ${input.currency}, is_active = ${isActive},
           method = ${JSON.stringify(input.method)}::jsonb, modes = ${JSON.stringify(input.modes)}::jsonb,
           modules = ${JSON.stringify(input.modules)}::jsonb,
           options = ${JSON.stringify(input.options)}::jsonb, faqs = ${JSON.stringify(input.faqs)}::jsonb,
@@ -199,8 +195,6 @@ export class CourseRepository {
       startDate: row.start_date,
       duration: row.duration,
       priceMinor: row.price_minor,
-      monthlyFeeMinor: row.monthly_fee_minor === null ? null : Number(row.monthly_fee_minor),
-      monthlyHours: row.monthly_hours,
       currency: row.currency,
       isActive: row.is_active,
       method: CourseFormat.method(row.method),

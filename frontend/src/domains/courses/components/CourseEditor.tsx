@@ -335,14 +335,8 @@ export function CourseEditor({
               <Field label="Next start" error={errors.startDate} hint="Blank shows “On request”.">
                 <input type="date" value={draft.startDate} onChange={(e) => set({ startDate: e.target.value })} className={FIELD} />
               </Field>
-              <Field label="Hourly fee" error={errors.priceMinor} hint="Per 1-on-1 hour. Blank = on request, 0 = free. Invoices and client plans use it.">
+              <Field label="Headline fee" error={errors.priceMinor} hint="Blank = on request, 0 = free. Invoices and client plans use it.">
                 <input inputMode="decimal" placeholder="On request" value={draft.price} onChange={(e) => set({ price: e.target.value })} className={`${FIELD} tabular-data`} />
-              </Field>
-              <Field label="Monthly fee" error={errors.monthlyFeeMinor} hint="Shown to students choosing monthly. Blank = agreed with each student.">
-                <input inputMode="decimal" placeholder="Agreed per student" value={draft.monthlyFee} onChange={(e) => set({ monthlyFee: e.target.value })} className={`${FIELD} tabular-data`} />
-              </Field>
-              <Field label="Hours included a month" error={errors.monthlyHours} hint="1-on-1 hours the monthly fee covers, e.g. 30.">
-                <input inputMode="numeric" placeholder="e.g. 30" value={draft.monthlyHours} onChange={(e) => set({ monthlyHours: e.target.value })} className={`${FIELD} tabular-data`} />
               </Field>
               <Field label="Currency" error={errors.currency}>
                 <select value={draft.currency} onChange={(e) => set({ currency: e.target.value })} className={FIELD}>

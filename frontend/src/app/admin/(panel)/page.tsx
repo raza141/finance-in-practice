@@ -65,7 +65,7 @@ export default async function AdminDashboardPage() {
     safely(TestimonialRepository.fromEnv()?.counts(), null, "Testimonials"),
     safely(articles?.counts(), null, "Articles"),
     safely(articles?.pendingReviews(), 0, "Article reviews"),
-    safely(AdminInbox.counts(), { clients: 0, pendingBookings: 0, hourRequests: 0, basisRequests: 0 }, "Inbox counts"),
+    safely(AdminInbox.counts(), { clients: 0, pendingBookings: 0, hourRequests: 0 }, "Inbox counts"),
     safely(AgreementRepository.fromEnv()?.unaccepted(), [], "Unaccepted agreements"),
     // Unknown counts as published: never nag on a hiccup.
     safely(TermsRepository.fromEnv()?.latest().then((t) => t !== null), true, "Terms"),
@@ -86,8 +86,7 @@ export default async function AdminDashboardPage() {
   const attention = [
     { count: inbox.pendingBookings, text: inbox.pendingBookings === 1 ? "booking to confirm" : "bookings to confirm", href: "/admin/schedule" },
     { count: inbox.hourRequests, text: inbox.hourRequests === 1 ? "request for more hours" : "requests for more hours", href: "/admin/hours" },
-    { count: inbox.basisRequests, text: inbox.basisRequests === 1 ? "student switching hourly / monthly" : "students switching hourly / monthly", href: "/admin/clients" },
-    { count: inbox.clients, text: inbox.clients === 1 ? "new student or Classroom request" : "new students or Classroom requests", href: "/admin/clients" },
+    { count: inbox.clients, text: inbox.clients === 1 ? "new student or request to answer" : "new students or requests to answer", href: "/admin/clients" },
     { count: overdueCount, text: overdueCount === 1 ? "invoice overdue" : "invoices overdue", href: "/admin/invoices" },
     { count: terms ? 0 : 1, text: "terms not published: students can't book", href: "/admin/settings/terms" },
     { count: unaccepted.length, text: unaccepted.length === 1 ? "agreement not accepted yet" : "agreements not accepted yet", href: unaccepted.length === 1 ? `/admin/clients/${unaccepted[0].clientId}#agreements` : "/admin/clients" },

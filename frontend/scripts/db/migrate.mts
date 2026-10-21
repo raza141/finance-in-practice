@@ -1120,18 +1120,44 @@ const MIGRATIONS: Migration[] = [
     ],
   },
   {
-    // Hourly or monthly: a course's monthly fee and hours beside its hourly price,
-    // and the basis a student asks for at registration or in the portal until the
-    // owner answers (clients.plan_unit stays the owner-confirmed basis).
-    id: "052_billing_basis",
+    // Packages on /pricing (Admin → Pricing): hours for a price, or Custom (both null).
+    // A student picks one at registration and keeps it (clients.package_id) until they
+    // ask for another (requested_package_id) and the owner applies it. A priced package
+    // becomes a 'package' agreement on the PKG service, its hours in hours_per_month
+    // (for a package: the total, not a month).
+    id: "053_packages",
     statements: [
-      `ALTER TABLE courses
-        ADD COLUMN monthly_fee_minor bigint CHECK (monthly_fee_minor >= 0),
-        ADD COLUMN monthly_hours integer CHECK (monthly_hours BETWEEN 1 AND 400)`,
+      `CREATE TABLE packages (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name        text NOT NULL CHECK (char_length(name) BETWEEN 2 AND 60),
+        tagline     text NOT NULL DEFAULT '' CHECK (char_length(tagline) <= 160),
+        hours       integer CHECK (hours BETWEEN 1 AND 300),
+        price_minor integer CHECK (price_minor > 0 AND price_minor <= 1000000000),
+        currency    text NOT NULL DEFAULT 'AED' CHECK (currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')),
+        features    jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(features) = 'array'),
+        position    integer NOT NULL DEFAULT 0,
+        featured    boolean NOT NULL DEFAULT false,
+        is_active   boolean NOT NULL DEFAULT true,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        updated_at  timestamptz NOT NULL DEFAULT now(),
+        CHECK ((hours IS NULL) = (price_minor IS NULL))
+      )`,
       `ALTER TABLE clients
-        ADD COLUMN requested_basis text CHECK (requested_basis IN ('hour', 'month')),
+        ADD COLUMN package_id uuid REFERENCES packages (id) ON DELETE SET NULL,
+        ADD COLUMN requested_package_id uuid REFERENCES packages (id) ON DELETE SET NULL,
         ADD COLUMN requested_at timestamptz`,
-      `ALTER TABLE student_registrations ADD COLUMN basis text NOT NULL DEFAULT 'hour' CHECK (basis IN ('hour', 'month'))`,
+      `ALTER TABLE student_registrations ADD COLUMN package_id uuid REFERENCES packages (id) ON DELETE SET NULL`,
+      `INSERT INTO services (code, name, description, category, units, default_unit)
+        VALUES ('PKG', 'Coaching package', 'Live 1-on-1 hours, used as booked', 'CFA', ARRAY['package'], 'package')
+        ON CONFLICT (code) DO NOTHING`,
+      `INSERT INTO packages (name, tagline, hours, price_minor, position, featured, features) VALUES
+        ('Focused Session', 'One live hour on the topic you choose', 1, 15000, 1, false,
+          '[{"label":"Guided end-of-chapter practice","value":"Selected questions"},{"label":"Personal study plan","value":""},{"label":"Topic teaching","value":"Selected concept"},{"label":"Progress and accountability","value":"Session recap"},{"label":"Concept clarification","value":"Included"},{"label":"Session action points","value":"Included"},{"label":"Real-world finance examples","value":"Included"},{"label":"Mock-result review","value":"Within your hours"},{"label":"Student portal access","value":"Included"},{"label":"Classroom access","value":"Included"},{"label":"Tutor-created notes","value":"Included"},{"label":"Delivery","value":"Online or in person"}]'),
+        ('Structured Coaching', 'A plan and the topics that matter most', 12, 150000, 2, false,
+          '[{"label":"Guided end-of-chapter practice","value":"Planned practice"},{"label":"Personal study plan","value":"Initial plan"},{"label":"Topic teaching","value":"Agreed topic priorities"},{"label":"Progress and accountability","value":"Scheduled review"},{"label":"Concept clarification","value":"Included"},{"label":"Session action points","value":"Included"},{"label":"Real-world finance examples","value":"Included"},{"label":"Mock-result review","value":"Within your hours"},{"label":"Student portal access","value":"Included"},{"label":"Classroom access","value":"Included"},{"label":"Tutor-created notes","value":"Included"},{"label":"Delivery","value":"Online or in person"}]'),
+        ('Extended Coaching', 'Broad coverage with regular check-ins', 30, 300000, 3, true,
+          '[{"label":"Guided end-of-chapter practice","value":"Planned practice"},{"label":"Personal study plan","value":"Plan + scheduled updates"},{"label":"Topic teaching","value":"Broader agreed coverage"},{"label":"Progress and accountability","value":"Scheduled check-ins"},{"label":"Concept clarification","value":"Included"},{"label":"Session action points","value":"Included"},{"label":"Real-world finance examples","value":"Included"},{"label":"Mock-result review","value":"Within your hours"},{"label":"Student portal access","value":"Included"},{"label":"Classroom access","value":"Included"},{"label":"Tutor-created notes","value":"Included"},{"label":"Delivery","value":"Online or in person"}]'),
+        ('Custom', 'Unlimited hours, another pace or place: agreed with you', NULL, NULL, 4, false, '[]')`,
     ],
   },
 ];

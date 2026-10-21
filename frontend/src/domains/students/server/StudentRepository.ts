@@ -1,9 +1,13 @@
 import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
+import { PackageRepository } from "@/domains/packages/server/PackageRepository";
+import type { Package } from "@/domains/packages/types";
 
 import { Batches } from "../services/Batches";
-import type { BillingBasis, CoursePrices, RegistrationInput, Student } from "../types";
+import type { RegistrationInput, Student } from "../types";
 
 interface StudentRow {
   id: string;
@@ -36,44 +40,6 @@ export class StudentRepository {
     return row ?? null;
   }
 
-  /** The hourly / monthly switch they asked for (null: none open), and the prices of their first course that has a page. */
-  async basis(clientId: string): Promise<{ requested: BillingBasis | null; requestedAt: string | null; course: string | null; prices: CoursePrices | null }> {
-    const [row] = (await this.sql`
-      SELECT c.requested_basis, c.requested_at::text AS requested_at, co.title, co.price_minor, co.monthly_fee_minor::int AS monthly_fee_minor, co.monthly_hours, co.currency
-      FROM clients c
-      LEFT JOIN LATERAL (
-        SELECT title, price_minor, monthly_fee_minor, monthly_hours, currency FROM courses
-        WHERE title = ANY (c.courses) ORDER BY array_position(c.courses, title), is_active DESC LIMIT 1
-      ) co ON true
-      WHERE c.id = ${clientId}
-    `) as {
-      requested_basis: BillingBasis | null;
-      requested_at: string | null;
-      title: string | null;
-      price_minor: number | null;
-      monthly_fee_minor: number | null;
-      monthly_hours: number | null;
-      currency: string | null;
-    }[];
-    if (!row) return { requested: null, requestedAt: null, course: null, prices: null };
-    return {
-      requested: row.requested_basis,
-      requestedAt: row.requested_at,
-      course: row.title,
-      prices: row.currency ? { hourMinor: row.price_minor, monthMinor: row.monthly_fee_minor, monthHours: row.monthly_hours, currency: row.currency } : null,
-    };
-  }
-
-  /** Opens (or replaces) the student's request to pay hourly or monthly; null withdraws it. False when nothing changed. */
-  async requestBasis(clientId: string, basis: BillingBasis | null): Promise<boolean> {
-    const rows = await this.sql`
-      UPDATE clients SET requested_basis = ${basis}, requested_at = CASE WHEN ${basis}::text IS NULL THEN NULL ELSE now() END
-      WHERE id = ${clientId} AND requested_basis IS DISTINCT FROM ${basis}::text
-      RETURNING id
-    `;
-    return rows.length > 0;
-  }
-
   /** What a student may book: their own courses first, then every published course (title order). */
   async bookableCourses(student: Student): Promise<string[]> {
     const rows = (await this.sql`SELECT title FROM courses WHERE is_active ORDER BY title`) as { title: string }[];
@@ -87,31 +53,23 @@ export class StudentRepository {
    * false when they already had that course (a repeat click on an email link).
    * Their sitting is saved too; a repeat join only replaces "Not sure yet".
    */
-  async join(input: RegistrationInput): Promise<{ id: string; added: boolean }> {
+  async join(input: RegistrationInput): Promise<{ id: string; added: boolean; package: Package | null }> {
     const result = await this.enrol(input);
     // The form requires the terms box (RegistrationContract): record the live version they accepted.
     await this.sql`
       UPDATE clients SET terms_accepted_at = now(), terms_version = (SELECT id FROM site_terms ORDER BY created_at DESC LIMIT 1) WHERE id = ${result.id}
     `;
-    // Hourly: their course's hourly rate becomes the plan, unless the owner already set one.
-    // Monthly: an open request, answered with an agreement quote.
-    if (input.basis === "hour") {
-      await this.sql`
-        UPDATE clients c SET plan_unit = 'hour', plan_fee_minor = co.price_minor, plan_currency = co.currency, updated_at = now()
-        FROM courses co
-        WHERE c.id = ${result.id} AND c.plan_unit IS NULL AND co.title = ${input.course} AND co.is_active AND co.price_minor > 0
-          AND co.currency IN ('AED', 'USD', 'PKR', 'GBP', 'EUR')
-      `;
-    } else {
-      await this.sql`UPDATE clients SET requested_basis = 'month', requested_at = now() WHERE id = ${result.id} AND requested_basis IS NULL`;
-    }
     if (input.batch) {
       await this.sql`
         INSERT INTO client_batches (client_id, course, label) VALUES (${result.id}, ${input.course}, ${input.batch})
         ON CONFLICT (client_id, course) DO UPDATE SET label = EXCLUDED.label WHERE client_batches.label = ${Batches.NOT_SURE}
       `;
     }
-    return result;
+    // The package they picked becomes their agreement (accepted with the terms above). Only their first:
+    // registering for another course later keeps it, and changing it is a request in the portal.
+    const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
+    const chosen = input.packageId ? await new PackageRepository(this.sql).assign(result.id, input.packageId, today, { firstOnly: true }) : null;
+    return { ...result, package: chosen };
   }
 
   private async enrol(input: RegistrationInput): Promise<{ id: string; added: boolean }> {
@@ -143,8 +101,8 @@ export class StudentRepository {
     const [, [row]] = (await this.sql.transaction([
       this.sql`DELETE FROM student_registrations WHERE created_at < now() - interval '1 day'`,
       this.sql`
-        INSERT INTO student_registrations (name, email, phone, course, batch, basis)
-        VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.phone}, ${input.course}, ${input.batch}, ${input.basis})
+        INSERT INTO student_registrations (name, email, phone, course, batch, package_id)
+        VALUES (${input.name}, ${input.email.toLowerCase()}, ${input.phone}, ${input.course}, ${input.batch}, ${input.packageId})
         RETURNING id
       `,
     ])) as [unknown, { id: string }[]];
@@ -155,7 +113,7 @@ export class StudentRepository {
   async parked(id: string): Promise<RegistrationInput | null> {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
     const [row] = (await this.sql`
-      SELECT name, email, phone, course, batch, basis FROM student_registrations
+      SELECT name, email, phone, course, batch, package_id AS "packageId" FROM student_registrations
       WHERE id = ${id} AND created_at > now() - interval '1 day'
     `) as RegistrationInput[];
     return row ?? null;

@@ -5,6 +5,9 @@ import { notFound } from "next/navigation";
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PageHeader, PRIMARY_ACTION, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
+import { applyPackage } from "@/domains/packages/actions/packages";
+import { PackageRepository } from "@/domains/packages/server/PackageRepository";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
@@ -35,7 +38,6 @@ import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClient
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { Batches } from "@/domains/students/services/Batches";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
-import { answerBasis } from "@/domains/students/actions/account";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -44,9 +46,9 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "agreement-ended": { text: "Agreement ended. Documents that used it keep their rates.", tone: "ok" },
   "agreement-refused": { text: "Agreement not added.", tone: "warn" },
   "plan-saved": { text: "Study plan saved.", tone: "ok" },
-  "basis-hour": { text: "Hourly confirmed: their plan is now their course's hourly rate.", tone: "ok" },
-  "basis-dismiss": { text: "Request closed.", tone: "ok" },
-  "basis-refused": { text: "Not confirmed: none of their courses has an hourly fee. Set one in Courses, or set the plan under Details.", tone: "warn" },
+  "package-applied": { text: "Package applied from today: their previous package agreement ended and the new one is under Agreements.", tone: "ok" },
+  "package-dismissed": { text: "Request closed.", tone: "ok" },
+  "package-refused": { text: "Package not changed.", tone: "warn" },
   "hours-saved": { text: "Hours saved: their Hours & payments tab shows them now.", tone: "ok" },
   "hours-refused": { text: "Hours not saved.", tone: "warn" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
@@ -141,6 +143,12 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     ["details", "Details"],
   ] as const;
 
+  // Never takes the client page down (e.g. before 053_packages is applied).
+  const packageRepo = PackageRepository.fromEnv();
+  const [pkg, packages] = await Promise.all([
+    (packageRepo?.ofClient(client.id) ?? Promise.resolve(null)).catch(() => null),
+    (packageRepo?.active() ?? Promise.resolve([])).catch(() => []),
+  ]);
   return (
     <div className="max-w-5xl">
       <Link href="/admin/clients" className="text-sm text-muted hover:text-ink">
@@ -169,41 +177,64 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         />
       </div>
 
-      {client.requestedBasis && (
-        <div role="status" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4 text-sm">
+      {pkg && (pkg.current || pkg.requested || client.courses.length > 0) && (
+        <section
+          aria-label="Package"
+          className={`mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm ${pkg.requested ? "border-gold/40 bg-gold/5" : "border-line bg-surface"}`}
+        >
           <p className="text-ink">
-            <strong>Wants to pay {client.requestedBasis === "month" ? "monthly" : "hourly"}.</strong>{" "}
-            <span className="text-muted">
-              {client.requestedBasis === "month"
-                ? "Send a quote with the agreement: when they accept it, this closes."
-                : agreement?.unit === "month"
-                  ? `Their monthly agreement${agreement.endsOn ? ` runs to ${InvoiceEmails.day(agreement.endsOn)}` : " has no end date"}: end it under Agreements when hourly starts.`
-                  : "Confirming sets their plan to their course's hourly rate."}
-            </span>
+            <strong>{pkg.current ? `Package: ${pkg.current.name}` : "No package"}</strong>
+            {pkg.current && !PackageTable.isCustom(pkg.current) && (
+              <span className="text-muted">
+                {" "}
+                ({PackageTable.hours(pkg.current)}, {PackageTable.price(pkg.current)})
+              </span>
+            )}
+            {pkg.requested && <span className="block text-gold">Asks to move to {pkg.requested.name}.</span>}
+            {pkg.current && PackageTable.isCustom(pkg.current) && !agreement && (
+              <span className="block text-muted">Custom: agree the terms on WhatsApp, then send a quote with the agreement.</span>
+            )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {client.requestedBasis === "month" ? (
-              <Link href={`/admin/invoices/new?client=${client.id}&type=quote&basis=month`} className={PRIMARY_ACTION}>
-                Send monthly quote
-              </Link>
+            {pkg.requested ? (
+              <>
+                <form action={applyPackage}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="packageId" value={pkg.requested.id} />
+                  <PendingButton pendingLabel="Applying…" className={PRIMARY_ACTION}>
+                    Apply {pkg.requested.name}
+                  </PendingButton>
+                </form>
+                <form action={applyPackage}>
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input type="hidden" name="answer" value="dismiss" />
+                  <PendingButton pendingLabel="Closing…" className={SECONDARY_ACTION}>
+                    Close request
+                  </PendingButton>
+                </form>
+              </>
             ) : (
-              <form action={answerBasis}>
+              <form action={applyPackage} className="flex flex-wrap items-center gap-2">
                 <input type="hidden" name="clientId" value={client.id} />
-                <input type="hidden" name="answer" value="hour" />
-                <PendingButton pendingLabel="Saving…" className={PRIMARY_ACTION}>
-                  Confirm hourly
+                <select name="packageId" required defaultValue="" aria-label="Change package" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink">
+                  <option value="" disabled>
+                    {pkg.current ? "Change package" : "Set package"}
+                  </option>
+                  {packages
+                    .filter((p) => p.id !== pkg.current?.id)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <PendingButton pendingLabel="Saving…" className={SECONDARY_ACTION}>
+                  Apply from today
                 </PendingButton>
               </form>
             )}
-            <form action={answerBasis}>
-              <input type="hidden" name="clientId" value={client.id} />
-              <input type="hidden" name="answer" value="dismiss" />
-              <PendingButton pendingLabel="Closing…" className={SECONDARY_ACTION}>
-                Close request
-              </PendingButton>
-            </form>
           </div>
-        </div>
+        </section>
       )}
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -226,7 +257,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
               <>
                 <span className="block text-ink">
                   {InvoiceMath.money(agreement.rateMinor, agreement.currency)} {InvoiceContract.UNITS[agreement.unit].toLowerCase()}
-                  {agreement.hoursPerMonth !== null && ` · ${agreement.hoursPerMonth} h a month`}
+                  {agreement.hoursPerMonth !== null && ` · ${agreement.hoursPerMonth} h ${agreement.unit === "package" ? "package" : "a month"}`}
                 </span>
                 <span className={`block text-xs ${agreement.acceptedAt ? "text-quant" : "text-gold"}`}>
                   {agreement.acceptedAt ? "Accepted" : "Not accepted yet"}
@@ -290,7 +321,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
                     {a.paymentTerms && ` · ${InvoiceContract.termsLabel(a.paymentTerms, a.termsDays)}`}
                     {a.schedule && ` · ${a.schedule}`}
                   </span>
-                  {a.hoursPerMonth !== null && <span className="block text-xs text-ink">{a.hoursPerMonth} h a month included</span>}
+                  {a.hoursPerMonth !== null && <span className="block text-xs text-ink">{a.hoursPerMonth} h {a.unit === "package" ? "in the package" : "a month included"}</span>}
                   {a.scope && <span className="block text-xs text-muted">{a.scope}</span>}
                   <span className={`block text-xs ${a.acceptedAt ? "text-quant" : "text-gold"}`}>
                     {a.acceptedAt ? `Accepted in the portal ${InvoiceEmails.day(a.acceptedAt.toISOString().slice(0, 10))}` : "Waiting for the student to accept it in their portal"}

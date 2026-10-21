@@ -16,7 +16,7 @@ const CODE_ROWS = new Set(["Account number", "IBAN", "SWIFT / BIC"]);
 const THANKS: Record<"invoice" | "quote" | "credit_note", (business: string) => string> = {
   invoice: (business) =>
     `Thank you for choosing ${business}. Questions about this invoice and bookings for the next session are handled by WhatsApp or email.`,
-  quote: (business) => `Thank you for considering ${business}. Questions about this quote are handled by WhatsApp or email.`,
+  quote: (business) => `Thank you for considering ${business}. Questions about it are handled by WhatsApp or email.`,
   credit_note: () => "This credit note reduces the balance of the invoice shown in the details. Questions are handled by WhatsApp or email.",
 };
 
@@ -75,7 +75,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         <div>
           <h2 className={LABEL}>Details</h2>
           <dl className="mt-3 grid grid-cols-[auto_1fr] items-baseline gap-x-5 gap-y-1.5">
-            <dt className={ROW_LABEL}>{SettingsContract.DOCUMENT_TYPES[docType]} no.</dt>
+            <dt className={ROW_LABEL}>{DocumentFormat.label(invoice)} no.</dt>
             <dd className="font-semibold whitespace-nowrap text-slate-900">{number}</dd>
             <dt className={ROW_LABEL}>Issued</dt>
             <dd className="font-semibold text-slate-900">{invoice.issueDate ? InvoiceEmails.day(invoice.issueDate) : "On issue"}</dd>
@@ -220,7 +220,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
             `Runs from ${InvoiceEmails.day(invoice.agreement.startsOn)}${invoice.agreement.endsOn ? ` to ${InvoiceEmails.day(invoice.agreement.endsOn)}` : ", with no end date"}. ${agreementMonths(invoice.agreement.startsOn)}`,
             invoice.agreement.hoursPerMonth !== null &&
               `${invoice.agreement.hoursPerMonth} hours of 1-on-1 sessions are included each month. Unused hours don't carry over; more hours need approval and may be charged at the agreed rate.`,
-            "Accepting this quote online, with the terms and conditions, makes it your agreement. No signature is needed.",
+            "Accepting it online, with the terms and conditions, makes it your agreement. No signature is needed.",
           ]
             .filter(Boolean)
             .join("\n")}
