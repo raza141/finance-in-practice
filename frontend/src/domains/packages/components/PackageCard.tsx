@@ -35,7 +35,7 @@ export function PackageCard({
           {current
             ? PackageTable.isCustom(current)
               ? "Hours, pace and fee as agreed with your instructor."
-              : `${PackageTable.hours(current)} for ${PackageTable.price(current)}. Your hours left are under Hours & payments.`
+              : `${PackageTable.summary(current)}. Your hours are under Hours & payments.`
             : "No package yet. Ask for one below, or message your instructor."}
         </p>
         {requested && (
@@ -65,8 +65,7 @@ export function PackageCard({
                 </option>
                 {others.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.hours ? `: ${PackageTable.hours(p)}, ${PackageTable.price(p)}` : ""}
+                    {PackageTable.summary(p)}
                   </option>
                 ))}
               </select>

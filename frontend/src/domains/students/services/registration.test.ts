@@ -41,14 +41,21 @@ describe("RegistrationContract", () => {
     expect(RegistrationContract.parse({ ...VALID, ...patch }, COURSES).ok).toBe(false);
   });
 
-  it("requires a package the course offers: any for an exam course, only Custom otherwise", () => {
+  it("requires a package the course offers: exam, university, or only Custom", () => {
     const batches = { "CFA Level I": ["Nov 2026"] };
-    const packages = [{ id: "p12", hours: 12 }, { id: "custom", hours: null }];
-    const parse = (patch: object) => RegistrationContract.parse({ ...VALID, batch: "Nov 2026", ...patch }, COURSES, batches, packages);
+    const packages = [
+      { id: "p12", priceMinor: 150000, audience: "exam" as const },
+      { id: "custom", priceMinor: null, audience: "exam" as const },
+      { id: "uni", priceMinor: 10000, audience: "university" as const },
+    ];
+    const groups = { "CFA Level I": "exam" as const, "FRM Part I": "other" as const };
+    const parse = (patch: object) => RegistrationContract.parse({ ...VALID, batch: "Nov 2026", ...patch }, COURSES, batches, packages, groups);
     expect(parse({ package: "p12" })).toMatchObject({ ok: true, value: { packageId: "p12" } });
     expect(parse({ package: "" }).ok).toBe(false);
+    expect(parse({ package: "uni" }).ok).toBe(false);
     expect(parse({ course: "FRM Part I", package: "p12" }).ok).toBe(false);
     expect(parse({ course: "FRM Part I", package: "custom" })).toMatchObject({ ok: true, value: { packageId: "custom" } });
+    expect(parse({ course: "Other", topic: "Corporate finance", package: "uni" })).toMatchObject({ ok: true, value: { packageId: "uni" } });
   });
 
   it("flags the honeypot without failing", () => {

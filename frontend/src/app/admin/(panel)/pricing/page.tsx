@@ -44,9 +44,10 @@ export default async function AdminPricingPage({ searchParams }: PageProps<"/adm
                   {p.name}
                   {!p.isActive && <span className="ml-2 text-xs text-muted">Hidden</span>}
                   {p.featured && <span className="ml-2 text-xs text-gold">Recommended</span>}
+                  <span className="ml-2 text-xs text-muted">{PackageTable.AUDIENCE[p.audience]}</span>
                 </span>
                 <span className="text-sm text-muted tabular-nums">
-                  {PackageTable.hours(p)}, {PackageTable.price(p)}
+                  {PackageTable.summary(p)}
                   {PackageTable.perHour(p) && ` (${PackageTable.perHour(p)})`}
                 </span>
               </summary>

@@ -35,13 +35,31 @@ export function PackageForm({ pkg }: { pkg?: Package }) {
       extra={(errors) => (
         <div className="grid gap-5 sm:grid-cols-3">
           <label className="flex items-center gap-2 text-sm sm:col-span-3">
-            <input type="checkbox" name="custom" value="yes" defaultChecked={pkg ? pkg.hours === null : false} className="accent-quant" />
+            <input type="checkbox" name="custom" value="yes" defaultChecked={pkg ? pkg.priceMinor === null : false} className="accent-quant" />
             Custom: hours and fee agreed with each student (no price shown, no agreement created at registration)
           </label>
-          <Field label="Live hours" error={errors.hours}>
+          <Field label="Billed" error={errors.billing} hint="By the hour: no hours limit">
+            <select name="billing" defaultValue={pkg?.billing ?? "package"} className={FIELD}>
+              {Object.entries(PackageTable.BILLING).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="For" error={errors.audience} hint="Custom shows for exam courses and other subjects">
+            <select name="audience" defaultValue={pkg?.audience ?? "exam"} className={FIELD}>
+              {Object.entries(PackageTable.AUDIENCE).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Live hours" error={errors.hours} hint="In total, or a month when billed by the month">
             <input name="hours" inputMode="numeric" defaultValue={pkg?.hours ?? ""} placeholder="e.g. 12" className={FIELD} />
           </Field>
-          <Field label="Price" error={errors.priceMinor}>
+          <Field label="Price" error={errors.priceMinor} hint="The total, or per hour / per month">
             <input name="price" inputMode="decimal" defaultValue={pkg?.priceMinor ? InvoiceMath.majorInput(pkg.priceMinor) : ""} placeholder="e.g. 1500" className={FIELD} />
           </Field>
           <Field label="Currency" error={errors.currency}>

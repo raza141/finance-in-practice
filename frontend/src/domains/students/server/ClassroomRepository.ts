@@ -2,6 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 import { PackageRepository } from "@/domains/packages/server/PackageRepository";
+import { PackageTable, type CourseGroup } from "@/domains/packages/services/PackageTable";
 import type { Package, PricingCourse } from "@/domains/packages/types";
 
 import type { Ticker } from "@/domains/testimonials/types";
@@ -74,7 +75,9 @@ export class ClassroomRepository {
    * Published courses for the public form and /pricing, the sittings each exam
    * course offers (exam courses only), and the live packages.
    */
-  async registrationOptions(now = new Date()): Promise<{ titles: string[]; batches: Record<string, string[]>; courses: PricingCourse[]; packages: Package[] }> {
+  async registrationOptions(
+    now = new Date(),
+  ): Promise<{ titles: string[]; batches: Record<string, string[]>; courses: PricingCourse[]; packages: Package[]; groups: Record<string, CourseGroup> }> {
     const [courses, opened, packages] = await Promise.all([
       // Same list and order as CourseRepository.active().
       this.sql`SELECT title, slug, category, testimonial_ticker AS ticker FROM courses WHERE is_active ORDER BY start_date NULLS LAST, title`.then(
@@ -88,11 +91,13 @@ export class ClassroomRepository {
       const windows = Batches.windows(c.ticker);
       if (windows) batches[c.title] = Batches.offer(windows, opened.filter((b) => b.course === c.title), now);
     }
+    const pricing = courses.map((c) => ({ title: c.title, slug: c.slug, category: c.category, sittings: batches[c.title] ?? [] }));
     return {
       titles: courses.map((c) => c.title),
       batches,
-      courses: courses.map((c) => ({ title: c.title, slug: c.slug, category: c.category, sittings: batches[c.title] ?? [] })),
+      courses: pricing,
       packages,
+      groups: Object.fromEntries(pricing.map((c) => [c.title, PackageTable.groupOf(c)])),
     };
   }
 

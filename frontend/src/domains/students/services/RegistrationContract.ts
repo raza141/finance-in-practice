@@ -1,5 +1,5 @@
 import type { Package } from "@/domains/packages/types";
-import { PackageTable } from "@/domains/packages/services/PackageTable";
+import { PackageTable, type CourseGroup } from "@/domains/packages/services/PackageTable";
 
 import type { RegistrationInput } from "../types";
 import { Batches } from "./Batches";
@@ -18,13 +18,15 @@ export class RegistrationContract {
   /**
    * `courses` = the published course titles a visitor may pick (never drafts or internal ones);
    * `batches` = the sittings each exam course offers: one of them, or "Not sure yet", is required.
-   * `packages` = the live packages: one the course offers is required (exam courses: any; others: Custom).
+   * `packages` = the live packages: one the course offers is required (PackageTable.forCourse);
+   * `groups` = each published course's group (exam / university / other).
    */
   static parse(
     body: unknown,
     courses: readonly string[],
     batches: Readonly<Record<string, readonly string[]>> = {},
-    packages: readonly Pick<Package, "id" | "hours">[] = [],
+    packages: readonly Pick<Package, "id" | "priceMinor" | "audience">[] = [],
+    groups: Readonly<Record<string, CourseGroup>> = {},
   ): RegistrationResult {
     const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
     const text = (key: string) => (typeof b[key] === "string" ? (b[key] as string).trim().replace(/\s+/g, " ") : "");
@@ -57,7 +59,8 @@ export class RegistrationContract {
     if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
 
     const packageId = text("package");
-    const offered = PackageTable.forCourse(packages, (sittings?.length ?? 0) > 0);
+    const group: CourseGroup = picked === OTHER ? "open" : (groups[course] ?? ((sittings?.length ?? 0) > 0 ? "exam" : "other"));
+    const offered = PackageTable.forCourse(packages, group);
     if (offered.length > 0 && !offered.some((p) => p.id === packageId)) return { ok: false, error: "Choose a package." };
 
     // The terms box on the form: registering records the version they accepted (StudentRepository.join).

@@ -69,8 +69,9 @@ export function CourseView({
   /** Optional lead magnet, shown before the FAQ. */
   freeResource?: ReactNode;
 }) {
-  // Exam courses sell the packages from /pricing; other courses keep their own options.
-  const offered = course.testimonialTicker ? packages : [];
+  // Exam and university courses sell the packages from /pricing; other courses keep their own options.
+  const group = course.testimonialTicker ? "exam" : PackageTable.groupOf(course);
+  const offered = group === "other" ? [] : PackageTable.forCourse(packages, group);
   const difference = course.difference ? CourseFormat.splitFirstLine(course.difference) : null;
   const exam = examRows(course.testimonialTicker);
   const facts: { label: string; value: string; note?: string }[] = [
@@ -294,15 +295,17 @@ export function CourseView({
       {offered.length > 0 && (
         <section id="pricing" aria-labelledby="packages-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            <SectionHeading id="packages-heading" title="Choose your package." lede="The package you choose is your agreement. Register in one step on the next page." />
+            <SectionHeading id="packages-heading" title="Choose your package." lede="Pick one and register in one step. We confirm on WhatsApp, then send your agreement." />
             <ul className={`mt-10 grid gap-4 ${row(offered.length)}`}>
               {offered.map((p) => (
                 <li key={p.id} className={`flex flex-col rounded-2xl border bg-surface p-6 ${p.featured ? "border-gold/60" : "border-line"}`}>
                   <h3 className="text-xl font-bold">{p.name}</h3>
-                  <p className="tabular-data mt-2 text-2xl font-semibold text-gold">{PackageTable.price(p)}</p>
+                  <p className="tabular-data mt-2 text-2xl font-semibold text-gold">
+                    {PackageTable.price(p)} <span className="text-sm font-normal text-muted">{PackageTable.per(p)}</span>
+                  </p>
                   <p className="mt-1 text-sm text-muted">
                     {PackageTable.hours(p)}
-                    {p.hours !== null && p.hours > 1 && `, ${PackageTable.perHour(p)}`}
+                    {PackageTable.perHour(p) && `, ${PackageTable.perHour(p)}`}
                   </p>
                   {p.tagline && <p className="mt-3 leading-relaxed text-muted">{p.tagline}</p>}
                   <div className="mt-auto pt-5">

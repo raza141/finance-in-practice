@@ -49,7 +49,7 @@ export async function requestPackage(formData: FormData): Promise<void> {
       [
         ["Student", student.name],
         ["Now on", current?.name ?? "No package"],
-        ["Wants", `${wanted.name}${wanted.hours ? `, ${PackageTable.hours(wanted)} for ${PackageTable.price(wanted)}` : ""}`],
+        ["Wants", PackageTable.summary(wanted)],
         ["Next step", "Apply it on their client page, or close the request"],
       ],
       student.id,

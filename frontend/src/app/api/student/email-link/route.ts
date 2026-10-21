@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.intent === "register") {
-      const { titles, batches, packages } = await classrooms.registrationOptions();
-      const parsed = RegistrationContract.parse(body, titles, batches, packages);
+      const { titles, batches, packages, groups } = await classrooms.registrationOptions();
+      const parsed = RegistrationContract.parse(body, titles, batches, packages, groups);
       if (!parsed.ok) return reject(400, parsed.error);
       const id = await repo.park(parsed.value);
       // Every registration is mailed, so saying the send failed reveals nothing about who is a student.

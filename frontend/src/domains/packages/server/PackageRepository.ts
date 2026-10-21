@@ -3,7 +3,7 @@ import "server-only";
 import { Database, type Sql } from "@/core/db/Database";
 import type { Currency } from "@/domains/invoices/types";
 
-import type { Package, PackageFeature, PackageInput } from "../types";
+import type { Package, PackageAudience, PackageBilling, PackageFeature, PackageInput } from "../types";
 
 interface PackageRow {
   id: string;
@@ -12,6 +12,8 @@ interface PackageRow {
   hours: number | null;
   price_minor: number | null;
   currency: Currency;
+  billing: PackageBilling;
+  audience: PackageAudience;
   features: PackageFeature[];
   position: number;
   featured: boolean;
@@ -19,13 +21,13 @@ interface PackageRow {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLUMNS = "id, name, tagline, hours, price_minor, currency, features, position, featured, is_active";
+const COLUMNS = "id, name, tagline, hours, price_minor, currency, billing, audience, features, position, featured, is_active";
 
 /**
- * Packages (053_packages) and the one each student is on. A priced package is
- * also a client agreement (unit 'package' on the PKG service, its hours in
- * hours_per_month), so the allowance, the booking limit and the invoice form
- * all work from it unchanged.
+ * Packages (053–054) and the one each student is on. A priced package is also a
+ * client agreement on the PKG service, in its billing unit (package: hours in
+ * total in hours_per_month; month: hours each month; hour: no limit), so the
+ * allowance, the booking limit and the invoice form all work from it unchanged.
  */
 export class PackageRepository {
   constructor(private readonly sql: Sql) {}
@@ -57,15 +59,15 @@ export class PackageRepository {
     const features = JSON.stringify(p.features);
     if (id === null) {
       const [row] = (await this.sql`
-        INSERT INTO packages (name, tagline, hours, price_minor, currency, features, position, featured, is_active)
-        VALUES (${p.name}, ${p.tagline}, ${p.hours}, ${p.priceMinor}, ${p.currency}, ${features}::jsonb, ${p.position}, ${p.featured}, ${p.isActive})
+        INSERT INTO packages (name, tagline, hours, price_minor, currency, billing, audience, features, position, featured, is_active)
+        VALUES (${p.name}, ${p.tagline}, ${p.hours}, ${p.priceMinor}, ${p.currency}, ${p.billing}, ${p.audience}, ${features}::jsonb, ${p.position}, ${p.featured}, ${p.isActive})
         RETURNING id
       `) as { id: string }[];
       return row.id;
     }
     if (!UUID.test(id)) return null;
     const rows = await this.sql`
-      UPDATE packages SET name = ${p.name}, tagline = ${p.tagline}, hours = ${p.hours}, price_minor = ${p.priceMinor}, currency = ${p.currency},
+      UPDATE packages SET name = ${p.name}, tagline = ${p.tagline}, hours = ${p.hours}, price_minor = ${p.priceMinor}, currency = ${p.currency}, billing = ${p.billing}, audience = ${p.audience},
         features = ${features}::jsonb, position = ${p.position}, featured = ${p.featured}, is_active = ${p.isActive}, updated_at = now()
       WHERE id = ${id} RETURNING id
     `;
@@ -91,10 +93,10 @@ export class PackageRepository {
 
   /**
    * Puts the client on a package from `today`: their live package agreement ends,
-   * and a priced package starts a new one, already accepted (they chose it, with
-   * the terms they accepted). Custom starts none: the owner agrees it and sends
-   * the agreement. An open request closes. `firstOnly` (registration): only when
-   * they have no package yet, so a second course never replaces it. Null when nothing changed.
+   * and a priced package starts a new one (billed as the package bills), sent to
+   * their portal to accept. Custom starts none: the owner agrees it and sends the
+   * agreement. An open request closes. `firstOnly` (registration): only when they
+   * have no package yet, so a second course never replaces it. Null when nothing changed.
    */
   async assign(clientId: string, packageId: string, today: string, { firstOnly = false } = {}): Promise<Package | null> {
     if (!UUID.test(clientId) || !UUID.test(packageId)) return null;
@@ -107,14 +109,15 @@ export class PackageRepository {
     await this.sql.transaction([
       this.sql`
         UPDATE client_agreements SET archived_at = now()
-        WHERE client_id = ${clientId} AND unit = 'package' AND archived_at IS NULL AND service_id = (SELECT id FROM services WHERE code = 'PKG')
+        WHERE client_id = ${clientId} AND archived_at IS NULL AND service_id = (SELECT id FROM services WHERE code = 'PKG')
       `,
       this.sql`
-        INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, scope, hours_per_month, accepted_at, accepted_terms)
-        SELECT ${clientId}, s.id, 'package', p.currency, p.price_minor, ${today}, p.name || ': ' || p.hours || ' live hours', p.hours, now(),
-               (SELECT terms_version FROM clients WHERE id = ${clientId})
+        INSERT INTO client_agreements (client_id, service_id, unit, currency, rate_minor, starts_on, scope, hours_per_month)
+        SELECT ${clientId}, s.id, p.billing, p.currency, p.price_minor, ${today},
+               p.name || CASE p.billing WHEN 'hour' THEN ': by the hour' WHEN 'month' THEN ': ' || p.hours || ' live hours a month' ELSE ': ' || p.hours || ' live hours' END,
+               p.hours
         FROM packages p, services s
-        WHERE p.id = ${packageId} AND p.hours IS NOT NULL AND s.code = 'PKG'
+        WHERE p.id = ${packageId} AND p.price_minor IS NOT NULL AND s.code = 'PKG'
       `,
     ]);
     return this.byId(packageId);
@@ -140,6 +143,8 @@ export class PackageRepository {
       hours: row.hours,
       priceMinor: row.price_minor,
       currency: row.currency,
+      billing: row.billing,
+      audience: row.audience,
       features: row.features,
       position: row.position,
       featured: row.featured,

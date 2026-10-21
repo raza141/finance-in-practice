@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { titles, batches, packages } = await classrooms.registrationOptions();
-    const parsed = RegistrationContract.parse({ ...(payload as object), email }, titles, batches, packages);
+    const { titles, batches, packages, groups } = await classrooms.registrationOptions();
+    const parsed = RegistrationContract.parse({ ...(payload as object), email }, titles, batches, packages, groups);
     if (!parsed.ok) return reject(400, parsed.error);
     if (parsed.spam) return reject(400, "Unable to process this request.");
     const { id: clientId, package: chosen } = await repo.join(parsed.value);

@@ -54,8 +54,9 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
   const packageId = picked?.packageId ?? ownPackage ?? saved?.packageId ?? "";
   const [state, setState] = useState<FormState>({ kind: "editing" });
 
-  const sittings = courses.find((c) => c.title === course)?.sittings ?? [];
-  const offered = PackageTable.forCourse(packages, sittings.length > 0);
+  const listed = courses.find((c) => c.title === course);
+  const sittings = listed?.sittings ?? [];
+  const offered = PackageTable.forCourse(packages, course === OTHER ? "open" : listed ? PackageTable.groupOf(listed) : "other");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -178,9 +179,7 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
                   />
                   <span className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 text-sm">
                     <span className="font-semibold text-ink">{p.name}</span>
-                    <span className="text-muted tabular-nums">
-                      {PackageTable.isCustom(p) ? PackageTable.price(p) : `${PackageTable.hours(p)}, ${PackageTable.price(p)}`}
-                    </span>
+                    <span className="text-muted tabular-nums">{PackageTable.isCustom(p) ? PackageTable.price(p) : `${PackageTable.price(p)} ${PackageTable.per(p)}`.trim()}</span>
                   </span>
                 </label>
               ))}
@@ -192,12 +191,12 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
         )}
         <label className="flex items-start gap-2.5 text-sm text-ink/90">
           <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
-          <span>
-            I accept the{" "}
+          <span className="text-pretty">
+            I agree to the{" "}
             <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
               terms and conditions
             </a>
-            {offered.some((p) => p.id === packageId && !PackageTable.isCustom(p)) && ", and this package as my agreement"}.
+            {offered.some((p) => p.id === packageId) ? " and want to book this package." : "."}
           </span>
         </label>
         {/* Honeypot: hidden from people, filled by bots. */}
@@ -215,7 +214,7 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
       >
         {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>
-      <p className="text-xs text-muted">We only use these details to arrange your lessons, and message you on WhatsApp to confirm.</p>
+      <p className="text-center text-xs leading-relaxed text-pretty text-muted">No payment now. We&rsquo;ll confirm your schedule on WhatsApp within 2 hours.</p>
     </form>
   );
 }

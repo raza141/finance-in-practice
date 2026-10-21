@@ -6,14 +6,23 @@ export interface PackageFeature {
   value: string;
 }
 
+/** How a package bills: hours for one price, a rate per hour (no limit), or a fee per month with hours each month. */
+export type PackageBilling = "package" | "hour" | "month";
+
+/** Which courses offer it (054_package_billing). */
+export type PackageAudience = "exam" | "university";
+
 /** A package on /pricing, as Admin → Pricing saves it (053_packages). */
 export interface PackageInput {
   name: string;
   tagline: string;
-  /** Live hours included; null with priceMinor null = Custom (agreed with the student). */
+  /** Live hours: in total (package) or each month (month); null for hourly, and for Custom. */
   hours: number | null;
+  /** Null = Custom (agreed with the student). */
   priceMinor: number | null;
   currency: Currency;
+  billing: PackageBilling;
+  audience: PackageAudience;
   features: PackageFeature[];
   /** Order on the page, low first. */
   position: number;
@@ -26,7 +35,7 @@ export interface Package extends PackageInput {
   id: string;
 }
 
-/** A course on /pricing: exam courses take any package, other courses only Custom. */
+/** A course on /pricing and the join form; PackageTable.groupOf decides its packages. */
 export interface PricingCourse {
   title: string;
   slug: string;

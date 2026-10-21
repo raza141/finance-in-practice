@@ -1160,6 +1160,26 @@ const MIGRATIONS: Migration[] = [
         ('Custom', 'Unlimited hours, another pace or place: agreed with you', NULL, NULL, 4, false, '[]')`,
     ],
   },
+  {
+    // How a package bills ('package' = hours for a total, 'hour' = a rate with no
+    // limit, 'month' = a fee with hours each month) and who it is for (exam or
+    // university courses). University: hourly and monthly.
+    id: "054_package_billing",
+    statements: [
+      `ALTER TABLE packages
+        ADD COLUMN billing text NOT NULL DEFAULT 'package' CHECK (billing IN ('package', 'hour', 'month')),
+        ADD COLUMN audience text NOT NULL DEFAULT 'exam' CHECK (audience IN ('exam', 'university'))`,
+      `ALTER TABLE packages DROP CONSTRAINT packages_check`,
+      `ALTER TABLE packages ADD CONSTRAINT packages_price_check
+        CHECK ((price_minor IS NULL AND hours IS NULL) OR (price_minor IS NOT NULL AND (billing = 'hour') = (hours IS NULL)))`,
+      `UPDATE services SET units = ARRAY['package', 'hour', 'month'] WHERE code = 'PKG'`,
+      `INSERT INTO packages (name, tagline, hours, price_minor, billing, audience, position, featured, features) VALUES
+        ('Hourly', 'Pay only for the hours you book', NULL, 10000, 'hour', 'university', 1, false,
+          '[{"label":"Concept clarification","value":"Included"},{"label":"Student portal access","value":"Included"},{"label":"Delivery","value":"Online or in person"},{"label":"Study plan","value":""}]'),
+        ('Monthly', 'One fixed fee each month', 20, 200000, 'month', 'university', 2, true,
+          '[{"label":"Concept clarification","value":"Included"},{"label":"Student portal access","value":"Included"},{"label":"Delivery","value":"Online or in person"},{"label":"Study plan","value":"Monthly plan"}]')`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
