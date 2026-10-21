@@ -1,5 +1,6 @@
 import type { RegistrationInput } from "../types";
 import { Batches } from "./Batches";
+import { BillingBasis } from "./BillingBasis";
 
 export type RegistrationResult = { ok: true; value: RegistrationInput; spam: boolean } | { ok: false; error: string };
 
@@ -47,10 +48,13 @@ export class RegistrationContract {
     const batch = sittings ? text("batch") : "";
     if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
 
+    const basis = text("basis");
+    if (!BillingBasis.isBasis(basis)) return { ok: false, error: "Choose hourly or monthly." };
+
     // The terms box on the form: registering records the version they accepted (StudentRepository.join).
     if (text("acceptTerms") !== "yes") return { ok: false, error: "Please accept the terms and conditions." };
 
     // Honeypot: a hidden field people never fill. The route answers as usual and saves nothing.
-    return { ok: true, value: { name, email, phone, course, batch }, spam: text("website") !== "" };
+    return { ok: true, value: { name, email, phone, course, batch, basis }, spam: text("website") !== "" };
   }
 }

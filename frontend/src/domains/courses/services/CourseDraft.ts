@@ -29,6 +29,8 @@ export interface CourseDraftState {
   startDate: string;
   duration: string;
   price: string;
+  monthlyFee: string;
+  monthlyHours: string;
   currency: string;
   brochureUrl: string;
   seoTitle: string;
@@ -66,6 +68,8 @@ export class CourseDraft {
       startDate: course?.startDate ?? "",
       duration: course?.duration ?? "1-on-1 · flexible schedule",
       price: CourseContract.priceInput(course?.priceMinor ?? null),
+      monthlyFee: CourseContract.priceInput(course?.monthlyFeeMinor ?? null),
+      monthlyHours: course?.monthlyHours ? String(course.monthlyHours) : "",
       currency: course?.currency ?? "AED",
       brochureUrl: course?.brochureUrl ?? "",
       seoTitle: course?.seoTitle ?? "",
@@ -95,6 +99,7 @@ export class CourseDraft {
   /** A best-effort Course for the preview: shows what is typed even before it validates. */
   static preview(draft: CourseDraftState, base: Pick<Course, "id" | "isActive">): Course {
     const price = CourseContract.parsePrice(draft.price);
+    const monthly = CourseContract.parsePrice(draft.monthlyFee);
     const payload = CourseDraft.payload(draft);
     return {
       ...base,
@@ -116,6 +121,8 @@ export class CourseDraft {
       startDate: /^\d{4}-\d{2}-\d{2}$/.test(draft.startDate) ? draft.startDate : null,
       duration: draft.duration.trim(),
       priceMinor: price === "invalid" ? null : price,
+      monthlyFeeMinor: monthly === "invalid" ? null : monthly,
+      monthlyHours: /^\d+$/.test(draft.monthlyHours.trim()) ? Number(draft.monthlyHours) : null,
       currency: /^[A-Z]{3}$/.test(draft.currency) ? draft.currency : "AED",
       method: CourseFormat.method(payload.method),
       modes: CourseFormat.method(payload.modes),

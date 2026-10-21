@@ -35,6 +35,7 @@ import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClient
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { Batches } from "@/domains/students/services/Batches";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
+import { answerBasis } from "@/domains/students/actions/account";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -43,6 +44,9 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "agreement-ended": { text: "Agreement ended. Documents that used it keep their rates.", tone: "ok" },
   "agreement-refused": { text: "Agreement not added.", tone: "warn" },
   "plan-saved": { text: "Study plan saved.", tone: "ok" },
+  "basis-hour": { text: "Hourly confirmed: their plan is now their course's hourly rate.", tone: "ok" },
+  "basis-dismiss": { text: "Request closed.", tone: "ok" },
+  "basis-refused": { text: "Not confirmed: none of their courses has an hourly fee. Set one in Courses, or set the plan under Details.", tone: "warn" },
   "hours-saved": { text: "Hours saved: their Hours & payments tab shows them now.", tone: "ok" },
   "hours-refused": { text: "Hours not saved.", tone: "warn" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
@@ -164,6 +168,43 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           }
         />
       </div>
+
+      {client.requestedBasis && (
+        <div role="status" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4 text-sm">
+          <p className="text-ink">
+            <strong>Wants to pay {client.requestedBasis === "month" ? "monthly" : "hourly"}.</strong>{" "}
+            <span className="text-muted">
+              {client.requestedBasis === "month"
+                ? "Send a quote with the agreement: when they accept it, this closes."
+                : agreement?.unit === "month"
+                  ? `Their monthly agreement${agreement.endsOn ? ` runs to ${InvoiceEmails.day(agreement.endsOn)}` : " has no end date"}: end it under Agreements when hourly starts.`
+                  : "Confirming sets their plan to their course's hourly rate."}
+            </span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {client.requestedBasis === "month" ? (
+              <Link href={`/admin/invoices/new?client=${client.id}&type=quote&basis=month`} className={PRIMARY_ACTION}>
+                Send monthly quote
+              </Link>
+            ) : (
+              <form action={answerBasis}>
+                <input type="hidden" name="clientId" value={client.id} />
+                <input type="hidden" name="answer" value="hour" />
+                <PendingButton pendingLabel="Saving…" className={PRIMARY_ACTION}>
+                  Confirm hourly
+                </PendingButton>
+              </form>
+            )}
+            <form action={answerBasis}>
+              <input type="hidden" name="clientId" value={client.id} />
+              <input type="hidden" name="answer" value="dismiss" />
+              <PendingButton pendingLabel="Closing…" className={SECONDARY_ACTION}>
+                Close request
+              </PendingButton>
+            </form>
+          </div>
+        </div>
+      )}
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-line bg-surface p-4">

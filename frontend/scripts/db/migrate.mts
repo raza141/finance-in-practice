@@ -1119,6 +1119,21 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE quote_acceptances ADD CONSTRAINT quote_acceptances_method_check CHECK (method IN ('email', 'whatsapp', 'signed', 'verbal', 'other', 'online'))`,
     ],
   },
+  {
+    // Hourly or monthly: a course's monthly fee and hours beside its hourly price,
+    // and the basis a student asks for at registration or in the portal until the
+    // owner answers (clients.plan_unit stays the owner-confirmed basis).
+    id: "052_billing_basis",
+    statements: [
+      `ALTER TABLE courses
+        ADD COLUMN monthly_fee_minor bigint CHECK (monthly_fee_minor >= 0),
+        ADD COLUMN monthly_hours integer CHECK (monthly_hours BETWEEN 1 AND 400)`,
+      `ALTER TABLE clients
+        ADD COLUMN requested_basis text CHECK (requested_basis IN ('hour', 'month')),
+        ADD COLUMN requested_at timestamptz`,
+      `ALTER TABLE student_registrations ADD COLUMN basis text NOT NULL DEFAULT 'hour' CHECK (basis IN ('hour', 'month'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

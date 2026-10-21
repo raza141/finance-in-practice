@@ -6,8 +6,10 @@ import { useState, type FormEvent } from "react";
 import { ApiError } from "@/core/http/ApiError";
 
 import { Batches } from "../services/Batches";
+import { BillingBasis } from "../services/BillingBasis";
 import { RegistrationContract } from "../services/RegistrationContract";
 import { StudentApiClient } from "../services/StudentApiClient";
+import type { CoursePrices } from "../types";
 
 const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
@@ -36,9 +38,20 @@ function CheckInbox({ to, lead }: { to: string; lead: string }) {
 /**
  * Join form. With `email` (back from Google, address proven): enrols at once and
  * opens the portal. Without: the visitor types their email and we mail a link
- * that confirms it first. `courses` = published titles only; `batches` = each exam course's sittings.
+ * that confirms it first. `courses` = published titles only; `batches` = each exam course's sittings;
+ * `prices` = each course's hourly and monthly price, shown on the hourly / monthly choice.
  */
-export function JoinForm({ courses, batches, email }: { courses: string[]; batches: Record<string, string[]>; email?: string }) {
+export function JoinForm({
+  courses,
+  batches,
+  prices,
+  email,
+}: {
+  courses: string[];
+  batches: Record<string, string[]>;
+  prices: Record<string, CoursePrices>;
+  email?: string;
+}) {
   const router = useRouter();
   const [course, setCourse] = useState("");
   const [state, setState] = useState<FormState>({ kind: "editing" });
@@ -136,6 +149,28 @@ export function JoinForm({ courses, batches, email }: { courses: string[]; batch
             <input name="topic" required minLength={LIMITS.topic[0]} maxLength={LIMITS.topic[1]} placeholder="e.g. AP Statistics, corporate finance" className={FIELD} />
           </label>
         )}
+        <fieldset className="grid gap-1.5">
+          <legend className={`${LABEL} mb-1.5`}>How do you want to pay?</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["hour", "month"] as const).map((basis) => {
+              const { amount, detail } = BillingBasis.price(basis, prices[course] ?? null);
+              return (
+                <label
+                  key={basis}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-md border border-line p-3 transition-colors has-[:checked]:border-quant/70 has-[:checked]:bg-quant/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-quant/60"
+                >
+                  <input type="radio" name="basis" value={basis} required className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
+                  <span className="grid gap-0.5">
+                    <span className="text-sm font-semibold text-ink">{BillingBasis.LABELS[basis]}</span>
+                    <span className="text-sm text-ink/90 tabular-nums">{amount}</span>
+                    <span className="text-xs text-muted">{detail}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <span className="text-xs text-muted">You can switch later from your portal.</span>
+        </fieldset>
         <label className="flex items-start gap-2.5 text-sm text-ink/90">
           <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
           <span>

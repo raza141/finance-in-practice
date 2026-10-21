@@ -58,7 +58,8 @@ export default async function AdminClientsPage({ searchParams }: { searchParams:
   const agreementOf = new Map<string, Agreement>();
   for (const a of agreements) if (!agreementOf.has(a.clientId)) agreementOf.set(a.clientId, a);
   const shown = (search ? clients.filter((c) => [c.name, c.email, c.phone, ...c.courses].some((v) => v.toLowerCase().includes(search))) : clients).toSorted(
-    (a, b) => Number(unseen.has(b.id)) - Number(unseen.has(a.id)),
+    // Waiting on you first: a switch to answer, then new.
+    (a, b) => Number(!!b.requestedBasis) - Number(!!a.requestedBasis) || Number(unseen.has(b.id)) - Number(unseen.has(a.id)),
   );
   const adding = query.new === "1" || clients.length === 0;
 
@@ -116,6 +117,11 @@ export default async function AdminClientsPage({ searchParams }: { searchParams:
                     <span className="flex items-center gap-2">
                       <span className="truncate font-medium text-ink">{client.name}</span>
                       {unseen.has(client.id) && <span className="shrink-0 rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-canvas">New</span>}
+                      {client.requestedBasis && (
+                        <span className="shrink-0 rounded-full border border-gold/60 px-2 py-0.5 text-[10px] font-semibold text-gold">
+                          Wants {client.requestedBasis === "month" ? "monthly" : "hourly"}
+                        </span>
+                      )}
                     </span>
                     <span className="block truncate text-xs text-muted">{[client.email, client.phone].filter(Boolean).join(" · ")}</span>
                   </span>

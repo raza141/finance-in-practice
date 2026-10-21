@@ -10,6 +10,7 @@ import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { QuoteAgreements } from "@/domains/invoices/services/QuoteAgreements";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
 import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
+import { StudentRepository } from "@/domains/students/server/StudentRepository";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     if (!built.ok) outcome = built.reason;
     else if (await agreements.createFromQuote(quote.clientId, built.input, quote.id, version?.id ?? null)) {
       if (quote.supersedesId) await agreements.archiveFromQuote(quote.clientId, quote.supersedesId);
+      if (built.input.unit === "month") await StudentRepository.fromEnv()?.requestBasis(quote.clientId, null);
       outcome = "Their agreement was created from it and shows in their portal.";
     } else outcome = "The agreement couldn't be created (the service doesn't offer that basis). Add it by hand in Clients.";
     await terms.accept(quote.clientId);

@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import { RegistrationContract } from "./RegistrationContract";
 
 const COURSES = ["CFA Level I", "FRM Part I"];
-const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", acceptTerms: "yes" };
+const VALID = { name: " Ali  Kenan ", email: "Ali.Kenan@Gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", acceptTerms: "yes", basis: "hour" };
 
 describe("RegistrationContract", () => {
   it("normalises a valid sign-up", () => {
     expect(RegistrationContract.parse(VALID, COURSES)).toEqual({
       ok: true,
       spam: false,
-      value: { name: "Ali Kenan", email: "ali.kenan@gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", batch: "" },
+      value: { name: "Ali Kenan", email: "ali.kenan@gmail.com", phone: "+971 50 123 4567", course: "CFA Level I", batch: "", basis: "hour" },
     });
     const other = RegistrationContract.parse({ ...VALID, course: "Other", topic: "AP Statistics" }, COURSES);
     expect(other.ok && other.value.course).toBe("Other: AP Statistics");

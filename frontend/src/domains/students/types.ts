@@ -68,6 +68,18 @@ export interface RegistrationInput {
   course: string;
   /** Exam courses: the sitting picked, e.g. "Nov 2026" or "Not sure yet"; otherwise "". */
   batch: string;
+  /** How they want to pay: hourly at the course's rate, or monthly (the owner sends the agreement). */
+  basis: BillingBasis;
+}
+
+export type BillingBasis = "hour" | "month";
+
+/** A course's prices as a student choosing hourly or monthly sees them; null = on request / agreed per student. */
+export interface CoursePrices {
+  hourMinor: number | null;
+  monthMinor: number | null;
+  monthHours: number | null;
+  currency: string;
 }
 
 /** "none": not asked yet. Only "approved" reveals the invite (039_portal_controls). */

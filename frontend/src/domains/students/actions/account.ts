@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
+import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
@@ -13,7 +14,9 @@ import { TermsRepository } from "@/domains/settings/server/TermsRepository";
 import { HourRequestRepository } from "../server/HourRequestRepository";
 import { OwnerNotice } from "../server/OwnerNotice";
 import { StudentAuth } from "../server/StudentAuth";
+import { StudentRepository } from "../server/StudentRepository";
 import { AgreementPeriod } from "../services/AgreementPeriod";
+import { BillingBasis } from "../services/BillingBasis";
 import { Allowance } from "../services/Allowance";
 import { HourRequestContract } from "../services/HourRequestContract";
 import type { HourRequestStatus } from "../types";
@@ -72,6 +75,8 @@ export async function acceptAgreement(_: AccountActionState, formData: FormData)
   if (!(await agreements.accept(student.id, id, version?.id ?? null))) return { error: "This agreement was already accepted or has ended." };
   await terms.accept(student.id);
   const agreement = (await agreements.forClient(student.id)).find((a) => a.id === id);
+  // Their monthly agreement is what a request for monthly was waiting for.
+  if (agreement?.unit === "month") await StudentRepository.fromEnv()?.requestBasis(student.id, null);
   await OwnerNotice.send(
     `Agreement accepted: ${student.name}`,
     "Agreement accepted in the portal",
@@ -83,6 +88,38 @@ export async function acceptAgreement(_: AccountActionState, formData: FormData)
   );
   refresh();
   return { ok: true };
+}
+
+/** The student asks to pay hourly or monthly ("none" withdraws the request); the owner confirms in admin Clients. */
+export async function requestBasis(formData: FormData): Promise<void> {
+  const student = await StudentAuth.current();
+  const repo = StudentRepository.fromEnv();
+  if (!student || !repo) return;
+  const raw = formData.get("basis");
+  const basis = BillingBasis.isBasis(raw) ? raw : null;
+  if (raw !== "none" && basis === null) return;
+  if (basis) {
+    // Asking for what they already pay on would leave the owner a request with nothing to do.
+    const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
+    const [client, agreements] = await Promise.all([ClientRepository.fromEnv()?.byId(student.id), AgreementRepository.fromEnv()?.forClient(student.id)]);
+    const monthlyNow = (agreements ?? []).some((a) => a.unit === "month" && a.startsOn <= today && (!a.endsOn || a.endsOn >= today));
+    const unit = client?.planUnit;
+    const current = monthlyNow || unit === "month" ? "month" : unit === "hour" || unit === "session" ? "hour" : null;
+    if (basis === current) return;
+  }
+  if ((await repo.requestBasis(student.id, basis)) && basis) {
+    await OwnerNotice.send(
+      `${student.name} wants to pay ${BillingBasis.LABELS[basis].toLowerCase()}`,
+      `Switch to ${BillingBasis.LABELS[basis].toLowerCase()}`,
+      [
+        ["Student", student.name],
+        ["Wants to pay", BillingBasis.LABELS[basis]],
+        ["Next step", basis === "month" ? "Send them a quote with the agreement to accept" : "Confirm hourly on their client page"],
+      ],
+      student.id,
+    );
+  }
+  refresh();
 }
 
 /** The student accepts the current terms and conditions (after an update, or if they registered before terms were asked). */
@@ -102,4 +139,13 @@ export async function decideHourRequest(formData: FormData): Promise<void> {
   const status = String(formData.get("status")) as Exclude<HourRequestStatus, "pending">;
   if (DECISIONS.includes(status)) await HourRequestRepository.fromEnv()?.decide(clientId, String(formData.get("requestId")), status);
   redirect(`/admin/clients/${clientId}?notice=hours-saved#sessions`);
+}
+
+/** Owner: confirm an hourly request (their course's hourly rate becomes the plan) or dismiss a request. */
+export async function answerBasis(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const clientId = String(formData.get("clientId"));
+  const answer = formData.get("answer") === "hour" ? "hour" : "dismiss";
+  const done = (await ClientRepository.fromEnv()?.answerBasis(clientId, answer)) ?? false;
+  redirect(`/admin/clients/${clientId}?notice=${done ? `basis-${answer}` : "basis-refused"}`);
 }

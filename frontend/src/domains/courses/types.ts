@@ -72,6 +72,9 @@ export interface Course {
   duration: string;
   /** Headline fee in minor units (fils, cents); null when on request. Invoices and client plans pick it up. */
   priceMinor: number | null;
+  /** Monthly plan: the fee a month and the 1-on-1 hours it includes; null = not offered monthly (or on request). */
+  monthlyFeeMinor: number | null;
+  monthlyHours: number | null;
   currency: string;
   isActive: boolean;
   method: MethodStep[];

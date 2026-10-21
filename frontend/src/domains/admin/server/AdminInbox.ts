@@ -12,6 +12,8 @@ export interface InboxCounts {
   pendingBookings: number;
   /** Students asking for more hours on their monthly allowance. */
   hourRequests: number;
+  /** Students asking to pay hourly or monthly. */
+  basisRequests: number;
 }
 
 /** What needs the owner's attention, for the badges in the admin menu. */
@@ -44,8 +46,9 @@ export class AdminInbox {
                 SELECT id FROM clients WHERE seen_at IS NULL
                 UNION SELECT client_id FROM classroom_access WHERE status = 'requested'
               ) waiting) AS clients,
-              (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests
-          ` as unknown as Promise<{ clients: number; hour_requests: number }[]>)
+              (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests,
+              (SELECT count(*)::int FROM clients WHERE requested_basis IS NOT NULL) AS basis_requests
+          ` as unknown as Promise<{ clients: number; hour_requests: number; basis_requests: number }[]>)
         : Promise.resolve([]),
       AdminInbox.pendingBookings(),
     ]);
@@ -56,6 +59,7 @@ export class AdminInbox {
       clients: row?.clients ?? 0,
       pendingBookings: bookings.status === "fulfilled" ? bookings.value : 0,
       hourRequests: row?.hour_requests ?? 0,
+      basisRequests: row?.basis_requests ?? 0,
     };
   }
 

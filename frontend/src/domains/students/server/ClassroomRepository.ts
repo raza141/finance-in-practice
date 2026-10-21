@@ -5,7 +5,7 @@ import { Database, type Sql } from "@/core/db/Database";
 import type { Ticker } from "@/domains/testimonials/types";
 
 import { Batches } from "../services/Batches";
-import type { Batch, ClassroomAccess, PrivateClassroom, StudentClassroom } from "../types";
+import type { Batch, ClassroomAccess, CoursePrices, PrivateClassroom, StudentClassroom } from "../types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -69,11 +69,15 @@ export class ClassroomRepository {
   }
 
   /** Published courses for the public form, and the sittings each exam course offers. */
-  async registrationOptions(now = new Date()): Promise<{ titles: string[]; batches: Record<string, string[]> }> {
+  async registrationOptions(now = new Date()): Promise<{ titles: string[]; batches: Record<string, string[]>; prices: Record<string, CoursePrices> }> {
     const [courses, opened] = await Promise.all([
       // Same list and order as CourseRepository.active().
-      this.sql`SELECT title, testimonial_ticker AS ticker FROM courses WHERE is_active ORDER BY start_date NULLS LAST, title`.then(
-        (r) => r as { title: string; ticker: Ticker | null }[],
+      this.sql`
+        SELECT title, testimonial_ticker AS ticker, price_minor, monthly_fee_minor::int AS monthly_fee_minor, monthly_hours, currency
+        FROM courses WHERE is_active ORDER BY start_date NULLS LAST, title
+      `.then(
+        (r) =>
+          r as { title: string; ticker: Ticker | null; price_minor: number | null; monthly_fee_minor: number | null; monthly_hours: number | null; currency: string }[],
       ),
       this.batches(),
     ]);
@@ -82,7 +86,10 @@ export class ClassroomRepository {
       const windows = Batches.windows(c.ticker);
       if (windows) batches[c.title] = Batches.offer(windows, opened.filter((b) => b.course === c.title), now);
     }
-    return { titles: courses.map((c) => c.title), batches };
+    const prices = Object.fromEntries(
+      courses.map((c) => [c.title, { hourMinor: c.price_minor, monthMinor: c.monthly_fee_minor, monthHours: c.monthly_hours, currency: c.currency }]),
+    );
+    return { titles: courses.map((c) => c.title), batches, prices };
   }
 
   /** Exam courses (published or draft) and what the owner may assign or open for each. */

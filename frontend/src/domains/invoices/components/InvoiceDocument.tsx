@@ -25,6 +25,14 @@ const THANKS: Record<"invoice" | "quote" | "credit_note", (business: string) => 
  * admin preview. A consultancy layout adds Scope and Deliverables before the
  * fees, and Expenses and Assumptions after them.
  */
+const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
+
+/** "Each month runs from the 21st to the 20th of the next month." from the agreement's start day. */
+function agreementMonths(startsOn: string): string {
+  const day = Number(startsOn.slice(8, 10));
+  return day === 1 ? "Each month is a calendar month." : `Each month runs from the ${ordinal(day)} to the ${ordinal(day - 1)} of the next month.`;
+}
+
 export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; settings: BillingSettings }) {
   const docType = invoice.docType === "receipt" ? "invoice" : invoice.docType;
   const money = (minor: number) => InvoiceMath.money(minor, invoice.currency);
@@ -209,7 +217,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         <TextBlock
           title="Agreement"
           text={[
-            `Runs from ${InvoiceEmails.day(invoice.agreement.startsOn)}${invoice.agreement.endsOn ? ` to ${InvoiceEmails.day(invoice.agreement.endsOn)}` : ", with no end date"}. Each month runs from the start date (e.g. the 17th to the 16th).`,
+            `Runs from ${InvoiceEmails.day(invoice.agreement.startsOn)}${invoice.agreement.endsOn ? ` to ${InvoiceEmails.day(invoice.agreement.endsOn)}` : ", with no end date"}. ${agreementMonths(invoice.agreement.startsOn)}`,
             invoice.agreement.hoursPerMonth !== null &&
               `${invoice.agreement.hoursPerMonth} hours of 1-on-1 sessions are included each month. Unused hours don't carry over; more hours need approval and may be charged at the agreed rate.`,
             "Accepting this quote online, with the terms and conditions, makes it your agreement. No signature is needed.",

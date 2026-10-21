@@ -13,6 +13,7 @@ import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceFormLoader } from "@/domains/invoices/server/InvoiceFormLoader";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import type { InvoiceInput } from "@/domains/invoices/types";
+import { StudentRepository } from "@/domains/students/server/StudentRepository";
 
 export const metadata: Metadata = { title: "New document" };
 
@@ -34,12 +35,18 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     null;
 
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
+  // "Send monthly quote" from a student's request: their course at its monthly fee, as an agreement from today.
+  const basis = client && query.type === "quote" && query.basis === "month" ? await StudentRepository.fromEnv()?.basis(client.id) : null;
+  const monthly = basis?.course && basis.prices ? { course: basis.course, ...basis.prices } : null;
+  // Accepting needs a catalogue line to become their agreement: the monthly service named like the course, if exactly one.
+  const named = monthly ? options.services.filter((s) => !s.archivedAt && s.units.includes("month") && s.name.toLowerCase() === monthly.course.toLowerCase()) : [];
+  const service = named.length === 1 ? named[0] : null;
   const docType = query.type === "quote" ? "quote" : "invoice";
   const { settings } = options;
   // The client's usual terms, else the business default (an agreement picked on a line can set them).
   const terms = InvoiceContract.resolveTerms(null, client || null, { terms: settings.terms.default, days: settings.terms.days });
   const initial: InvoiceInput = {
-    agreement: null,
+    agreement: monthly ? { startsOn: today, endsOn: null, hoursPerMonth: monthly.monthHours } : null,
     docType,
     relatedId: null,
     bookingUid: prefill?.bookingUid ?? null,
@@ -48,8 +55,10 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     clientEmail: client?.email ?? prefill?.clientEmail ?? "",
     clientPhone: client?.phone ?? "",
     clientAddress: client?.address ?? "",
-    currency: client?.planCurrency ?? settings.currency,
-    items: client?.courses.length
+    currency: InvoiceContract.CURRENCIES.find((c) => c === monthly?.currency) ?? client?.planCurrency ?? settings.currency,
+    items: client && monthly
+      ? [{ description: monthly.course, ...(service && { serviceId: service.id, code: service.code, pricingSource: "manual" as const }), unit: "month", quantity: 1, unitMinor: monthly.monthMinor ?? 0, amountMinor: monthly.monthMinor ?? 0 }]
+      : client?.courses.length
       ? InvoiceContract.planItems(client)
       : prefill
       ? [
@@ -86,7 +95,11 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
       </Link>
       <h1 className="mt-3 text-3xl font-normal tracking-tight italic">{docType === "quote" ? "New quote" : "New invoice"}</h1>
       <p className="mt-2 mb-6 text-sm text-muted">
-        {prefill ? `Prefilled from the Cal.com booking with ${prefill.clientName || "this client"}.` : "Saved as a draft until you issue it."}
+        {monthly
+          ? `Monthly agreement for ${client?.name} at the course's monthly fee, from today. Set the end date (e.g. the exam)${service ? "" : ", and pick the monthly service on the line so accepting creates their agreement"}.`
+          : prefill
+            ? `Prefilled from the Cal.com booking with ${prefill.clientName || "this client"}.`
+            : "Saved as a draft until you issue it."}
       </p>
       <div className="mb-8 grid gap-3">
         {error && (

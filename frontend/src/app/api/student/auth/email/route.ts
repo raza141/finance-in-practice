@@ -5,6 +5,7 @@ import { EmailLink } from "@/domains/students/server/EmailLink";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
 import { Batches } from "@/domains/students/services/Batches";
+import { BillingBasis } from "@/domains/students/services/BillingBasis";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 
@@ -27,14 +28,14 @@ export async function GET(request: NextRequest) {
       if (!registration) return to("/student?error=link_expired");
       const { id, added } = await repo.join(registration);
       await StudentAuth.startSession(id, repo);
-      const { name, email, phone, course, batch } = registration;
+      const { name, email, phone, course, batch, basis } = registration;
       if (added) {
         const classrooms = ClassroomRepository.fromEnv();
         const batchRow = batch && classrooms ? [Batches.noticeRow(batch, await classrooms.batchState(course, batch))] : [];
         await OwnerNotice.send(
           `New student joined: ${name}`,
           "New student joined",
-          [["Name", name], ["Email", email], ["Mobile", phone], ["Course", course], ...batchRow, ["Signed up with", "Email link"]],
+          [["Name", name], ["Email", email], ["Mobile", phone], ["Course", course], ...batchRow, ["Wants to pay", BillingBasis.LABELS[basis]], ["Signed up with", "Email link"]],
           id,
         );
       }

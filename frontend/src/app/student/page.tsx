@@ -12,6 +12,7 @@ import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { Portal, safely } from "@/domains/students/components/PortalView";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { SignupTicket } from "@/domains/students/server/SignupTicket";
+import type { CoursePrices } from "@/domains/students/types";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = {
@@ -97,8 +98,8 @@ const initialsOf = (name: string) =>
     .toUpperCase();
 
 /** Published courses only (the public form never lists drafts or internal programmes), and each exam course's sittings. */
-async function publicCourses(): Promise<{ titles: string[]; batches: Record<string, string[]> }> {
-  return (await safely("published courses", async () => ClassroomRepository.fromEnv()?.registrationOptions())) ?? { titles: [], batches: {} };
+async function publicCourses(): Promise<{ titles: string[]; batches: Record<string, string[]>; prices: Record<string, CoursePrices> }> {
+  return (await safely("published courses", async () => ClassroomRepository.fromEnv()?.registrationOptions())) ?? { titles: [], batches: {}, prices: {} };
 }
 
 async function SignIn({ error, view }: { error?: string; view?: string }) {
@@ -107,7 +108,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   // Back on the join view without a valid ticket: it expired (or was used).
   const expired = view === "join" && joining === null;
   const register = joining !== null || view === "register" || view === "join";
-  const { titles: courses, batches } = register ? await publicCourses() : { titles: [], batches: {} };
+  const { titles: courses, batches, prices } = register ? await publicCourses() : { titles: [], batches: {}, prices: {} };
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
@@ -148,7 +149,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
           <>
             <h1 className="text-3xl font-normal tracking-tight italic">Almost there</h1>
             <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
-            <JoinForm courses={courses} batches={batches} email={joining} />
+            <JoinForm courses={courses} batches={batches} prices={prices} email={joining} />
           </>
         ) : register ? (
           <>
@@ -164,7 +165,7 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
               or with your email
               <span aria-hidden className="h-px flex-1 bg-line" />
             </p>
-            <JoinForm courses={courses} batches={batches} />
+            <JoinForm courses={courses} batches={batches} prices={prices} />
             <p className="border-t border-line pt-5 text-sm text-muted">
               Already registered?{" "}
               <Link href="/student" className="text-quant hover:underline">
