@@ -221,13 +221,18 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
                   <option value="" disabled>
                     {pkg.current ? "Change package" : "Set package"}
                   </option>
-                  {packages
-                    .filter((p) => p.id !== pkg.current?.id)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
+                  {(Object.keys(PackageTable.AUDIENCE) as (keyof typeof PackageTable.AUDIENCE)[]).map((audience) => (
+                    <optgroup key={audience} label={PackageTable.AUDIENCE[audience]}>
+                      {packages
+                        .filter((p) => p.audience === audience)
+                        .map((p) => (
+                          <option key={p.id} value={p.id} disabled={p.id === pkg.current?.id}>
+                            {p.name}
+                            {p.id === pkg.current?.id && " (current)"}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
                 </select>
                 <input name="startsOn" type="date" required defaultValue={today} max={today} aria-label="Starts on" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink" />
                 <PendingButton pendingLabel="Saving…" className={SECONDARY_ACTION}>
