@@ -7,6 +7,7 @@ import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ScheduleBoard } from "@/domains/schedule/components/ScheduleBoard";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { Schedule } from "@/domains/schedule/services/Schedule";
+import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 
 export const metadata: Metadata = { title: "Schedule" };
 
@@ -25,7 +26,7 @@ function awaitingConfirmation(bookings: CalBookingDetail[]): CalBookingDetail[] 
 }
 
 export default async function AdminSchedulePage({ searchParams }: PageProps<"/admin/schedule">) {
-  await AdminAuth.require();
+  const admin = await AdminAuth.require();
   const today = new ZonedCalendar(Schedule.TIME_ZONE).today();
   const requested = (await searchParams).week;
   const weekStart = Schedule.weekStart(ZonedCalendar.isIsoDate(requested) ? requested : today);
@@ -44,11 +45,19 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
   const warnings: string[] = [];
   if (!cal) warnings.push("Cal.com is not configured (CAL_API_KEY), so bookings and calendars are not shown.");
   if (!repo) warnings.push("The database is not configured, so blocked time can't be saved.");
-  const events = Schedule.merge(
+  const merged = Schedule.merge(
     settled(bookings, [], "Website bookings", warnings),
     settled(busy, [], "Google/Apple calendar busy times", warnings),
     settled(blocks, [], "Blocked time", warnings),
   );
+  // The owner's "studied" corrections on this week's sessions (hours only the owner sees and edits).
+  const owner = admin.role === "owner";
+  const studied = owner
+    ? await (SessionLogRepository.fromEnv()?.byBookingUids(merged.filter((e) => e.kind === "booking").map((e) => e.id)) ?? Promise.resolve(new Map<string, number>())).catch(
+        (error) => (console.error("[schedule] session log failed", error), new Map<string, number>()),
+      )
+    : new Map<string, number>();
+  const events = Schedule.markEnded(merged.map((e) => (studied.has(e.id) ? { ...e, studiedMinutes: studied.get(e.id) } : e)));
 
   const waiting = awaitingConfirmation(settled(unconfirmed, [], "Bookings waiting for confirmation", warnings));
   const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
@@ -108,7 +117,7 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
           </ul>
         </section>
       )}
-      <ScheduleBoard key={weekStart} weekStart={weekStart} today={today} events={events} />
+      <ScheduleBoard key={weekStart} weekStart={weekStart} today={today} events={events} owner={owner} />
     </div>
   );
 }

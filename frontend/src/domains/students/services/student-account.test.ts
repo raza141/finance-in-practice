@@ -148,17 +148,26 @@ describe("StudentAccount", () => {
       // Invoiced less than agreed: both show.
       expect(month("2026-10")).toMatchObject({ agreed: [{ currency: "AED", minor: 300_000 }], billed: [{ currency: "AED", minor: 250_000 }] });
       // Nov, Dec, Jan, Feb.
-      expect(view.agreements[0]).toMatchObject({ monthsLeft: 4, remainingMinor: 1_200_000 });
+      expect(view.agreements[0]).toMatchObject({ monthsLeft: 4, remainingMinor: 1_200_000, period: { number: 2, of: 6, start: "2026-10-01", end: "2026-10-31" } });
       // The monthly agreement wins over the hourly client plan.
       expect(view.plan).toEqual({ unit: "month", feeMinor: 300_000, currency: "AED" });
       expect(view.next.estimateMinor).toBe(300_000);
     });
 
+    it("bills a month that crosses calendar months once, and counts days to the end (Shamma: 17 Oct – 14 Nov)", () => {
+      const view = StudentAccount.build({ entries: [], documents: [], bookings: [], plan: null, agreements: [{ ...cfa, startsOn: "2026-10-17", endsOn: "2026-11-14" }], now: NOW });
+      const month = (m: string) => view.months.find((x) => x.month === m)!;
+      expect(month("2026-10").agreed).toEqual([{ currency: "AED", minor: 300_000 }]);
+      expect(month("2026-11").agreed).toEqual([]);
+      expect(view.next.estimateMinor).toBeNull();
+      expect(view.agreements[0]).toMatchObject({ monthsLeft: 0, remainingMinor: 0, daysLeft: 24, period: { number: 1, of: 1, start: "2026-10-17", end: "2026-11-14" } });
+    });
+
     it("counts a future agreement from its first month, ends at zero, and drops agreements already over", () => {
-      expect(StudentAccount.agreement({ ...cfa, startsOn: "2027-01-01", endsOn: "2027-03-31" }, "2026-10")).toMatchObject({ monthsLeft: 3, remainingMinor: 900_000 });
-      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: "2026-10-31" }, "2026-10")).toMatchObject({ monthsLeft: 0 });
-      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: null }, "2026-10")).toMatchObject({ monthsLeft: null });
-      expect(StudentAccount.agreement({ ...cfa, unit: "hour", startsOn: "2026-01-01", endsOn: "2027-01-01" }, "2026-10")).toMatchObject({ monthsLeft: null });
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2027-01-01", endsOn: "2027-03-31" }, "2026-10-21")).toMatchObject({ monthsLeft: 3, remainingMinor: 900_000 });
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: "2026-10-31" }, "2026-10-21")).toMatchObject({ monthsLeft: 0 });
+      expect(StudentAccount.agreement({ ...cfa, startsOn: "2026-01-01", endsOn: null }, "2026-10-21")).toMatchObject({ monthsLeft: null });
+      expect(StudentAccount.agreement({ ...cfa, unit: "hour", startsOn: "2026-01-01", endsOn: "2027-01-01" }, "2026-10-21")).toMatchObject({ monthsLeft: null });
       const over = StudentAccount.build({ entries: [], documents: [], bookings: [], plan: null, agreements: [{ ...cfa, startsOn: "2026-01-01", endsOn: "2026-09-30" }], now: NOW });
       expect(over.agreements).toEqual([]);
       expect(over.plan).toBeNull();

@@ -404,12 +404,12 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         requests={hourRequests}
         allowance={
           bookings &&
-          Allowance.forMonth({
+          Allowance.forDate({
             agreements,
             requests: hourRequests,
             bookings: StudentSessions.applyLog(bookings, sessionLog),
             manual: sessionLog.flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
-            month: today.slice(0, 7),
+            date: today,
             freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
           })
         }

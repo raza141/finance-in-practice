@@ -3,6 +3,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import type { Agreement } from "@/domains/invoices/types";
 
 import type { HourRequest, MonthAllowance } from "../types";
+import { AgreementPeriod, type Period } from "./AgreementPeriod";
 
 /** The parts of a Cal.com booking the allowance reads. */
 export interface AllowanceBooking {
@@ -17,7 +18,8 @@ type AllowanceAgreement = Pick<Agreement, "id" | "serviceName" | "unit" | "start
 
 /**
  * Hours included in a monthly agreement (e.g. 30 h a month; unused hours don't
- * carry over). Only 1-on-1 time counts: group classes and the free diagnostic
+ * carry over). A month is the agreement's own (AgreementPeriod: 17 Oct – 16 Nov),
+ * and a request for more hours is keyed by its month's start (YYYY-MM). Only 1-on-1 time counts: group classes and the free diagnostic
  * never use it up, and hand-logged sessions and the owner's corrections do.
  * The booking route refuses a session that would go over. Pure.
  */
@@ -27,26 +29,32 @@ export class Allowance {
     return (b.attendees?.length ?? 0) <= 1 && !(freeSlug && b.eventType?.slug === freeSlug);
   }
 
+  /** The Dubai date (YYYY-MM-DD) of an instant. */
+  static dateOf(iso: string): string {
+    return new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).dateOf(new Date(iso));
+  }
+
   static monthOf(iso: string): string {
-    return new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).dateOf(new Date(iso)).slice(0, 7);
+    return Allowance.dateOf(iso).slice(0, 7);
   }
 
-  /** The monthly agreement with an hours limit that covers `month`, if any. */
-  static covering<T extends AllowanceAgreement>(agreements: readonly T[], month: string): T | null {
-    return (
-      agreements.find(
-        (a) => a.unit === "month" && a.hoursPerMonth !== null && a.startsOn.slice(0, 7) <= month && (!a.endsOn || month <= a.endsOn.slice(0, 7)),
-      ) ?? null
-    );
+  /** The monthly agreement with an hours limit running on `date`, with its month that contains it. */
+  static covering<T extends AllowanceAgreement>(agreements: readonly T[], date: string): { agreement: T; period: Period } | null {
+    for (const agreement of agreements) {
+      if (agreement.unit !== "month" || agreement.hoursPerMonth === null) continue;
+      const period = AgreementPeriod.at(agreement, date);
+      if (period) return { agreement, period };
+    }
+    return null;
   }
 
-  /** `month`'s allowance, or null when no agreement with an hours limit covers it. */
-  static forMonth({
+  /** The allowance of the agreement month containing `date`, or null when no agreement with an hours limit covers it. */
+  static forDate({
     agreements,
     requests,
     bookings,
     manual,
-    month,
+    date,
     freeSlug,
     now = new Date(),
   }: {
@@ -54,16 +62,19 @@ export class Allowance {
     requests: readonly HourRequest[];
     bookings: readonly AllowanceBooking[];
     manual: readonly { date: string; minutes: number }[];
-    month: string;
+    date: string;
     freeSlug?: string;
     now?: Date;
   }): MonthAllowance | null {
-    const agreement = Allowance.covering(agreements, month);
-    if (!agreement) return null;
-    let takenMinutes = manual.filter((m) => m.date.startsWith(month)).reduce((sum, m) => sum + Math.max(0, m.minutes), 0);
+    const found = Allowance.covering(agreements, date);
+    if (!found) return null;
+    const { agreement, period } = found;
+    const month = period.start.slice(0, 7);
+    const within = (day: string) => day >= period.start && day <= period.end;
+    let takenMinutes = manual.filter((m) => within(m.date)).reduce((sum, m) => sum + Math.max(0, m.minutes), 0);
     let bookedMinutes = 0;
     for (const b of bookings) {
-      if (Allowance.monthOf(b.start) !== month || !Allowance.billable(b, freeSlug)) continue;
+      if (!within(Allowance.dateOf(b.start)) || !Allowance.billable(b, freeSlug)) continue;
       const minutes = Math.max(0, Math.round((Date.parse(b.end) - Date.parse(b.start)) / 60_000));
       const ended = Date.parse(b.end) <= now.getTime();
       if (b.status === "accepted" && ended) takenMinutes += minutes;
@@ -77,6 +88,8 @@ export class Allowance {
       agreementId: agreement.id,
       serviceName: agreement.serviceName,
       month,
+      periodStart: period.start,
+      periodEnd: period.end,
       includedMinutes,
       extraMinutes,
       extraBilledMinutes: minutes(own.filter((r) => r.status === "billed")),

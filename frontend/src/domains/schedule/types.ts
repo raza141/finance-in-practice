@@ -23,4 +23,10 @@ export interface ScheduleEvent extends TimeRange {
   status?: string;
   email?: string;
   meetingUrl?: string | null;
+  /** Bookings only: the time actually studied, when the owner corrected it (049_session_log); 0 = didn't happen. */
+  studiedMinutes?: number | null;
+  /** Bookings only: more than one attendee (a group class). */
+  group?: boolean;
+  /** Bookings only: accepted and over, so its studied time can be corrected. */
+  ended?: boolean;
 }

@@ -5,6 +5,10 @@ import { refresh, updateTag } from "next/cache";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
+import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
+import { SessionLogContract } from "@/domains/students/services/SessionLogContract";
 
 import { BlockRepository } from "../server/BlockRepository";
 import { BlockContract } from "../services/BlockContract";
@@ -97,6 +101,41 @@ export async function moveBooking(uid: string, date: string, time: string): Prom
 }
 
 /** The admin is signed in and the uid looks like a Cal.com booking. */
+/**
+ * The time a past session actually took (booked 1 h, studied 3), or `null` to go
+ * back to the booked length. Only our own record changes: Cal.com, the client's
+ * calendar and WhatsApp are never told. Owner only.
+ */
+export async function setStudied(uid: string, hours: string | null): Promise<ScheduleActionState> {
+  await AdminAuth.requireOwner();
+  const cal = await bookingClient(uid);
+  if (!(cal instanceof CalComClient)) return cal;
+  const logs = SessionLogRepository.fromEnv();
+  const clients = ClientRepository.fromEnv();
+  if (!logs || !clients) return { ok: false, message: "The database is not configured." };
+  let booking;
+  try {
+    booking = await cal.booking(uid);
+  } catch (error) {
+    console.error("[schedule] booking lookup failed", error);
+    return { ok: false, message: "Couldn't read that booking from Cal.com. Try again." };
+  }
+  if (booking.status !== "accepted" || Date.parse(booking.end) > Date.now()) return { ok: false, message: "Only sessions that already took place can be corrected." };
+  // Booked from the portal: its client id; otherwise the attendee's email.
+  const fromMeta = booking.metadata?.clientId ? await clients.byId(booking.metadata.clientId) : null;
+  const client = fromMeta ?? (booking.attendees[0]?.email ? await clients.byEmail(booking.attendees[0].email) : null);
+  if (!client) return { ok: false, message: "Add them as a client first (Clients → New), then set the hours." };
+  if (hours === null) {
+    await logs.removeBooking(client.id, uid);
+  } else {
+    const parsed = SessionLogContract.parse({ hours, bookingUid: uid }, new ZonedCalendar(Schedule.TIME_ZONE).today());
+    if (!parsed.ok) return { ok: false, message: parsed.error };
+    await logs.save(client.id, parsed.value);
+  }
+  refresh();
+  return { ok: true, message: hours === null ? "Back to the booked length." : `Saved for ${client.name}: their Hours & payments counts this now.` };
+}
+
 async function bookingClient(uid: string): Promise<CalComClient | Exclude<ScheduleActionState, null>> {
   await AdminAuth.require();
   const cal = CalComClient.fromEnv();

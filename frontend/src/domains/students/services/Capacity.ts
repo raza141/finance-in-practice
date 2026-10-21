@@ -1,5 +1,6 @@
 import type { Agreement, Currency } from "@/domains/invoices/types";
 
+import { AgreementPeriod } from "./AgreementPeriod";
 import { Allowance } from "./Allowance";
 
 interface CapacityBooking {
@@ -91,9 +92,10 @@ export class Capacity {
       if (m.invoicedMinor > 0) row(m.clientId).invoiced.push({ currency: m.currency, minor: m.invoicedMinor });
       if (m.paidMinor > 0) row(m.clientId).paid.push({ currency: m.currency, minor: m.paidMinor });
     }
+    // An agreement month counts in the calendar month it starts (17 Oct – 16 Nov: October).
     for (const a of agreements) {
       if (a.unit !== "month" || !clients.some((c) => c.id === a.clientId)) continue;
-      if (a.startsOn.slice(0, 7) > month || (a.endsOn && a.endsOn.slice(0, 7) < month)) continue;
+      if (!AgreementPeriod.all(a).some((p) => p.start.startsWith(month))) continue;
       const r = row(a.clientId);
       r.agreed.push({ currency: a.currency, minor: a.rateMinor });
       if (a.hoursPerMonth !== null) r.includedMinutes = (r.includedMinutes ?? 0) + Math.round(a.hoursPerMonth * 60);

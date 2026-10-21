@@ -5,6 +5,7 @@ import { Ledger } from "@/domains/invoices/services/Ledger";
 import type { Agreement, ClientDocument, Currency, LedgerEntry } from "@/domains/invoices/types";
 
 import type { AccountAgreement, AccountMoney, AccountMonth, HourRequest, PrepaidBlock, StudentAccountView, StudentPlan } from "../types";
+import { AgreementPeriod } from "./AgreementPeriod";
 import { Allowance } from "./Allowance";
 
 type AgreementLike = Pick<
@@ -114,9 +115,11 @@ export class StudentAccount {
     }
 
     const live = agreements.filter((a) => !a.endsOn || a.endsOn.slice(0, 7) >= current);
+    // The fee once per agreement month, in the calendar month that month starts (17 Oct – 14 Nov: October only).
     for (const a of live.filter((x) => x.unit === "month")) {
-      for (const row of months.values()) {
-        if (a.startsOn.slice(0, 7) <= row.month && (!a.endsOn || row.month <= a.endsOn.slice(0, 7))) StudentAccount.add(row.agreed, a.currency, a.rateMinor);
+      for (const period of AgreementPeriod.all(a)) {
+        const row = months.get(period.start.slice(0, 7));
+        if (row) StudentAccount.add(row.agreed, a.currency, a.rateMinor);
       }
     }
     // Hourly or per-session: what the 1-on-1 time taken comes to beyond what was invoiced, at this month's rate.
@@ -129,8 +132,13 @@ export class StudentAccount {
 
     // The fee basis for next month: a monthly agreement covering it, any other live agreement, then the client's plan.
     const covers = (a: AgreementLike) => a.startsOn.slice(0, 7) <= nextMonth && (!a.endsOn || nextMonth <= a.endsOn.slice(0, 7));
-    const basis = live.find((a) => a.unit === "month" && covers(a)) ?? live.find((a) => a.unit !== "month" && covers(a));
+    // A monthly agreement bills next month only if one of its months starts then (17 Oct – 14 Nov: nothing in November).
+    const monthlies = live.filter((a) => a.unit === "month");
+    const nextMonthly = monthlies.find((a) => AgreementPeriod.all(a).some((p) => p.start.startsWith(nextMonth)));
+    const basis = nextMonthly ?? live.find((a) => a.unit !== "month" && covers(a));
     if (basis) plan = { unit: basis.unit, feeMinor: basis.rateMinor, currency: basis.currency };
+    // On a monthly agreement that has ended by then: no fee to estimate (not the client's old plan).
+    else if (monthlies.length > 0) plan = null;
 
     const next = months.get(nextMonth)!;
     const paceMinutes = StudentAccount.pace(takenByMonth, current);
@@ -140,8 +148,8 @@ export class StudentAccount {
       money: StudentAccount.money(entries),
       prepaid: taken ? StudentAccount.prepaid(documents ?? [], billable) : [],
       plan,
-      agreements: live.map((a) => StudentAccount.agreement(a, current)),
-      allowance: taken ? Allowance.forMonth({ agreements: live, requests, bookings: bookings ?? [], manual, month: current, freeSlug, now }) : null,
+      agreements: live.map((a) => StudentAccount.agreement(a, calendar.dateOf(now))),
+      allowance: taken ? Allowance.forDate({ agreements: live, requests, bookings: bookings ?? [], manual, date: calendar.dateOf(now), freeSlug, now }) : null,
       uninvoiced,
       next: {
         month: nextMonth,
@@ -154,16 +162,22 @@ export class StudentAccount {
     };
   }
 
-  /** Monthly with an end: months after `current` up to the end month, and what they add up to. */
-  static agreement(a: AgreementLike, current: string): AccountAgreement {
-    if (a.unit !== "month" || !a.endsOn) return { ...a, monthsLeft: null, remainingMinor: null };
-    const [y1, m1] = current.split("-").map(Number);
-    const [y2, m2] = a.endsOn.slice(0, 7).split("-").map(Number);
-    const [ys, ms] = a.startsOn.slice(0, 7).split("-").map(Number);
-    // Not started yet: count from its first month.
-    const from = Math.max(y1 * 12 + m1 + 1, ys * 12 + ms);
-    const monthsLeft = Math.max(0, y2 * 12 + m2 - from + 1);
-    return { ...a, monthsLeft, remainingMinor: monthsLeft * a.rateMinor };
+  /** Where an agreement stands on `today`: its current month, the months after it and what they add up to, days to the end. */
+  static agreement(a: AgreementLike, today: string): AccountAgreement {
+    const daysLeft = a.endsOn ? AgreementPeriod.daysLeft(today, a.endsOn) : null;
+    if (a.unit !== "month") return { ...a, monthsLeft: null, remainingMinor: null, period: null, daysLeft };
+    // Not started yet: its first month, and every month counts as still to come.
+    const current = today < a.startsOn ? null : AgreementPeriod.at(a, today);
+    const shown = current ?? (today < a.startsOn ? AgreementPeriod.nth(a, 0) : null);
+    const of = AgreementPeriod.count(a);
+    const monthsLeft = of === null ? null : current ? of - current.index - 1 : today < a.startsOn ? of : 0;
+    return {
+      ...a,
+      monthsLeft,
+      remainingMinor: monthsLeft === null ? null : monthsLeft * a.rateMinor,
+      period: shown ? { number: shown.index + 1, of, start: shown.start, end: shown.end } : null,
+      daysLeft,
+    };
   }
 
   /** Charged, paid, credited and owed per currency, from the same ledger as the client's statement. */

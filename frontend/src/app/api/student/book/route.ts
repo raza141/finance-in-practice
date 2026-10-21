@@ -40,12 +40,12 @@ async function allowanceFor(clientId: string, existing: CalBookingDetail[], star
     HourRequestRepository.fromEnv()?.forClient(clientId) ?? [],
     SessionLogRepository.fromEnv()?.forClient(clientId) ?? [],
   ]);
-  return Allowance.forMonth({
+  return Allowance.forDate({
     agreements,
     requests,
     bookings: StudentSessions.applyLog(existing, log),
     manual: log.flatMap((l) => (l.onDate ? [{ date: l.onDate, minutes: l.minutes }] : [])),
-    month: Allowance.monthOf(start),
+    date: Allowance.dateOf(start),
     freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
   });
 }

@@ -162,9 +162,13 @@ export type AccountAgreement = Pick<
   Agreement,
   "id" | "serviceName" | "unit" | "rateMinor" | "currency" | "startsOn" | "endsOn" | "scope" | "hoursPerMonth" | "acceptedAt"
 > & {
-  /** Monthly with an end date: months after this one up to the end month (inclusive). */
+  /** Monthly with an end date: agreement months after the current one. */
   monthsLeft: number | null;
   remainingMinor: number | null;
+  /** Monthly: the agreement month running today (or its first, before it starts). */
+  period: { number: number; of: number | null; start: string; end: string } | null;
+  /** With an end date: days until it ends. */
+  daysLeft: number | null;
 };
 
 /** The student portal's Account tab (StudentAccount.build). */
@@ -214,7 +218,11 @@ export interface HourRequest {
 export interface MonthAllowance {
   agreementId: string;
   serviceName: string;
+  /** YYYY-MM of the agreement month's start: the key requests use. */
   month: string;
+  /** The agreement month, e.g. 17 Oct – 16 Nov (YYYY-MM-DD, inclusive). */
+  periodStart: string;
+  periodEnd: string;
   includedMinutes: number;
   /** Approved requests, included or billed. */
   extraMinutes: number;

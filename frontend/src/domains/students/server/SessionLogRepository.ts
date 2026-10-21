@@ -50,13 +50,26 @@ export class SessionLogRepository {
       await this.sql`
         INSERT INTO session_log (client_id, booking_uid, minutes, note) VALUES (${clientId}, ${input.bookingUid}, ${input.minutes}, ${input.note})
         ON CONFLICT (client_id, booking_uid) WHERE booking_uid IS NOT NULL
-        DO UPDATE SET minutes = EXCLUDED.minutes, note = EXCLUDED.note, updated_at = now()
+        DO UPDATE SET minutes = EXCLUDED.minutes, note = CASE WHEN EXCLUDED.note = '' THEN session_log.note ELSE EXCLUDED.note END, updated_at = now()
       `;
     } else {
       await this.sql`
         INSERT INTO session_log (client_id, on_date, minutes, note) VALUES (${clientId}, ${input.onDate}, ${input.minutes}, ${input.note})
       `;
     }
+  }
+
+  /** The owner's corrections for these Cal.com bookings, by booking uid (minutes studied). */
+  async byBookingUids(uids: readonly string[]): Promise<Map<string, number>> {
+    if (uids.length === 0) return new Map();
+    const rows = (await this.sql`SELECT booking_uid, minutes FROM session_log WHERE booking_uid = ANY (${[...uids]}::text[])`) as { booking_uid: string; minutes: number }[];
+    return new Map(rows.map((r) => [r.booking_uid, r.minutes]));
+  }
+
+  /** A booking back to its booked length. */
+  async removeBooking(clientId: string, uid: string): Promise<void> {
+    if (!UUID.test(clientId)) return;
+    await this.sql`DELETE FROM session_log WHERE client_id = ${clientId} AND booking_uid = ${uid}`;
   }
 
   /** Back to the booked length (a correction), or gone (a hand-logged session). */

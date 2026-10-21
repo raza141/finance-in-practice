@@ -13,6 +13,7 @@ import { TermsRepository } from "@/domains/settings/server/TermsRepository";
 import { HourRequestRepository } from "../server/HourRequestRepository";
 import { OwnerNotice } from "../server/OwnerNotice";
 import { StudentAuth } from "../server/StudentAuth";
+import { AgreementPeriod } from "../services/AgreementPeriod";
 import { Allowance } from "../services/Allowance";
 import { HourRequestContract } from "../services/HourRequestContract";
 import type { HourRequestStatus } from "../types";
@@ -24,20 +25,19 @@ export interface AccountActionState {
   error?: string;
 }
 
-const thisAndNextMonth = () => {
-  const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
-  return [today.slice(0, 7), InvoiceMath.addMonths(`${today.slice(0, 7)}-01`, 1).slice(0, 7)];
-};
 
 /** A student who used their month's hours asks for more; the owner gets an email and answers in admin Clients. */
 export async function requestHours(_: AccountActionState, formData: FormData): Promise<AccountActionState> {
   const student = await StudentAuth.current();
   if (!student) return { error: "Please sign in again." };
-  const parsed = HourRequestContract.parse(Object.fromEntries(formData), thisAndNextMonth());
-  if (!parsed.ok) return { error: parsed.error };
   const agreements = (await AgreementRepository.fromEnv()?.forClient(student.id)) ?? [];
-  const agreement = Allowance.covering(agreements, parsed.value.month);
-  if (!agreement) return { error: "Your agreement doesn't include monthly hours. Message your instructor." };
+  const found = Allowance.covering(agreements, new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today());
+  if (!found) return { error: "Your agreement doesn't include monthly hours. Message your instructor." };
+  const { agreement, period } = found;
+  // This agreement month, or the next one (keyed by their start month).
+  const next = AgreementPeriod.nth(agreement, period.index + 1);
+  const parsed = HourRequestContract.parse(Object.fromEntries(formData), [period.start.slice(0, 7), ...(next ? [next.start.slice(0, 7)] : [])]);
+  if (!parsed.ok) return { error: parsed.error };
   const repo = HourRequestRepository.fromEnv();
   if (!repo) return { error: "Requests are not available right now." };
   if (!(await repo.create(student.id, agreement.id, parsed.value.month, parsed.value.hours, parsed.value.note))) {

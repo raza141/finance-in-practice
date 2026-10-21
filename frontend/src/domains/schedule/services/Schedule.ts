@@ -57,6 +57,11 @@ export class Schedule {
    * calendars, so calendar busy time that exactly matches a booking is the
    * same event echoed back and is dropped.
    */
+  /** Marks accepted bookings that are over (their studied time can be corrected). */
+  static markEnded(events: readonly ScheduleEvent[], now = Date.now()): ScheduleEvent[] {
+    return events.map((e) => (e.kind === "booking" && e.status === "accepted" && Date.parse(e.end) <= now ? { ...e, ended: true } : e));
+  }
+
   static merge(bookings: readonly BookingLike[], busy: readonly BusyLike[], blocks: readonly BookingBlock[]): ScheduleEvent[] {
     const key = (r: TimeRange) => `${Date.parse(r.start)}-${Date.parse(r.end)}`;
     const booked = new Set(bookings.filter((b) => b.status !== "cancelled" && b.status !== "rejected").map(key));
@@ -72,6 +77,7 @@ export class Schedule {
         status: b.status,
         email: b.attendees[0]?.email,
         meetingUrl: b.meetingUrl,
+        group: b.attendees.length > 1,
       })),
       ...busy
         .filter((b) => !booked.has(key(b)))

@@ -12,6 +12,8 @@ const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC"
 const MONTH_LONG = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const ACCEPTED = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Dubai" });
+const SHORT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const dayDate = (ymd: string) => new Date(`${ymd}T00:00:00Z`);
 const monthDate = (ym: string) => new Date(`${ym}-01T00:00:00Z`);
 
 /** "1.5 h"; "0 h" stays plain. */
@@ -47,7 +49,7 @@ export function AccountSummaryCard({ account }: { account: StudentAccountView | 
             {!account.taken
               ? "Hours unavailable just now"
               : account.allowance
-                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left in ${MONTH.format(monthDate(now.month))}`
+                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left until ${SHORT.format(dayDate(account.allowance.periodEnd))}`
                 : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`}
           </p>
           <p className="text-sm text-muted">
@@ -153,7 +155,7 @@ export function AccountPanel({ account, readOnly = false }: { account: StudentAc
         {third ?? <NextMonth next={next} plan={plan} />}
       </div>
 
-      {agreements.length > 0 && <Agreements agreements={agreements} current={months.at(-2)!.month} readOnly={readOnly} />}
+      {agreements.length > 0 && <Agreements agreements={agreements} readOnly={readOnly} />}
 
       <MonthRecord months={months} known={taken !== null} />
 
@@ -200,11 +202,11 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
   const total = allowance.includedMinutes + allowance.extraMinutes;
   const share = (minutes: number) => `${Math.min(100, (minutes / Math.max(total, 1)) * 100)}%`;
   const over = allowance.leftMinutes < 0;
-  const name = MONTH_LONG.format(monthDate(allowance.month)).split(" ")[0];
+  const name = `${SHORT.format(dayDate(allowance.periodStart))} – ${SHORT.format(dayDate(allowance.periodEnd))}`;
   return (
     <section className={CARD} aria-labelledby="allowance-heading">
       <h2 id="allowance-heading" className={LABEL}>
-        Your hours in {name}
+        Your hours, {name}
       </h2>
       <p className={`mt-2 text-3xl font-semibold tabular-nums ${over ? "text-gold" : "text-ink"}`}>
         {over ? `${hoursOf(-allowance.leftMinutes)} over` : `${hoursOf(allowance.leftMinutes)} left`}
@@ -235,7 +237,7 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
 }
 
 /** What was agreed with them: rate, dates (e.g. until the exam) and, for monthly fees, what is still to come. */
-function Agreements({ agreements, current, readOnly }: { agreements: AccountAgreement[]; current: string; readOnly: boolean }) {
+function Agreements({ agreements, readOnly }: { agreements: AccountAgreement[]; readOnly: boolean }) {
   return (
     <section className={`${CARD} sm:p-8`} aria-labelledby="agreement-heading">
       <h2 id="agreement-heading" className="text-2xl font-normal italic">
@@ -260,16 +262,26 @@ function Agreements({ agreements, current, readOnly }: { agreements: AccountAgre
                 )}
               </div>
             </div>
-            {a.monthsLeft !== null && a.remainingMinor !== null && (
+            {(a.daysLeft !== null || a.period) && (
               <div className="sm:text-right">
-                <p className="text-2xl font-semibold text-ink tabular-nums">
-                  {a.monthsLeft} {a.monthsLeft === 1 ? "month" : "months"} left
-                </p>
-                <p className="text-sm text-muted">
-                  {a.monthsLeft > 0
-                    ? `after ${MONTH_LONG.format(monthDate(current)).split(" ")[0]}: ${InvoiceMath.money(a.remainingMinor, a.currency)} to come`
-                    : "This is the last month"}
-                </p>
+                {a.daysLeft !== null && a.endsOn && (
+                  <p className="text-2xl font-semibold text-ink tabular-nums">
+                    {a.daysLeft === 0 ? "Ends today" : `${a.daysLeft} ${a.daysLeft === 1 ? "day" : "days"} left`}
+                  </p>
+                )}
+                {a.period && (
+                  <p className="text-sm text-muted">
+                    Month {a.period.number}
+                    {a.period.of !== null && ` of ${a.period.of}`}: {SHORT.format(dayDate(a.period.start))} – {SHORT.format(dayDate(a.period.end))}
+                  </p>
+                )}
+                {a.monthsLeft !== null && a.remainingMinor !== null && (
+                  <p className="text-sm text-muted">
+                    {a.monthsLeft > 0
+                      ? `Then ${a.monthsLeft} more ${a.monthsLeft === 1 ? "month" : "months"}: ${InvoiceMath.money(a.remainingMinor, a.currency)} to come`
+                      : "This is the last month"}
+                  </p>
+                )}
               </div>
             )}
           </li>

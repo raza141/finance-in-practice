@@ -6,7 +6,7 @@ import { useActionState, useState, useTransition, type MouseEvent } from "react"
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
-import { blockTime, cancelBooking, confirmBooking, declineBooking, moveBooking, removeBlock, type ScheduleActionState } from "../actions/schedule";
+import { blockTime, cancelBooking, confirmBooking, declineBooking, moveBooking, removeBlock, setStudied, type ScheduleActionState } from "../actions/schedule";
 import { Schedule } from "../services/Schedule";
 import type { ScheduleEvent } from "../types";
 
@@ -56,7 +56,7 @@ const pad = (minutes: number) => `${String(Math.floor(minutes / 60) % 24).padSta
  * Week view of everything that makes the owner unavailable, plus the block-time
  * form. Clicking an empty spot prefills the form with that half hour.
  */
-export function ScheduleBoard({ weekStart, today, events }: { weekStart: string; today: string; events: ScheduleEvent[] }) {
+export function ScheduleBoard({ weekStart, today, events, owner = false }: { weekStart: string; today: string; events: ScheduleEvent[]; owner?: boolean }) {
   const days = Array.from({ length: 7 }, (_, i) => ZonedCalendar.addDays(weekStart, i));
   const visible = events.filter((e) => !closed(e));
 
@@ -149,6 +149,10 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
                     >
                       <span className="block truncate font-medium">{e.title}</span>
                       {height > 30 && <span className="block truncate opacity-80">{time(e.start)}–{time(e.end)}</span>}
+                      {/* Drawn at its booked time (that's when you were busy); the studied length is a label. */}
+                      {e.studiedMinutes != null && (
+                        <span className="block truncate font-semibold">{e.studiedMinutes === 0 ? "didn't happen" : `studied ${hoursLabel(e.studiedMinutes)}`}</span>
+                      )}
                     </button>
                   );
                 })}
@@ -161,7 +165,7 @@ export function ScheduleBoard({ weekStart, today, events }: { weekStart: string;
 
       <aside className="grid content-start gap-6">
         {/* The fresh copy after an action refreshed the week (e.g. pending -> accepted). */}
-        {selected && <EventDetail key={selected.id} event={events.find((e) => e.id === selected.id) ?? selected} onClose={() => setSelected(null)} />}
+        {selected && <EventDetail key={selected.id} event={events.find((e) => e.id === selected.id) ?? selected} owner={owner} onClose={() => setSelected(null)} />}
 
         <form id="block-form" action={submit} className="grid gap-3 rounded-lg border border-line bg-surface p-4">
           <h2 className="font-serif text-lg italic">Block time</h2>
@@ -357,7 +361,59 @@ function MoveBooking({ uid, date, start, onResult }: { uid: string; date: string
   );
 }
 
-function EventDetail({ event, onClose }: { event: ScheduleEvent; onClose: () => void }) {
+const hoursLabel = (minutes: number) => `${Math.round((minutes / 60) * 100) / 100} h`;
+
+/**
+ * A past 1-on-1 session's real length (booked 1 h, studied 3): saved only on
+ * this site, for the student's Hours & payments. Cal.com, their calendar and
+ * WhatsApp are not told.
+ */
+function StudiedHours({ event }: { event: ScheduleEvent }) {
+  const booked = Math.round((Date.parse(event.end) - Date.parse(event.start)) / 60_000);
+  const [hours, setHours] = useState(String(Math.round(((event.studiedMinutes ?? booked) / 60) * 100) / 100));
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<ScheduleActionState>(null);
+  const save = (value: string | null) => startTransition(async () => setResult(await setStudied(event.id, value)));
+  return (
+    <div className="grid gap-2 rounded-md border border-quant/30 bg-quant/5 p-3">
+      <label className="grid gap-1">
+        <span>
+          Hours studied <span className="text-xs text-muted">(booked {hoursLabel(booked)})</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <input
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            inputMode="decimal"
+            aria-label="Hours studied"
+            className="w-20 rounded-md border border-line bg-canvas px-3 py-1.5"
+          />
+          <button type="button" disabled={pending} onClick={() => save(hours)} className="rounded-md bg-quant/15 px-3 py-1.5 font-medium text-quant disabled:opacity-60">
+            {pending ? "Saving…" : "Save"}
+          </button>
+        </span>
+      </label>
+      <div className="flex flex-wrap gap-3 text-xs">
+        <button type="button" disabled={pending} onClick={() => save("0")} className="text-muted hover:text-gold">
+          Didn&rsquo;t happen
+        </button>
+        {event.studiedMinutes != null && (
+          <button type="button" disabled={pending} onClick={() => save(null)} className="text-muted hover:text-ink">
+            Back to booked
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-muted">Counts in their Hours &amp; payments. Cal.com and the student aren&rsquo;t notified.</p>
+      {result && (
+        <p role="status" className={result.ok ? "text-quant" : "text-gold"}>
+          {result.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EventDetail({ event, owner, onClose }: { event: ScheduleEvent; owner: boolean; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
@@ -421,6 +477,7 @@ function EventDetail({ event, onClose }: { event: ScheduleEvent; onClose: () => 
               Create invoice
             </Link>
           </div>
+          {owner && event.ended && !event.group && <StudiedHours key={`${event.id}-${event.studiedMinutes ?? "booked"}`} event={event} />}
           {awaiting(event) && <ConfirmBar uid={event.id} onResult={setResult} />}
           {!closed(event) && <MoveBooking uid={event.id} date={date} start={time(event.start)} onResult={setResult} />}
           {!closed(event) &&
