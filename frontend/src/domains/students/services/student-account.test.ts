@@ -5,10 +5,11 @@ import type { ClientDocument, LedgerEntry } from "@/domains/invoices/types";
 import { StudentAccount } from "./StudentAccount";
 
 const NOW = new Date("2026-10-21T08:00:00Z");
-const booking = (start: string, hours: number, status = "accepted") => ({
+const booking = (start: string, hours: number, status = "accepted", patch: object = {}) => ({
   start,
   end: new Date(Date.parse(start) + hours * 3_600_000).toISOString(),
   status,
+  ...patch,
 });
 const entry = (date: string, kind: LedgerEntry["kind"], currency: LedgerEntry["currency"], debitMinor: number, creditMinor: number): LedgerEntry => ({
   date,
@@ -98,6 +99,23 @@ describe("StudentAccount", () => {
       now: NOW,
     });
     expect(view.prepaid).toEqual([{ unit: "hour", billed: 8, used: 3 }]);
+  });
+
+  it("never takes the free diagnostic or a group class from paid hours, but counts them as studied", () => {
+    const view = StudentAccount.build({
+      entries: [],
+      documents: [doc({ hours: 10 })],
+      bookings: [
+        booking("2026-09-01T10:00:00Z", 0.5, "accepted", { eventType: { slug: "30min" } }),
+        booking("2026-09-08T10:00:00Z", 2, "accepted", { attendees: [{}, {}, {}] }),
+        booking("2026-09-15T10:00:00Z", 1, "accepted", { attendees: [{}], eventType: { slug: "session" } }),
+      ],
+      plan: null,
+      freeSlug: "30min",
+      now: NOW,
+    });
+    expect(view.taken).toEqual({ minutes: 210, sessions: 3 });
+    expect(view.prepaid).toEqual([{ unit: "hour", billed: 10, used: 1 }]);
   });
 
   it("estimates next month from the plan at their usual pace", () => {

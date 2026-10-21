@@ -52,6 +52,8 @@ async function portalData(student: Student) {
         entries,
         documents,
         bookings,
+        // The public booking link's event (NEXT_PUBLIC_CAL_LINK = user/slug) is the free diagnostic.
+        freeSlug: process.env.NEXT_PUBLIC_CAL_LINK?.split("/")[1]?.trim(),
         plan: client?.planUnit && client.planFeeMinor ? { unit: client.planUnit, feeMinor: client.planFeeMinor, currency: client.planCurrency } : null,
       })
     : null;

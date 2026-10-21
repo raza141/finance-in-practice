@@ -41,6 +41,8 @@ export interface CalBookingDetail extends CalBooking {
   createdAt: string;
   /** Free text: an address, a meeting URL or an integration key. */
   location?: string | null;
+  /** Which event was booked, e.g. the free diagnostic or a student "session". */
+  eventType?: { slug?: string } | null;
 }
 
 /** A busy interval from a connected calendar (Google, Apple...). No titles: Cal.com doesn't expose them. */

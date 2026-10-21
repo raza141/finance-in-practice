@@ -11,6 +11,8 @@ interface BookingLike {
   start: string;
   end: string;
   status: string;
+  attendees?: readonly unknown[];
+  eventType?: { slug?: string } | null;
 }
 
 interface AccountSources {
@@ -19,6 +21,8 @@ interface AccountSources {
   documents: readonly ClientDocument[] | null;
   bookings: readonly BookingLike[] | null;
   plan: StudentPlan | null;
+  /** The free diagnostic's event slug: studied, but never taken from paid hours. */
+  freeSlug?: string;
   now?: Date;
 }
 
@@ -33,7 +37,7 @@ export class StudentAccount {
   static readonly MONTHS = 6;
   static readonly PACE_MONTHS = 3;
 
-  static build({ entries, documents, bookings, plan, now = new Date() }: AccountSources): StudentAccountView {
+  static build({ entries, documents, bookings, plan, freeSlug, now = new Date() }: AccountSources): StudentAccountView {
     const calendar = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE);
     const monthOf = (iso: string) => calendar.dateOf(new Date(iso)).slice(0, 7);
     const current = calendar.dateOf(now).slice(0, 7);
@@ -46,6 +50,8 @@ export class StudentAccount {
     // Every month with a session, not only those shown: the pace needs the full history.
     const takenByMonth = new Map<string, number>();
     let taken: StudentAccountView["taken"] = null;
+    // What their own invoices pay for: 1-on-1 sessions, not group classes or the free diagnostic.
+    const billable = { minutes: 0, sessions: 0 };
     // ponytail: Cal.com returns the latest 100 bookings, so all-time totals undercount past ~100 sessions; page through bookingsFor if a student gets there.
     if (bookings) {
       taken = { minutes: 0, sessions: 0 };
@@ -57,6 +63,10 @@ export class StudentAccount {
         if (b.status === "accepted" && ended) {
           taken.minutes += minutes;
           taken.sessions += 1;
+          if ((b.attendees?.length ?? 0) <= 1 && !(freeSlug && b.eventType?.slug === freeSlug)) {
+            billable.minutes += minutes;
+            billable.sessions += 1;
+          }
           takenByMonth.set(month, (takenByMonth.get(month) ?? 0) + minutes);
           if (row) {
             row.minutesTaken += minutes;
@@ -82,7 +92,7 @@ export class StudentAccount {
       months: [...months.values()],
       taken,
       money: StudentAccount.money(entries),
-      prepaid: StudentAccount.prepaid(documents ?? [], taken),
+      prepaid: taken ? StudentAccount.prepaid(documents ?? [], billable) : [],
       plan,
       next: {
         month: nextMonth,
@@ -123,9 +133,8 @@ export class StudentAccount {
     return Math.round(full.reduce((sum, month) => sum + (takenByMonth.get(month) ?? 0), 0) / full.length);
   }
 
-  /** Hours or sessions their invoices billed (credit notes give back) against those taken. Only units that were billed show. */
-  private static prepaid(documents: readonly ClientDocument[], taken: StudentAccountView["taken"]): PrepaidBlock[] {
-    if (!taken) return [];
+  /** Hours or sessions their invoices billed (credit notes give back) against the billable ones taken. Only units that were billed show. */
+  private static prepaid(documents: readonly ClientDocument[], taken: { minutes: number; sessions: number }): PrepaidBlock[] {
     const hours = documents.reduce((sum, d) => sum + d.hours, 0);
     const sessions = documents.reduce((sum, d) => sum + d.sessions, 0);
     return [
