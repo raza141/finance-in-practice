@@ -122,7 +122,9 @@ export class StudentAccount {
     // Hourly or per-session: what the 1-on-1 time taken comes to beyond what was invoiced, at this month's rate.
     const coversNow = (a: AgreementLike) => a.startsOn.slice(0, 7) <= current && (!a.endsOn || current <= a.endsOn.slice(0, 7));
     const nowAgreement = live.find((a) => (a.unit === "hour" || a.unit === "session") && coversNow(a));
-    const nowBasis = nowAgreement ? { unit: nowAgreement.unit, feeMinor: nowAgreement.rateMinor, currency: nowAgreement.currency } : plan;
+    // A monthly agreement this month covers the time: nothing is owed per hour.
+    const monthly = live.some((a) => a.unit === "month" && coversNow(a));
+    const nowBasis = monthly ? null : nowAgreement ? { unit: nowAgreement.unit, feeMinor: nowAgreement.rateMinor, currency: nowAgreement.currency } : plan;
     const uninvoiced = taken ? StudentAccount.uninvoiced(nowBasis, documents ?? [], billable) : null;
 
     // The fee basis for next month: a monthly agreement covering it, any other live agreement, then the client's plan.

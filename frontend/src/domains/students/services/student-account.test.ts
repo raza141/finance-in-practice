@@ -193,5 +193,8 @@ describe("StudentAccount", () => {
     expect(StudentAccount.build({ ...sources, documents: [doc({ hours: 2 })] }).uninvoiced).toEqual({ unit: "hour", quantity: 3, amountMinor: 90_000, currency: "AED" });
     expect(StudentAccount.build({ ...sources, documents: [doc({ hours: 5 })] }).uninvoiced).toBeNull();
     expect(StudentAccount.build({ ...sources, documents: [], plan: { unit: "month", feeMinor: 300_000, currency: "AED" } }).uninvoiced).toBeNull();
+    // Moved onto a monthly agreement while the client record still says hourly: the agreement covers the time.
+    const monthly = { id: "m", serviceName: "CFA", unit: "month" as const, rateMinor: 300_000, currency: "AED" as const, startsOn: "2026-10-01", endsOn: null, scope: "", hoursPerMonth: 30, acceptedAt: null };
+    expect(StudentAccount.build({ ...sources, documents: [], agreements: [monthly] }).uninvoiced).toBeNull();
   });
 });
