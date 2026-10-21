@@ -58,7 +58,7 @@ export async function requestPackage(formData: FormData): Promise<void> {
   refresh();
 }
 
-/** Owner: put the client on a package from today (their old package agreement ends), or close their request. */
+/** Owner: put the client on a package from a start date, today or earlier (their old package agreement ends), or close their request. */
 export async function applyPackage(formData: FormData): Promise<void> {
   await AdminAuth.requireOwner();
   const repo = PackageRepository.fromEnv();
@@ -69,7 +69,10 @@ export async function applyPackage(formData: FormData): Promise<void> {
     await repo.request(clientId, null);
     redirect(`/admin/clients/${clientId}?notice=package-dismissed`);
   }
+  // A past start date backdates it, so hours already taught since then count against the package.
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
-  const applied = await repo.assign(clientId, packageId, today);
+  const raw = String(formData.get("startsOn") ?? "");
+  const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(raw) && raw <= today ? raw : today;
+  const applied = await repo.assign(clientId, packageId, startsOn);
   redirect(`/admin/clients/${clientId}?notice=${applied ? "package-applied" : "package-refused"}`);
 }

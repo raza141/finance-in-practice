@@ -198,9 +198,10 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           <div className="flex flex-wrap items-center gap-2">
             {pkg.requested ? (
               <>
-                <form action={applyPackage}>
+                <form action={applyPackage} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="clientId" value={client.id} />
                   <input type="hidden" name="packageId" value={pkg.requested.id} />
+                  <input name="startsOn" type="date" required defaultValue={today} max={today} aria-label="Starts on" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink" />
                   <PendingButton pendingLabel="Applying…" className={PRIMARY_ACTION}>
                     Apply {pkg.requested.name}
                   </PendingButton>
@@ -228,8 +229,9 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
                       </option>
                     ))}
                 </select>
+                <input name="startsOn" type="date" required defaultValue={today} max={today} aria-label="Starts on" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink" />
                 <PendingButton pendingLabel="Saving…" className={SECONDARY_ACTION}>
-                  Apply from today
+                  Apply from this date
                 </PendingButton>
               </form>
             )}
