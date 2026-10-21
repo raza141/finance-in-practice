@@ -24,6 +24,24 @@ const request = (status: HourRequest["status"], hours: number, month = "2026-10"
 });
 
 describe("Allowance", () => {
+  it("counts a package's hours across calendar months, from its start, and refuses past the total", () => {
+    const pkg = { id: "p1", serviceName: "Coaching package", unit: "package" as const, startsOn: "2026-09-20", endsOn: null, hoursPerMonth: 12 };
+    const allowance = Allowance.forDate({
+      agreements: [pkg],
+      requests: [],
+      bookings: [
+        booking("2026-09-10T10:00:00Z", 3), // before the package: not counted
+        booking("2026-09-25T10:00:00Z", 5),
+        booking("2026-10-15T10:00:00Z", 6),
+        booking("2026-11-02T10:00:00Z", 2, "pending"),
+      ],
+      manual: [],
+      date: "2026-10-21",
+      now: NOW,
+    });
+    expect(allowance).toMatchObject({ package: true, month: "2026-09", periodStart: "2026-09-20", takenMinutes: 11 * 60, bookedMinutes: 120, leftMinutes: -60 });
+  });
+
   it("counts this month's 1-on-1 time taken and booked against the hours included", () => {
     const allowance = Allowance.forDate({
       agreements: [cfa],

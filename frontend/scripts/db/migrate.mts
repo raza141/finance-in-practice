@@ -1145,7 +1145,7 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE clients
         ADD COLUMN package_id uuid REFERENCES packages (id) ON DELETE SET NULL,
         ADD COLUMN requested_package_id uuid REFERENCES packages (id) ON DELETE SET NULL,
-        ADD COLUMN requested_at timestamptz`,
+        ADD COLUMN package_requested_at timestamptz`,
       `ALTER TABLE student_registrations ADD COLUMN package_id uuid REFERENCES packages (id) ON DELETE SET NULL`,
       `INSERT INTO services (code, name, description, category, units, default_unit)
         VALUES ('PKG', 'Coaching package', 'Live 1-on-1 hours, used as booked', 'CFA', ARRAY['package'], 'package')

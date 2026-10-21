@@ -57,7 +57,7 @@ export class RegistrationContract {
     if (sittings && batch !== Batches.NOT_SURE && !sittings.includes(batch)) return { ok: false, error: "Choose your exam sitting, or Not sure yet." };
 
     const packageId = text("package");
-    const offered = PackageTable.forCourse(packages, !!sittings);
+    const offered = PackageTable.forCourse(packages, (sittings?.length ?? 0) > 0);
     if (offered.length > 0 && !offered.some((p) => p.id === packageId)) return { ok: false, error: "Choose a package." };
 
     // The terms box on the form: registering records the version they accepted (StudentRepository.join).

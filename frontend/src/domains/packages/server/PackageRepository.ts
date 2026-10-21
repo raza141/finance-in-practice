@@ -76,7 +76,7 @@ export class PackageRepository {
   async ofClient(clientId: string): Promise<{ current: Package | null; requested: Package | null; requestedAt: string | null }> {
     const empty = { current: null, requested: null, requestedAt: null };
     if (!UUID.test(clientId)) return empty;
-    const [row] = (await this.sql`SELECT package_id, requested_package_id, requested_at::text AS requested_at FROM clients WHERE id = ${clientId}`) as {
+    const [row] = (await this.sql`SELECT package_id, requested_package_id, package_requested_at::text AS requested_at FROM clients WHERE id = ${clientId}`) as {
       package_id: string | null;
       requested_package_id: string | null;
       requested_at: string | null;
@@ -99,7 +99,7 @@ export class PackageRepository {
   async assign(clientId: string, packageId: string, today: string, { firstOnly = false } = {}): Promise<Package | null> {
     if (!UUID.test(clientId) || !UUID.test(packageId)) return null;
     const changed = await this.sql`
-      UPDATE clients SET package_id = ${packageId}, requested_package_id = NULL, requested_at = NULL, updated_at = now()
+      UPDATE clients SET package_id = ${packageId}, requested_package_id = NULL, package_requested_at = NULL, updated_at = now()
       WHERE id = ${clientId} AND (${!firstOnly} OR package_id IS NULL) AND EXISTS (SELECT 1 FROM packages WHERE id = ${packageId})
       RETURNING id
     `;
@@ -124,7 +124,7 @@ export class PackageRepository {
   async request(clientId: string, packageId: string | null): Promise<boolean> {
     if (!UUID.test(clientId) || (packageId !== null && !UUID.test(packageId))) return false;
     const rows = await this.sql`
-      UPDATE clients SET requested_package_id = ${packageId}, requested_at = CASE WHEN ${packageId}::uuid IS NULL THEN NULL ELSE now() END
+      UPDATE clients SET requested_package_id = ${packageId}, package_requested_at = CASE WHEN ${packageId}::uuid IS NULL THEN NULL ELSE now() END
       WHERE id = ${clientId} AND requested_package_id IS DISTINCT FROM ${packageId}::uuid
         AND (${packageId}::uuid IS NULL OR (package_id IS DISTINCT FROM ${packageId}::uuid AND EXISTS (SELECT 1 FROM packages WHERE id = ${packageId} AND is_active)))
       RETURNING id
