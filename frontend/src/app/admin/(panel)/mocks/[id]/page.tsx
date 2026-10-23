@@ -8,6 +8,8 @@ import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { Inline } from "@/domains/journal/components/RichText";
+import { ExhibitText } from "@/domains/mocks/components/ExhibitText";
+import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
 import { deleteMock, setMockPublished } from "@/domains/mocks/actions/mocks";
 import { MockAccessForm, MockExamForm, MockUploadForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
@@ -95,9 +97,24 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                   {q.number} · {q.topic}
                   {q.vignette && " · vignette"} · answer <span className="text-emerald-300">{q.correct}</span>
                 </p>
-                <p className="line-clamp-2">
-                  <Inline text={q.question} />
-                </p>
+                {/* Opens to the question as students see it, tables and charts included. */}
+                <details>
+                  <summary className="line-clamp-2 cursor-pointer">
+                    <Inline text={MockExhibits.parse(q.question).find((p) => p.kind === "text")?.text ?? "(exhibit)"} />
+                  </summary>
+                  <div className="mt-3 grid gap-3">
+                    {q.vignette && <ExhibitText text={q.vignette} className="rounded-lg border border-line p-3" />}
+                    <ExhibitText text={q.question} />
+                    <ol className="grid gap-1">
+                      {q.options.map((o, i) => (
+                        <li key={i} className={MockContract.LETTERS[i] === q.correct ? "text-emerald-300" : ""}>
+                          {MockContract.LETTERS[i]}. <Inline text={o} />
+                        </li>
+                      ))}
+                    </ol>
+                    {q.explanation && <ExhibitText text={q.explanation} className="text-muted" />}
+                  </div>
+                </details>
               </li>
             ))}
           </ol>

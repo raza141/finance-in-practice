@@ -90,6 +90,22 @@ export function MockUploadForm({ mockId }: { mockId: string }) {
       <Field label="…or paste the rows from Excel" hint="Select the whole table including the header row, copy, paste here.">
         <textarea name="paste" rows={6} className={`${FIELD} font-mono text-xs`} placeholder={"Number\tTopic\tVignette (Optional)\tQuestion\tOption_A\tOption_B\tOption_C\tCorrect_Option\tExplanation (Optional)"} />
       </Field>
+      <details className="rounded-lg border border-line p-3 text-sm">
+        <summary className="cursor-pointer font-medium">Tables and charts (FSA statements, term structures)</summary>
+        <p className="mt-2 text-muted">
+          In the Vignette, Question or Explanation cell, one row per line (Alt+Enter in Excel). The first row is the header. A title line just above is optional:
+          &ldquo;Exhibit 1: …&rdquo; or &ldquo;Table: …&rdquo; for a table, &ldquo;Chart: …&rdquo; to draw the rows as a line chart.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <pre className="overflow-x-auto rounded-md bg-canvas/80 p-3 font-mono text-xs">
+            {"Exhibit 1: Delta Corp (AED m)\n| Item | 2025 | 2024 |\n| Revenue | 840 | 790 |\n| COGS | (510) | (480) |\n| LIFO reserve | 26 | 18 |"}
+          </pre>
+          <pre className="overflow-x-auto rounded-md bg-canvas/80 p-3 font-mono text-xs">
+            {"Chart: Spot rate curve\n| Maturity (years) | Spot rate (%) |\n| 1 | 3.20 |\n| 2 | 3.65 |\n| 3 | 3.90 |\n| 5 | 4.10 |"}
+          </pre>
+        </div>
+        <p className="mt-2 text-muted">Up to 40 rows, 8 columns and 3 lines per chart. Cells take maths ($…$) and bold (**…**). A broken table is reported by row number and nothing is saved.</p>
+      </details>
       <div className="flex flex-wrap items-start gap-4">
         <PendingButton pendingLabel="Checking…" className={SAVE}>
           Upload questions

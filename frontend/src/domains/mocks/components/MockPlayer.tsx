@@ -1,13 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { autosaveMock, submitMock } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
@@ -53,9 +47,7 @@ export function MockPlayer({
 }) {
   const router = useRouter();
   const storageKey = `fip-mock:${attemptId}`;
-  const [answers, setAnswers] = useState<Record<string, Answer>>(() =>
-    Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, a])),
-  );
+  const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, a])));
   const [current, setCurrent] = useState(0);
   const [struck, setStruck] = useState<Record<string, OptionLetter[]>>({});
   const [deadline] = useState(() => Date.now() + remainingMs);
@@ -63,18 +55,14 @@ export function MockPlayer({
   const [confirming, setConfirming] = useState(false);
   // The numbered palette: open beside the question on wide screens, closed on phones (it would push the question down).
   const [palette, setPalette] = useState(true);
-  const [state, setState] = useState<"working" | "submitting" | "error">(
-    "working",
-  );
+  const [state, setState] = useState<"working" | "submitting" | "error">("working");
   const dirty = useRef(false);
   const submitted = useRef(false);
 
   // This device's unsaved changes (e.g. notes typed just before a refresh) win over the last autosave.
   useEffect(() => {
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(storageKey) ?? "null",
-      ) as Record<string, Answer> | null;
+      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as Record<string, Answer> | null;
       if (saved) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring this browser's copy after hydration
         setAnswers((a) => ({ ...a, ...saved }));
@@ -90,8 +78,7 @@ export function MockPlayer({
   }, []);
 
   const list = useCallback(
-    (a: Record<string, Answer>): MockResponse[] =>
-      questions.map((q) => ({ questionId: q.id, ...(a[q.id] ?? BLANK) })),
+    (a: Record<string, Answer>): MockResponse[] => questions.map((q) => ({ questionId: q.id, ...(a[q.id] ?? BLANK) })),
     [questions],
   );
 
@@ -167,21 +154,12 @@ export function MockPlayer({
   const toggleStrike = (letter: OptionLetter) =>
     setStruck((s) => {
       const now = s[q.id] ?? [];
-      return {
-        ...s,
-        [q.id]: now.includes(letter)
-          ? now.filter((l) => l !== letter)
-          : [...now, letter],
-      };
+      return { ...s, [q.id]: now.includes(letter) ? now.filter((l) => l !== letter) : [...now, letter] };
     });
 
   const tile = (i: number) => {
     const a = answers[questions[i].id];
-    const tone = a?.flagged
-      ? "border-gold bg-gold/25 text-gold"
-      : a?.selected
-        ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200"
-        : "border-line bg-surface text-muted";
+    const tone = a?.flagged ? "border-gold bg-gold/25 text-gold" : a?.selected ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted";
     return `${tone} ${i === current ? "ring-2 ring-quant ring-offset-2 ring-offset-canvas" : ""}`;
   };
 
@@ -196,9 +174,7 @@ export function MockPlayer({
           </p>
           <p className="min-w-0 flex-1 truncate text-sm">
             <span className="font-semibold">{title}</span>
-            <span className="ml-2 rounded border border-quant/40 px-1.5 py-0.5 font-mono text-[11px] text-quant">
-              {tag}
-            </span>
+            <span className="ml-2 rounded border border-quant/40 px-1.5 py-0.5 font-mono text-[11px] text-quant">{tag}</span>
           </p>
           <button
             type="button"
@@ -212,10 +188,7 @@ export function MockPlayer({
           <div className="flex items-center gap-3">
             <div className="hidden w-40 sm:block" aria-hidden>
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
-                <div
-                  className="h-full bg-emerald-400 transition-[width]"
-                  style={{ width: `${(answered / questions.length) * 100}%` }}
-                />
+                <div className="h-full bg-emerald-400 transition-[width]" style={{ width: `${(answered / questions.length) * 100}%` }} />
               </div>
             </div>
             <span className="font-mono text-xs text-muted">
@@ -232,15 +205,9 @@ export function MockPlayer({
         </div>
       </header>
 
-      <div
-        className={`grid flex-1 gap-4 p-4 sm:p-6 ${palette ? "lg:grid-cols-[13rem_1fr]" : ""}`}
-      >
+      <div className={`grid flex-1 gap-4 p-4 sm:p-6 ${palette ? "lg:grid-cols-[13rem_1fr]" : ""}`}>
         {palette && (
-          <nav
-            id="mock-palette"
-            aria-label="Questions"
-            className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-11rem)] lg:self-start lg:overflow-y-auto"
-          >
+          <nav id="mock-palette" aria-label="Questions" className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-11rem)] lg:self-start lg:overflow-y-auto">
             <ol className="grid grid-cols-8 gap-1.5 sm:grid-cols-12 lg:grid-cols-5">
               {questions.map((x, i) => (
                 <li key={x.id}>
@@ -262,16 +229,13 @@ export function MockPlayer({
             </ol>
             <ul className="mt-4 grid gap-1.5 text-xs text-muted">
               <li className="flex items-center gap-2">
-                <span className="size-3 rounded-sm border border-emerald-400/70 bg-emerald-400/20" />{" "}
-                Answered
+                <span className="size-3 rounded-sm border border-emerald-400/70 bg-emerald-400/20" /> Answered
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-3 rounded-sm border border-gold bg-gold/25" />{" "}
-                Flagged for review
+                <span className="size-3 rounded-sm border border-gold bg-gold/25" /> Flagged for review
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-3 rounded-sm border border-line bg-surface" />{" "}
-                Unanswered
+                <span className="size-3 rounded-sm border border-line bg-surface" /> Unanswered
               </li>
             </ul>
           </nav>
@@ -280,20 +244,12 @@ export function MockPlayer({
         <main className="grid min-w-0 content-start gap-4">
           <div className={`grid gap-4 ${q.vignette ? "xl:grid-cols-2" : ""}`}>
             {q.vignette && (
-              <section
-                aria-label="Case"
-                className="max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-surface/60 p-5"
-              >
-                <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
-                  Vignette
-                </h2>
+              <section aria-label="Case" className="max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-surface/60 p-5">
+                <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Vignette</h2>
                 <div className="mt-3 text-ink/90">{q.vignette}</div>
               </section>
             )}
-            <section
-              aria-label={`Question ${q.number}`}
-              className="rounded-xl border border-line bg-surface/60 p-5"
-            >
+            <section aria-label={`Question ${q.number}`} className="rounded-xl border border-line bg-surface/60 p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-mono text-xs tracking-[0.16em] text-quant uppercase">
                   Question {q.number} of {questions.length}
@@ -307,9 +263,7 @@ export function MockPlayer({
                   {mine.flagged ? "⚑ Flagged" : "⚐ Flag for review"}
                 </button>
               </div>
-              <div className="mt-4 text-[1.05rem] leading-relaxed">
-                {q.question}
-              </div>
+              <div className="mt-4 text-[1.05rem] leading-relaxed">{q.question}</div>
               <fieldset className="mt-5">
                 <legend className="sr-only">Choose one answer</legend>
                 <ul className="grid gap-2.5">
@@ -321,21 +275,13 @@ export function MockPlayer({
                         <button
                           type="button"
                           aria-pressed={on}
-                          onClick={() =>
-                            change(q.id, { selected: on ? null : letter })
-                          }
+                          onClick={() => change(q.id, { selected: on ? null : letter })}
                           className={`flex min-h-14 flex-1 items-center gap-4 rounded-xl border-2 px-4 py-3 text-left transition-colors ${on ? "border-quant bg-quant/10" : "border-line bg-surface hover:border-quant/50"} ${off ? "opacity-45" : ""}`}
                         >
-                          <span
-                            className={`grid size-8 shrink-0 place-items-center rounded-md border font-mono text-sm ${on ? "border-quant bg-quant text-canvas" : "border-line text-muted"}`}
-                          >
+                          <span className={`grid size-8 shrink-0 place-items-center rounded-md border font-mono text-sm ${on ? "border-quant bg-quant text-canvas" : "border-line text-muted"}`}>
                             {letter}
                           </span>
-                          <span
-                            className={`min-w-0 flex-1 ${off ? "line-through decoration-2" : ""}`}
-                          >
-                            {q.options[i]}
-                          </span>
+                          <span className={`min-w-0 flex-1 ${off ? "line-through decoration-2" : ""}`}>{q.options[i]}</span>
                         </button>
                         <button
                           type="button"
@@ -357,14 +303,8 @@ export function MockPlayer({
             </section>
           </div>
 
-          <section
-            aria-label="Notes"
-            className="rounded-xl border border-line bg-surface/60 p-5"
-          >
-            <label
-              htmlFor="mock-notes"
-              className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase"
-            >
+          <section aria-label="Notes" className="rounded-xl border border-line bg-surface/60 p-5">
+            <label htmlFor="mock-notes" className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
               Scratchpad · your notes for this question, kept for revision
             </label>
             <textarea
@@ -390,9 +330,9 @@ export function MockPlayer({
           >
             ‹ Previous
           </button>
-          <p className="font-mono text-xs text-muted">
-            Progress: {answered}/{questions.length} (
-            {MockGrader.percent(answered, questions.length)}%)
+          {/* Phones: the bar above already shows it, and the buttons keep to one row. */}
+          <p className="hidden font-mono text-xs text-muted sm:block">
+            Progress: {answered}/{questions.length} ({MockGrader.percent(answered, questions.length)}%)
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -403,22 +343,13 @@ export function MockPlayer({
             >
               Next ›
             </button>
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              disabled={state === "submitting"}
-              className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60"
-            >
+            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting"} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
               {state === "submitting" ? "Submitting…" : "Submit"}
             </button>
           </div>
         </div>
         {(confirming || state === "error") && state !== "submitting" && (
-          <div
-            role="alertdialog"
-            aria-label="Submit the mock"
-            className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-4 py-3 text-sm sm:px-6"
-          >
+          <div role="alertdialog" aria-label="Submit the mock" className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-4 py-3 text-sm sm:px-6">
             <p className={state === "error" ? "text-red-300" : "text-ink"}>
               {state === "error"
                 ? "Submitting didn't work. Your answers are kept on this device; please try again."
@@ -426,18 +357,10 @@ export function MockPlayer({
                   ? `${unanswered} question${unanswered > 1 ? "s are" : " is"} unanswered. Submit anyway?`
                   : "Submit your answers? You can't change them afterwards."}
             </p>
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              className="h-9 rounded-md border border-line px-4"
-            >
+            <button type="button" onClick={() => setConfirming(false)} className="h-9 rounded-md border border-line px-4">
               Keep working
             </button>
-            <button
-              type="button"
-              onClick={() => void submit()}
-              className="h-9 rounded-md bg-gold px-4 font-semibold text-canvas"
-            >
+            <button type="button" onClick={() => void submit()} className="h-9 rounded-md bg-gold px-4 font-semibold text-canvas">
               Submit now
             </button>
           </div>

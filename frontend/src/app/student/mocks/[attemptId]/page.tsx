@@ -7,7 +7,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { Logo } from "@/core/components/layout/Logo";
-import { Inline, RichText } from "@/domains/journal/components/RichText";
+import { Inline } from "@/domains/journal/components/RichText";
+import { ExhibitText } from "@/domains/mocks/components/ExhibitText";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
 import { MockResults } from "@/domains/mocks/components/MockResults";
 import { MockSession } from "@/domains/mocks/server/MockSession";
@@ -22,8 +23,8 @@ export const metadata: Metadata = { title: "Mock exam", robots: { index: false, 
 const rendered = (q: ActiveQuestion) => ({
   id: q.id,
   number: q.number,
-  vignette: q.vignette ? <RichText text={q.vignette} /> : null,
-  question: <RichText text={q.question} />,
+  vignette: q.vignette ? <ExhibitText text={q.vignette} /> : null,
+  question: <ExhibitText text={q.question} />,
   options: q.options.map((o, i) => <Inline key={i} text={o} />) as [ReactNode, ReactNode, ReactNode],
 });
 
@@ -83,7 +84,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
             ...rendered(q),
             topic: q.topic,
             correct: q.correct,
-            explanation: q.explanation ? <RichText text={q.explanation} /> : null,
+            explanation: q.explanation ? <ExhibitText text={q.explanation} /> : null,
             selected: mine.get(q.id)?.selected ?? null,
             flagged: mine.get(q.id)?.flagged ?? false,
             notes: mine.get(q.id)?.notes ?? "",

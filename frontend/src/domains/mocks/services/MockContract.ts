@@ -1,5 +1,6 @@
 import { CsvText } from "@/domains/journal/services/ChartData";
 
+import { MockExhibits } from "./MockExhibits";
 import type { MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter } from "../types";
 
 export type PoolPick = { topics: string[]; from: string[]; count: number };
@@ -131,6 +132,7 @@ export class MockContract {
       }
       if (at("vignette").length > 20000) problems.push("Vignette is over 20000 characters");
       if (at("explanation").length > 10000) problems.push("Explanation is over 10000 characters");
+      for (const [c, label] of [["vignette", "Vignette"], ["question", "Question"], ["explanation", "Explanation"]] as const) problems.push(...MockExhibits.problems(at(c), label));
       if (problems.length) {
         errors.push(`${line}: ${problems.join("; ")}.`);
         continue;
