@@ -91,6 +91,28 @@ describe("MockContract.parsePool", () => {
   });
 });
 
+describe("MockContract.parseAccess", () => {
+  const form = (entries: [string, string][]) => {
+    const f = new FormData();
+    for (const [k, v] of entries) f.append(k, v);
+    return f;
+  };
+  const id = "11111111-1111-4111-8111-111111111111";
+
+  it("keeps only the list the chosen audience uses", () => {
+    const ticks: [string, string][] = [["course", "CFA Level I"], ["course", "CFA Level I"], ["client", id], ["client", "x"]];
+    expect(MockContract.parseAccess(form([["audience", "course"], ...ticks]))).toEqual({ ok: true, value: { audience: "course", courses: ["CFA Level I"], clients: [] } });
+    expect(MockContract.parseAccess(form([["audience", "clients"], ...ticks]))).toEqual({ ok: true, value: { audience: "clients", courses: [], clients: [id] } });
+    expect(MockContract.parseAccess(form([["audience", "all"], ...ticks]))).toEqual({ ok: true, value: { audience: "all", courses: [], clients: [] } });
+  });
+
+  it("refuses an unknown audience or an empty list", () => {
+    expect(MockContract.parseAccess(form([["audience", "everyone"]])).ok).toBe(false);
+    expect(MockContract.parseAccess(form([["audience", "course"]]))).toEqual({ ok: false, error: "Tick at least one course." });
+    expect(MockContract.parseAccess(form([["audience", "clients"], ["client", "x"]]))).toEqual({ ok: false, error: "Tick at least one client." });
+  });
+});
+
 describe("MockContract.parseResponses", () => {
   it("keeps well-formed answers and drops anything else", () => {
     const id = "11111111-1111-4111-8111-111111111111";

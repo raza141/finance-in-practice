@@ -9,7 +9,7 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { Inline } from "@/domains/journal/components/RichText";
 import { deleteMock, setMockPublished } from "@/domains/mocks/actions/mocks";
-import { MockExamForm, MockUploadForm } from "@/domains/mocks/components/MockAdminForms";
+import { MockAccessForm, MockExamForm, MockUploadForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -21,7 +21,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;
   if (!repo || !mock) notFound();
-  const questions = await repo.questions(mock.id);
+  const [questions, students, granted] = await Promise.all([repo.questions(mock.id), repo.students(), repo.accessClients(mock.id)]);
 
   return (
     <div className="max-w-5xl">
@@ -57,6 +57,16 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         </h2>
         <div className="mt-4">
           <MockExamForm mock={mock} />
+        </div>
+      </section>
+
+      <section aria-labelledby="access" className="mt-6 rounded-lg border border-line p-5">
+        <h2 id="access" className="text-lg">
+          Who can take it
+        </h2>
+        <p className="mt-1 text-sm text-muted">Students removed later keep their past results, and can finish an attempt they&rsquo;ve already started.</p>
+        <div className="mt-4">
+          <MockAccessForm mock={mock} students={students} granted={granted} />
         </div>
       </section>
 

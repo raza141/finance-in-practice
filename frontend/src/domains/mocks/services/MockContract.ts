@@ -1,6 +1,6 @@
 import { CsvText } from "@/domains/journal/services/ChartData";
 
-import type { MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter } from "../types";
+import type { MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter } from "../types";
 
 export type PoolPick = { topics: string[]; from: string[]; count: number };
 
@@ -33,6 +33,11 @@ export class MockContract {
     random: "Random mock",
     full: "Full syllabus",
   };
+  static readonly AUDIENCES: Record<MockAudience, string> = {
+    all: "All students",
+    course: "Students on certain courses",
+    clients: "Selected clients only",
+  };
   static readonly LETTERS: readonly OptionLetter[] = ["A", "B", "C"];
   static readonly MAX_QUESTIONS = 500;
   static readonly MAX_NOTES = 5000;
@@ -57,6 +62,20 @@ export class MockContract {
       return { ok: false, error: "The duration is whole minutes, 1 to 600." };
     }
     return { ok: true, value: { title, mockType: mockType as MockType, source, durationMinutes } };
+  }
+
+  /** The access form. Only the list the chosen audience uses is kept, and it can't be empty. */
+  static parseAccess(form: FormData): { ok: true; value: MockAccess } | { ok: false; error: string } {
+    const audience = String(form.get("audience") ?? "");
+    if (!(audience in MockContract.AUDIENCES)) return { ok: false, error: "Choose who can take this mock." };
+    const courses = [...new Set(form.getAll("course").map((c) => String(c).trim()))].filter(Boolean).slice(0, 50);
+    const clients = [...new Set(form.getAll("client").map(String))].filter(MockContract.isUuid);
+    if (audience === "course" && !courses.length) return { ok: false, error: "Tick at least one course." };
+    if (audience === "clients" && !clients.length) return { ok: false, error: "Tick at least one client." };
+    return {
+      ok: true,
+      value: { audience: audience as MockAudience, courses: audience === "course" ? courses : [], clients: audience === "clients" ? clients : [] },
+    };
   }
 
   /** The pool form: which topics, optionally which mocks to draw from (none ticked: every mock), and how many questions. */

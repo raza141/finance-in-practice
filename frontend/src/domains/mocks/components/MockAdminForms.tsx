@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { buildMockFromPool, saveMock, uploadMockQuestions, type MockActionState } from "../actions/mocks";
+import { buildMockFromPool, saveMock, setMockAccess, uploadMockQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
-import type { MockExam } from "../types";
+import type { MockAudience, MockExam, MockStudent } from "../types";
 
 const SAVE = "h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright";
 
@@ -24,6 +24,23 @@ function Notice({ state }: { state: MockActionState }) {
         </ul>
       )}
     </div>
+  );
+}
+
+/** Submits without React's reset after the action, so ticks and choices stay as they were sent (as SettingsForm). */
+function keep(action: (data: FormData) => void) {
+  return (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    startTransition(() => action(data));
+  };
+}
+
+function SaveButton({ busy, busyLabel, children }: { busy: boolean; busyLabel: string; children: string }) {
+  return (
+    <button type="submit" disabled={busy} aria-busy={busy} className={`${SAVE} disabled:cursor-wait disabled:opacity-60`}>
+      {busy ? busyLabel : children}
+    </button>
   );
 }
 
@@ -87,9 +104,9 @@ const BOX = "flex items-center gap-2 rounded-md border border-line px-3 py-2 tex
 
 /** A new draft mock of random questions from the ones already uploaded, by topic and optionally by source mock. */
 export function MockPoolForm({ topics, mocks }: { topics: { topic: string; count: number }[]; mocks: MockExam[] }) {
-  const [state, action] = useActionState(buildMockFromPool, null);
+  const [state, action, busy] = useActionState(buildMockFromPool, null);
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={keep(action)} className="grid gap-4 sm:grid-cols-2">
       <fieldset className="sm:col-span-2">
         <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">Topics</legend>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -134,9 +151,70 @@ export function MockPoolForm({ topics, mocks }: { topics: { topic: string; count
         <input name="source" maxLength={120} placeholder="Question pool" defaultValue="Question pool" className={FIELD} />
       </Field>
       <div className="flex items-center gap-4 sm:col-span-2">
-        <PendingButton pendingLabel="Building…" className={SAVE}>
+        <SaveButton busy={busy} busyLabel="Building…">
           Build draft mock
-        </PendingButton>
+        </SaveButton>
+        <Notice state={state} />
+      </div>
+    </form>
+  );
+}
+
+/** Who can see and start the mock: everyone, students on ticked courses, or ticked clients. */
+export function MockAccessForm({ mock, students, granted }: { mock: MockExam; students: MockStudent[]; granted: string[] }) {
+  const [state, action, busy] = useActionState(setMockAccess, null);
+  const [audience, setAudience] = useState<MockAudience>(mock.audience);
+  const [query, setQuery] = useState("");
+  // Courses as written on the clients' records, plus any the mock still names that no client has now.
+  const courses = [...new Set([...students.flatMap((s) => s.courses), ...mock.courses])].sort();
+  const q = query.trim().toLowerCase();
+  return (
+    <form onSubmit={keep(action)} className="grid gap-4">
+      <input type="hidden" name="id" value={mock.id} />
+      <fieldset className="flex flex-wrap gap-2">
+        <legend className="sr-only">Who can take this mock</legend>
+        {Object.entries(MockContract.AUDIENCES).map(([value, label]) => (
+          <label key={value} className={BOX}>
+            <input type="radio" name="audience" value={value} defaultChecked={mock.audience === value} onChange={() => setAudience(value as MockAudience)} />
+            {label}
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset hidden={audience !== "course"}>
+        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">Courses</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {courses.map((c) => (
+            <label key={c} className={BOX}>
+              <input type="checkbox" name="course" value={c} defaultChecked={mock.courses.includes(c)} />
+              {c} <span className="font-mono text-xs text-muted">{students.filter((s) => s.courses.includes(c)).length}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset hidden={audience !== "clients"}>
+        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">Clients</legend>
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by name or email" className={FIELD} />
+        <ul className="mt-2 grid max-h-72 gap-1 overflow-y-auto sm:grid-cols-2">
+          {students.map((s) => (
+            // Filtered rows are hidden, not removed, so their ticks still submit.
+            <li key={s.id} hidden={!!q && !`${s.name} ${s.email}`.toLowerCase().includes(q)}>
+              <label className={BOX}>
+                <input type="checkbox" name="client" value={s.id} defaultChecked={granted.includes(s.id)} />
+                <span className="min-w-0">
+                  {s.name} <span className="block truncate text-xs text-muted">{s.email}</span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+
+      <div className="flex items-center gap-4">
+        <SaveButton busy={busy} busyLabel="Saving…">
+          Save access
+        </SaveButton>
         <Notice state={state} />
       </div>
     </form>

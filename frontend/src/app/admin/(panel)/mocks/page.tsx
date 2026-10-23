@@ -57,6 +57,7 @@ export default async function AdminMocksPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">
                     <span className={m.published ? "text-emerald-300" : "text-muted"}>{m.published ? "Published" : "Draft"}</span>
+                    {m.audience !== "all" && <span className="block text-muted">{m.audience === "course" ? m.courses.join(", ") : "Selected clients"}</span>}
                   </td>
                 </tr>
               ))}

@@ -7,12 +7,15 @@ import type {
   AttemptStatus,
   AttemptSummary,
   MockAttempt,
+  MockAccess,
+  MockAudience,
   MockExam,
   MockExamInput,
   MockGrade,
   MockQuestion,
   MockQuestionInput,
   MockResponse,
+  MockStudent,
   MockType,
   OptionLetter,
 } from "../types";
@@ -26,6 +29,8 @@ interface ExamRow {
   source: string;
   duration_minutes: number;
   published: boolean;
+  audience: MockAudience;
+  courses: string[];
   created_at: Date;
   question_count: number;
   attempted: boolean;
@@ -143,6 +148,30 @@ export class MockRepository {
     return (inserted as unknown[]).length > 0;
   }
 
+  /** The clients a mock is granted to (audience "clients"). */
+  async accessClients(mockId: string): Promise<string[]> {
+    const rows = (await this.sql`SELECT client_id FROM mock_access WHERE mock_id = ${mockId}`) as { client_id: string }[];
+    return rows.map((r) => r.client_id);
+  }
+
+  /** Clients who can sign in to the portal (they have a course), for the access form. */
+  async students(): Promise<MockStudent[]> {
+    return (await this.sql`
+      SELECT id, name, email, courses FROM clients WHERE cardinality(courses) > 0 ORDER BY lower(name) LIMIT 1000
+    `) as MockStudent[];
+  }
+
+  async setAccess(mockId: string, access: MockAccess): Promise<void> {
+    await this.sql.transaction([
+      this.sql`UPDATE mock_exams SET audience = ${access.audience}, courses = ${access.courses}::text[] WHERE id = ${mockId}`,
+      this.sql`DELETE FROM mock_access WHERE mock_id = ${mockId}`,
+      this.sql`
+        INSERT INTO mock_access (mock_id, client_id)
+        SELECT ${mockId}::uuid, c.id FROM clients c WHERE c.id = ANY(${access.clients}::uuid[])
+      `,
+    ]);
+  }
+
   /** The pool's topics with how many distinct questions each has (a question copied into a pool mock counts once). */
   async topics(): Promise<{ topic: string; count: number }[]> {
     return (await this.sql`
@@ -189,9 +218,20 @@ export class MockRepository {
 
   // --- Students ---
 
-  /** What the lobby lists: published mocks that have questions. */
-  async published(): Promise<MockExam[]> {
-    return (await this.all()).filter((m) => m.published && m.questionCount > 0);
+  /** What the student's lobby lists: published mocks with questions that are open to them (same rule as `start`). */
+  async published(clientId: string): Promise<MockExam[]> {
+    const rows = (await this.sql`
+      SELECT e.*, n.question_count, false AS attempted
+      FROM mock_exams e
+      JOIN clients c ON c.id = ${clientId}
+      CROSS JOIN LATERAL (SELECT count(*)::int AS question_count FROM mock_questions q WHERE q.mock_id = e.id) n
+      WHERE e.published AND n.question_count > 0
+        AND (e.audience = 'all'
+          OR (e.audience = 'course' AND e.courses && c.courses)
+          OR (e.audience = 'clients' AND EXISTS (SELECT 1 FROM mock_access x WHERE x.mock_id = e.id AND x.client_id = c.id)))
+      ORDER BY e.created_at DESC
+    `) as ExamRow[];
+    return rows.map(MockRepository.toExam);
   }
 
   async history(clientId: string): Promise<AttemptSummary[]> {
@@ -212,13 +252,21 @@ export class MockRepository {
     }));
   }
 
-  /** Starts the mock, or returns the student's open attempt at it. Null: not published or no questions. */
+  /**
+   * Starts the mock, or returns the student's open attempt at it. Null: not published, no questions,
+   * or not open to this student (same rule as `published`). An attempt already open can be finished.
+   */
   async start(clientId: string, mockId: string): Promise<string | null> {
     const [created] = (await this.sql`
       INSERT INTO mock_attempts (client_id, mock_id, ends_at, total)
       SELECT ${clientId}::uuid, e.id, now() + make_interval(mins => e.duration_minutes), c.n
-      FROM mock_exams e, LATERAL (SELECT count(*)::int AS n FROM mock_questions WHERE mock_id = e.id) c
+      FROM mock_exams e
+      JOIN clients cl ON cl.id = ${clientId}
+      CROSS JOIN LATERAL (SELECT count(*)::int AS n FROM mock_questions WHERE mock_id = e.id) c
       WHERE e.id = ${mockId} AND e.published AND c.n > 0
+        AND (e.audience = 'all'
+          OR (e.audience = 'course' AND e.courses && cl.courses)
+          OR (e.audience = 'clients' AND EXISTS (SELECT 1 FROM mock_access x WHERE x.mock_id = e.id AND x.client_id = cl.id)))
       ON CONFLICT (client_id, mock_id) WHERE status = 'in_progress' DO NOTHING
       RETURNING id
     `) as { id: string }[];
@@ -319,6 +367,8 @@ export class MockRepository {
       source: r.source,
       durationMinutes: r.duration_minutes,
       published: r.published,
+      audience: r.audience,
+      courses: r.courses,
       questionCount: r.question_count,
       attempted: r.attempted,
       createdAt: r.created_at,

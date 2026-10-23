@@ -63,7 +63,7 @@ async function portalData(student: Student) {
     safely("open quotes", async () => (invoices ? invoices.openQuotes(student.id) : [])),
     safely("package", async () => (await PackageRepository.fromEnv()?.ofClient(student.id)) ?? null),
     safely("packages", async () => (await PackageRepository.fromEnv()?.active()) ?? []),
-    safely("mock exams", async () => (await MockRepository.fromEnv()?.published()) ?? []),
+    safely("mock exams", async () => (await MockRepository.fromEnv()?.published(student.id)) ?? []),
     safely("mock attempts", async () => (await MockRepository.fromEnv()?.history(student.id)) ?? []),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.

@@ -97,6 +97,19 @@ export async function buildMockFromPool(_prev: MockActionState, form: FormData):
   redirect(`/admin/mocks/${built.id}`);
 }
 
+/** Who can see and start the mock. Students already part-way through keep their attempt. */
+export async function setMockAccess(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const id = String(form.get("id"));
+  if (!MockContract.isUuid(id)) return { ok: false, message: "Unknown mock." };
+  const access = MockContract.parseAccess(form);
+  if (!access.ok) return { ok: false, message: access.error };
+  await MockSession.repo().setAccess(id, access.value);
+  revalidatePath("/student");
+  refresh();
+  return { ok: true, message: "Saved." };
+}
+
 export async function setMockPublished(form: FormData): Promise<void> {
   await AdminAuth.require();
   const id = String(form.get("id"));

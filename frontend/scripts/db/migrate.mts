@@ -1233,6 +1233,23 @@ const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    // Who may see and start a mock: every portal student, those on certain
+    // courses (matched against clients.courses), or named clients only.
+    // Past attempts stay visible to their student either way.
+    id: "056_mock_access",
+    statements: [
+      `ALTER TABLE mock_exams
+        ADD COLUMN audience text NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'course', 'clients')),
+        ADD COLUMN courses text[] NOT NULL DEFAULT '{}' CHECK (cardinality(courses) <= 50)`,
+      `CREATE TABLE mock_access (
+        mock_id   uuid NOT NULL REFERENCES mock_exams (id) ON DELETE CASCADE,
+        client_id uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        PRIMARY KEY (mock_id, client_id)
+      )`,
+      `CREATE INDEX mock_access_client_idx ON mock_access (client_id)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

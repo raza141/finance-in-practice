@@ -1,5 +1,23 @@
 export type MockType = "book" | "topic" | "random" | "full";
 export type OptionLetter = "A" | "B" | "C";
+/** Who sees a mock: every portal student, those on certain courses, or named clients. */
+export type MockAudience = "all" | "course" | "clients";
+
+export interface MockAccess {
+  audience: MockAudience;
+  /** Course titles as on clients.courses; used when audience is "course". */
+  courses: string[];
+  /** Client ids; used when audience is "clients". */
+  clients: string[];
+}
+
+/** A portal student the admin can grant a mock to. */
+export interface MockStudent {
+  id: string;
+  name: string;
+  email: string;
+  courses: string[];
+}
 
 export interface MockExamInput {
   title: string;
@@ -12,6 +30,8 @@ export interface MockExamInput {
 export interface MockExam extends MockExamInput {
   id: string;
   published: boolean;
+  audience: MockAudience;
+  courses: string[];
   questionCount: number;
   /** Any attempts: the questions are then fixed and the mock can't be deleted. */
   attempted: boolean;
