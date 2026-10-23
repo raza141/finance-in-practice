@@ -85,6 +85,18 @@ export async function uploadMockQuestions(_prev: MockActionState, form: FormData
   return { ok: true, message: `Saved ${sheet.questions.length} questions.` };
 }
 
+/** A new draft mock drawn at random from the questions already uploaded; opens it for the preview. */
+export async function buildMockFromPool(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const exam = MockContract.parseExam(form);
+  if (!exam.ok) return { ok: false, message: exam.error };
+  const pick = MockContract.parsePool(form);
+  if (!pick.ok) return { ok: false, message: pick.error };
+  const built = await MockSession.repo().buildFromPool(exam.value, pick.value);
+  if (!built) return { ok: false, message: "No uploaded questions match those topics and mocks." };
+  redirect(`/admin/mocks/${built.id}`);
+}
+
 export async function setMockPublished(form: FormData): Promise<void> {
   await AdminAuth.require();
   const id = String(form.get("id"));

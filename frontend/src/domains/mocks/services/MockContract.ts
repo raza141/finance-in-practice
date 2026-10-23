@@ -2,6 +2,8 @@ import { CsvText } from "@/domains/journal/services/ChartData";
 
 import type { MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter } from "../types";
 
+export type PoolPick = { topics: string[]; from: string[]; count: number };
+
 export type SheetResult = { ok: true; questions: MockQuestionInput[] } | { ok: false; errors: string[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,6 +57,16 @@ export class MockContract {
       return { ok: false, error: "The duration is whole minutes, 1 to 600." };
     }
     return { ok: true, value: { title, mockType: mockType as MockType, source, durationMinutes } };
+  }
+
+  /** The pool form: which topics, optionally which mocks to draw from (none ticked: every mock), and how many questions. */
+  static parsePool(form: FormData): { ok: true; value: PoolPick } | { ok: false; error: string } {
+    const topics = [...new Set(form.getAll("topic").map((t) => String(t).trim()))].filter(Boolean);
+    const from = form.getAll("from").map(String).filter(MockContract.isUuid);
+    const count = Number(form.get("count"));
+    if (!topics.length) return { ok: false, error: "Tick at least one topic." };
+    if (!Number.isInteger(count) || count < 1 || count > MockContract.MAX_QUESTIONS) return { ok: false, error: "The number of questions is 1 to 500." };
+    return { ok: true, value: { topics, from, count } };
   }
 
   /**

@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { saveMock, uploadMockQuestions, type MockActionState } from "../actions/mocks";
+import { buildMockFromPool, saveMock, uploadMockQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import type { MockExam } from "../types";
 
@@ -76,6 +76,66 @@ export function MockUploadForm({ mockId }: { mockId: string }) {
       <div className="flex flex-wrap items-start gap-4">
         <PendingButton pendingLabel="Checking…" className={SAVE}>
           Upload questions
+        </PendingButton>
+        <Notice state={state} />
+      </div>
+    </form>
+  );
+}
+
+const BOX = "flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm has-[:checked]:border-quant/70";
+
+/** A new draft mock of random questions from the ones already uploaded, by topic and optionally by source mock. */
+export function MockPoolForm({ topics, mocks }: { topics: { topic: string; count: number }[]; mocks: MockExam[] }) {
+  const [state, action] = useActionState(buildMockFromPool, null);
+  return (
+    <form action={action} className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="sm:col-span-2">
+        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">Topics</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {topics.map((t) => (
+            <label key={t.topic} className={BOX}>
+              <input type="checkbox" name="topic" value={t.topic} />
+              {t.topic} <span className="font-mono text-xs text-muted">{t.count}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="sm:col-span-2">
+        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">From these mocks (none ticked: all)</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {mocks.map((m) => (
+            <label key={m.id} className={BOX}>
+              <input type="checkbox" name="from" value={m.id} />
+              {m.title}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Field label="Title" className="sm:col-span-2">
+        <input name="title" required minLength={3} maxLength={120} placeholder="FSA topic mock 1" className={FIELD} />
+      </Field>
+      <Field label="Questions" hint="Fewer in the pool than this? It takes them all.">
+        <input name="count" type="number" required min={1} max={MockContract.MAX_QUESTIONS} defaultValue={30} className={FIELD} />
+      </Field>
+      <Field label="Duration (minutes)">
+        <input name="durationMinutes" type="number" required min={1} max={600} defaultValue={45} className={FIELD} />
+      </Field>
+      <Field label="Type">
+        <select name="mockType" defaultValue="topic" className={FIELD}>
+          {Object.entries(MockContract.TYPES).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Book or source">
+        <input name="source" maxLength={120} placeholder="Question pool" defaultValue="Question pool" className={FIELD} />
+      </Field>
+      <div className="flex items-center gap-4 sm:col-span-2">
+        <PendingButton pendingLabel="Building…" className={SAVE}>
+          Build draft mock
         </PendingButton>
         <Notice state={state} />
       </div>

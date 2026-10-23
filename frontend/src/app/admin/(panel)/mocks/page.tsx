@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
-import { MockExamForm } from "@/domains/mocks/components/MockAdminForms";
+import { MockExamForm, MockPoolForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -20,7 +20,7 @@ export default async function AdminMocksPage() {
       </p>
     );
   }
-  const mocks = await repo.all();
+  const [mocks, topics] = await Promise.all([repo.all(), repo.topics()]);
 
   return (
     <div className="max-w-5xl">
@@ -73,6 +73,20 @@ export default async function AdminMocksPage() {
           <MockExamForm />
         </div>
       </section>
+
+      {topics.length > 0 && (
+        <section aria-labelledby="pool" className="mt-6 rounded-lg border border-line p-5">
+          <h2 id="pool" className="text-lg">
+            Build from the question pool
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Random questions copied from the mocks you&rsquo;ve uploaded, by topic. It opens as a draft to preview and publish; the source mocks don&rsquo;t change.
+          </p>
+          <div className="mt-4">
+            <MockPoolForm topics={topics} mocks={mocks.filter((m) => m.questionCount > 0)} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

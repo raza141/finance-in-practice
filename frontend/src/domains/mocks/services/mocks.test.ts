@@ -69,6 +69,28 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
   });
 });
 
+describe("MockContract.parsePool", () => {
+  const form = (entries: [string, string][]) => {
+    const f = new FormData();
+    for (const [k, v] of entries) f.append(k, v);
+    return f;
+  };
+
+  it("takes the ticked topics and mocks, dropping blanks, repeats and bad ids", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["topic", " FSA "], ["topic", ""], ["from", id], ["from", "x"], ["count", "30"]]))).toEqual({
+      ok: true,
+      value: { topics: ["FSA"], from: [id], count: 30 },
+    });
+  });
+
+  it("needs a topic and a whole count of 1 to 500", () => {
+    expect(MockContract.parsePool(form([["count", "30"]]))).toEqual({ ok: false, error: "Tick at least one topic." });
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "2.5"]])).ok).toBe(false);
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "501"]])).ok).toBe(false);
+  });
+});
+
 describe("MockContract.parseResponses", () => {
   it("keeps well-formed answers and drops anything else", () => {
     const id = "11111111-1111-4111-8111-111111111111";

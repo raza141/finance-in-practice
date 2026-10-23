@@ -16,6 +16,7 @@ import type {
   MockType,
   OptionLetter,
 } from "../types";
+import type { PoolPick } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 
 interface ExamRow {
@@ -140,6 +141,44 @@ export class MockRepository {
       `,
     ]);
     return (inserted as unknown[]).length > 0;
+  }
+
+  /** The pool's topics with how many distinct questions each has (a question copied into a pool mock counts once). */
+  async topics(): Promise<{ topic: string; count: number }[]> {
+    return (await this.sql`
+      SELECT topic, count(*)::int AS count
+      FROM (SELECT DISTINCT topic, vignette, question, option_a, option_b, option_c FROM mock_questions) d
+      GROUP BY topic ORDER BY topic
+    `) as { topic: string; count: number }[];
+  }
+
+  /**
+   * A new draft mock of up to `count` random questions copied from existing mocks: the chosen topics,
+   * from the chosen mocks (none: all). Copies, so the source mocks and their results never change.
+   * Null when nothing in the pool matches.
+   */
+  async buildFromPool(m: MockExamInput, pick: PoolPick): Promise<{ id: string; count: number } | null> {
+    const [row] = (await this.sql`
+      WITH pool AS (
+        SELECT DISTINCT ON (topic, vignette, question, option_a, option_b, option_c) *
+        FROM mock_questions
+        WHERE topic = ANY(${pick.topics}::text[]) AND (cardinality(${pick.from}::uuid[]) = 0 OR mock_id = ANY(${pick.from}::uuid[]))
+        ORDER BY topic, vignette, question, option_a, option_b, option_c, random()
+      ), picked AS (
+        SELECT pool.*, row_number() OVER (ORDER BY random()) AS n FROM pool
+      ), exam AS (
+        INSERT INTO mock_exams (title, mock_type, source, duration_minutes)
+        SELECT ${m.title}, ${m.mockType}, ${m.source}, ${m.durationMinutes} WHERE EXISTS (SELECT 1 FROM pool)
+        RETURNING id
+      ), copied AS (
+        INSERT INTO mock_questions (mock_id, number, topic, vignette, question, option_a, option_b, option_c, correct, explanation)
+        SELECT exam.id, p.n, p.topic, p.vignette, p.question, p.option_a, p.option_b, p.option_c, p.correct, p.explanation
+        FROM exam CROSS JOIN picked p WHERE p.n <= ${pick.count}
+        RETURNING 1
+      )
+      SELECT exam.id, (SELECT count(*)::int FROM copied) AS count FROM exam
+    `) as { id: string; count: number }[];
+    return row ?? null;
   }
 
   /** With answers and explanations: for grading and results only, never an open attempt's page. */
