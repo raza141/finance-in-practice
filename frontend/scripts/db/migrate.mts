@@ -1180,6 +1180,59 @@ const MIGRATIONS: Migration[] = [
           '[{"label":"Concept clarification","value":"Included"},{"label":"Student portal access","value":"Included"},{"label":"Delivery","value":"Online or in person"},{"label":"Study plan","value":"Monthly plan"}]')`,
     ],
   },
+  {
+    // Timed mock exams in the student portal (replacing Google Forms mocks).
+    // Questions come from an uploaded sheet; an attempt's clock is ends_at, set on
+    // start, so a refresh never resets it. One open attempt per student and mock.
+    id: "055_mock_exams",
+    statements: [
+      `CREATE TABLE mock_exams (
+        id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        title            text NOT NULL CHECK (char_length(title) BETWEEN 3 AND 120),
+        mock_type        text NOT NULL CHECK (mock_type IN ('book', 'topic', 'random', 'full')),
+        source           text NOT NULL DEFAULT '' CHECK (char_length(source) <= 120),
+        duration_minutes smallint NOT NULL CHECK (duration_minutes BETWEEN 1 AND 600),
+        published        boolean NOT NULL DEFAULT false,
+        created_at       timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE TABLE mock_questions (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        mock_id     uuid NOT NULL REFERENCES mock_exams (id) ON DELETE CASCADE,
+        number      smallint NOT NULL CHECK (number BETWEEN 1 AND 500),
+        topic       text NOT NULL CHECK (char_length(topic) BETWEEN 1 AND 80),
+        vignette    text NOT NULL DEFAULT '' CHECK (char_length(vignette) <= 20000),
+        question    text NOT NULL CHECK (char_length(question) BETWEEN 1 AND 5000),
+        option_a    text NOT NULL CHECK (char_length(option_a) BETWEEN 1 AND 2000),
+        option_b    text NOT NULL CHECK (char_length(option_b) BETWEEN 1 AND 2000),
+        option_c    text NOT NULL CHECK (char_length(option_c) BETWEEN 1 AND 2000),
+        correct     char(1) NOT NULL CHECK (correct IN ('A', 'B', 'C')),
+        explanation text NOT NULL DEFAULT '' CHECK (char_length(explanation) <= 10000),
+        UNIQUE (mock_id, number)
+      )`,
+      // RESTRICT: a mock students have sat can't be deleted (unpublish it instead).
+      `CREATE TABLE mock_attempts (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id    uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        mock_id      uuid NOT NULL REFERENCES mock_exams (id) ON DELETE RESTRICT,
+        started_at   timestamptz NOT NULL DEFAULT now(),
+        ends_at      timestamptz NOT NULL,
+        submitted_at timestamptz,
+        score        smallint,
+        total        smallint NOT NULL,
+        status       text NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed'))
+      )`,
+      `CREATE UNIQUE INDEX mock_attempts_open_idx ON mock_attempts (client_id, mock_id) WHERE status = 'in_progress'`,
+      `CREATE INDEX mock_attempts_client_idx ON mock_attempts (client_id, started_at DESC)`,
+      `CREATE TABLE mock_responses (
+        attempt_id  uuid NOT NULL REFERENCES mock_attempts (id) ON DELETE CASCADE,
+        question_id uuid NOT NULL REFERENCES mock_questions (id) ON DELETE CASCADE,
+        selected    char(1) CHECK (selected IN ('A', 'B', 'C')),
+        flagged     boolean NOT NULL DEFAULT false,
+        notes       text NOT NULL DEFAULT '' CHECK (char_length(notes) <= 5000),
+        PRIMARY KEY (attempt_id, question_id)
+      )`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

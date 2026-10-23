@@ -63,6 +63,7 @@ export class AdminNavigation {
       label: "Teaching",
       modules: [
         { href: "/admin/questions", label: "CFA questions", icon: "question" },
+        { href: "/admin/mocks", label: "Mock exams", icon: "clock" },
         { href: "/admin/classroom", label: "Classroom", icon: "school", ownerOnly: true },
         { href: "/admin/courses", label: "Courses", icon: "book" },
         { href: "/admin/instructors", label: "Instructors", icon: "user" },

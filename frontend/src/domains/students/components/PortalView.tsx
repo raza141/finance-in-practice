@@ -10,6 +10,8 @@ import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { PackageCard } from "@/domains/packages/components/PackageCard";
 import { PackageRepository } from "@/domains/packages/server/PackageRepository";
+import { MockLobby } from "@/domains/mocks/components/MockLobby";
+import { MockRepository } from "@/domains/mocks/server/MockRepository";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
@@ -42,7 +44,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
@@ -61,6 +63,8 @@ async function portalData(student: Student) {
     safely("open quotes", async () => (invoices ? invoices.openQuotes(student.id) : [])),
     safely("package", async () => (await PackageRepository.fromEnv()?.ofClient(student.id)) ?? null),
     safely("packages", async () => (await PackageRepository.fromEnv()?.active()) ?? []),
+    safely("mock exams", async () => (await MockRepository.fromEnv()?.published()) ?? []),
+    safely("mock attempts", async () => (await MockRepository.fromEnv()?.history(student.id)) ?? []),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -92,12 +96,14 @@ async function portalData(student: Student) {
     offers: offers ?? [],
     // Unknown (database hiccup): no card rather than a wrong one.
     pkg: pkg && { ...pkg, packages: packages ?? [] },
+    mocks,
+    attempts,
   };
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg, mocks, attempts } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -139,7 +145,12 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         sessions={sessions}
         past={past}
         addresses={addresses}
-        plan={<StudyPlanTimeline items={plan} programmes={student.courses} />}
+        plan={
+          <div className="grid gap-6">
+            <StudyPlanTimeline items={plan} programmes={student.courses} />
+            <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
+          </div>
+        }
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
           <PortalOverview

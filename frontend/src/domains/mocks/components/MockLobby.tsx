@@ -1,0 +1,81 @@
+import Link from "next/link";
+
+import { BUTTON, BOOK_BUTTON } from "@/domains/students/components/buttons";
+
+import { startMock } from "../actions/mocks";
+import { MockContract } from "../services/MockContract";
+import { MockGrader } from "../services/MockGrader";
+import type { AttemptSummary, MockExam } from "../types";
+
+const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
+const DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", year: "numeric" });
+
+/** The portal's mock exams: what's available to sit, and every past attempt to revise. null = couldn't load. */
+export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | null; history: AttemptSummary[] | null; readOnly: boolean }) {
+  if (mocks === null || history === null) {
+    return <p className={`${CARD} text-sm text-muted`}>Couldn&rsquo;t load your mock exams right now. Please refresh in a minute.</p>;
+  }
+  if (mocks.length === 0 && history.length === 0) return null;
+  const open = new Map(history.filter((h) => h.status === "in_progress").map((h) => [h.mockId, h.id]));
+  return (
+    <section aria-labelledby="mocks-heading" className={CARD}>
+      <h2 id="mocks-heading" className="text-2xl font-normal italic">
+        Mock exams
+      </h2>
+      <p className="mt-1 text-sm text-muted">Timed, exam-style. The clock keeps running if you close the page; results and explanations appear the moment you submit.</p>
+
+      {mocks.length > 0 && (
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+          {mocks.map((m) => (
+            <li key={m.id} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/60 p-5">
+              <div>
+                <p className="font-mono text-[11px] tracking-[0.18em] text-quant uppercase">{MockContract.TYPES[m.mockType]}</p>
+                <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
+                {m.source && <p className="text-sm text-muted">{m.source}</p>}
+              </div>
+              <p className="font-mono text-xs text-muted">
+                {m.questionCount} questions · {m.durationMinutes} min
+              </p>
+              <form action={startMock} className="mt-auto">
+                <input type="hidden" name="mockId" value={m.id} />
+                <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
+                  {open.has(m.id) ? "Resume" : "Start mock"}
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Past attempts</h3>
+          <ul className="mt-3 divide-y divide-line rounded-xl border border-line">
+            {history.map((h) => (
+              <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span>
+                  <span className="font-medium">{h.mockTitle}</span>
+                  <span className="block font-mono text-xs text-muted">{DAY.format(h.startedAt)}</span>
+                </span>
+                <span className="flex items-center gap-4">
+                  {h.score !== null ? (
+                    <span className="font-mono">
+                      {h.score}/{h.total} <span className="text-muted">({MockGrader.percent(h.score, h.total)}%)</span>
+                    </span>
+                  ) : (
+                    <span className="font-mono text-xs text-gold">In progress</span>
+                  )}
+                  {readOnly ? null : (
+                    <Link href={`/student/mocks/${h.id}`} className={BUTTON}>
+                      {h.status === "completed" ? "Revise / view results" : "Resume"}
+                    </Link>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
