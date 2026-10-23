@@ -1250,6 +1250,18 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX mock_access_client_idx ON mock_access (client_id)`,
     ],
   },
+  {
+    // Mocks on the exam package cards, after "Topic teaching" (data only; edit in
+    // Admin → Pricing). Matched by name; a package that already lists them is left alone.
+    id: "057_package_mocks",
+    statements: [
+      `UPDATE packages SET features = jsonb_insert(jsonb_insert(features, '{3}',
+          jsonb_build_object('label', 'Topic mocks', 'value', CASE name WHEN 'Structured Coaching' THEN 'Per book, on request' ELSE 'Per book, tailored to your weak areas' END)),
+          '{3}', jsonb_build_object('label', 'Full CFA mocks', 'value', CASE name WHEN 'Structured Coaching' THEN '3 full-length mocks' ELSE '6 full-length mocks' END)),
+        updated_at = now()
+      WHERE name IN ('Structured Coaching', 'Extended Coaching') AND NOT features @> '[{"label":"Full CFA mocks"}]'`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
