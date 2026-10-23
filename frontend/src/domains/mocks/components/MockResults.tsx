@@ -37,6 +37,7 @@ export function MockResults({
   grade,
   seconds,
   questions,
+  readOnly = false,
 }: {
   attemptId: string;
   title: string;
@@ -44,6 +45,8 @@ export function MockResults({
   /** Time taken. */
   seconds: number;
   questions: ReviewQuestion[];
+  /** The owner reviewing a student's attempt: their notes show, nothing saves. */
+  readOnly?: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(questions.map((q) => [q.id, q.notes])));
@@ -180,28 +183,37 @@ export function MockResults({
                 <div className="mt-2 text-ink/90">{q.explanation}</div>
               </section>
             )}
-            <div className="mt-4">
-              <label htmlFor={`note-${q.id}`} className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
-                My notes
-              </label>
-              <textarea
-                id={`note-${q.id}`}
-                value={notes[q.id] ?? ""}
-                maxLength={5000}
-                rows={3}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setNotes((n) => ({ ...n, [q.id]: value }));
-                  setStatus((s) => ({ ...s, [q.id]: undefined }));
-                }}
-                onBlur={() => void saveNote(q.id)}
-                placeholder="Add a revision note…"
-                className="mt-2 w-full rounded-md border border-line bg-canvas/80 px-3 py-2 font-mono text-sm text-ink outline-none placeholder:text-muted/50 focus:border-quant/70"
-              />
-              <p aria-live="polite" className="min-h-5 text-xs text-muted">
-                {status[q.id] === "saving" ? "Saving…" : status[q.id] === "saved" ? "Saved." : status[q.id] === "error" ? "Couldn't save. Click outside the box to retry." : ""}
-              </p>
-            </div>
+            {readOnly ? (
+              notes[q.id]?.trim() && (
+                <div className="mt-4">
+                  <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Their notes</h3>
+                  <p className="mt-2 font-mono text-sm whitespace-pre-wrap text-ink/90">{notes[q.id]}</p>
+                </div>
+              )
+            ) : (
+              <div className="mt-4">
+                <label htmlFor={`note-${q.id}`} className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+                  My notes
+                </label>
+                <textarea
+                  id={`note-${q.id}`}
+                  value={notes[q.id] ?? ""}
+                  maxLength={5000}
+                  rows={3}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNotes((n) => ({ ...n, [q.id]: value }));
+                    setStatus((s) => ({ ...s, [q.id]: undefined }));
+                  }}
+                  onBlur={() => void saveNote(q.id)}
+                  placeholder="Add a revision note…"
+                  className="mt-2 w-full rounded-md border border-line bg-canvas/80 px-3 py-2 font-mono text-sm text-ink outline-none placeholder:text-muted/50 focus:border-quant/70"
+                />
+                <p aria-live="polite" className="min-h-5 text-xs text-muted">
+                  {status[q.id] === "saving" ? "Saving…" : status[q.id] === "saved" ? "Saved." : status[q.id] === "error" ? "Couldn't save. Click outside the box to retry." : ""}
+                </p>
+              </div>
+            )}
           </article>
         );
       })}

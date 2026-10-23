@@ -180,3 +180,29 @@ describe("MockGrader", () => {
     expect(MockGrader.open(end, new Date("2026-10-23T10:00:31Z"))).toBe(false);
   });
 });
+
+describe("MockGrader.arrange", () => {
+  const q = (n: number, vignette = "") => ({ id: `q${n}`, number: n, vignette });
+  const qs = [q(1), q(2, "case A"), q(3, "case A"), q(4), q(5), q(6, "case B"), q(7, "case B"), q(8)];
+  const ids = (list: { id: string }[]) => list.map((x) => x.id);
+
+  it("keeps the mock's order on a first attempt", () => {
+    expect(ids(MockGrader.arrange(qs, null))).toEqual(ids(qs));
+  });
+
+  it("gives each retake its own order, the same every time it loads, renumbered 1…n", () => {
+    const a = MockGrader.arrange(qs, "attempt-1");
+    expect(MockGrader.arrange(qs, "attempt-1")).toEqual(a);
+    expect(ids(MockGrader.arrange(qs, "attempt-2"))).not.toEqual(ids(a));
+    expect([...ids(a)].sort()).toEqual([...ids(qs)].sort());
+    expect(a.map((x) => x.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it("keeps questions on one vignette together and in their order", () => {
+    for (const seed of ["s1", "s2", "s3", "s4"]) {
+      const order = ids(MockGrader.arrange(qs, seed));
+      expect(order.indexOf("q3")).toBe(order.indexOf("q2") + 1);
+      expect(order.indexOf("q7")).toBe(order.indexOf("q6") + 1);
+    }
+  });
+});

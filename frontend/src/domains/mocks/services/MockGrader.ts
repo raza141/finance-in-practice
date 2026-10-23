@@ -2,6 +2,31 @@ import type { ActiveQuestion, MockGrade, MockQuestion, MockResponse, TopicScore 
 
 /** Marks an attempt, and decides what of a question a student may see while it is open. */
 export class MockGrader {
+  /**
+   * The order an attempt shows its questions in, numbered 1…n by position. `seed` null (a first
+   * attempt): the mock's own order. A retake passes its attempt id, so every retake gets its own
+   * order that stays the same on refresh and in its results. Questions sharing a vignette stay
+   * together in their own order; the options never move (an answer can be "A and B").
+   */
+  static arrange<T extends { id: string; number: number; vignette: string }>(questions: readonly T[], seed: string | null): T[] {
+    const groups: T[][] = [];
+    for (const q of questions) {
+      const last = groups.at(-1);
+      if (q.vignette && last?.[0].vignette === q.vignette) last.push(q);
+      else groups.push([q]);
+    }
+    const key = (g: T[]) => MockGrader.hash(`${seed}:${g[0].id}`);
+    const ordered = seed === null ? groups : [...groups].sort((a, b) => key(a) - key(b));
+    return ordered.flat().map((q, i) => ({ ...q, number: i + 1 }));
+  }
+
+  /** FNV-1a, 32-bit: a stable shuffle key, not security. */
+  private static hash(text: string): number {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+    return h >>> 0;
+  }
+
   /** Seconds after the clock ends that answers still count: the auto-submit's round trip. */
   static readonly GRACE_MS = 30_000;
 

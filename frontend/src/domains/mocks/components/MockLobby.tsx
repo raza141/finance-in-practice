@@ -17,6 +17,8 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
   }
   if (mocks.length === 0 && history.length === 0) return null;
   const open = new Map(history.filter((h) => h.status === "in_progress").map((h) => [h.mockId, h.id]));
+  // Newest first, so the first completed one per mock is the latest mark.
+  const done = (mockId: string) => history.filter((h) => h.mockId === mockId && h.score !== null);
   return (
     <section aria-labelledby="mocks-heading" className={CARD}>
       <h2 id="mocks-heading" className="text-2xl font-normal italic">
@@ -36,10 +38,15 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
               <p className="font-mono text-xs text-muted">
                 {m.questionCount} questions · {m.durationMinutes} min
               </p>
+              {done(m.id).length > 0 && (
+                <p className="text-xs text-muted">
+                  Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}%. A retake shuffles the questions and keeps every mark.
+                </p>
+              )}
               <form action={startMock} className="mt-auto">
                 <input type="hidden" name="mockId" value={m.id} />
                 <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
-                  {open.has(m.id) ? "Resume" : "Start mock"}
+                  {open.has(m.id) ? "Resume" : done(m.id).length ? "Retake" : "Start mock"}
                 </button>
               </form>
             </li>

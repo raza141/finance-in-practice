@@ -6,6 +6,7 @@ import MockAttemptPage from "@/app/student/mocks/[attemptId]/page";
 import type { Sql } from "@/core/db/Database";
 
 import { submitMock } from "../actions/mocks";
+import { AttemptResults } from "../components/AttemptResults";
 import { MockPlayer } from "../components/MockPlayer";
 import { MockResults, type ReviewQuestion } from "../components/MockResults";
 import type { MockAttempt, MockGrade, MockQuestion, MockResponse } from "../types";
@@ -52,6 +53,9 @@ class FakeRepo {
   async responses() {
     return this.saved;
   }
+  async seed() {
+    return null;
+  }
   async complete(_id: string, _client: string, grade: MockGrade, responses: MockResponse[]) {
     if (this.attemptRow.status !== "in_progress") return false;
     this.completed = { grade, responses };
@@ -68,6 +72,12 @@ function find(node: ReactNode, type: unknown): ReactElement<Record<string, unkno
   if (!isValidElement<{ children?: ReactNode }>(node)) return null;
   if (node.type === type) return node as ReactElement<Record<string, unknown>>;
   return find(node.props.children, type);
+}
+
+/** The results the page renders: AttemptResults loads them, so run it to reach MockResults. */
+async function resultsOf(page: ReactNode) {
+  const el = find(page, AttemptResults);
+  return el ? find(await AttemptResults(el.props as Parameters<typeof AttemptResults>[0]), MockResults) : null;
 }
 
 const render = async () => MockAttemptPage({ params: Promise.resolve({ attemptId: ATTEMPT }), searchParams: Promise.resolve({}) } as never);
@@ -125,7 +135,7 @@ describe("submitting (grading and notes)", () => {
     });
     expect(repo.completed?.responses).toEqual(sent);
 
-    const results = find(await render(), MockResults);
+    const results = await resultsOf(await render());
     expect(results).not.toBeNull();
     expect(find(await render(), MockPlayer)).toBeNull();
     const review = results!.props.questions as ReviewQuestion[];
@@ -158,7 +168,7 @@ describe("submitting (grading and notes)", () => {
     repo = new FakeRepo(new Date(Date.now() - 5 * 60_000));
     repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "kept" }];
     vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
-    const results = find(await render(), MockResults);
+    const results = await resultsOf(await render());
     expect(results).not.toBeNull();
     expect(repo.completed?.grade.score).toBe(1);
     // Started 10 minutes ago, clock ended 5 minutes ago: 5 minutes taken, not the time until the revisit.

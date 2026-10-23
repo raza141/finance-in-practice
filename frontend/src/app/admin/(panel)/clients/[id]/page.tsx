@@ -38,6 +38,8 @@ import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClient
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { Batches } from "@/domains/students/services/Batches";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
+import { MockRepository } from "@/domains/mocks/server/MockRepository";
+import { MockGrader } from "@/domains/mocks/services/MockGrader";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -114,6 +116,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     HourRequestRepository.fromEnv()?.forClient(client.id) ?? [],
     AdminInbox.markSeen(client.id),
   ]);
+  // Never takes the client page down (e.g. before 055_mock_exams is applied).
+  const mockAttempts = await (MockRepository.fromEnv()?.history(client.id) ?? Promise.resolve([])).catch((error) => {
+    console.error("admin: could not load mock attempts", error);
+    return [];
+  });
   const query = await searchParams;
   const notice = NOTICES[String(query.notice)];
   const reason = typeof query.reason === "string" ? query.reason : null;
@@ -139,6 +146,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     ["account", "Account"],
     ["documents", "Documents"],
     ["study-plan", "Study plan"],
+    ["mocks", "Mock exams"],
     ["classroom", "Classroom"],
     ["details", "Details"],
   ] as const;
@@ -513,6 +521,35 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       </section>
 
       <StudyPlanEditor clientId={client.id} items={plan} />
+
+      <section id="mocks" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
+        <h2 className="text-lg">Mock exams</h2>
+        <p className="mt-1 text-sm text-muted">Every attempt, retakes included, with their answers, flags and notes.</p>
+        {mockAttempts.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No mocks taken yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line rounded-lg border border-line text-sm">
+            {mockAttempts.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
+                <span className="flex-1">{a.mockTitle}</span>
+                <span className="text-muted">{InvoiceEmails.day(Allowance.dateOf(a.startedAt.toISOString()))}</span>
+                {a.score === null ? (
+                  <span className="font-mono text-xs text-gold">In progress</span>
+                ) : (
+                  <>
+                    <span className="font-mono tabular-nums">
+                      {a.score}/{a.total} <span className="text-muted">({MockGrader.percent(a.score, a.total)}%)</span>
+                    </span>
+                    <Link href={`/admin/clients/${client.id}/mocks/${a.id}`} className="text-quant hover:underline">
+                      Review
+                    </Link>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section id="classroom" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
         <h2 className="text-lg">Google Classroom</h2>

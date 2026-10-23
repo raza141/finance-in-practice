@@ -282,6 +282,16 @@ export class MockRepository {
     return row ? MockRepository.toAttempt(row) : null;
   }
 
+  /** The shuffle seed for an attempt: null for the student's first go at the mock, its own id for a retake. */
+  async seed(attempt: MockAttempt): Promise<string | null> {
+    const [row] = (await this.sql`
+      SELECT EXISTS (
+        SELECT 1 FROM mock_attempts WHERE client_id = ${attempt.clientId} AND mock_id = ${attempt.mockId} AND started_at < ${attempt.startedAt}
+      ) AS retake
+    `) as { retake: boolean }[];
+    return row.retake ? attempt.id : null;
+  }
+
   /** The open attempt's questions. The SELECT itself leaves out the answer and the explanation. */
   async activeQuestions(mockId: string): Promise<ActiveQuestion[]> {
     const rows = (await this.sql`
