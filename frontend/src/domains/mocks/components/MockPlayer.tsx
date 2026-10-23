@@ -35,6 +35,7 @@ export function MockPlayer({
   remainingMs,
   questions,
   initial,
+  session = null,
 }: {
   attemptId: string;
   studentName: string;
@@ -44,9 +45,12 @@ export function MockPlayer({
   remainingMs: number;
   questions: PlayerQuestion[];
   initial: MockResponse[];
+  /** A full mock's session ("Session 1 of 2"): its own questions, numbered from 1; null for one sitting. */
+  session?: { index: number; of: number } | null;
 }) {
+  const last = !session || session.index === session.of;
   const router = useRouter();
-  const storageKey = `fip-mock:${attemptId}`;
+  const storageKey = `fip-mock:${attemptId}${session ? `:${session.index}` : ""}`;
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, a])));
   const [current, setCurrent] = useState(0);
   const [struck, setStruck] = useState<Record<string, OptionLetter[]>>({});
@@ -175,6 +179,11 @@ export function MockPlayer({
           <p className="min-w-0 flex-1 truncate text-sm">
             <span className="font-semibold">{title}</span>
             <span className="ml-2 rounded border border-quant/40 px-1.5 py-0.5 font-mono text-[11px] text-quant">{tag}</span>
+            {session && (
+              <span className="ml-2 rounded border border-gold/50 px-1.5 py-0.5 font-mono text-[11px] text-gold">
+                Session {session.index} of {session.of}
+              </span>
+            )}
           </p>
           <button
             type="button"
@@ -344,7 +353,7 @@ export function MockPlayer({
               Next ›
             </button>
             <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting"} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
-              {state === "submitting" ? "Submitting…" : "Submit"}
+              {state === "submitting" ? "Submitting…" : last ? "Submit" : `End session ${session!.index}`}
             </button>
           </div>
         </div>
@@ -354,14 +363,16 @@ export function MockPlayer({
               {state === "error"
                 ? "Submitting didn't work. Your answers are kept on this device; please try again."
                 : unanswered
-                  ? `${unanswered} question${unanswered > 1 ? "s are" : " is"} unanswered. Submit anyway?`
-                  : "Submit your answers? You can't change them afterwards."}
+                  ? `${unanswered} question${unanswered > 1 ? "s are" : " is"} unanswered. ${last ? "Submit anyway?" : "End the session anyway?"}`
+                  : last
+                    ? "Submit your answers? You can't change them afterwards."
+                    : `End session ${session!.index}? Its answers lock, and session ${session!.index + 1} follows after an optional break.`}
             </p>
             <button type="button" onClick={() => setConfirming(false)} className="h-9 rounded-md border border-line px-4">
               Keep working
             </button>
             <button type="button" onClick={() => void submit()} className="h-9 rounded-md bg-gold px-4 font-semibold text-canvas">
-              Submit now
+              {last ? "Submit now" : "End session now"}
             </button>
           </div>
         )}

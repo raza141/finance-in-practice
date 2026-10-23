@@ -41,6 +41,13 @@ export class MockContract {
   };
   static readonly LETTERS: readonly OptionLetter[] = ["A", "B", "C"];
   static readonly MAX_QUESTIONS = 500;
+  /** The optional break between a full mock's sessions (the CFA exam's is about 30 minutes). */
+  static readonly BREAK_MINUTES = 30;
+
+  /** A full-syllabus mock sits like the CFA exam: two timed sessions, each the mock's duration. Every other type is one sitting. */
+  static sessions(mock: { mockType: MockType }): 1 | 2 {
+    return mock.mockType === "full" ? 2 : 1;
+  }
   static readonly MAX_NOTES = 5000;
 
   static isUuid(id: unknown): id is string {

@@ -36,7 +36,8 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
                 {m.source && <p className="text-sm text-muted">{m.source}</p>}
               </div>
               <p className="font-mono text-xs text-muted">
-                {m.questionCount} questions · {m.durationMinutes} min
+                {m.questionCount} questions ·{" "}
+                {MockContract.sessions(m) === 2 ? `2 sessions × ${m.durationMinutes} min, optional ${MockContract.BREAK_MINUTES}-min break` : `${m.durationMinutes} min`}
               </p>
               {done(m.id).length > 0 && (
                 <p className="text-xs text-muted">

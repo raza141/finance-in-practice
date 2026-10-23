@@ -27,11 +27,24 @@ export async function startMock(form: FormData): Promise<void> {
   redirect(attemptId ? `/student/mocks/${attemptId}` : "/student");
 }
 
-/** The player's periodic save. `open` false: the attempt is closed or its clock ran out, so the player submits. */
+/** The player's periodic save. `open` false: the attempt (or its session) is closed or its clock ran out, so the player submits. */
 export async function autosaveMock(attemptId: string, responses: unknown): Promise<{ open: boolean }> {
   const { id: clientId } = await student();
   if (!MockContract.isUuid(attemptId)) return { open: false };
-  return { open: await MockSession.repo().autosave(attemptId, clientId, MockContract.parseResponses(responses)) };
+  const repo = MockSession.repo();
+  const attempt = await repo.attempt(attemptId, clientId);
+  if (attempt?.status !== "in_progress") return { open: false };
+  // Only the session the attempt is in: a full mock's first half is locked once its break starts.
+  const { current } = await MockSession.questions(repo, attempt);
+  return { open: await repo.autosave(attemptId, clientId, MockSession.only(MockContract.parseResponses(responses), current), attempt.session) };
+}
+
+/** Ends a full mock's break early: session 2's clock starts now. */
+export async function startNextSession(form: FormData): Promise<void> {
+  const { id: clientId } = await student();
+  const attemptId = String(form.get("attemptId"));
+  if (MockContract.isUuid(attemptId)) await MockSession.repo().startSession(attemptId, clientId);
+  redirect(MockContract.isUuid(attemptId) ? `/student/mocks/${attemptId}` : "/student");
 }
 
 /** Grades and closes the attempt; the page then re-renders as the results. A repeat submit is a no-op. */

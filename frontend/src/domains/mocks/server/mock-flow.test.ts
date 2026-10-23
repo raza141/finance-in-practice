@@ -7,6 +7,7 @@ import type { Sql } from "@/core/db/Database";
 
 import { submitMock } from "../actions/mocks";
 import { AttemptResults } from "../components/AttemptResults";
+import { MockBreak } from "../components/MockBreak";
 import { MockPlayer } from "../components/MockPlayer";
 import { MockResults, type ReviewQuestion } from "../components/MockResults";
 import type { MockAttempt, MockGrade, MockQuestion, MockResponse } from "../types";
@@ -33,15 +34,16 @@ class FakeRepo {
   attemptRow: MockAttempt;
   saved: MockResponse[] = [];
   completed: { grade: MockGrade; responses: MockResponse[] } | null = null;
+  mockType = "book";
 
   constructor(endsAt: Date) {
-    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress" };
+    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null };
   }
   async attempt(id: string, clientId: string) {
     return id === ATTEMPT && clientId === CLIENT ? { ...this.attemptRow } : null;
   }
   async byId() {
-    return { id: MOCK, title: "Book 3 · FSA", mockType: "book", source: "Book 3", durationMinutes: 135, published: true, questionCount: 3, attempted: true, createdAt: new Date() };
+    return { id: MOCK, title: "Book 3 · FSA", mockType: this.mockType, source: "Book 3", durationMinutes: 135, published: true, questionCount: 3, attempted: true, createdAt: new Date() };
   }
   // Deliberately returns the full rows, answers included: the page must still never pass them on.
   async activeQuestions() {
@@ -55,6 +57,19 @@ class FakeRepo {
   }
   async seed() {
     return null;
+  }
+  // Like the SQL: session 1's answers saved, the break from when its clock ended (or now), then session 2's clock.
+  async endSession(_id: string, _client: string, responses: MockResponse[]) {
+    if (this.attemptRow.status !== "in_progress" || this.attemptRow.session !== 1) return false;
+    const ids = new Set(responses.map((r) => r.questionId));
+    this.saved = [...this.saved.filter((r) => !ids.has(r.questionId)), ...responses];
+    const from = Math.min(Date.now(), this.attemptRow.endsAt.getTime());
+    this.attemptRow = { ...this.attemptRow, session: 2, breakUntil: new Date(from + 30 * 60_000), endsAt: new Date(from + (30 + 135) * 60_000) };
+    return true;
+  }
+  async startSession() {
+    this.attemptRow = { ...this.attemptRow, breakUntil: new Date(), endsAt: new Date(Date.now() + 135 * 60_000) };
+    return true;
   }
   async complete(_id: string, _client: string, grade: MockGrade, responses: MockResponse[]) {
     if (this.attemptRow.status !== "in_progress") return false;
@@ -173,5 +188,54 @@ describe("submitting (grading and notes)", () => {
     expect(repo.completed?.grade.score).toBe(1);
     // Started 10 minutes ago, clock ended 5 minutes ago: 5 minutes taken, not the time until the revisit.
     expect(results!.props.seconds).toBeCloseTo(300, 0);
+  });
+});
+
+describe("a full mock in two sessions", () => {
+  beforeEach(() => {
+    repo.mockType = "full";
+  });
+
+  it("shows session 1's half, locks it at the break, then shows only session 2 and grades both", async () => {
+    const first = find(await render(), MockPlayer)!.props;
+    expect((first.questions as { id: string; number: number }[]).map((q) => [q.id, q.number])).toEqual([
+      [qid(1), 1],
+      [qid(2), 2],
+    ]);
+    expect(first.session).toEqual({ index: 1, of: 2 });
+
+    // Ending session 1 keeps only its own answers: q3 belongs to session 2.
+    await submitMock(ATTEMPT, [
+      { questionId: qid(1), selected: "B", flagged: false, notes: "" },
+      { questionId: qid(2), selected: "A", flagged: false, notes: "" },
+      { questionId: qid(3), selected: "A", flagged: false, notes: "" },
+    ]);
+    expect(repo.completed).toBeNull();
+    expect(repo.saved.map((r) => r.questionId)).toEqual([qid(1), qid(2)]);
+    expect(find(await render(), MockBreak)).not.toBeNull();
+
+    await repo.startSession();
+    const second = find(await render(), MockPlayer)!.props;
+    expect((second.questions as { id: string; number: number }[]).map((q) => [q.id, q.number])).toEqual([[qid(3), 1]]);
+    expect(second.session).toEqual({ index: 2, of: 2 });
+
+    // Trying to change a session-1 answer now does nothing.
+    await submitMock(ATTEMPT, [
+      { questionId: qid(1), selected: "C", flagged: false, notes: "" },
+      { questionId: qid(3), selected: "A", flagged: false, notes: "" },
+    ]);
+    expect(repo.completed?.grade.score).toBe(3);
+    expect(repo.completed?.responses.find((r) => r.questionId === qid(1))?.selected).toBe("B");
+  });
+
+  it("away past session 1's clock: it closes from the autosave and the break counts from when the clock ended", async () => {
+    repo = new FakeRepo(new Date(Date.now() - 5 * 60_000));
+    repo.mockType = "full";
+    repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "" }];
+    vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
+    const brk = find(await render(), MockBreak);
+    expect(brk).not.toBeNull();
+    expect(brk!.props.remainingMs as number).toBeLessThan(26 * 60_000);
+    expect(repo.attemptRow.session).toBe(2);
   });
 });

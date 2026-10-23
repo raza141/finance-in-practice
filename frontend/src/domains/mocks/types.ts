@@ -83,6 +83,10 @@ export interface MockAttempt {
   score: number | null;
   total: number;
   status: AttemptStatus;
+  /** 1, or 2 in the second half of a full mock. */
+  session: number;
+  /** Set when session 1 of a full mock closed: session 2's clock starts then, or sooner if the student starts it. */
+  breakUntil: Date | null;
 }
 
 /** Lobby history row. */

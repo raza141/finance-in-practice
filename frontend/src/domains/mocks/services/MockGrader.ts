@@ -20,6 +20,17 @@ export class MockGrader {
     return ordered.flat().map((q, i) => ({ ...q, number: i + 1 }));
   }
 
+  /**
+   * The questions of one session, from the attempt's arranged order: the first half (rounded up)
+   * then the rest, moved on past any vignette set so a set is never split across the break.
+   */
+  static session<T extends { vignette: string }>(arranged: readonly T[], sessions: number, session: number): T[] {
+    if (sessions === 1) return [...arranged];
+    let cut = Math.ceil(arranged.length / 2);
+    while (cut < arranged.length && arranged[cut].vignette && arranged[cut].vignette === arranged[cut - 1].vignette) cut++;
+    return session === 1 ? arranged.slice(0, cut) : arranged.slice(cut);
+  }
+
   /** FNV-1a, 32-bit: a stable shuffle key, not security. */
   private static hash(text: string): number {
     let h = 0x811c9dc5;

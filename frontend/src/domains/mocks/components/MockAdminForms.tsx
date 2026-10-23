@@ -62,7 +62,14 @@ export function MockExamForm({ mock }: { mock?: MockExam }) {
           ))}
         </select>
       </Field>
-      <Field label="Duration (minutes)" hint={mock?.attempted ? "Open attempts keep the time they started with." : "CFA Level I: 135 per session."}>
+      <Field
+        label="Duration (minutes)"
+        hint={
+          mock?.attempted
+            ? "Open attempts keep the time they started with."
+            : "Full syllabus sits in two sessions (half the questions each) with this time per session and an optional 30-minute break: CFA Level I is 135. Other types are one sitting."
+        }
+      >
         <input name="durationMinutes" type="number" required min={1} max={600} defaultValue={mock?.durationMinutes ?? 135} className={FIELD} />
       </Field>
       <Field label="Book or source" className="sm:col-span-2">

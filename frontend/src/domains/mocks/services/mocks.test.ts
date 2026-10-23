@@ -233,3 +233,15 @@ describe("MockProgress.build", () => {
     expect(MockProgress.build([])).toMatchObject({ mocks: [], latest: null, change: null, topics: [], overall: { last: null, count: 0 } });
   });
 });
+
+describe("MockGrader.session", () => {
+  const q = (id: string, vignette = "") => ({ id, vignette });
+  it("splits a full mock in half, rounding up, and never cuts a vignette set", () => {
+    const plain = ["1", "2", "3", "4", "5"].map((id) => q(id));
+    expect(MockGrader.session(plain, 2, 1).map((x) => x.id)).toEqual(["1", "2", "3"]);
+    expect(MockGrader.session(plain, 2, 2).map((x) => x.id)).toEqual(["4", "5"]);
+    const sets = [q("1"), q("2", "case"), q("3", "case"), q("4", "case"), q("5")];
+    expect(MockGrader.session(sets, 2, 1).map((x) => x.id)).toEqual(["1", "2", "3", "4"]);
+    expect(MockGrader.session(sets, 1, 1)).toHaveLength(5);
+  });
+});

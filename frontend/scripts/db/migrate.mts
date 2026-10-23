@@ -1262,6 +1262,16 @@ const MIGRATIONS: Migration[] = [
       WHERE name IN ('Structured Coaching', 'Extended Coaching') AND NOT features @> '[{"label":"Full CFA mocks"}]'`,
     ],
   },
+  {
+    // A full-syllabus mock sits like the CFA exam: session 1, an optional break, session 2
+    // (ends_at is the current session's). break_until is set when session 1 closes.
+    id: "058_mock_sessions",
+    statements: [
+      `ALTER TABLE mock_attempts
+        ADD COLUMN session smallint NOT NULL DEFAULT 1 CHECK (session IN (1, 2)),
+        ADD COLUMN break_until timestamptz`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

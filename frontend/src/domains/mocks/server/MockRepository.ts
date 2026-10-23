@@ -20,7 +20,7 @@ import type {
   OptionLetter,
   TopicMark,
 } from "../types";
-import type { PoolPick } from "../services/MockContract";
+import { MockContract, type PoolPick } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 
 interface ExamRow {
@@ -60,6 +60,8 @@ interface AttemptRow {
   score: number | null;
   total: number;
   status: AttemptStatus;
+  session: number;
+  break_until: Date | null;
 }
 
 /** Postgres-backed mock exams (migration 055_mock_exams). Every student read checks the attempt is theirs. */
@@ -323,12 +325,16 @@ export class MockRepository {
     return rows.map((r) => ({ questionId: r.question_id, selected: r.selected, flagged: r.flagged, notes: r.notes }));
   }
 
-  /** Saves answers while the attempt is open and its clock (plus grace) hasn't run out; false otherwise. */
-  async autosave(attemptId: string, clientId: string, responses: MockResponse[]): Promise<boolean> {
+  /**
+   * Saves answers while the attempt is open, still in `session`, not on its break, and its clock
+   * (plus grace) hasn't run out; false otherwise. The caller passes only that session's questions.
+   */
+  async autosave(attemptId: string, clientId: string, responses: MockResponse[], session: number): Promise<boolean> {
     const [row] = (await this.sql`
       WITH live AS (
         SELECT id, mock_id FROM mock_attempts
-        WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress'
+        WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress' AND session = ${session}
+          AND (break_until IS NULL OR break_until <= now())
           AND now() <= ends_at + make_interval(secs => ${MockGrader.GRACE_MS / 1000})
       ), saved AS (
         INSERT INTO mock_responses (attempt_id, question_id, selected, flagged, notes)
@@ -366,6 +372,44 @@ export class MockRepository {
       SELECT count(*)::int AS n FROM done
     `) as { n: number }[];
     return row.n > 0;
+  }
+
+  /**
+   * Closes session 1 of a full mock with its final answers: the break starts when its clock ended
+   * (or now, if earlier) and session 2's clock starts when the break ends. False if already moved on.
+   */
+  async endSession(attemptId: string, clientId: string, responses: MockResponse[]): Promise<boolean> {
+    const [row] = (await this.sql`
+      WITH moved AS (
+        UPDATE mock_attempts a SET session = 2,
+          break_until = LEAST(now(), a.ends_at) + make_interval(mins => ${MockContract.BREAK_MINUTES}),
+          ends_at = LEAST(now(), a.ends_at) + make_interval(mins => ${MockContract.BREAK_MINUTES} + e.duration_minutes)
+        FROM mock_exams e
+        WHERE e.id = a.mock_id AND a.id = ${attemptId} AND a.client_id = ${clientId} AND a.status = 'in_progress' AND a.session = 1
+        RETURNING a.id, a.mock_id
+      ), saved AS (
+        INSERT INTO mock_responses (attempt_id, question_id, selected, flagged, notes)
+        SELECT moved.id, r.question_id, r.selected, r.flagged, r.notes
+        FROM moved CROSS JOIN jsonb_to_recordset(${MockRepository.json(responses)}::jsonb)
+          AS r(question_id uuid, selected text, flagged boolean, notes text)
+        JOIN mock_questions q ON q.id = r.question_id AND q.mock_id = moved.mock_id
+        ON CONFLICT (attempt_id, question_id) DO UPDATE SET selected = EXCLUDED.selected, flagged = EXCLUDED.flagged, notes = EXCLUDED.notes
+        RETURNING 1
+      )
+      SELECT count(*)::int AS n FROM moved
+    `) as { n: number }[];
+    return row.n > 0;
+  }
+
+  /** Ends the break early: session 2's clock starts now. False when the break is already over. */
+  async startSession(attemptId: string, clientId: string): Promise<boolean> {
+    const rows = await this.sql`
+      UPDATE mock_attempts a SET break_until = now(), ends_at = now() + make_interval(mins => e.duration_minutes)
+      FROM mock_exams e
+      WHERE e.id = a.mock_id AND a.id = ${attemptId} AND a.client_id = ${clientId} AND a.status = 'in_progress' AND a.session = 2 AND a.break_until > now()
+      RETURNING a.id
+    `;
+    return rows.length > 0;
   }
 
   /** Revision notes stay editable after the mock; the answer doesn't. */
@@ -416,6 +460,8 @@ export class MockRepository {
       score: r.score,
       total: r.total,
       status: r.status,
+      session: r.session,
+      breakUntil: r.break_until,
     };
   }
 }
