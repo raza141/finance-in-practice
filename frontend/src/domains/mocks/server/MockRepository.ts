@@ -18,6 +18,7 @@ import type {
   MockStudent,
   MockType,
   OptionLetter,
+  TopicMark,
 } from "../types";
 import type { PoolPick } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
@@ -250,6 +251,21 @@ export class MockRepository {
       total: r.total,
       status: r.status,
     }));
+  }
+
+  /** Every closed attempt's marks by topic, oldest first: what the portal's Progress tab is built from. */
+  async topicMarks(clientId: string): Promise<TopicMark[]> {
+    const rows = (await this.sql`
+      SELECT a.id, e.title, a.submitted_at, q.topic, count(*)::int AS total, count(*) FILTER (WHERE r.selected = q.correct)::int AS correct
+      FROM mock_attempts a
+      JOIN mock_exams e ON e.id = a.mock_id
+      JOIN mock_questions q ON q.mock_id = a.mock_id
+      LEFT JOIN mock_responses r ON r.attempt_id = a.id AND r.question_id = q.id
+      WHERE a.client_id = ${clientId} AND a.status = 'completed'
+      GROUP BY a.id, e.title, a.submitted_at, q.topic
+      ORDER BY a.submitted_at, a.id, min(q.number)
+    `) as { id: string; title: string; submitted_at: Date; topic: string; total: number; correct: number }[];
+    return rows.map((r) => ({ attemptId: r.id, title: r.title, at: r.submitted_at.toISOString(), topic: r.topic, correct: r.correct, total: r.total }));
   }
 
   /**

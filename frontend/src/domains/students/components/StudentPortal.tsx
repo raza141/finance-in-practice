@@ -77,7 +77,7 @@ export function StudentPortal({
   classroom: ReactNode | null;
   /** The first tab: next session, to-do, latest mark and what's new. */
   overview: ReactNode;
-  /** Mock scores from Classroom; null hides the tab. */
+  /** Marks from the portal's own mocks; null hides the tab. */
   progress: ReactNode | null;
   /** An admin viewing as this student: shown as they see it, but nothing is booked, changed or marked seen. */
   readOnly?: boolean;

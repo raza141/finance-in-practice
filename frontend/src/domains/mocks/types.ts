@@ -108,3 +108,14 @@ export interface MockGrade {
   total: number;
   topics: TopicScore[];
 }
+
+/** One topic of one closed attempt: a row of the Progress tab's data. */
+export interface TopicMark {
+  attemptId: string;
+  title: string;
+  /** When it was submitted (ISO). */
+  at: string;
+  topic: string;
+  correct: number;
+  total: number;
+}

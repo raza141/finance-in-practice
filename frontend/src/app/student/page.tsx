@@ -34,7 +34,7 @@ const ERRORS: Record<string, string> = {
 
 const PERKS = [
   "Book, move or cancel sessions yourself",
-  "Your Classroom quizzes, mocks and files in one place",
+  "Timed mock exams with your progress by topic",
   "See your progress against your target score",
 ];
 

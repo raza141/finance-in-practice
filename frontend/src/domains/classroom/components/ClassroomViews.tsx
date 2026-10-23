@@ -2,7 +2,7 @@ import { siteConfig } from "@/core/config/site";
 import { BUTTON, CLASSROOM_BUTTON } from "@/domains/students/components/buttons";
 import { TabButton } from "@/domains/students/components/StudentPortal";
 
-import { ClassFeed, type Score } from "../services/ClassFeed";
+import { ClassFeed, type Progress, type Score } from "../services/ClassFeed";
 import type { ClassItem, StudentFeed } from "../types";
 
 /** What the page hands every view: never a rejected promise, so one Google hiccup can't break the portal. */
@@ -197,26 +197,22 @@ function Chart({ scores, W, className }: { scores: Score[]; W: number; className
 
 const BOOK = "inline-flex h-9 items-center rounded-md bg-gold px-3.5 text-sm font-semibold text-canvas hover:bg-gold-bright";
 
-/** Progress tab: every returned mark, overall and per Classroom topic (mocks are one topic), each weak spot with a way to book a review. */
-export async function ProgressPanel({ result }: { result: Promise<FeedResult> }) {
-  const r = await result;
-  if (r.status === "off") return null;
-  if (r.status === "error") return unavailable;
-  const p = ClassFeed.progress(r.feed.items);
+/** Progress tab (MockProgress, from the portal's own mocks): every mark, overall and per topic, each weak spot with a way to book a review. */
+export function ProgressPanel({ progress: p }: { progress: Progress }) {
   const { last, average, best, count } = p.overall;
   if (!last) {
     return (
       <section className={CARD}>
         <h2 className="text-2xl font-normal italic">Your progress</h2>
-        <p className="mt-3 text-sm text-muted">Your quiz, test and mock marks appear here once your instructor returns them in Classroom.</p>
+        <p className="mt-3 text-sm text-muted">Your marks and topic trends appear here after your first mock exam.</p>
       </section>
     );
   }
   const stats: [string, string][] = [
-    ["Latest mark", `${last.pct}%`],
+    ["Latest mock", `${last.pct}%`],
     ["Average", average === null ? "—" : `${average}%`],
     ["Best", best === null ? "—" : `${best}%`],
-    ["Marked", String(count)],
+    ["Mocks taken", String(count)],
   ];
   return (
     <div className="grid gap-6">
@@ -249,7 +245,7 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
             <li key={t.name} className="grid gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                 <span className="text-ink">
-                  {t.name} <span className="text-muted">· {t.count} marked</span>
+                  {t.name} <span className="text-muted">· {t.count} mock{t.count > 1 ? "s" : ""}</span>
                 </span>
                 <span className="flex items-center gap-3">
                   <span className={`font-semibold ${t.pct < TARGET ? "text-gold" : "text-quant"}`}>{t.pct}%</span>
@@ -274,7 +270,7 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-xl font-normal italic">{t.name}</h2>
             <p className="text-sm text-muted">
-              {t.count} marked · average <span className={t.pct < TARGET ? "text-gold" : "text-quant"}>{t.pct}%</span>
+              {t.count} mock{t.count > 1 ? "s" : ""} · average <span className={t.pct < TARGET ? "text-gold" : "text-quant"}>{t.pct}%</span>
             </p>
           </div>
           {/* A trend needs two marks; one mark is just the list. Narrower drawing on phones, so the labels stay readable. */}
@@ -295,7 +291,7 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
                 <span className="flex items-center gap-4">
                   <span className={`font-semibold ${m.pct < TARGET ? "text-gold" : "text-quant"}`}>{m.pct}%</span>
                   {m.link && (
-                    <a href={m.link} target="_blank" rel="noreferrer" className={BUTTON}>
+                    <a href={m.link} className={BUTTON}>
                       Review
                     </a>
                   )}
@@ -310,7 +306,24 @@ export async function ProgressPanel({ result }: { result: Promise<FeedResult> })
   );
 }
 
-/** Overview cards fed by Classroom: due soon, latest mark, what's new. */
+/** The overview's mock card (MockProgress): the latest mark against the target, and the trend since the first. */
+export function LatestMockCard({ progress: p }: { progress: Progress }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md">
+      <h2 className={LABEL}>Latest mock</h2>
+      <p className={`mt-2 text-3xl font-semibold ${p.latest !== null && p.latest < TARGET ? "text-gold" : "text-ink"}`}>{p.latest === null ? "—" : `${p.latest}%`}</p>
+      <p className="truncate text-sm text-muted">
+        {p.mocks.length > 0 ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%` : "No mocks taken yet"}
+        {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
+      </p>
+      <TabButton tab={p.mocks.length > 0 ? "progress" : "plan"} className={`${BUTTON} mt-4`}>
+        {p.mocks.length > 0 ? "See progress" : "Open mock exams"}
+      </TabButton>
+    </section>
+  );
+}
+
+/** Overview cards fed by Classroom: due soon and what's new. */
 export async function OverviewClassCards({ result }: { result: Promise<FeedResult> }) {
   const r = await result;
   if (r.status === "off") return null;
@@ -319,8 +332,6 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
   const missing = ClassFeed.todo(feed.items).filter((i) => i.status === "missing");
   const soon = ClassFeed.dueWithin(feed.items, 7);
   const fresh = feed.items.filter((i) => ClassFeed.isNew(i, feed.seenAt));
-  const p = ClassFeed.progress(feed.items);
-  const shown = p.latest ?? p.overall.last?.pct ?? null;
   const card = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
   return (
     <>
@@ -331,22 +342,6 @@ export async function OverviewClassCards({ result }: { result: Promise<FeedResul
         {soon[0] && <p className="mt-2 truncate text-sm text-ink/90">Next: {soon[0].title}</p>}
         <TabButton tab="classroom" className={`${BUTTON} mt-4`}>
           Open Classroom
-        </TabButton>
-      </section>
-      <section className={card}>
-        {/* Mocks when there are any; otherwise the latest quiz or test mark. */}
-        <h2 className={LABEL}>{p.mocks.length > 0 ? "Latest mock" : "Latest mark"}</h2>
-        <p className={`mt-2 text-3xl font-semibold ${shown !== null && shown < TARGET ? "text-gold" : "text-ink"}`}>{shown === null ? "—" : `${shown}%`}</p>
-        <p className="truncate text-sm text-muted">
-          {p.mocks.length > 0
-            ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%`
-            : p.overall.last
-              ? `${p.overall.last.title} · target ${TARGET}%`
-              : "No marks returned yet"}
-          {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
-        </p>
-        <TabButton tab="progress" className={`${BUTTON} mt-4`}>
-          See progress
         </TabButton>
       </section>
       <section className={card}>

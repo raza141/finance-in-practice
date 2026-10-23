@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
-import { ClassFeedSidebar, ClassTopics, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
+import { ClassFeedSidebar, ClassTopics, LatestMockCard, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
 import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
@@ -12,6 +12,7 @@ import { PackageCard } from "@/domains/packages/components/PackageCard";
 import { PackageRepository } from "@/domains/packages/server/PackageRepository";
 import { MockLobby } from "@/domains/mocks/components/MockLobby";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
+import { MockProgress } from "@/domains/mocks/services/MockProgress";
 
 import { ClassroomRepository } from "../server/ClassroomRepository";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
@@ -44,7 +45,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> =>
       (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
@@ -65,6 +66,7 @@ async function portalData(student: Student) {
     safely("packages", async () => (await PackageRepository.fromEnv()?.active()) ?? []),
     safely("mock exams", async () => (await MockRepository.fromEnv()?.published(student.id)) ?? []),
     safely("mock attempts", async () => (await MockRepository.fromEnv()?.history(student.id)) ?? []),
+    safely("mock marks", async () => (await MockRepository.fromEnv()?.topicMarks(student.id)) ?? []),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -98,12 +100,14 @@ async function portalData(student: Student) {
     pkg: pkg && { ...pkg, packages: packages ?? [] },
     mocks,
     attempts,
+    // Unknown (database hiccup): no card and no tab rather than an empty record.
+    progress: marks && MockProgress.build(marks),
   };
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg, mocks, attempts } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -157,6 +161,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
             sessions={sessions}
             plan={plan}
             accountCard={<AccountSummaryCard account={account} />}
+            mockCard={progress && (progress.mocks.length > 0 || (mocks?.length ?? 0) > 0) ? <LatestMockCard progress={progress} /> : null}
             classCards={
               synced && (
                 <Suspense fallback={loading("your class")}>
@@ -189,13 +194,8 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
             </div>
           ) : null
         }
-        progress={
-          synced ? (
-            <Suspense fallback={loading("your marks")}>
-              <ProgressPanel result={feed} />
-            </Suspense>
-          ) : null
-        }
+        // The student's own mocks; no tab until they've sat one.
+        progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
       />
       {/* Phones: no room in the bar, so the follow link sits at the bottom. */}
       <div className="md:hidden">

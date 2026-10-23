@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MockQuestion, MockResponse } from "../types";
 import { MockContract } from "./MockContract";
 import { MockGrader } from "./MockGrader";
+import { MockProgress } from "./MockProgress";
 
 const HEADER = "Number,Topic,Vignette (Optional),Question,Option_A,Option_B,Option_C,Correct_Option,Explanation (Optional)";
 
@@ -204,5 +205,31 @@ describe("MockGrader.arrange", () => {
       expect(order.indexOf("q3")).toBe(order.indexOf("q2") + 1);
       expect(order.indexOf("q7")).toBe(order.indexOf("q6") + 1);
     }
+  });
+});
+
+describe("MockProgress.build", () => {
+  const row = (attemptId: string, at: string, topic: string, correct: number, total: number) => ({ attemptId, title: `Mock ${attemptId}`, at, topic, correct, total });
+
+  it("makes each attempt a mark and each topic a trend, matching topics across uploads, weakest topic first", () => {
+    const p = MockProgress.build([
+      row("a1", "2026-10-01T10:00:00Z", "FSA", 6, 10),
+      row("a1", "2026-10-01T10:00:00Z", "Ethics", 9, 10),
+      row("a2", "2026-10-08T10:00:00Z", "fsa ", 8, 10),
+      row("a2", "2026-10-08T10:00:00Z", "Ethics", 10, 10),
+    ]);
+    expect(p.mocks.map((m) => [m.id, m.pct, m.link])).toEqual([
+      ["a1", 75, "/student/mocks/a1"],
+      ["a2", 90, "/student/mocks/a2"],
+    ]);
+    expect(p).toMatchObject({ latest: 90, best: 90, average: 83, change: 15, overall: { count: 2 } });
+    expect(p.topics.map((t) => [t.name, t.pct, t.scores.map((s) => s.pct)])).toEqual([
+      ["FSA", 70, [60, 80]],
+      ["Ethics", 95, [90, 100]],
+    ]);
+  });
+
+  it("is empty with no attempts", () => {
+    expect(MockProgress.build([])).toMatchObject({ mocks: [], latest: null, change: null, topics: [], overall: { last: null, count: 0 } });
   });
 });
