@@ -93,6 +93,12 @@ export function MockUploadForm({ mockId }: { mockId: string }) {
   return (
     <form action={action} className="grid gap-4">
       <input type="hidden" name="id" value={mockId} />
+      <p className="text-sm text-muted">
+        <a href="/templates/mock-questions-template.xlsx" download className="text-quant hover:underline">
+          Download the Excel template
+        </a>{" "}
+        (the columns, topic and answer dropdowns, and examples of a question set, a table and a term-structure chart).
+      </p>
       <Field label="CSV file" hint="In Excel: File → Save As → CSV UTF-8. Maths as $…$ or $$…$$; amounts like $40m stay text, but write \$ for a dollar sign that could pair up.">
         <input name="file" type="file" accept=".csv,.tsv,.txt,text/csv" className={`${FIELD} text-sm`} />
       </Field>
