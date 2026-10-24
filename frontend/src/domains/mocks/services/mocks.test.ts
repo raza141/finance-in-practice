@@ -77,18 +77,67 @@ describe("MockContract.parsePool", () => {
     return f;
   };
 
-  it("takes the ticked topics and mocks, dropping blanks, repeats and bad ids", () => {
+  it("takes a number per topic (blank or 0 skipped, one per topic ignoring case), ticked ids and mocks, dropping bad ids", () => {
     const id = "11111111-1111-4111-8111-111111111111";
-    expect(MockContract.parsePool(form([["topic", "FSA"], ["topic", " FSA "], ["topic", ""], ["from", id], ["from", "x"], ["count", "30"]]))).toEqual({
+    const entries: [string, string][] = [
+      ["topic", "Fixed Income"],
+      ["count", "10"],
+      ["topic", "FSA"],
+      ["count", "20"],
+      ["topic", "fsa "],
+      ["count", "5"],
+      ["topic", "Ethics"],
+      ["count", ""],
+      ["topic", "Quant"],
+      ["count", "0"],
+      ["q", id],
+      ["q", id],
+      ["q", "x"],
+      ["from", id],
+      ["from", "x"],
+    ];
+    expect(MockContract.parsePool(form(entries))).toEqual({
       ok: true,
-      value: { topics: ["FSA"], from: [id], count: 30 },
+      value: { quotas: [{ topic: "Fixed Income", count: 10 }, { topic: "FSA", count: 20 }], ids: [id], from: [id] },
     });
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", ""], ["q", id]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], from: [] } });
   });
 
-  it("needs a topic and a whole count of 1 to 500", () => {
-    expect(MockContract.parsePool(form([["count", "30"]]))).toEqual({ ok: false, error: "Tick at least one topic." });
+  it("needs a number or a tick, whole numbers, and at most 500", () => {
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "0"]]))).toEqual({ ok: false, error: "Give a topic a number of questions, or tick some." });
     expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "2.5"]])).ok).toBe(false);
-    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "501"]])).ok).toBe(false);
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "-1"]])).ok).toBe(false);
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "300"], ["topic", "FI"], ["count", "201"]])).ok).toBe(false);
+  });
+});
+
+describe("MockContract.minutes", () => {
+  it("is the CFA pace, a full mock's per session", () => {
+    expect(MockContract.minutes(90, "book")).toBe(135);
+    expect(MockContract.minutes(80, "topic")).toBe(120);
+    expect(MockContract.minutes(180, "full")).toBe(135);
+    expect(MockContract.minutes(7, "random")).toBe(11);
+    expect(MockContract.minutes(0, "book")).toBe(1);
+  });
+});
+
+describe("MockContract.parseQuestion", () => {
+  const form = (entries: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(entries)) f.append(k, v);
+    return f;
+  };
+  const good = { number: "4", topic: " Fixed Income ", vignette: "Chart: Spot\n| Year | Rate |\n| 1 | 3.2 |\n| 2 | 3.6 |", question: "Q?", a: "x", b: "y", c: "z", correct: "b", explanation: "" };
+
+  it("checks one question as a sheet row is checked", () => {
+    expect(MockContract.parseQuestion(form(good))).toEqual({
+      ok: true,
+      value: { number: 4, topic: "Fixed Income", vignette: good.vignette, question: "Q?", options: ["x", "y", "z"], correct: "B", explanation: "" },
+    });
+    expect(MockContract.parseQuestion(form({ ...good, c: "", correct: "D", vignette: "Chart: Spot\n| Year | Rate |\n| 1 | n/a |" }))).toEqual({
+      ok: false,
+      errors: ['Correct_Option must be A, B or C (got "D")', "Option_C is empty", expect.stringMatching(/^Vignette chart "Spot"/)],
+    });
   });
 });
 

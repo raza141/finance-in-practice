@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PageHeader } from "@/domains/admin/components/PageHeader";
+import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
-import { MockExamForm, MockPoolForm } from "@/domains/mocks/components/MockAdminForms";
+import { MockExamForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -20,13 +20,18 @@ export default async function AdminMocksPage() {
       </p>
     );
   }
-  const [mocks, topics] = await Promise.all([repo.all(), repo.topics()]);
+  const mocks = await repo.all();
 
   return (
     <div className="max-w-5xl">
       <PageHeader
         title="Mock exams"
         description="Published mocks appear to every signed-in student under Study plan & materials. Create a mock, upload its question sheet, then publish it."
+        actions={
+          <Link href="/admin/mocks/bank" className={PRIMARY_ACTION}>
+            Question bank
+          </Link>
+        }
       />
 
       {mocks.length === 0 ? (
@@ -75,19 +80,13 @@ export default async function AdminMocksPage() {
         </div>
       </section>
 
-      {topics.length > 0 && (
-        <section aria-labelledby="pool" className="mt-6 rounded-lg border border-line p-5">
-          <h2 id="pool" className="text-lg">
-            Build from the question pool
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            Random questions copied from the mocks you&rsquo;ve uploaded, by topic. It opens as a draft to preview and publish; the source mocks don&rsquo;t change.
-          </p>
-          <div className="mt-4">
-            <MockPoolForm topics={topics} mocks={mocks.filter((m) => m.questionCount > 0)} />
-          </div>
-        </section>
-      )}
+      <p className="mt-6 text-sm text-muted">
+        To build a mock from questions already uploaded (by topic, a number from each, or ticked by hand), open the{" "}
+        <Link href="/admin/mocks/bank" className="text-quant hover:underline">
+          question bank
+        </Link>
+        .
+      </p>
     </div>
   );
 }

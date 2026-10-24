@@ -98,7 +98,29 @@ export async function uploadMockQuestions(_prev: MockActionState, form: FormData
   return { ok: true, message: `Saved ${sheet.questions.length} questions.` };
 }
 
-/** A new draft mock drawn at random from the questions already uploaded; opens it for the preview. */
+/** Adds or edits one question (the bank's way in for exhibit-heavy questions, or a typo); back to the mock's list. */
+export async function saveMockQuestion(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const id = String(form.get("id"));
+  const questionId = String(form.get("questionId") ?? "");
+  if (!MockContract.isUuid(id) || (questionId && !MockContract.isUuid(questionId))) return { ok: false, message: "Unknown mock." };
+  const parsed = MockContract.parseQuestion(form);
+  if (!parsed.ok) return { ok: false, message: "Nothing was saved. Fix these and save again:", errors: parsed.errors };
+  const saved = await MockSession.repo().saveQuestion(id, questionId || null, parsed.value);
+  if (saved === "fixed") return { ok: false, message: "Students have already started this mock, so its questions are fixed. Make a new mock instead." };
+  if (saved === "taken") return { ok: false, message: `Question ${parsed.value.number} already exists in this mock. Pick another number.` };
+  redirect(`/admin/mocks/${id}#q${parsed.value.number}`);
+}
+
+export async function deleteMockQuestion(form: FormData): Promise<void> {
+  await AdminAuth.require();
+  const id = String(form.get("id"));
+  const questionId = String(form.get("questionId"));
+  if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().deleteQuestion(id, questionId);
+  redirect(`/admin/mocks/${id}`);
+}
+
+/** A new draft mock from the question bank: ticked questions and random ones by topic; opens it for the preview. */
 export async function buildMockFromPool(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require();
   const exam = MockContract.parseExam(form);
@@ -106,7 +128,7 @@ export async function buildMockFromPool(_prev: MockActionState, form: FormData):
   const pick = MockContract.parsePool(form);
   if (!pick.ok) return { ok: false, message: pick.error };
   const built = await MockSession.repo().buildFromPool(exam.value, pick.value);
-  if (!built) return { ok: false, message: "No uploaded questions match those topics and mocks." };
+  if (!built) return { ok: false, message: "No uploaded questions match those topics, ticks and mocks." };
   redirect(`/admin/mocks/${built.id}`);
 }
 

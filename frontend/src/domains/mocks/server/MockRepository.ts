@@ -18,6 +18,7 @@ import type {
   MockStudent,
   MockType,
   OptionLetter,
+  PoolQuestion,
   TopicMark,
 } from "../types";
 import { MockContract, type PoolPick } from "../services/MockContract";
@@ -175,42 +176,99 @@ export class MockRepository {
     ]);
   }
 
-  /** The pool's topics with how many distinct questions each has (a question copied into a pool mock counts once). */
-  async topics(): Promise<{ topic: string; count: number }[]> {
-    return (await this.sql`
-      SELECT topic, count(*)::int AS count
-      FROM (SELECT DISTINCT topic, vignette, question, option_a, option_b, option_c FROM mock_questions) d
-      GROUP BY topic ORDER BY topic
-    `) as { topic: string; count: number }[];
+  /** Topic names already used, so a new question can reuse the spelling (Progress and the bank group by it). */
+  async topicNames(): Promise<string[]> {
+    const rows = (await this.sql`SELECT DISTINCT ON (lower(trim(topic))) trim(topic) AS topic FROM mock_questions ORDER BY lower(trim(topic))`) as { topic: string }[];
+    return rows.map((r) => r.topic);
   }
 
   /**
-   * A new draft mock of up to `count` random questions copied from existing mocks: the chosen topics,
-   * from the chosen mocks (none: all). Copies, so the source mocks and their results never change.
-   * Null when nothing in the pool matches.
+   * Every distinct question uploaded (a question copied into a pool mock counts once), optionally only
+   * from some mocks, with the mock it came from: the question bank. Topics are matched ignoring case
+   * and spaces at the ends, as Progress matches them.
+   */
+  async pool(from: string[] = []): Promise<PoolQuestion[]> {
+    const rows = (await this.sql`
+      SELECT DISTINCT ON (lower(trim(q.topic)), q.vignette, q.question, q.option_a, q.option_b, q.option_c) q.*, e.title AS mock_title
+      FROM mock_questions q JOIN mock_exams e ON e.id = q.mock_id
+      WHERE cardinality(${from}::uuid[]) = 0 OR q.mock_id = ANY(${from}::uuid[])
+      ORDER BY lower(trim(q.topic)), q.vignette, q.question, q.option_a, q.option_b, q.option_c, e.created_at
+    `) as (QuestionRow & { mock_id: string; mock_title: string })[];
+    return rows
+      .map((r) => ({ ...MockRepository.toActive(r), correct: r.correct, explanation: r.explanation, mockId: r.mock_id, mockTitle: r.mock_title }))
+      .sort((a, b) => a.topic.toLowerCase().localeCompare(b.topic.toLowerCase()) || a.mockTitle.localeCompare(b.mockTitle) || a.number - b.number);
+  }
+
+  /**
+   * A new draft mock copied from the pool: every ticked question, and per topic random ones until it
+   * has that topic's number (ticked ones count towards it). Topics in the order given; a vignette set
+   * stays together. Copies, so the source mocks and their results never change. Null when nothing matches.
    */
   async buildFromPool(m: MockExamInput, pick: PoolPick): Promise<{ id: string; count: number } | null> {
+    const quotas = JSON.stringify(pick.quotas);
     const [row] = (await this.sql`
       WITH pool AS (
-        SELECT DISTINCT ON (topic, vignette, question, option_a, option_b, option_c) *
+        SELECT DISTINCT ON (lower(trim(topic)), vignette, question, option_a, option_b, option_c) *
         FROM mock_questions
-        WHERE topic = ANY(${pick.topics}::text[]) AND (cardinality(${pick.from}::uuid[]) = 0 OR mock_id = ANY(${pick.from}::uuid[]))
-        ORDER BY topic, vignette, question, option_a, option_b, option_c, random()
+        WHERE cardinality(${pick.from}::uuid[]) = 0 OR mock_id = ANY(${pick.from}::uuid[]) OR id = ANY(${pick.ids}::uuid[])
+        ORDER BY lower(trim(topic)), vignette, question, option_a, option_b, option_c, id = ANY(${pick.ids}::uuid[]) DESC, random()
+      ), want AS (
+        SELECT lower(trim(w.e->>'topic')) AS key, (w.e->>'count')::int AS count, w.ord FROM jsonb_array_elements(${quotas}::jsonb) WITH ORDINALITY AS w(e, ord)
+      ), ranked AS (
+        SELECT pool.*, lower(trim(pool.topic)) AS key,
+          row_number() OVER (PARTITION BY lower(trim(pool.topic)) ORDER BY pool.id = ANY(${pick.ids}::uuid[]) DESC, random()) AS r
+        FROM pool
       ), picked AS (
-        SELECT pool.*, row_number() OVER (ORDER BY random()) AS n FROM pool
+        SELECT ranked.*, row_number() OVER (ORDER BY want.ord NULLS LAST, ranked.key, ranked.vignette, CASE WHEN ranked.vignette = '' THEN random() END, ranked.mock_id, ranked.number) AS n
+        FROM ranked LEFT JOIN want USING (key)
+        WHERE ranked.id = ANY(${pick.ids}::uuid[]) OR ranked.r <= want.count
       ), exam AS (
         INSERT INTO mock_exams (title, mock_type, source, duration_minutes)
-        SELECT ${m.title}, ${m.mockType}, ${m.source}, ${m.durationMinutes} WHERE EXISTS (SELECT 1 FROM pool)
+        SELECT ${m.title}, ${m.mockType}, ${m.source}, ${m.durationMinutes} WHERE EXISTS (SELECT 1 FROM picked)
         RETURNING id
       ), copied AS (
         INSERT INTO mock_questions (mock_id, number, topic, vignette, question, option_a, option_b, option_c, correct, explanation)
         SELECT exam.id, p.n, p.topic, p.vignette, p.question, p.option_a, p.option_b, p.option_c, p.correct, p.explanation
-        FROM exam CROSS JOIN picked p WHERE p.n <= ${pick.count}
+        FROM exam CROSS JOIN picked p WHERE p.n <= ${MockContract.MAX_QUESTIONS}
         RETURNING 1
       )
       SELECT exam.id, (SELECT count(*)::int FROM copied) AS count FROM exam
     `) as { id: string; count: number }[];
     return row ?? null;
+  }
+
+  /**
+   * Adds (no `questionId`) or edits one question. "fixed" once anyone has started the mock, as a new
+   * sheet is; "taken" when another question has that number.
+   */
+  async saveQuestion(mockId: string, questionId: string | null, q: MockQuestionInput): Promise<"saved" | "fixed" | "taken"> {
+    try {
+      const rows = questionId
+        ? await this.sql`
+            UPDATE mock_questions SET number = ${q.number}, topic = ${q.topic}, vignette = ${q.vignette}, question = ${q.question},
+              option_a = ${q.options[0]}, option_b = ${q.options[1]}, option_c = ${q.options[2]}, correct = ${q.correct}, explanation = ${q.explanation}
+            WHERE id = ${questionId} AND mock_id = ${mockId} AND NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${mockId})
+            RETURNING id
+          `
+        : await this.sql`
+            INSERT INTO mock_questions (mock_id, number, topic, vignette, question, option_a, option_b, option_c, correct, explanation)
+            SELECT ${mockId}::uuid, ${q.number}, ${q.topic}, ${q.vignette}, ${q.question}, ${q.options[0]}, ${q.options[1]}, ${q.options[2]}, ${q.correct}, ${q.explanation}
+            WHERE NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${mockId})
+            RETURNING id
+          `;
+      return rows.length > 0 ? "saved" : "fixed";
+    } catch (error) {
+      if (Database.isUniqueViolation(error)) return "taken";
+      throw error;
+    }
+  }
+
+  /** False once anyone has started the mock. The gap in numbers is fine: an attempt numbers its questions 1 to n. */
+  async deleteQuestion(mockId: string, questionId: string): Promise<boolean> {
+    const rows = await this.sql`
+      DELETE FROM mock_questions WHERE id = ${questionId} AND mock_id = ${mockId} AND NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${mockId}) RETURNING id
+    `;
+    return rows.length > 0;
   }
 
   /** With answers and explanations: for grading and results only, never an open attempt's page. */

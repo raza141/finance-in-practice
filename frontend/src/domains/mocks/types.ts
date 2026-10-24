@@ -64,6 +64,12 @@ export interface MockQuestion extends ActiveQuestion {
   explanation: string;
 }
 
+/** A question in the bank, with the mock it was uploaded to. */
+export interface PoolQuestion extends MockQuestion {
+  mockId: string;
+  mockTitle: string;
+}
+
 export interface MockResponse {
   questionId: string;
   selected: OptionLetter | null;

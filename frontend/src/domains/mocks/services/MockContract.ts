@@ -3,7 +3,8 @@ import { CsvText } from "@/domains/journal/services/ChartData";
 import { MockExhibits } from "./MockExhibits";
 import type { MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter } from "../types";
 
-export type PoolPick = { topics: string[]; from: string[]; count: number };
+/** How many random questions to draw per topic, plus questions ticked by hand; `from` limits the draw to those mocks (empty: all). */
+export type PoolPick = { quotas: { topic: string; count: number }[]; ids: string[]; from: string[] };
 
 export type SheetResult = { ok: true; questions: MockQuestionInput[] } | { ok: false; errors: string[] };
 
@@ -49,6 +50,14 @@ export class MockContract {
     return mock.mockType === "full" ? 2 : 1;
   }
   static readonly MAX_NOTES = 5000;
+  /** The CFA exam's pace: 135 minutes for 90 questions. */
+  static readonly MINUTES_PER_QUESTION = 1.5;
+
+  /** The suggested duration for `count` questions; a full mock's is per session, so half the questions. */
+  static minutes(count: number, mockType: MockType): number {
+    const sitting = MockContract.sessions({ mockType }) === 2 ? Math.ceil(count / 2) : count;
+    return Math.min(600, Math.max(1, Math.ceil(sitting * MockContract.MINUTES_PER_QUESTION)));
+  }
 
   static isUuid(id: unknown): id is string {
     return typeof id === "string" && UUID.test(id);
@@ -86,14 +95,69 @@ export class MockContract {
     };
   }
 
-  /** The pool form: which topics, optionally which mocks to draw from (none ticked: every mock), and how many questions. */
+  /** The pool form: a number per topic (blank or 0: none), ticked question ids, and optionally which mocks to draw from (none: every mock). */
   static parsePool(form: FormData): { ok: true; value: PoolPick } | { ok: false; error: string } {
-    const topics = [...new Set(form.getAll("topic").map((t) => String(t).trim()))].filter(Boolean);
+    const counts = form.getAll("count").map((c) => String(c).trim());
+    const seen = new Set<string>();
+    const quotas: PoolPick["quotas"] = [];
+    for (const [i, name] of form.getAll("topic").entries()) {
+      const topic = String(name).trim();
+      const count = counts[i] ? Number(counts[i]) : 0;
+      if (!Number.isInteger(count) || count < 0) return { ok: false, error: `The number for ${topic} is a whole number.` };
+      if (!topic || count === 0 || seen.has(topic.toLowerCase())) continue;
+      seen.add(topic.toLowerCase());
+      quotas.push({ topic, count });
+    }
+    const ids = [...new Set(form.getAll("q").map(String))].filter(MockContract.isUuid);
     const from = form.getAll("from").map(String).filter(MockContract.isUuid);
-    const count = Number(form.get("count"));
-    if (!topics.length) return { ok: false, error: "Tick at least one topic." };
-    if (!Number.isInteger(count) || count < 1 || count > MockContract.MAX_QUESTIONS) return { ok: false, error: "The number of questions is 1 to 500." };
-    return { ok: true, value: { topics, from, count } };
+    if (!quotas.length && !ids.length) return { ok: false, error: "Give a topic a number of questions, or tick some." };
+    if (quotas.reduce((n, q) => n + q.count, 0) > MockContract.MAX_QUESTIONS || ids.length > MockContract.MAX_QUESTIONS) {
+      return { ok: false, error: `At most ${MockContract.MAX_QUESTIONS} questions per mock.` };
+    }
+    return { ok: true, value: { quotas, ids, from } };
+  }
+
+  /** One question's problems (sheet row or the admin's question form), as "Question is empty". */
+  static questionProblems(at: (c: Column) => string): string[] {
+    const problems: string[] = [];
+    const number = Number(at("number"));
+    if (!Number.isInteger(number) || number < 1 || number > MockContract.MAX_QUESTIONS) problems.push(`Number "${at("number")}" is not 1 to 500`);
+    if (!MockContract.isLetter(at("correct").toUpperCase())) problems.push(`Correct_Option must be A, B or C (got "${at("correct")}")`);
+    const limits: [Column, string, number][] = [
+      ["topic", "Topic", 80],
+      ["question", "Question", 5000],
+      ["a", "Option_A", 2000],
+      ["b", "Option_B", 2000],
+      ["c", "Option_C", 2000],
+    ];
+    for (const [c, label, max] of limits) {
+      if (!at(c)) problems.push(`${label} is empty`);
+      else if (at(c).length > max) problems.push(`${label} is over ${max} characters`);
+    }
+    if (at("vignette").length > 20000) problems.push("Vignette is over 20000 characters");
+    if (at("explanation").length > 10000) problems.push("Explanation is over 10000 characters");
+    for (const [c, label] of [["vignette", "Vignette"], ["question", "Question"], ["explanation", "Explanation"]] as const) problems.push(...MockExhibits.problems(at(c), label));
+    return problems;
+  }
+
+  /** The admin's one-question form (fields named as the sheet's columns: number, topic, vignette, question, a, b, c, correct, explanation). */
+  static parseQuestion(form: FormData): { ok: true; value: MockQuestionInput } | { ok: false; errors: string[] } {
+    const at = (c: Column) => String(form.get(c) ?? "").trim();
+    const problems = MockContract.questionProblems(at);
+    if (problems.length) return { ok: false, errors: problems };
+    return { ok: true, value: MockContract.toInput(at) };
+  }
+
+  private static toInput(at: (c: Column) => string): MockQuestionInput {
+    return {
+      number: Number(at("number")),
+      topic: at("topic"),
+      vignette: at("vignette"),
+      question: at("question"),
+      options: [at("a"), at("b"), at("c")],
+      correct: at("correct").toUpperCase() as OptionLetter,
+      explanation: at("explanation"),
+    };
   }
 
   /**
@@ -119,41 +183,15 @@ export class MockContract {
     for (const [i, row] of data.entries()) {
       if (row.every((cell) => cell === "")) continue;
       const at = (c: Column) => (index.has(c) ? (row[index.get(c)!] ?? "") : "");
-      const line = `Row ${i + 2}`;
-      const problems: string[] = [];
+      const problems = MockContract.questionProblems(at);
       const number = Number(at("number"));
-      if (!Number.isInteger(number) || number < 1 || number > MockContract.MAX_QUESTIONS) problems.push(`Number "${at("number")}" is not 1 to 500`);
-      else if (seen.has(number)) problems.push(`Number ${number} is used twice`);
-      const correct = at("correct").toUpperCase();
-      if (!MockContract.isLetter(correct)) problems.push(`Correct_Option must be A, B or C (got "${at("correct")}")`);
-      const limits: [Column, string, number][] = [
-        ["topic", "Topic", 80],
-        ["question", "Question", 5000],
-        ["a", "Option_A", 2000],
-        ["b", "Option_B", 2000],
-        ["c", "Option_C", 2000],
-      ];
-      for (const [c, label, max] of limits) {
-        if (!at(c)) problems.push(`${label} is empty`);
-        else if (at(c).length > max) problems.push(`${label} is over ${max} characters`);
-      }
-      if (at("vignette").length > 20000) problems.push("Vignette is over 20000 characters");
-      if (at("explanation").length > 10000) problems.push("Explanation is over 10000 characters");
-      for (const [c, label] of [["vignette", "Vignette"], ["question", "Question"], ["explanation", "Explanation"]] as const) problems.push(...MockExhibits.problems(at(c), label));
+      if (seen.has(number)) problems.unshift(`Number ${number} is used twice`);
       if (problems.length) {
-        errors.push(`${line}: ${problems.join("; ")}.`);
+        errors.push(`Row ${i + 2}: ${problems.join("; ")}.`);
         continue;
       }
       seen.add(number);
-      questions.push({
-        number,
-        topic: at("topic"),
-        vignette: at("vignette"),
-        question: at("question"),
-        options: [at("a"), at("b"), at("c")],
-        correct: correct as OptionLetter,
-        explanation: at("explanation"),
-      });
+      questions.push(MockContract.toInput(at));
     }
     if (errors.length) return { ok: false, errors };
     if (questions.length === 0) return { ok: false, errors: ["The sheet has no questions."] };

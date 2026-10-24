@@ -1,13 +1,15 @@
 "use client";
 
-import { startTransition, useActionState, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useState, type FormEvent, type ReactNode } from "react";
 
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { buildMockFromPool, saveMock, setMockAccess, uploadMockQuestions, type MockActionState } from "../actions/mocks";
+import { buildMockFromPool, saveMock, saveMockQuestion, setMockAccess, uploadMockQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
-import type { MockAudience, MockExam, MockStudent } from "../types";
+import { MockExhibits } from "../services/MockExhibits";
+import type { MockAudience, MockExam, MockQuestion, MockStudent, MockType } from "../types";
+import { QuestionPreview } from "./QuestionPreview";
 
 const SAVE = "h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright";
 
@@ -36,9 +38,9 @@ function keep(action: (data: FormData) => void) {
   };
 }
 
-function SaveButton({ busy, busyLabel, children }: { busy: boolean; busyLabel: string; children: string }) {
+function SaveButton({ busy, busyLabel, disabled = false, children }: { busy: boolean; busyLabel: string; disabled?: boolean; children: string }) {
   return (
-    <button type="submit" disabled={busy} aria-busy={busy} className={`${SAVE} disabled:cursor-wait disabled:opacity-60`}>
+    <button type="submit" disabled={busy || disabled} aria-busy={busy} className={`${SAVE} disabled:cursor-wait disabled:opacity-60`}>
       {busy ? busyLabel : children}
     </button>
   );
@@ -125,61 +127,215 @@ export function MockUploadForm({ mockId }: { mockId: string }) {
 
 const BOX = "flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm has-[:checked]:border-quant/70";
 
-/** A new draft mock of random questions from the ones already uploaded, by topic and optionally by source mock. */
-export function MockPoolForm({ topics, mocks }: { topics: { topic: string; count: number }[]; mocks: MockExam[] }) {
+export type BankTopic = { topic: string; questions: { id: string; label: string; summary: ReactNode; preview: ReactNode }[] };
+
+const NUMBER = "h-9 w-20 rounded-md border border-line bg-canvas/70 px-2 text-ink outline-none focus:border-quant/70";
+
+/**
+ * A new draft mock from the question bank: per topic, tick questions and/or give a number (ticked ones
+ * count towards it, the rest are drawn at random). The duration follows the CFA pace until it's typed.
+ */
+export function MockBankForm({ topics, from }: { topics: BankTopic[]; from: string[] }) {
   const [state, action, busy] = useActionState(buildMockFromPool, null);
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  const [ticked, setTicked] = useState<Set<string>>(() => new Set());
+  const [mockType, setMockType] = useState<MockType>("topic");
+  const [duration, setDuration] = useState<string | null>(null);
+  const toggle = (id: string) =>
+    setTicked((t) => {
+      const next = new Set(t);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const inMock = (t: BankTopic) => Math.max(t.questions.filter((q) => ticked.has(q.id)).length, Math.min(Number(counts[t.topic]) || 0, t.questions.length));
+  const total = topics.reduce((n, t) => n + inMock(t), 0);
+
   return (
-    <form onSubmit={keep(action)} className="grid gap-4 sm:grid-cols-2">
-      <fieldset className="sm:col-span-2">
-        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">Topics</legend>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {topics.map((t) => (
-            <label key={t.topic} className={BOX}>
-              <input type="checkbox" name="topic" value={t.topic} />
-              {t.topic} <span className="font-mono text-xs text-muted">{t.count}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset className="sm:col-span-2">
-        <legend className="text-[11px] tracking-[0.22em] text-muted uppercase">From these mocks (none ticked: all)</legend>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {mocks.map((m) => (
-            <label key={m.id} className={BOX}>
-              <input type="checkbox" name="from" value={m.id} />
-              {m.title}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <Field label="Title" className="sm:col-span-2">
-        <input name="title" required minLength={3} maxLength={120} placeholder="FSA topic mock 1" className={FIELD} />
-      </Field>
-      <Field label="Questions" hint="Fewer in the pool than this? It takes them all.">
-        <input name="count" type="number" required min={1} max={MockContract.MAX_QUESTIONS} defaultValue={30} className={FIELD} />
-      </Field>
-      <Field label="Duration (minutes)">
-        <input name="durationMinutes" type="number" required min={1} max={600} defaultValue={45} className={FIELD} />
-      </Field>
-      <Field label="Type">
-        <select name="mockType" defaultValue="topic" className={FIELD}>
-          {Object.entries(MockContract.TYPES).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Book or source">
-        <input name="source" maxLength={120} placeholder="Question pool" defaultValue="Question pool" className={FIELD} />
-      </Field>
-      <div className="flex items-center gap-4 sm:col-span-2">
-        <SaveButton busy={busy} busyLabel="Building…">
-          Build draft mock
+    <form onSubmit={keep(action)} className="grid gap-6">
+      {from.map((id) => (
+        <input key={id} type="hidden" name="from" value={id} />
+      ))}
+      <ul className="divide-y divide-line rounded-lg border border-line">
+        {topics.map((t) => {
+          const picked = t.questions.filter((q) => ticked.has(q.id)).length;
+          return (
+            <li key={t.topic} className="p-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <p className="min-w-0 basis-full font-medium sm:basis-0 sm:flex-1">
+                  {t.topic} <span className="font-mono text-xs text-muted">{t.questions.length} in the bank</span>
+                </p>
+                <input type="hidden" name="topic" value={t.topic} />
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  Questions
+                  <input
+                    name="count"
+                    type="number"
+                    min={0}
+                    max={t.questions.length}
+                    placeholder="0"
+                    value={counts[t.topic] ?? ""}
+                    onChange={(e) => setCounts((c) => ({ ...c, [t.topic]: e.target.value }))}
+                    className={NUMBER}
+                  />
+                </label>
+                <span className="font-mono text-xs whitespace-nowrap text-muted sm:w-36 sm:text-right">
+                  {picked > 0 && <span className="text-quant">{picked} ticked · </span>}
+                  {inMock(t)} in mock
+                </span>
+              </div>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-quant">Pick questions</summary>
+                <ul className="mt-2 grid gap-1">
+                  {t.questions.map((q) => (
+                    <li key={q.id} className="rounded-md border border-line px-3 py-2 has-[:checked]:border-quant/70">
+                      <label className="flex items-start gap-3 text-sm">
+                        <input type="checkbox" name="q" value={q.id} checked={ticked.has(q.id)} onChange={() => toggle(q.id)} className="mt-1" />
+                        <span className="min-w-0">
+                          <span className="line-clamp-2">{q.summary}</span>
+                          <span className="block font-mono text-xs text-muted">{q.label}</span>
+                        </span>
+                      </label>
+                      <details className="mt-1 pl-7">
+                        <summary className="cursor-pointer text-xs text-muted">Preview</summary>
+                        <div className="mt-2 text-sm">{q.preview}</div>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Title" className="sm:col-span-2">
+          <input name="title" required minLength={3} maxLength={120} placeholder="Recall mock: FI, FSA, Derivatives" className={FIELD} />
+        </Field>
+        <Field label="Type">
+          <select name="mockType" value={mockType} onChange={(e) => setMockType(e.target.value as MockType)} className={FIELD}>
+            {Object.entries(MockContract.TYPES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          label="Duration (minutes)"
+          hint={`Set at the CFA pace, ${MockContract.MINUTES_PER_QUESTION} min a question${mockType === "full" ? ", per session (half the questions each)" : ""}. Type to change it.`}
+        >
+          <input
+            name="durationMinutes"
+            type="number"
+            required
+            min={1}
+            max={600}
+            value={duration ?? MockContract.minutes(total, mockType)}
+            onChange={(e) => setDuration(e.target.value)}
+            className={FIELD}
+          />
+        </Field>
+        <Field label="Book or source" className="sm:col-span-2">
+          <input name="source" maxLength={120} defaultValue="Question bank" className={FIELD} />
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <SaveButton busy={busy} disabled={total === 0} busyLabel="Building…">
+          {`Build draft mock · ${total} question${total === 1 ? "" : "s"}`}
         </SaveButton>
         <Notice state={state} />
       </div>
     </form>
+  );
+}
+
+const TEXT_FIELDS = [
+  ["vignette", "Vignette (optional)", 6],
+  ["question", "Question", 4],
+  ["a", "Option A", 2],
+  ["b", "Option B", 2],
+  ["c", "Option C", 2],
+  ["explanation", "Explanation (optional)", 4],
+] as const;
+type QuestionFields = Record<"number" | "topic" | "correct" | (typeof TEXT_FIELDS)[number][0], string>;
+
+/** One question, added (no `question`) or edited, with the preview beside it as students will see it. */
+export function MockQuestionForm({ mockId, question, nextNumber, topics }: { mockId: string; question?: MockQuestion; nextNumber: number; topics: string[] }) {
+  const [state, action, busy] = useActionState(saveMockQuestion, null);
+  const [f, setF] = useState<QuestionFields>(() => ({
+    number: String(question?.number ?? nextNumber),
+    topic: question?.topic ?? "",
+    correct: question?.correct ?? "A",
+    vignette: question?.vignette ?? "",
+    question: question?.question ?? "",
+    a: question?.options[0] ?? "",
+    b: question?.options[1] ?? "",
+    c: question?.options[2] ?? "",
+    explanation: question?.explanation ?? "",
+  }));
+  const set = (k: keyof QuestionFields) => (e: { target: { value: string } }) => setF((v) => ({ ...v, [k]: e.target.value }));
+  const exhibitProblems = [
+    ...MockExhibits.problems(f.vignette, "Vignette"),
+    ...MockExhibits.problems(f.question, "Question"),
+    ...MockExhibits.problems(f.explanation, "Explanation"),
+  ];
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <form onSubmit={keep(action)} className="grid content-start gap-4">
+        <input type="hidden" name="id" value={mockId} />
+        {question && <input type="hidden" name="questionId" value={question.id} />}
+        <div className="grid grid-cols-[6rem_1fr_6rem] gap-3">
+          <Field label="Number">
+            <input name="number" type="number" required min={1} max={MockContract.MAX_QUESTIONS} value={f.number} onChange={set("number")} className={FIELD} />
+          </Field>
+          <Field label="Topic">
+            <input name="topic" required maxLength={80} list="mock-topics" value={f.topic} onChange={set("topic")} className={FIELD} />
+            <datalist id="mock-topics">
+              {topics.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          </Field>
+          <Field label="Correct">
+            <select name="correct" value={f.correct} onChange={set("correct")} className={FIELD}>
+              {MockContract.LETTERS.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        {TEXT_FIELDS.map(([name, label, rows]) => (
+          <Field key={name} label={label}>
+            <textarea name={name} rows={rows} required={name === "question" || name.length === 1} value={f[name]} onChange={set(name)} className={`${FIELD} font-mono text-xs`} />
+          </Field>
+        ))}
+        <div className="flex flex-wrap items-start gap-4">
+          <SaveButton busy={busy} busyLabel="Saving…">
+            {question ? "Save question" : "Add question"}
+          </SaveButton>
+          <Notice state={state} />
+        </div>
+      </form>
+      <section aria-label="Preview" className="content-start lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+        <p className="text-[11px] tracking-[0.22em] text-muted uppercase">Preview</p>
+        {exhibitProblems.length > 0 && (
+          <ul role="alert" className="mt-2 list-disc pl-5 text-xs text-gold">
+            {exhibitProblems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 rounded-lg border border-line p-4 text-sm">
+          {f.question || f.vignette ? (
+            <QuestionPreview q={{ ...f, options: [f.a, f.b, f.c] }} />
+          ) : (
+            <p className="text-muted">Type the question to see it here.</p>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
