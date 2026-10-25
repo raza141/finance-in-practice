@@ -42,10 +42,10 @@ export class MockSession {
     return repo.complete(attempt.id, attempt.clientId, MockGrader.grade(all, final), final);
   }
 
-  /** The attempt, moved on first if its clock ran out while the student was away (a full mock may need both steps). */
+  /** The attempt, moved on first if its clock ran out while the student was away (a full mock may need both steps). A paused clock hasn't run out. */
   static async load(repo: MockRepository, attemptId: string, clientId: string): Promise<MockAttempt | null> {
     let attempt = await repo.attempt(attemptId, clientId);
-    for (let step = 0; step < 2 && attempt?.status === "in_progress" && !MockGrader.open(attempt.endsAt); step++) {
+    for (let step = 0; step < 2 && attempt?.status === "in_progress" && !attempt.pausedAt && !MockGrader.open(attempt.endsAt); step++) {
       await MockSession.finish(repo, attempt);
       attempt = await repo.attempt(attemptId, clientId);
     }

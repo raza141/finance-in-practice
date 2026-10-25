@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { Logo } from "@/core/components/layout/Logo";
-import { MockBreak } from "@/domains/mocks/components/MockBreak";
+import { MockBreak, MockPaused } from "@/domains/mocks/components/MockBreak";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
 import { AttemptResults, renderQuestion } from "@/domains/mocks/components/AttemptResults";
 import { MockSession } from "@/domains/mocks/server/MockSession";
@@ -32,6 +32,14 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
     return (
       <div className="-mt-20 bg-canvas">
         <MockBreak attemptId={attempt.id} title={mock.title} remainingMs={MockGrader.remainingMs(attempt.breakUntil!)} next={attempt.session} />
+      </div>
+    );
+  }
+
+  if (attempt.status === "in_progress" && attempt.pausedAt) {
+    return (
+      <div className="-mt-20 bg-canvas">
+        <MockPaused attemptId={attempt.id} title={mock.title} leftMs={Math.max(0, attempt.endsAt.getTime() - attempt.pausedAt.getTime())} />
       </div>
     );
   }

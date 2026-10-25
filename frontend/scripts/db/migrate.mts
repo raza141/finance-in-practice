@@ -1272,6 +1272,11 @@ const MIGRATIONS: Migration[] = [
         ADD COLUMN break_until timestamptz`,
     ],
   },
+  {
+    // A student can pause a mock: the clock stops (paused_at) and resume adds the paused time to ends_at.
+    id: "059_mock_pause",
+    statements: [`ALTER TABLE mock_attempts ADD COLUMN paused_at timestamptz`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

@@ -63,6 +63,7 @@ interface AttemptRow {
   status: AttemptStatus;
   session: number;
   break_until: Date | null;
+  paused_at: Date | null;
 }
 
 /** Postgres-backed mock exams (migration 055_mock_exams). Every student read checks the attempt is theirs. */
@@ -392,7 +393,7 @@ export class MockRepository {
       WITH live AS (
         SELECT id, mock_id FROM mock_attempts
         WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress' AND session = ${session}
-          AND (break_until IS NULL OR break_until <= now())
+          AND (break_until IS NULL OR break_until <= now()) AND paused_at IS NULL
           AND now() <= ends_at + make_interval(secs => ${MockGrader.GRACE_MS / 1000})
       ), saved AS (
         INSERT INTO mock_responses (attempt_id, question_id, selected, flagged, notes)
@@ -460,6 +461,27 @@ export class MockRepository {
   }
 
   /** Ends the break early: session 2's clock starts now. False when the break is already over. */
+  /** Stops the clock while a session is running; answers aren't taken until resume. */
+  async pause(attemptId: string, clientId: string): Promise<boolean> {
+    const rows = await this.sql`
+      UPDATE mock_attempts SET paused_at = now()
+      WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress' AND paused_at IS NULL AND now() < ends_at
+        AND (break_until IS NULL OR break_until <= now())
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  /** Restarts the clock with the time that was left at the pause. */
+  async resume(attemptId: string, clientId: string): Promise<boolean> {
+    const rows = await this.sql`
+      UPDATE mock_attempts SET ends_at = ends_at + (now() - paused_at), paused_at = NULL
+      WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress' AND paused_at IS NOT NULL
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
   async startSession(attemptId: string, clientId: string): Promise<boolean> {
     const rows = await this.sql`
       UPDATE mock_attempts a SET break_until = now(), ends_at = now() + make_interval(mins => e.duration_minutes)
@@ -520,6 +542,7 @@ export class MockRepository {
       status: r.status,
       session: r.session,
       breakUntil: r.break_until,
+      pausedAt: r.paused_at,
     };
   }
 }

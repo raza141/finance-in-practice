@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { startNextSession } from "../actions/mocks";
+import { resumeMock, startNextSession } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
 
 /**
@@ -43,6 +43,30 @@ export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: 
           <input type="hidden" name="attemptId" value={attemptId} />
           <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
             Start session {next} now
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+/** A paused attempt: the clock is stopped and the questions hidden until the student resumes. */
+export function MockPaused({ attemptId, title, leftMs }: { attemptId: string; title: string; leftMs: number }) {
+  return (
+    <div className="grid min-h-screen place-items-center p-6">
+      <section aria-labelledby="paused-heading" className="w-full max-w-lg rounded-3xl border border-white/10 bg-canvas/70 p-8 text-center backdrop-blur-md">
+        <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">{title}</p>
+        <h1 id="paused-heading" className="mt-2 text-2xl font-normal italic">
+          Paused
+        </h1>
+        <p aria-label="Time left" className="mt-6 font-mono text-5xl tabular-nums">
+          {MockGrader.clock(Math.ceil(leftMs / 1000))}
+        </p>
+        <p className="mt-4 text-sm text-muted">The clock has stopped and your answers are saved. You can close this page and come back to it later.</p>
+        <form action={resumeMock} className="mt-6">
+          <input type="hidden" name="attemptId" value={attemptId} />
+          <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
+            Resume
           </button>
         </form>
       </section>

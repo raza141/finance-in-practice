@@ -41,6 +41,21 @@ export async function autosaveMock(attemptId: string, responses: unknown): Promi
 }
 
 /** Ends a full mock's break early: session 2's clock starts now. */
+/** Saves what the browser has, then stops the clock. */
+export async function pauseMock(attemptId: string, responses: unknown): Promise<{ ok: boolean }> {
+  const { id: clientId } = await student();
+  if (!MockContract.isUuid(attemptId)) return { ok: false };
+  await autosaveMock(attemptId, responses);
+  return { ok: await MockSession.repo().pause(attemptId, clientId) };
+}
+
+export async function resumeMock(form: FormData): Promise<void> {
+  const { id: clientId } = await student();
+  const attemptId = String(form.get("attemptId"));
+  if (MockContract.isUuid(attemptId)) await MockSession.repo().resume(attemptId, clientId);
+  redirect(MockContract.isUuid(attemptId) ? `/student/mocks/${attemptId}` : "/student");
+}
+
 export async function startNextSession(form: FormData): Promise<void> {
   const { id: clientId } = await student();
   const attemptId = String(form.get("attemptId"));

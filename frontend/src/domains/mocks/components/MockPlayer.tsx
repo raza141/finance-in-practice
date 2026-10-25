@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { autosaveMock, submitMock } from "../actions/mocks";
+import { autosaveMock, pauseMock, submitMock } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
 import type { MockResponse, OptionLetter } from "../types";
 
@@ -20,6 +20,18 @@ type Answer = Omit<MockResponse, "questionId">;
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
 const BLANK: Answer = { selected: null, flagged: false, notes: "" };
 const AUTOSAVE_MS = 20_000;
+
+/** The side-panel icon (as in a chat app's sidebar toggle): a window with its left column marked. */
+function PanelIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-5">
+      <rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" />
+      <path d="M7.75 3.75v12.5" />
+    </svg>
+  );
+}
+
+const ICON_BUTTON = "grid size-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-surface hover:text-ink";
 
 /**
  * The CBT player. Navigation, answers, flags, notes and strike-throughs live in the
@@ -59,7 +71,7 @@ export function MockPlayer({
   const [confirming, setConfirming] = useState(false);
   // The numbered palette: open beside the question on wide screens, closed on phones (it would push the question down).
   const [palette, setPalette] = useState(true);
-  const [state, setState] = useState<"working" | "submitting" | "error">("working");
+  const [state, setState] = useState<"working" | "submitting" | "pausing" | "error">("working");
   const dirty = useRef(false);
   const submitted = useRef(false);
 
@@ -118,6 +130,15 @@ export function MockPlayer({
       dirty.current = true;
     }
   }, [attemptId, list, submit]);
+
+  // Saves, stops the server's clock, and shows the pause screen (the questions stay hidden until resume).
+  const pause = async () => {
+    if (submitted.current) return;
+    submitted.current = true;
+    setState("pausing");
+    await pauseMock(attemptId, list(answersRef.current)).catch(() => null);
+    router.refresh();
+  };
 
   // The clock, from the server's end time.
   useEffect(() => {
@@ -185,15 +206,6 @@ export function MockPlayer({
               </span>
             )}
           </p>
-          <button
-            type="button"
-            aria-expanded={palette}
-            aria-controls="mock-palette"
-            onClick={() => setPalette((p) => !p)}
-            className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink"
-          >
-            {palette ? "Hide questions" : "Show questions"}
-          </button>
           <div className="flex items-center gap-3">
             <div className="hidden w-40 sm:block" aria-hidden>
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
@@ -211,12 +223,26 @@ export function MockPlayer({
           >
             ⏱ {MockGrader.clock(left)}
           </p>
+          <button
+            type="button"
+            onClick={() => void pause()}
+            disabled={state === "pausing" || state === "submitting"}
+            className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink disabled:opacity-60"
+          >
+            {state === "pausing" ? "Pausing…" : "⏸ Pause"}
+          </button>
         </div>
       </header>
 
       <div className={`grid flex-1 gap-4 p-4 sm:p-6 ${palette ? "lg:grid-cols-[13rem_1fr]" : ""}`}>
         {palette && (
           <nav id="mock-palette" aria-label="Questions" className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-11rem)] lg:self-start lg:overflow-y-auto">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Questions</span>
+              <button type="button" aria-expanded aria-controls="mock-palette" aria-label="Hide question numbers" title="Hide question numbers" onClick={() => setPalette(false)} className={ICON_BUTTON}>
+                <PanelIcon />
+              </button>
+            </div>
             <ol className="grid grid-cols-8 gap-1.5 sm:grid-cols-12 lg:grid-cols-5">
               {questions.map((x, i) => (
                 <li key={x.id}>
@@ -260,9 +286,16 @@ export function MockPlayer({
             )}
             <section aria-label={`Question ${q.number}`} className="rounded-xl border border-line bg-surface/60 p-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="font-mono text-xs tracking-[0.16em] text-quant uppercase">
-                  Question {q.number} of {questions.length}
-                </h2>
+                <div className="flex items-center gap-2">
+                  {!palette && (
+                    <button type="button" aria-expanded={false} aria-label="Show question numbers" title="Show question numbers" onClick={() => setPalette(true)} className={`${ICON_BUTTON} -ml-1.5`}>
+                      <PanelIcon />
+                    </button>
+                  )}
+                  <h2 className="font-mono text-xs tracking-[0.16em] text-quant uppercase">
+                    Question {q.number} of {questions.length}
+                  </h2>
+                </div>
                 <button
                   type="button"
                   aria-pressed={mine.flagged}

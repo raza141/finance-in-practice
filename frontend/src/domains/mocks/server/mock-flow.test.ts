@@ -7,7 +7,7 @@ import type { Sql } from "@/core/db/Database";
 
 import { submitMock } from "../actions/mocks";
 import { AttemptResults } from "../components/AttemptResults";
-import { MockBreak } from "../components/MockBreak";
+import { MockBreak, MockPaused } from "../components/MockBreak";
 import { MockPlayer } from "../components/MockPlayer";
 import { MockResults, type ReviewQuestion } from "../components/MockResults";
 import type { MockAttempt, MockGrade, MockQuestion, MockResponse } from "../types";
@@ -37,7 +37,7 @@ class FakeRepo {
   mockType = "book";
 
   constructor(endsAt: Date) {
-    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null };
+    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null, pausedAt: null };
   }
   async attempt(id: string, clientId: string) {
     return id === ATTEMPT && clientId === CLIENT ? { ...this.attemptRow } : null;
@@ -101,6 +101,19 @@ let repo: FakeRepo;
 beforeEach(() => {
   repo = new FakeRepo(new Date(Date.now() + 60 * 60_000));
   vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
+});
+
+describe("a paused attempt", () => {
+  it("shows the pause screen with the time left at the pause, no questions, and isn't closed though its end time has passed", async () => {
+    const pausedAt = new Date(Date.now() - 2 * 60 * 60_000);
+    repo.attemptRow = { ...repo.attemptRow, pausedAt, endsAt: new Date(pausedAt.getTime() + 25 * 60_000) };
+    const page = await render();
+    const paused = find(page, MockPaused);
+    expect(paused?.props.leftMs).toBe(25 * 60_000);
+    expect(find(page, MockPlayer)).toBeNull();
+    expect(JSON.stringify(paused?.props)).not.toMatch(/FCFF|SECRET/);
+    expect(repo.completed).toBeNull();
+  });
 });
 
 describe("an open attempt's page (anti-cheat)", () => {

@@ -93,6 +93,8 @@ export interface MockAttempt {
   session: number;
   /** Set when session 1 of a full mock closed: session 2's clock starts then, or sooner if the student starts it. */
   breakUntil: Date | null;
+  /** Set while the student has paused: the clock is stopped and the questions hidden until they resume. */
+  pausedAt: Date | null;
 }
 
 /** Lobby history row. */
