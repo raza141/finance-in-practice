@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "mocks:check": "vitest run src/domains/mocks/services/sheet-check.test.ts",
     "api:schema": "cd ../quant-backend && uv run --no-sync python -c \"import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))\" > ../frontend/openapi/quant-api.json",
     "api:types": "openapi-typescript openapi/quant-api.json --default-non-nullable=false -o src/domains/quant-lab/types/api.generated.ts",
     "gen:api": "npm run api:schema && npm run api:types",
