@@ -8,6 +8,7 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 import { MockSession } from "../server/MockSession";
 import { MockContract } from "../services/MockContract";
+import type { MockType } from "../types";
 
 export type MockActionState = { ok: boolean; message: string; errors?: string[] } | null;
 
@@ -71,11 +72,22 @@ export async function saveMockNote(attemptId: string, questionId: string, notes:
 /** Create (no id) or update the mock's details. */
 export async function saveMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require();
+  const id = String(form.get("id") ?? "");
+  // A new mock can come with its sheet: checked first, so a bad sheet creates nothing. A blank duration is set from the questions.
+  const file = form.get("file");
+  const sheet = !id && file instanceof File && file.size > 0 ? MockContract.parseSheet(await file.text()) : null;
+  if (sheet && !sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
+  if (sheet?.ok && !String(form.get("durationMinutes") ?? "").trim()) {
+    form.set("durationMinutes", String(MockContract.minutes(sheet.questions.length, String(form.get("mockType")) as MockType)));
+  }
   const parsed = MockContract.parseExam(form);
   if (!parsed.ok) return { ok: false, message: parsed.error };
-  const id = String(form.get("id") ?? "");
   const repo = MockSession.repo();
-  if (!id) redirect(`/admin/mocks/${await repo.create(parsed.value)}`);
+  if (!id) {
+    const created = await repo.create(parsed.value);
+    if (sheet?.ok) await repo.replaceQuestions(created, sheet.questions);
+    redirect(`/admin/mocks/${created}`);
+  }
   if (!MockContract.isUuid(id)) return { ok: false, message: "Unknown mock." };
   await repo.update(id, parsed.value);
   refresh();

@@ -69,14 +69,30 @@ export function MockExamForm({ mock }: { mock?: MockExam }) {
         hint={
           mock?.attempted
             ? "Open attempts keep the time they started with."
-            : "Full syllabus sits in two sessions (half the questions each) with this time per session and an optional 30-minute break: CFA Level I is 135. Other types are one sitting."
+            : `${mock ? "" : "Blank with a sheet: set from the questions at the CFA pace (1.5 min each). "}Full syllabus sits in two sessions (half the questions each) with this time per session and an optional 30-minute break: CFA Level I is 135. Other types are one sitting.`
         }
       >
-        <input name="durationMinutes" type="number" required min={1} max={600} defaultValue={mock?.durationMinutes ?? 135} className={FIELD} />
+        <input name="durationMinutes" type="number" required={!!mock} min={1} max={600} defaultValue={mock?.durationMinutes} placeholder="Auto" className={FIELD} />
       </Field>
       <Field label="Book or source" className="sm:col-span-2">
         <input name="source" maxLength={120} defaultValue={mock?.source} placeholder="Book 2: Quantitative Methods, or Random pool" className={FIELD} />
       </Field>
+      {!mock && (
+        <Field
+          label="Question sheet (optional)"
+          hint={
+            <>
+              CSV UTF-8, checked before anything is saved; or add it on the mock&rsquo;s page later.{" "}
+              <a href="/templates/mock-questions-template.xlsx" download className="text-quant hover:underline">
+                Excel template
+              </a>
+            </>
+          }
+          className="sm:col-span-2"
+        >
+          <input name="file" type="file" accept=".csv,.tsv,.txt,text/csv" className={`${FIELD} text-sm`} />
+        </Field>
+      )}
       <div className="flex items-center gap-4 sm:col-span-2">
         <PendingButton pendingLabel="Saving…" className={SAVE}>
           {mock ? "Save details" : "Create mock"}
