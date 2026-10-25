@@ -6,8 +6,7 @@ Source for **financeinpractice.me**, a finance education and consulting platform
 finance-in-practice/
 ├── frontend/          # Next.js 16 (App Router, Tailwind v4, anime.js v4, R3F)  [Phase 2 ✓]
 ├── quant-backend/     # FastAPI quant engine (NumPy, pandas, SciPy)           [Phase 1 ✓]
-├── docker-compose.yml
-└── .env.example
+└── docker-compose.yml
 ```
 
 ## Frontend
@@ -31,13 +30,24 @@ frontend/src/
 
 ```bash
 cd frontend
-cp .env.example .env.local     # NEXT_PUBLIC_CAL_LINK enables the 'Confirm on Cal.com' hand-off
+# create .env.local with the frontend variables listed under Environment below
 npm install
 npm run dev                    # http://localhost:3000
 npm run build                  # production build (static prerender)
 npm test && npm run typecheck && npm run lint
 npm run gen:api                # regenerate API types after backend changes
 ```
+
+## Environment
+
+Env files are git-ignored (none are committed). Create them by hand; production values live in Vercel → Settings → Environment Variables.
+
+| File | Variables |
+|------|-----------|
+| `.env` (Docker, repo root) | `BACKEND_PORT` `FRONTEND_PORT` `ENVIRONMENT` `CORS_ORIGINS` `RATE_LIMIT` `RATE_LIMIT_ENABLED` `RATE_LIMIT_STORAGE_URI` `FORWARDED_ALLOW_IPS` `NEXT_PUBLIC_API_URL` |
+| `frontend/.env.local` | `NEXT_PUBLIC_API_URL` `NEXT_PUBLIC_CAL_LINK` `CAL_API_KEY` `DATABASE_URL` `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `CLASSROOM_CLIENT_ID` `CLASSROOM_CLIENT_SECRET` `GOOGLE_PLACES_API_KEY` `BLOB_READ_WRITE_TOKEN` `RESEND_API_KEY` `EMAIL_FROM` `EMAIL_REPLY_TO` `ANTHROPIC_API_KEY` `MARKET_PULSE_URL` `WHATSAPP_GATEWAY_SECRET` optional: `CRON_SECRET` (cron jobs) `APP_URL` (fixed site origin) |
+| `quant-backend/.env` | `ENVIRONMENT` `CORS_ORIGINS` `RATE_LIMIT` `RATE_LIMIT_ENABLED` `RATE_LIMIT_STORAGE_URI` |
+| `whatsapp-gateway/.env` | `SITE_URL` `WHATSAPP_GATEWAY_SECRET` (same value as the site's) `POLL_SECONDS` |
 
 ## Quant backend
 
@@ -120,6 +130,6 @@ uv run uvicorn app.main:app --reload # http://localhost:8000/docs
 ### Run with Docker
 
 ```bash
-cp .env.example .env
+# create .env with the Docker variables listed under Environment
 docker compose up --build
 ```

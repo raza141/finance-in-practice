@@ -1,5 +1,5 @@
 # Local development stack.
-#   cp .env.example .env
+#   create .env (variables: README → Environment)
 #   docker compose up --build
 name: finance-in-practice
 

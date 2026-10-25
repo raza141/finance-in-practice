@@ -125,4 +125,4 @@ When the new number connects, every student who'd had the intro gets *"Finance i
   - a test file
 - `frontend/src/app/api/whatsapp/gateway/route.ts`, `frontend/src/app/admin/(panel)/whatsapp/page.tsx`, and a "WhatsApp" entry in the admin menu.
 - `frontend/src/domains/invoices/components/ViewBeacon.tsx`: the gateway printing a PDF doesn't count as the client viewing it.
-- `whatsapp-gateway/`: the Mac program (`gateway.ts`), `.env.example` and the auto-start file. `auth/`, which is the WhatsApp session, is git-ignored; treat it like a password.
+- `whatsapp-gateway/`: the Mac program (`gateway.ts`), its `.env` (variables: README → Environment; git-ignored) and the auto-start file. `auth/`, which is the WhatsApp session, is git-ignored; treat it like a password.

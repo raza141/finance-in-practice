@@ -59,7 +59,7 @@ if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !name || (role !== null && r
 
 const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set. Add it to frontend/.env.local (see .env.example).");
+  console.error("DATABASE_URL is not set. Add it to frontend/.env.local (variables: README → Environment).");
   process.exit(1);
 }
 

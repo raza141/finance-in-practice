@@ -6,7 +6,7 @@
  * link/unlink command from the admin page (linking shows a QR code there). Invoices and receipts are printed to
  * PDF from their public page with the Mac's own Chrome (headless).
  *
- *   npm start            # reads .env (see .env.example)
+ *   npm start            # reads .env (variables: README → Environment)
  *
  * Node runs this file with type stripping only: no enums, no constructor
  * parameter properties.
