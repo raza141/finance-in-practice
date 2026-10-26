@@ -49,8 +49,10 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
       {/* Frozen at the top while scrolling (the portal tabs stick just below it), in the page's own colour and grid. */}
-      <header className="sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
-        <div className="page-container flex h-16 items-center justify-between gap-4">
+      <header className="nav-line sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
+        {/* A faint cyan-to-gold wash over the grid, so the bar reads as a bar. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-r from-quant/10 via-transparent to-gold/10" />
+        <div className="page-container relative flex h-16 items-center justify-between gap-4">
           <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
           </Link>
