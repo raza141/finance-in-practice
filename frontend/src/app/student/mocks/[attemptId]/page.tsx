@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { Logo } from "@/core/components/layout/Logo";
 import { MockBreak } from "@/domains/mocks/components/MockBreak";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
@@ -65,7 +64,8 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
 
   return (
     <div className="relative -mt-20 min-h-screen overflow-clip">
-      <FinanceBackdrop glow={false} className="fixed inset-0" />
+      {/* The page's grid, still: no animation behind a mock's results. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 bg-canvas bg-grid-lines" />
       <header className="sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
         <div className="page-container flex h-16 items-center justify-between gap-4">
           <Link href="/" aria-label="Finance in Practice website">
