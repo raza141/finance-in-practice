@@ -10,19 +10,24 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = { title: "Mock exam instructions", robots: { index: false, follow: false } };
 
-const DOS = [
-  "Pause the mock whenever you need to: the clock stops until you resume, and you can go back to the portal and resume from there.",
-  "Take notes or write down your understanding of the concept under each question.",
-  "Flag questions to come back to them before you submit.",
-  "Strike through any answer option you want to eliminate.",
-  "Go straight to any question by clicking its number.",
+// [symbol, tool, what it does]: the player's own controls, in the order a student meets them.
+const TOOLS: [string, string, string][] = [
+  ["⏸", "Pause", "The clock stops. You can leave and resume later from the portal."],
+  ["✎", "Notes", "Write your understanding of the concept under each question."],
+  ["⚐", "Flag", "Mark a question to come back to before you submit."],
+  ["S̶", "Strike through", "Eliminate an option you've ruled out."],
+  ["#", "Jump", "Click any question number to go straight to it."],
 ];
 
-const LEGEND: [string, string][] = [
-  ["border-line bg-surface", "Not answered"],
-  ["border-emerald-400/70 bg-emerald-400/20", "Answered"],
-  ["border-gold bg-gold/25", "Flagged for review"],
+// The player's palette tiles, exactly as they look in the exam.
+const LEGEND: [string, string, string][] = [
+  ["1", "border-line bg-surface text-muted", "Not answered"],
+  ["2", "border-emerald-400/70 bg-emerald-400/20 text-emerald-200", "Answered"],
+  ["3", "border-gold bg-gold/25 text-gold", "Flagged for review"],
 ];
+
+const CARD = "rounded-2xl border border-line bg-surface/60 p-5 sm:p-6";
+const HEADING = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
 
 /** The exam's instruction screen, as at the CBT centre: read, tick, then Begin starts the clock. Nothing is created until Begin. */
 export default async function MockInstructionsPage({ params }: PageProps<"/student/mocks/start/[mockId]">) {
@@ -35,9 +40,16 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
   const twoSessions = MockContract.sessions(mock) === 2;
   const facts: [string, string][] = [
     ["Questions", String(mock.questionCount)],
-    ["Time", twoSessions ? `2 sessions × ${mock.durationMinutes} min` : `${mock.durationMinutes} min`],
-    ...(twoSessions ? ([["Break", `Optional ${MockContract.BREAK_MINUTES} min between sessions`]] as [string, string][]) : []),
-    ["Format", "Multiple choice, three options (A, B, C)"],
+    ["Time", twoSessions ? `2 × ${mock.durationMinutes} min` : `${mock.durationMinutes} min`],
+    ...(twoSessions ? ([["Break", `${MockContract.BREAK_MINUTES} min, optional`]] as [string, string][]) : []),
+    ["Format", "MCQ · A, B, C"],
+  ];
+  const timing = [
+    "The clock starts when you press Begin.",
+    "It keeps running if you close the page, unless you pause first.",
+    ...(twoSessions ? ["Session 1's questions lock once it ends."] : []),
+    "When time runs out, your answers are submitted automatically.",
+    "Results, with an explanation for every question, appear as soon as you submit.",
   ];
 
   return (
@@ -48,60 +60,88 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
           <span className="truncate font-mono text-xs text-muted">{student.name}</span>
         </div>
       </header>
-      <main className="page-container max-w-3xl py-8 lg:py-12">
-        <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">{[MockContract.TYPES[mock.mockType], mock.source].filter(Boolean).join(" · ")}</p>
-        <h1 className="mt-1 text-3xl font-normal italic">{mock.title}</h1>
+      <main className="page-container grid max-w-4xl gap-6 py-8 lg:py-12">
+        <div>
+          <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">{[MockContract.TYPES[mock.mockType], mock.source].filter(Boolean).join(" · ")}</p>
+          <h1 className="mt-1 text-3xl font-normal italic">{mock.title}</h1>
+          <p className="mt-1 text-sm text-muted">Please read these instructions before you begin.</p>
+        </div>
 
-        <section aria-labelledby="instructions-heading" className="mt-6 rounded-2xl border border-line bg-surface/60 p-6 sm:p-8">
-          <h2 id="instructions-heading" className="text-xl font-semibold">
-            Instructions
-          </h2>
-          <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[8rem_1fr]">
-            {facts.map(([k, v]) => (
-              <div key={k} className="contents">
-                <dt className="text-muted">{k}</dt>
-                <dd className="text-ink">{v}</dd>
-              </div>
-            ))}
-          </dl>
+        <dl className={`grid grid-cols-2 gap-3 ${facts.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+          {facts.map(([k, v]) => (
+            <div key={k} className="rounded-2xl border border-line bg-surface/60 p-4">
+              <dt className={HEADING}>{k}</dt>
+              <dd className="mt-1 text-xl font-semibold text-ink">{v}</dd>
+            </div>
+          ))}
+        </dl>
 
-          <h3 className="mt-6 font-semibold">During the exam you can</h3>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink/90">
-            {DOS.map((d) => (
-              <li key={d}>{d}</li>
-            ))}
-          </ul>
+        <div className="grid items-start gap-6 md:grid-cols-2">
+          <section aria-labelledby="tools-heading" className={CARD}>
+            <h2 id="tools-heading" className={HEADING}>
+              During the exam
+            </h2>
+            <ul className="mt-4 grid gap-4">
+              {TOOLS.map(([icon, name, what]) => (
+                <li key={name} className="flex gap-3">
+                  <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-canvas font-mono text-sm text-quant">
+                    {icon}
+                  </span>
+                  <span className="text-sm">
+                    <span className="block font-semibold text-ink">{name}</span>
+                    <span className="text-muted">{what}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-          <h3 className="mt-6 font-semibold">Question numbers</h3>
-          <ul className="mt-2 flex flex-wrap gap-4 text-sm">
-            {LEGEND.map(([tone, label]) => (
-              <li key={label} className="flex items-center gap-2">
-                <span aria-hidden className={`size-4 rounded-sm border ${tone}`} /> {label}
-              </li>
-            ))}
-          </ul>
+          <div className="grid gap-6">
+            <section aria-labelledby="legend-heading" className={CARD}>
+              <h2 id="legend-heading" className={HEADING}>
+                Question numbers
+              </h2>
+              <ul className="mt-4 grid gap-3">
+                {LEGEND.map(([n, tone, label]) => (
+                  <li key={label} className="flex items-center gap-3 text-sm text-ink">
+                    <span aria-hidden className={`grid h-9 w-11 place-items-center rounded-md border font-mono text-xs ${tone}`}>
+                      {n}
+                    </span>
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-          <h3 className="mt-6 font-semibold">Timing and submitting</h3>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink/90">
-            <li>The clock starts when you press Begin and keeps running if you close the page, unless you pause first.</li>
-            <li>When time runs out, your answers are submitted automatically.</li>
-            {twoSessions && <li>Once session 1 ends you can&rsquo;t go back to its questions.</li>}
-            <li>Your results, with an explanation for every question, appear as soon as you submit.</li>
-          </ul>
-        </section>
+            <section aria-labelledby="timing-heading" className={CARD}>
+              <h2 id="timing-heading" className={HEADING}>
+                Timing and submitting
+              </h2>
+              <ol className="mt-4 grid gap-3 text-sm">
+                {timing.map((t, i) => (
+                  <li key={t} className="flex gap-3">
+                    <span aria-hidden className="font-mono text-quant">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-ink/90">{t}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+        </div>
 
-        <form action={startMock} className="mt-6 grid gap-4">
+        <form action={startMock} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gold/40 bg-gold/5 p-5 sm:p-6">
           <input type="hidden" name="mockId" value={mock.id} />
-          <label className="flex items-start gap-3 text-sm">
-            <input type="checkbox" required className="mt-0.5 size-4 accent-gold" />I have read the instructions and I&rsquo;m ready to begin.
+          <label className="flex items-center gap-3 text-sm text-ink">
+            <input type="checkbox" required className="size-4 accent-gold" />
+            I have read the instructions and I&rsquo;m ready to begin.
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
-              Begin exam
-            </button>
             <Link href="/student" className="rounded-md border border-line px-4 py-2.5 text-sm text-muted hover:text-ink">
               ← Back to the portal
             </Link>
+            <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
+              Begin exam
+            </button>
           </div>
         </form>
       </main>
