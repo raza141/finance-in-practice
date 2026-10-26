@@ -197,7 +197,7 @@ function Chart({ scores, W, className }: { scores: Score[]; W: number; className
 
 const BOOK = "inline-flex h-9 items-center rounded-md bg-gold px-3.5 text-sm font-semibold text-canvas hover:bg-gold-bright";
 
-/** Progress tab (MockProgress, from the portal's own mocks): every mark, overall and per topic, each weak spot with a way to book a review. */
+/** Progress tab (MockProgress, from the portal's own mocks): every mock, opening into its topics, each with a way to book a review; then each topic's trend. */
 export function ProgressPanel({ progress: p }: { progress: Progress }) {
   const { last, average, best, count } = p.overall;
   if (!last) {
@@ -216,17 +216,6 @@ export function ProgressPanel({ progress: p }: { progress: Progress }) {
   ];
   return (
     <div className="grid gap-6">
-      {last.pct < TARGET && (
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-gold/10 p-5 backdrop-blur-md">
-          <p className="text-sm text-ink">
-            {last.title}: <span className="font-semibold">{last.pct}%</span>, below your {TARGET}% target. A review session on what you missed helps most
-            now.
-          </p>
-          <TabButton tab="book" notes={`Review after ${last.title} (${last.pct}%)`} className={BOOK}>
-            Book a review session
-          </TabButton>
-        </section>
-      )}
       <section aria-labelledby="progress-heading" className={CARD}>
         <h2 id="progress-heading" className="text-2xl font-normal italic">
           Your progress
@@ -239,29 +228,49 @@ export function ProgressPanel({ progress: p }: { progress: Progress }) {
             </div>
           ))}
         </dl>
-        <h3 className={`${LABEL} mt-6`}>By topic</h3>
-        <ul className="mt-3 grid gap-4">
-          {p.topics.map((t) => (
-            <li key={t.name} className="grid gap-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <h3 className={`${LABEL} mt-6`}>Your mocks</h3>
+        {/* Newest first; each opens into its topics (native <details>, no JS), with one way to book a review. */}
+        <div className="mt-2 divide-y divide-line/60">
+          {[...p.mocks].reverse().map((m) => (
+            <details key={m.id} className="group py-1">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
                 <span className="text-ink">
-                  {t.name} <span className="text-muted">· {t.count} mock{t.count > 1 ? "s" : ""}</span>
+                  <span aria-hidden className="mr-2 inline-block text-muted transition-transform group-open:rotate-90">›</span>
+                  <span className="font-semibold">{m.title}</span>
+                  <span className="text-muted"> · {day(m.at)}</span>
                 </span>
                 <span className="flex items-center gap-3">
-                  <span className={`font-semibold ${t.pct < TARGET ? "text-gold" : "text-quant"}`}>{t.pct}%</span>
-                  {t.pct < TARGET && (
-                    <TabButton tab="book" notes={`Review: ${t.name} (${t.pct}% average)`} className="inline-flex h-7 items-center rounded-md border border-gold/60 px-2.5 font-mono text-[11px] font-semibold text-gold transition-colors hover:bg-gold/10">
-                      Book a review
-                    </TabButton>
+                  <span className={`font-semibold ${m.pct < TARGET ? "text-gold" : "text-quant"}`}>{m.pct}%</span>
+                  {m.link && (
+                    <a href={m.link} className={BUTTON}>
+                      Answers
+                    </a>
                   )}
+                  <TabButton tab="book" notes={`Review after ${m.title} (${m.pct}%)`} className={BOOK}>
+                    Book a review
+                  </TabButton>
                 </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                <div className={`h-full rounded-full ${t.pct < TARGET ? "bg-gold" : "bg-quant"}`} style={{ width: `${Math.min(t.pct, 100)}%` }} />
-              </div>
-            </li>
+              </summary>
+              <ul className="grid gap-3 pt-1 pb-4 pl-5">
+                {p.topics.flatMap((t) =>
+                  t.scores
+                    .filter((s) => s.id === m.id)
+                    .map((s) => (
+                      <li key={t.name} className="grid gap-1.5">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-ink">{t.name}</span>
+                          <span className={`font-semibold ${s.pct < TARGET ? "text-gold" : "text-quant"}`}>{s.pct}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                          <div className={`h-full rounded-full ${s.pct < TARGET ? "bg-gold" : "bg-quant"}`} style={{ width: `${Math.min(s.pct, 100)}%` }} />
+                        </div>
+                      </li>
+                    )),
+                )}
+              </ul>
+            </details>
           ))}
-        </ul>
+        </div>
       </section>
       {/* Two topics a row on wide screens, so each chart stays a readable size. */}
       <div className="grid items-start gap-6 lg:grid-cols-2">

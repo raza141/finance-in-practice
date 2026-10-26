@@ -281,6 +281,11 @@ export function MockPlayer({
           >
             ⏱ {MockGrader.clock(left)}
           </p>
+          {paused && (
+            <a href={exitHref} className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink">
+              ← {preview ? "Exit" : "Back to portal"}
+            </a>
+          )}
           {paused ? (
             <button
               type="button"
@@ -303,7 +308,7 @@ export function MockPlayer({
         </div>
         {paused && (
           <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
-            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on.{preview ? "" : " Your work is kept if you close this page."}
+            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on.{preview ? "" : " Your work is kept: you can go back to the portal and resume from there."}
           </p>
         )}
       </header>

@@ -206,10 +206,10 @@ export function StudentPortal({
     ["overview", "Overview"],
     ["book", moving ? "Change a session" : "Book a session"],
     ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
-    ["account", "Hours & payments"],
+    ["plan", "Exams & mocks"],
     ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
     ...(progress ? ([["progress", "Progress"]] as [Tab, string][]) : []),
-    ["plan", "Study plan & materials"],
+    ["account", "Hours & payments"],
   ];
   const go = (next: Tab, prefill?: string) => {
     setTab(next);
