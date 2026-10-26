@@ -50,6 +50,8 @@ export function MockPlayer({
   initial,
   session = null,
   paused: pausedAtStart = false,
+  answerKey,
+  exitHref = "/student",
 }: {
   attemptId: string;
   studentName: string;
@@ -63,7 +65,13 @@ export function MockPlayer({
   session?: { index: number; of: number } | null;
   /** Opened while paused (e.g. after a refresh): the clock waits for Resume. */
   paused?: boolean;
+  /** The admin's try-out: nothing is sent to the server, and Submit marks the answers against this key. */
+  answerKey?: Record<string, OptionLetter>;
+  /** Where the try-out's Exit goes. */
+  exitHref?: string;
 }) {
+  const preview = answerKey !== undefined;
+  const [checked, setChecked] = useState(false);
   const last = !session || session.index === session.of;
   const router = useRouter();
   const storageKey = `fip-mock:${attemptId}${session ? `:${session.index}` : ""}`;
@@ -84,6 +92,7 @@ export function MockPlayer({
 
   // This device's unsaved changes (e.g. notes typed just before a refresh) win over the last autosave.
   useEffect(() => {
+    if (preview) return;
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as Record<string, Answer> | null;
       if (saved) {
@@ -92,7 +101,7 @@ export function MockPlayer({
         dirty.current = true;
       }
     } catch {}
-  }, [storageKey]);
+  }, [preview, storageKey]);
 
   const wide = () => window.matchMedia("(min-width: 1024px)").matches;
   useEffect(() => {
@@ -111,6 +120,10 @@ export function MockPlayer({
   }, [answers]);
 
   const submit = useCallback(async () => {
+    if (preview) {
+      setConfirming(false);
+      return setChecked(true);
+    }
     if (submitted.current) return;
     submitted.current = true;
     setState("submitting");
@@ -125,10 +138,10 @@ export function MockPlayer({
       submitted.current = false;
       setState("error");
     }
-  }, [attemptId, list, router, storageKey]);
+  }, [attemptId, list, preview, router, storageKey]);
 
   const save = useCallback(async () => {
-    if (!dirty.current || submitted.current || pausedRef.current) return;
+    if (!dirty.current || submitted.current || pausedRef.current || preview) return;
     dirty.current = false;
     try {
       const { open } = await autosaveMock(attemptId, list(answersRef.current));
@@ -136,11 +149,15 @@ export function MockPlayer({
     } catch {
       dirty.current = true;
     }
-  }, [attemptId, list, submit]);
+  }, [attemptId, list, preview, submit]);
 
   // Saves and stops the server's clock; the student stays here and the clock waits for Resume.
   const pause = async () => {
     if (submitted.current || pausedRef.current) return;
+    if (preview) {
+      pausedRef.current = true;
+      return setPaused(true);
+    }
     setState("pausing");
     const res = await pauseMock(attemptId, list(answersRef.current)).catch(() => null);
     if (res?.ok) {
@@ -153,6 +170,11 @@ export function MockPlayer({
 
   // Restarts the server's clock and carries on from its new end time; changes made while paused are saved now.
   const resume = async () => {
+    if (preview) {
+      pausedRef.current = false;
+      setDeadline(Date.now() + left * 1000);
+      return setPaused(false);
+    }
     setState("resuming");
     const res = await resumeMock(attemptId).catch(() => null);
     if (!res) return setState("working");
@@ -167,7 +189,7 @@ export function MockPlayer({
 
   // The clock, from the server's end time. Stopped while paused.
   useEffect(() => {
-    if (paused) return;
+    if (paused || checked) return;
     const tick = () => {
       const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setLeft(s);
@@ -175,7 +197,7 @@ export function MockPlayer({
     };
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [deadline, paused, submit]);
+  }, [checked, deadline, paused, submit]);
 
   useEffect(() => {
     const timer = window.setInterval(() => void save(), AUTOSAVE_MS);
@@ -191,7 +213,7 @@ export function MockPlayer({
     setAnswers((a) => {
       const next = { ...a, [id]: { ...(a[id] ?? BLANK), ...patch } };
       try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
+        if (!preview) localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -210,13 +232,23 @@ export function MockPlayer({
 
   const tile = (i: number) => {
     const a = answers[questions[i].id];
-    const tone = a?.flagged ? "border-gold bg-gold/25 text-gold" : a?.selected ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted";
+    // Marked try-out: right in green, wrong in red.
+    const mark = checked && a?.selected ? (a.selected === answerKey![questions[i].id] ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-red-400/70 bg-red-400/20 text-red-200") : null;
+    const tone = mark ?? (a?.flagged ? "border-gold bg-gold/25 text-gold" : a?.selected ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted");
     return `${tone} ${i === current ? "ring-2 ring-quant ring-offset-2 ring-offset-canvas" : ""}`;
   };
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur-md">
+        {preview && (
+          <p className="flex items-center justify-between gap-3 bg-gold/90 px-4 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase sm:px-6">
+            <span>Try-out · nothing is saved, students don&rsquo;t see this</span>
+            <a href={exitHref} className="underline">
+              Exit
+            </a>
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           {/* Phones: no room for the name; the bar keeps the title, the toggle and the clock on two lines. */}
           <p className="hidden min-w-0 text-sm sm:block">
@@ -271,7 +303,7 @@ export function MockPlayer({
         </div>
         {paused && (
           <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
-            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on. Your work is kept if you close this page.
+            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on.{preview ? "" : " Your work is kept if you close this page."}
           </p>
         )}
       </header>
@@ -353,6 +385,7 @@ export function MockPlayer({
                 <ul className="grid gap-2.5">
                   {LETTERS.map((letter, i) => {
                     const on = mine.selected === letter;
+                    const right = checked && answerKey![q.id] === letter;
                     const off = struck[q.id]?.includes(letter);
                     return (
                       <li key={letter} className="flex items-stretch gap-2">
@@ -360,7 +393,7 @@ export function MockPlayer({
                           type="button"
                           aria-pressed={on}
                           onClick={() => change(q.id, { selected: on ? null : letter })}
-                          className={`flex min-h-14 flex-1 items-center gap-4 rounded-xl border-2 px-4 py-3 text-left transition-colors ${on ? "border-quant bg-quant/10" : "border-line bg-surface hover:border-quant/50"} ${off ? "opacity-45" : ""}`}
+                          className={`flex min-h-14 flex-1 items-center gap-4 rounded-xl border-2 px-4 py-3 text-left transition-colors ${right ? "border-emerald-400 bg-emerald-400/10" : checked && on ? "border-red-400 bg-red-400/10" : on ? "border-quant bg-quant/10" : "border-line bg-surface hover:border-quant/50"} ${off ? "opacity-45" : ""}`}
                         >
                           <span className={`grid size-8 shrink-0 place-items-center rounded-md border font-mono text-sm ${on ? "border-quant bg-quant text-canvas" : "border-line text-muted"}`}>
                             {letter}
@@ -427,9 +460,18 @@ export function MockPlayer({
             >
               Next ›
             </button>
+            {checked ? (
+              <span className="font-mono text-sm">
+                Score {questions.filter((x) => answers[x.id]?.selected === answerKey![x.id]).length}/{questions.length}
+                <a href={exitHref} className="ml-3 rounded-md bg-gold px-4 py-2 font-sans font-semibold text-canvas">
+                  Done
+                </a>
+              </span>
+            ) : (
             <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
               {state === "submitting" ? "Submitting…" : last ? "Submit" : `End session ${session!.index}`}
             </button>
+            )}
           </div>
         </div>
         {(confirming || state === "error") && state !== "submitting" && !paused && (

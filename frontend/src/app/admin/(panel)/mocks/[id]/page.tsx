@@ -41,6 +41,13 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         title={mock.title}
         description={`${MockContract.TYPES[mock.mockType]} · ${mock.questionCount} questions · ${mock.durationMinutes} min · ${mock.published ? "published" : "draft"}`}
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {mock.questionCount > 0 && (
+              // The student's exam screen with these questions; nothing is saved, so the questions stay editable.
+              <Link href={`/admin/mocks/${mock.id}/try`} className="inline-flex h-9 items-center rounded-md border border-quant/50 px-4 text-sm font-medium text-quant hover:bg-quant/10">
+                Try it as a student
+              </Link>
+            )}
           <form action={setMockPublished}>
             <input type="hidden" name="id" value={mock.id} />
             <input type="hidden" name="on" value={mock.published ? "0" : "1"} />
@@ -51,6 +58,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
               {mock.published ? "Unpublish" : "Publish to students"}
             </PendingButton>
           </form>
+          </div>
         }
       />
       {notice === "attempted" && (
@@ -59,6 +67,9 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         </p>
       )}
       {!mock.published && mock.questionCount === 0 && <p className="mt-4 text-sm text-muted">Upload the questions before publishing: a mock with none isn&rsquo;t shown.</p>}
+      {!mock.published && mock.questionCount > 0 && (
+        <p className="mt-4 text-sm text-muted">Draft: students can&rsquo;t see it yet. Try it as a student, fix anything (edit a question or upload the sheet again), then publish.</p>
+      )}
 
       <section aria-labelledby="details" className="mt-8 rounded-lg border border-line p-5">
         <h2 id="details" className="text-lg">
