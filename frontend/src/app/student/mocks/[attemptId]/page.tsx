@@ -76,7 +76,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
           </Link>
         </div>
       </header>
-      <div className="page-container relative max-w-5xl py-8 lg:py-10">
+      <div className="page-container relative py-8 lg:py-10">
         <AttemptResults repo={repo} attempt={attempt} title={mock.title} />
       </div>
     </div>
