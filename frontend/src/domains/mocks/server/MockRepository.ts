@@ -116,16 +116,20 @@ export class MockRepository {
     await this.sql`UPDATE mock_exams SET published = ${on} WHERE id = ${id}`;
   }
 
-  /** False when students have sat it (the attempts keep it). */
-  async remove(id: string): Promise<boolean> {
-    const rows = await this.sql`
-      DELETE FROM mock_exams WHERE id = ${id} AND NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${id}) RETURNING id
-    `;
-    return rows.length > 0;
+  /** False when students have sat it (the attempts keep it), unless `withAttempts`: their attempts and results go too. */
+  async remove(id: string, withAttempts = false): Promise<boolean> {
+    const [, rows] = await this.sql.transaction([
+      withAttempts ? this.sql`DELETE FROM mock_attempts WHERE mock_id = ${id}` : this.sql`SELECT 1`,
+      this.sql`DELETE FROM mock_exams WHERE id = ${id} AND NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${id}) RETURNING id`,
+    ]);
+    return (rows as unknown[]).length > 0;
   }
 
-  /** Swaps in a new sheet; refused (false) once anyone has started the mock, so results never shift under a student. */
-  async replaceQuestions(mockId: string, questions: MockQuestionInput[]): Promise<boolean> {
+  /**
+   * Swaps in a new sheet; refused (false) once anyone has started the mock, so results never shift under a
+   * student, unless `clearAttempts`: the attempts and their results are deleted with the old questions.
+   */
+  async replaceQuestions(mockId: string, questions: MockQuestionInput[], clearAttempts = false): Promise<boolean> {
     const rows = JSON.stringify(
       questions.map((q) => ({
         number: q.number,
@@ -139,7 +143,8 @@ export class MockRepository {
         explanation: q.explanation,
       })),
     );
-    const [, inserted] = await this.sql.transaction([
+    const [, , inserted] = await this.sql.transaction([
+      clearAttempts ? this.sql`DELETE FROM mock_attempts WHERE mock_id = ${mockId}` : this.sql`SELECT 1`,
       this.sql`DELETE FROM mock_questions WHERE mock_id = ${mockId} AND NOT EXISTS (SELECT 1 FROM mock_attempts WHERE mock_id = ${mockId})`,
       this.sql`
         INSERT INTO mock_questions (mock_id, number, topic, vignette, question, option_a, option_b, option_c, correct, explanation)

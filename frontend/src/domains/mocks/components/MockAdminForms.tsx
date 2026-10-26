@@ -104,7 +104,7 @@ export function MockExamForm({ mock }: { mock?: MockExam }) {
 }
 
 /** The question sheet: a CSV file, or rows copied from Excel and pasted. */
-export function MockUploadForm({ mockId }: { mockId: string }) {
+export function MockUploadForm({ mockId, attempted = false }: { mockId: string; attempted?: boolean }) {
   const [state, action] = useActionState(uploadMockQuestions, null);
   return (
     <form action={action} className="grid gap-4">
@@ -137,6 +137,13 @@ export function MockUploadForm({ mockId }: { mockId: string }) {
         </div>
         <p className="mt-2 text-muted">Up to 40 rows, 8 columns and 3 lines per chart. Cells take maths ($…$) and bold (**…**). A broken table is reported by row number and nothing is saved.</p>
       </details>
+      {/* Students have started it: replacing the questions would change their results, so their attempts go with them. */}
+      {attempted && (
+        <label className="flex items-start gap-2 rounded-md border border-red-400/50 p-3 text-sm text-red-200">
+          <input type="checkbox" name="clearAttempts" value="1" required className="mt-1" />
+          Students have started this mock. Replacing the questions deletes every attempt at it, with the answers and results (anyone mid-way loses it). Tick to go ahead.
+        </label>
+      )}
       <div className="flex flex-wrap items-start gap-4">
         <PendingButton pendingLabel="Checking…" className={SAVE}>
           Upload questions

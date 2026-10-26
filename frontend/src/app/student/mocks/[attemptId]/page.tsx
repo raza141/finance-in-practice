@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { Logo } from "@/core/components/layout/Logo";
-import { MockBreak, MockPaused } from "@/domains/mocks/components/MockBreak";
+import { MockBreak } from "@/domains/mocks/components/MockBreak";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
 import { AttemptResults, renderQuestion } from "@/domains/mocks/components/AttemptResults";
 import { MockSession } from "@/domains/mocks/server/MockSession";
@@ -36,14 +36,6 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
     );
   }
 
-  if (attempt.status === "in_progress" && attempt.pausedAt) {
-    return (
-      <div className="-mt-20 bg-canvas">
-        <MockPaused attemptId={attempt.id} title={mock.title} leftMs={Math.max(0, attempt.endsAt.getTime() - attempt.pausedAt.getTime())} />
-      </div>
-    );
-  }
-
   if (attempt.status === "in_progress") {
     // Only the answer-free SELECT feeds an open attempt: nothing here can carry the answer key to the browser.
     const [questions, responses, seed] = await Promise.all([repo.activeQuestions(attempt.mockId), repo.responses(attempt.id), repo.seed(attempt)]);
@@ -60,7 +52,9 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
           studentName={student.name}
           title={mock.title}
           tag={tag}
-          remainingMs={MockGrader.remainingMs(attempt.endsAt)}
+          // Paused: the time that was left at the pause, and the player opens with its clock stopped.
+          remainingMs={MockGrader.remainingMs(attempt.endsAt, attempt.pausedAt ?? undefined)}
+          paused={attempt.pausedAt !== null}
           questions={current.map((q) => renderQuestion(MockGrader.active(q)))}
           initial={responses.filter((r) => ids.has(r.questionId))}
           session={sessions === 2 ? { index: attempt.session, of: 2 } : null}

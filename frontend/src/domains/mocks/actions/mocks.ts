@@ -8,6 +8,7 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 import { MockSession } from "../server/MockSession";
 import { MockContract } from "../services/MockContract";
+import { MockGrader } from "../services/MockGrader";
 import type { MockType } from "../types";
 
 export type MockActionState = { ok: boolean; message: string; errors?: string[] } | null;
@@ -49,11 +50,14 @@ export async function pauseMock(attemptId: string, responses: unknown): Promise<
   return { ok: await MockSession.repo().pause(attemptId, clientId) };
 }
 
-export async function resumeMock(form: FormData): Promise<void> {
+/** Restarts the clock; the player carries on from the server's new end time. Null: the attempt isn't open any more. */
+export async function resumeMock(attemptId: string): Promise<{ remainingMs: number | null }> {
   const { id: clientId } = await student();
-  const attemptId = String(form.get("attemptId"));
-  if (MockContract.isUuid(attemptId)) await MockSession.repo().resume(attemptId, clientId);
-  redirect(MockContract.isUuid(attemptId) ? `/student/mocks/${attemptId}` : "/student");
+  if (!MockContract.isUuid(attemptId)) return { remainingMs: null };
+  const repo = MockSession.repo();
+  await repo.resume(attemptId, clientId);
+  const attempt = await repo.attempt(attemptId, clientId);
+  return { remainingMs: attempt?.status === "in_progress" && !attempt.pausedAt ? MockGrader.remainingMs(attempt.endsAt) : null };
 }
 
 export async function startNextSession(form: FormData): Promise<void> {
@@ -119,8 +123,10 @@ export async function uploadMockQuestions(_prev: MockActionState, form: FormData
   if (!text.trim()) return { ok: false, message: "Choose a .csv file or paste the rows from Excel." };
   const sheet = MockContract.parseSheet(text);
   if (!sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
-  const saved = await MockSession.repo().replaceQuestions(id, sheet.questions);
-  if (!saved) return { ok: false, message: "Students have already started this mock, so its questions are fixed. Make a new mock instead." };
+  // Ticked on a mock students have started: their attempts and results are deleted with the old questions.
+  const saved = await MockSession.repo().replaceQuestions(id, sheet.questions, form.get("clearAttempts") === "1");
+  if (!saved) return { ok: false, message: "Students have started this mock. Tick the box to delete their attempts and upload again." };
+  revalidatePath("/student");
   refresh();
   return { ok: true, message: `Saved ${sheet.questions.length} questions.` };
 }
@@ -183,6 +189,7 @@ export async function setMockPublished(form: FormData): Promise<void> {
 export async function deleteMock(form: FormData): Promise<void> {
   await AdminAuth.require();
   const id = String(form.get("id"));
-  if (MockContract.isUuid(id) && !(await MockSession.repo().remove(id))) redirect(`/admin/mocks/${id}?notice=attempted`);
+  if (MockContract.isUuid(id) && !(await MockSession.repo().remove(id, form.get("withAttempts") === "1"))) redirect(`/admin/mocks/${id}?notice=attempted`);
+  revalidatePath("/student");
   redirect("/admin/mocks");
 }

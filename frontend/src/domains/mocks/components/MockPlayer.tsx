@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { autosaveMock, pauseMock, submitMock } from "../actions/mocks";
+import { autosaveMock, pauseMock, resumeMock, submitMock } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
 import type { MockResponse, OptionLetter } from "../types";
 
@@ -37,7 +37,8 @@ const ICON_BUTTON = "grid size-8 shrink-0 place-items-center rounded-md text-mut
  * The CBT player. Navigation, answers, flags, notes and strike-throughs live in the
  * browser (no server call per click). Every change is kept in localStorage at once and
  * autosaved every 20 seconds and whenever the tab is hidden. The clock is the server's
- * end time, so a refresh resumes it; at zero the attempt submits itself.
+ * end time, so a refresh resumes it; at zero the attempt submits itself. Paused, the student
+ * stays on this screen with the clock stopped (notes and answers stay open) until Resume.
  */
 export function MockPlayer({
   attemptId,
@@ -48,6 +49,7 @@ export function MockPlayer({
   questions,
   initial,
   session = null,
+  paused: pausedAtStart = false,
 }: {
   attemptId: string;
   studentName: string;
@@ -59,6 +61,8 @@ export function MockPlayer({
   initial: MockResponse[];
   /** A full mock's session ("Session 1 of 2"): its own questions, numbered from 1; null for one sitting. */
   session?: { index: number; of: number } | null;
+  /** Opened while paused (e.g. after a refresh): the clock waits for Resume. */
+  paused?: boolean;
 }) {
   const last = !session || session.index === session.of;
   const router = useRouter();
@@ -66,12 +70,15 @@ export function MockPlayer({
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, a])));
   const [current, setCurrent] = useState(0);
   const [struck, setStruck] = useState<Record<string, OptionLetter[]>>({});
-  const [deadline] = useState(() => Date.now() + remainingMs);
+  const [deadline, setDeadline] = useState(() => Date.now() + remainingMs);
+  const [paused, setPaused] = useState(pausedAtStart);
+  // The server takes no answers while paused: changes stay in localStorage and are saved on resume.
+  const pausedRef = useRef(pausedAtStart);
   const [left, setLeft] = useState(Math.max(0, Math.ceil(remainingMs / 1000)));
   const [confirming, setConfirming] = useState(false);
   // The numbered palette: open beside the question on wide screens, closed on phones (it would push the question down).
   const [palette, setPalette] = useState(true);
-  const [state, setState] = useState<"working" | "submitting" | "pausing" | "error">("working");
+  const [state, setState] = useState<"working" | "submitting" | "pausing" | "resuming" | "error">("working");
   const dirty = useRef(false);
   const submitted = useRef(false);
 
@@ -121,7 +128,7 @@ export function MockPlayer({
   }, [attemptId, list, router, storageKey]);
 
   const save = useCallback(async () => {
-    if (!dirty.current || submitted.current) return;
+    if (!dirty.current || submitted.current || pausedRef.current) return;
     dirty.current = false;
     try {
       const { open } = await autosaveMock(attemptId, list(answersRef.current));
@@ -131,17 +138,36 @@ export function MockPlayer({
     }
   }, [attemptId, list, submit]);
 
-  // Saves, stops the server's clock, and shows the pause screen (the questions stay hidden until resume).
+  // Saves and stops the server's clock; the student stays here and the clock waits for Resume.
   const pause = async () => {
-    if (submitted.current) return;
-    submitted.current = true;
+    if (submitted.current || pausedRef.current) return;
     setState("pausing");
-    await pauseMock(attemptId, list(answersRef.current)).catch(() => null);
-    router.refresh();
+    const res = await pauseMock(attemptId, list(answersRef.current)).catch(() => null);
+    if (res?.ok) {
+      pausedRef.current = true;
+      dirty.current = false;
+      setPaused(true);
+    }
+    setState("working");
   };
 
-  // The clock, from the server's end time.
+  // Restarts the server's clock and carries on from its new end time; changes made while paused are saved now.
+  const resume = async () => {
+    setState("resuming");
+    const res = await resumeMock(attemptId).catch(() => null);
+    if (!res) return setState("working");
+    if (res.remainingMs === null) return router.refresh();
+    pausedRef.current = false;
+    setDeadline(Date.now() + res.remainingMs);
+    setPaused(false);
+    setState("working");
+    dirty.current = true;
+    void save();
+  };
+
+  // The clock, from the server's end time. Stopped while paused.
   useEffect(() => {
+    if (paused) return;
     const tick = () => {
       const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setLeft(s);
@@ -149,7 +175,7 @@ export function MockPlayer({
     };
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [deadline, submit]);
+  }, [deadline, paused, submit]);
 
   useEffect(() => {
     const timer = window.setInterval(() => void save(), AUTOSAVE_MS);
@@ -223,15 +249,31 @@ export function MockPlayer({
           >
             ⏱ {MockGrader.clock(left)}
           </p>
-          <button
-            type="button"
-            onClick={() => void pause()}
-            disabled={state === "pausing" || state === "submitting"}
-            className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink disabled:opacity-60"
-          >
-            {state === "pausing" ? "Pausing…" : "⏸ Pause"}
-          </button>
+          {paused ? (
+            <button
+              type="button"
+              onClick={() => void resume()}
+              disabled={state === "resuming"}
+              className="rounded-md bg-gold px-3 py-1.5 text-xs font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60"
+            >
+              {state === "resuming" ? "Resuming…" : "▶ Resume"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void pause()}
+              disabled={state === "pausing" || state === "submitting"}
+              className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink disabled:opacity-60"
+            >
+              {state === "pausing" ? "Pausing…" : "⏸ Pause"}
+            </button>
+          )}
         </div>
+        {paused && (
+          <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
+            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on. Your work is kept if you close this page.
+          </p>
+        )}
       </header>
 
       <div className={`grid flex-1 gap-4 p-4 sm:p-6 ${palette ? "lg:grid-cols-[13rem_1fr]" : ""}`}>
@@ -385,12 +427,12 @@ export function MockPlayer({
             >
               Next ›
             </button>
-            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting"} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
+            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
               {state === "submitting" ? "Submitting…" : last ? "Submit" : `End session ${session!.index}`}
             </button>
           </div>
         </div>
-        {(confirming || state === "error") && state !== "submitting" && (
+        {(confirming || state === "error") && state !== "submitting" && !paused && (
           <div role="alertdialog" aria-label="Submit the mock" className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-4 py-3 text-sm sm:px-6">
             <p className={state === "error" ? "text-red-300" : "text-ink"}>
               {state === "error"
