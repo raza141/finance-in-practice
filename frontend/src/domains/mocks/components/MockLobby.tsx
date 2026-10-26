@@ -44,12 +44,19 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
                   Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}%. A retake shuffles the questions and keeps every mark.
                 </p>
               )}
-              <form action={startMock} className="mt-auto">
-                <input type="hidden" name="mockId" value={m.id} />
-                <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
-                  {open.has(m.id) ? "Resume" : done(m.id).length ? "Retake" : "Start mock"}
-                </button>
-              </form>
+              {/* A new attempt opens on the instructions first; an open one goes straight back in. */}
+              {open.has(m.id) || readOnly ? (
+                <form action={startMock} className="mt-auto">
+                  <input type="hidden" name="mockId" value={m.id} />
+                  <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
+                    {open.has(m.id) ? "Resume" : done(m.id).length ? "Retake" : "Start mock"}
+                  </button>
+                </form>
+              ) : (
+                <Link href={`/student/mocks/start/${m.id}`} className={`${BOOK_BUTTON} mt-auto self-start`}>
+                  {done(m.id).length ? "Retake" : "Start mock"}
+                </Link>
+              )}
             </li>
           ))}
         </ul>
