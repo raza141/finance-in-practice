@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { saveMockNote } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
@@ -30,7 +30,7 @@ const FILTERS: [Filter, string][] = [
   ["notes", "Has my notes"],
 ];
 
-/** The score card, the topic breakdown, and every question to revise, with notes still editable. */
+/** The score card, the topic breakdown, and the questions to revise one at a time (picked from a numbered grid, as in the exam), with notes still editable. */
 export function MockResults({
   attemptId,
   title,
@@ -71,6 +71,19 @@ export function MockResults({
     } catch {
       setStatus((s) => ({ ...s, [id]: "error" }));
     }
+  };
+
+  // One question on screen at a time (as in the exam): a full mock's 180 rendered at once made scrolling and typing crawl.
+  const [currentId, setCurrentId] = useState(questions[0]?.id);
+  const card = useRef<HTMLElement>(null);
+  // A filter that hides the open question opens its first one instead.
+  const at = Math.max(0, shown.findIndex((x) => x.id === currentId));
+  const q = shown[at];
+  const right = q?.selected === q?.correct;
+  const go = (id: string) => {
+    setCurrentId(id);
+    // Back to the top of the question when the last one's explanation left the page scrolled past it.
+    if ((card.current?.getBoundingClientRect().top ?? 0) < 0) card.current?.scrollIntoView({ block: "start" });
   };
 
   const pct = MockGrader.percent(grade.score, grade.total);
@@ -130,25 +143,61 @@ export function MockResults({
         </table>
       </section>
 
-      <div role="group" aria-label="Show questions" className="sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 p-1.5 backdrop-blur-md">
-        {FILTERS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={filter === id}
-            onClick={() => setFilter(id)}
-            className={`shrink-0 rounded-xl px-4 py-2 text-sm whitespace-nowrap transition-colors ${filter === id ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`}
-          >
-            {label} ({count(id)})
-          </button>
-        ))}
-      </div>
+      <section aria-label="Review questions" className="grid gap-4 lg:grid-cols-[13rem_1fr]">
+        <nav aria-label="Questions" className="self-start rounded-2xl border border-white/10 bg-canvas/90 p-3 lg:sticky lg:top-20">
+          <div role="group" aria-label="Show questions" className="grid grid-cols-2 gap-1">
+            {FILTERS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={filter === id}
+                onClick={() => setFilter(id)}
+                className={`rounded-lg px-2 py-1.5 text-xs transition-colors ${filter === id ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`}
+              >
+                {label} ({count(id)})
+              </button>
+            ))}
+          </div>
+          {/* Capped and scrolling, so a full mock's 180 numbers don't push the question off a phone's screen. */}
+          <ol className="mt-3 grid max-h-40 grid-cols-8 gap-1.5 overflow-y-auto p-1 sm:grid-cols-12 lg:max-h-[calc(100vh-16rem)] lg:grid-cols-5">
+            {shown.map((x) => {
+              const tone = x.selected === x.correct ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : x.selected ? "border-red-400/70 bg-red-400/20 text-red-200" : "border-line bg-surface text-muted";
+              return (
+                <li key={x.id}>
+                  <button
+                    type="button"
+                    onClick={() => go(x.id)}
+                    aria-current={x.id === q?.id ? "true" : undefined}
+                    aria-label={`Question ${x.number}, ${x.selected === x.correct ? "correct" : x.selected ? "incorrect" : "not answered"}${x.flagged ? ", flagged" : ""}`}
+                    className={`relative h-9 w-full rounded-md border font-mono text-xs ${tone} ${x.id === q?.id ? "ring-2 ring-quant ring-offset-2 ring-offset-canvas" : ""}`}
+                  >
+                    {x.number}
+                    {x.flagged && <span aria-hidden className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-gold" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <ul className="mt-3 grid gap-1.5 text-xs text-muted">
+            <li className="flex items-center gap-2">
+              <span className="size-3 rounded-sm border border-emerald-400/70 bg-emerald-400/20" /> Correct
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="size-3 rounded-sm border border-red-400/70 bg-red-400/20" /> Incorrect
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="size-3 rounded-sm border border-line bg-surface" /> Not answered
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="mx-0.5 size-2 rounded-full bg-gold" /> Flagged
+            </li>
+          </ul>
+        </nav>
 
-      {shown.length === 0 && <p className="text-sm text-muted">No questions here.</p>}
-      {shown.map((q) => {
-        const right = q.selected === q.correct;
-        return (
-          <article key={q.id} aria-labelledby={`rq-${q.id}`} className="rounded-2xl border border-line bg-surface/60 p-5 sm:p-6">
+        {!q ? (
+          <p className="text-sm text-muted">No questions here.</p>
+        ) : (
+          <article ref={card} key={q.id} aria-labelledby={`rq-${q.id}`} className="min-w-0 scroll-mt-20 self-start rounded-2xl border border-line bg-surface/60 p-5 sm:p-6">
             <header className="flex flex-wrap items-center justify-between gap-2">
               <h2 id={`rq-${q.id}`} className="font-mono text-xs tracking-[0.16em] text-quant uppercase">
                 Question {q.number} · {q.topic}
@@ -214,9 +263,20 @@ export function MockResults({
                 </p>
               </div>
             )}
+            <footer className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+              <button type="button" disabled={at <= 0} onClick={() => go(shown[at - 1].id)} className="h-10 rounded-md border border-line px-4 text-sm disabled:opacity-40">
+                ‹ Previous
+              </button>
+              <span className="font-mono text-xs text-muted">
+                {at + 1} of {shown.length}
+              </span>
+              <button type="button" disabled={at >= shown.length - 1} onClick={() => go(shown[at + 1].id)} className="h-10 rounded-md border border-line px-4 text-sm disabled:opacity-40">
+                Next ›
+              </button>
+            </footer>
           </article>
-        );
-      })}
+        )}
+      </section>
     </div>
   );
 }
