@@ -209,20 +209,21 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   background-image: var(--grid-lines);
 }
 
-/* The student portal's bar: a thin cyan-gold line sliding along its bottom edge, so the bar stands apart from the grid below.
-   One 2px strip repainted, nothing else; still for reduced motion. */
+/* The student portal's bar and tabs: a thin cyan-gold line sliding along the bottom edge, so they stand apart from the grid below.
+   One 1px strip repainted, nothing else; still for reduced motion. */
 @keyframes nav-line {
   to {
     background-position: 200% 0;
   }
 }
-/* Needs a positioned element (the bar is sticky). */
+/* Needs a positioned element (both are sticky). */
 @utility nav-line {
   &::after {
     content: "";
     position: absolute;
-    inset: auto 0 0;
-    height: 2px;
+    inset: auto 1rem 0;
+    height: 1px;
+    opacity: 0.6;
     background: linear-gradient(90deg, transparent, var(--color-quant), var(--color-gold), var(--color-quant), transparent) 0 0 / 50% 100% repeat-x;
     animation: nav-line 8s linear infinite;
   }

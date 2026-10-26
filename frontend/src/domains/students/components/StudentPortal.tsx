@@ -225,7 +225,7 @@ export function StudentPortal({
   return (
     <PortalTabs value={go}>
     <div className="grid gap-6">
-      <nav aria-label="Student portal" className="sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 p-1.5 backdrop-blur-md">
+      <nav aria-label="Student portal" className="nav-line sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 bg-linear-to-r from-quant/5 via-transparent to-gold/5 p-1.5 backdrop-blur-md">
         {TABS.map(([id, label]) => (
           <button
             key={id}
