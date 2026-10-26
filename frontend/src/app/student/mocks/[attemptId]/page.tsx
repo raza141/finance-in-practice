@@ -71,7 +71,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
 
   return (
     <div className="relative -mt-20 min-h-screen overflow-clip">
-      <FinanceBackdrop glow={false} className="absolute inset-0 bg-fixed" />
+      <FinanceBackdrop glow={false} className="fixed inset-0" />
       <header className="sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
         <div className="page-container flex h-16 items-center justify-between gap-4">
           <Link href="/" aria-label="Finance in Practice website">

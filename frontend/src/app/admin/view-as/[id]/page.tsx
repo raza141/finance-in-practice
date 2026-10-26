@@ -20,7 +20,7 @@ export default async function ViewAsStudentPage({ params }: PageProps<"/admin/vi
 
   return (
     <div className="relative min-h-screen overflow-clip">
-      <FinanceBackdrop glow={false} className="absolute inset-0 bg-fixed" />
+      <FinanceBackdrop glow={false} className="fixed inset-0" />
       {/* h-16, like the portal's own bar: its tabs stick just below it. */}
       <header className="sticky top-0 z-30 bg-gold/95 text-canvas">
         <div className="page-container flex h-16 items-center justify-between gap-4 text-sm">

@@ -45,7 +45,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
     <div className="relative -mt-20 min-h-screen overflow-clip">
       {/* Grid pinned to the screen, like the bar's, so the frozen bar blends into the page. */}
-      <FinanceBackdrop glow={false} className="absolute inset-0 bg-fixed" />
+      <FinanceBackdrop glow={false} className="fixed inset-0" />
 
       {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
       {/* Frozen at the top while scrolling (the portal tabs stick just below it), in the page's own colour and grid. */}
