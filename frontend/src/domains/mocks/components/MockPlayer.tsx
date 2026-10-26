@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { BackToPortal } from "@/domains/students/components/BackToPortal";
+
 import { autosaveMock, pauseMock, resumeMock, submitMock } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
 import type { MockResponse, OptionLetter } from "../types";
@@ -282,9 +284,7 @@ export function MockPlayer({
             ⏱ {MockGrader.clock(left)}
           </p>
           {paused && (
-            <a href={exitHref} className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink">
-              ← {preview ? "Exit" : "Back to portal"}
-            </a>
+            <BackToPortal href={exitHref} label={preview ? "Exit" : "Back to portal"} />
           )}
           {paused ? (
             <button

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { startMock } from "@/domains/mocks/actions/mocks";
 import { MockSession } from "@/domains/mocks/server/MockSession";
 import { MockContract } from "@/domains/mocks/services/MockContract";
+import { BackToPortal } from "@/domains/students/components/BackToPortal";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = { title: "Mock exam instructions", robots: { index: false, follow: false } };
@@ -136,9 +136,7 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
             I have read the instructions and I&rsquo;m ready to begin.
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <Link href="/student" className="rounded-md border border-line px-4 py-2.5 text-sm text-muted hover:text-ink">
-              ← Back to the portal
-            </Link>
+            <BackToPortal />
             <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
               Begin exam
             </button>

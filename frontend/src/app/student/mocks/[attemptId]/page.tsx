@@ -11,6 +11,7 @@ import { AttemptResults, renderQuestion } from "@/domains/mocks/components/Attem
 import { MockSession } from "@/domains/mocks/server/MockSession";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 import { MockGrader } from "@/domains/mocks/services/MockGrader";
+import { BackToPortal } from "@/domains/students/components/BackToPortal";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = { title: "Mock exam", robots: { index: false, follow: false } };
@@ -71,9 +72,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
           <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
           </Link>
-          <Link href="/student" className="rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:text-ink">
-            ← Back to the portal
-          </Link>
+          <BackToPortal />
         </div>
       </header>
       <div className="page-container relative py-8 lg:py-10">
