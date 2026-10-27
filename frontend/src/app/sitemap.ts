@@ -15,6 +15,7 @@ export const revalidate = 300;
 const STATIC_ROUTES: { path: string; priority: number; changeFrequency: "daily" | "monthly" }[] = [
   { path: "", priority: 1, changeFrequency: "daily" }, // Market Pulse card refreshes each trading day
   { path: "/courses", priority: 0.9, changeFrequency: "monthly" },
+  { path: "/pricing", priority: 0.9, changeFrequency: "monthly" },
   { path: "/consulting", priority: 0.8, changeFrequency: "monthly" },
   { path: "/resources", priority: 0.8, changeFrequency: "monthly" },
   { path: "/about", priority: 0.7, changeFrequency: "monthly" },
