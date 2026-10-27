@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- .",
   "crons": [
     { "path": "/api/cron/weekly-digest", "schedule": "0 5 * * 0" },
     { "path": "/api/cron/cfa-question", "schedule": "0 4 * * *" }
