@@ -38,7 +38,10 @@ import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClient
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { Batches } from "@/domains/students/services/Batches";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
+import { endAccessGrant } from "@/domains/mocks/actions/mocks";
+import { AccessGrantForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
+import { MockContract } from "@/domains/mocks/services/MockContract";
 import { MockGrader } from "@/domains/mocks/services/MockGrader";
 
 export const metadata: Metadata = { title: "Client" };
@@ -121,6 +124,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     console.error("admin: could not load mock attempts", error);
     return [];
   });
+  const [accessGrants, grantableMocks] = await Promise.all([
+    MockRepository.fromEnv()?.grants(client.id) ?? [],
+    MockRepository.fromEnv()?.all() ?? [],
+  ]).catch((error) => {
+    console.error("admin: could not load access grants", error);
+    return [[], []] as [never[], never[]];
+  });
   const query = await searchParams;
   const notice = NOTICES[String(query.notice)];
   const reason = typeof query.reason === "string" ? query.reason : null;
@@ -147,6 +157,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     ["documents", "Documents"],
     ["study-plan", "Study plan"],
     ["mocks", "Mock exams"],
+    ["access", "Access"],
     ["classroom", "Classroom"],
     ["details", "Details"],
   ] as const;
@@ -549,6 +560,42 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
             ))}
           </ul>
         )}
+      </section>
+
+      <section id="access" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
+        <h2 className="text-lg">Access</h2>
+        <p className="mt-1 text-sm text-muted">Mocks and topic practice are granted separately. Ending access keeps their past results, and an attempt already started can be finished.</p>
+        {accessGrants.length > 0 && (
+          <ul className="mt-4 divide-y divide-line rounded-lg border border-line text-sm">
+            {accessGrants.map((g) => {
+              const live = !g.endsAt || g.endsAt > new Date();
+              return (
+                <li key={g.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <span>
+                    <span className="font-medium">{g.product ? MockContract.PRODUCTS[g.product] : g.mockTitle}</span>
+                    <span className="block font-mono text-xs text-muted">
+                      {g.startsAt.toLocaleDateString("en-GB", { timeZone: "Asia/Dubai" })} to {g.endsAt ? g.endsAt.toLocaleDateString("en-GB", { timeZone: "Asia/Dubai" }) : "no end"} · {g.source}
+                    </span>
+                  </span>
+                  {live ? (
+                    <form action={endAccessGrant}>
+                      <input type="hidden" name="clientId" value={client.id} />
+                      <input type="hidden" name="grantId" value={g.id} />
+                      <button type="submit" className="text-sm text-red-300 hover:underline">
+                        End access
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="text-xs text-muted">Ended</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="mt-4">
+          <AccessGrantForm clientId={client.id} mocks={grantableMocks} />
+        </div>
       </section>
 
       <section id="classroom" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { MockExamForm } from "@/domains/mocks/components/MockAdminForms";
+import { MockTable } from "@/domains/mocks/components/MockTable";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
 export const metadata: Metadata = { title: "Mock exams" };
 
-/** Timed mock exams for the student portal: each is a sheet of questions with a duration. */
+/** Timed mock exams for the student portal: each picks its questions from the bank. */
 export default async function AdminMocksPage() {
   await AdminAuth.require();
   const repo = MockRepository.fromEnv();
@@ -20,13 +21,13 @@ export default async function AdminMocksPage() {
       </p>
     );
   }
-  const mocks = await repo.all();
+  const mocks = (await repo.all()).filter((m) => !MockContract.isPractice(m.mockType));
 
   return (
     <div className="max-w-5xl">
       <PageHeader
         title="Mock exams"
-        description="Published mocks appear to every signed-in student under Study plan & materials. Create a mock, upload its question sheet, then publish it."
+        description="Create a mock, add questions from the question bank, try it, then publish it."
         actions={
           <Link href="/admin/mocks/bank" className={PRIMARY_ACTION}>
             Question bank
@@ -34,42 +35,7 @@ export default async function AdminMocksPage() {
         }
       />
 
-      {mocks.length === 0 ? (
-        <p className="mt-8 text-muted">No mocks yet.</p>
-      ) : (
-        <div className="mt-8 overflow-x-auto rounded-lg border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-surface text-left text-xs text-muted">
-              <tr>
-                <th className="px-4 py-3">Mock</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Questions</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {mocks.map((m) => (
-                <tr key={m.id}>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/mocks/${m.id}`} className="font-medium hover:text-quant">
-                      {m.title}
-                    </Link>
-                    {m.source && <span className="block text-xs text-muted">{m.source}</span>}
-                  </td>
-                  <td className="px-4 py-3 text-muted">{MockContract.TYPES[m.mockType]}</td>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {m.questionCount} · {m.durationMinutes} min
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    <span className={m.published ? "text-emerald-300" : "text-muted"}>{m.published ? "Published" : "Draft"}</span>
-                    {m.audience !== "all" && <span className="block text-muted">{m.audience === "course" ? m.courses.join(", ") : "Selected clients"}</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {mocks.length === 0 ? <p className="mt-8 text-muted">No mocks yet.</p> : <MockTable mocks={mocks} label="Mock" />}
 
       <section aria-labelledby="new-mock" className="mt-10 rounded-lg border border-line p-5">
         <h2 id="new-mock" className="text-lg">
@@ -79,14 +45,6 @@ export default async function AdminMocksPage() {
           <MockExamForm />
         </div>
       </section>
-
-      <p className="mt-6 text-sm text-muted">
-        To build a mock from questions already uploaded (by topic, a number from each, or ticked by hand), open the{" "}
-        <Link href="/admin/mocks/bank" className="text-quant hover:underline">
-          question bank
-        </Link>
-        .
-      </p>
     </div>
   );
 }

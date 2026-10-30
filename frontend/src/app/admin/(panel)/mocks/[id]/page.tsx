@@ -10,8 +10,8 @@ import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { Inline } from "@/domains/journal/components/RichText";
 import { QuestionPreview } from "@/domains/mocks/components/QuestionPreview";
 import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
-import { deleteMock, deleteMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
-import { MockAccessForm, MockExamForm, MockQuestionForm, MockUploadForm } from "@/domains/mocks/components/MockAdminForms";
+import { deleteMock, moveMockQuestion, removeMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
+import { MockAccessForm, MockBankForm, MockExamForm, type BankTopic } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -19,23 +19,39 @@ export const metadata: Metadata = { title: "Edit mock exam" };
 
 export default async function AdminMockPage({ params, searchParams }: PageProps<"/admin/mocks/[id]">) {
   await AdminAuth.require();
-  const [{ id }, { notice, edit }] = await Promise.all([params, searchParams]);
+  const [{ id }, { notice, add, chapter: chapterParam }] = await Promise.all([params, searchParams]);
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;
   if (!repo || !mock) notFound();
-  const [questions, students, granted, topics] = await Promise.all([
+  const [questions, students, granted, offered] = await Promise.all([
     repo.questions(mock.id),
     repo.students(),
     repo.accessClients(mock.id),
-    edit && !mock.attempted ? repo.topicNames() : [],
+    // ponytail: every available question's preview is rendered into the page; past a few thousand, load a topic's list on open.
+    add && !mock.attempted ? repo.pool(mock) : [],
   ]);
-  // ?edit=new adds a question, ?edit=<question id> edits that one.
-  const editing = mock.attempted ? undefined : edit === "new" ? null : questions.find((q) => q.id === edit);
+  const chapter = typeof chapterParam === "string" ? chapterParam : "";
+  const chapters = [...new Set(offered.map((q) => q.chapter.trim()).filter(Boolean))].sort();
+  const noun = MockContract.isPractice(mock.mockType) ? "set" : "mock";
+
+  // One group per topic however it was capitalised or spaced, named as first written.
+  const groups = new Map<string, BankTopic>();
+  for (const q of offered) {
+    if (chapter && q.chapter.trim().toLowerCase() !== chapter.toLowerCase()) continue;
+    const key = q.topic.trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, { topic: q.topic.trim(), questions: [] });
+    groups.get(key)!.questions.push({
+      id: q.id,
+      label: `${q.chapter ? `${q.chapter} · ` : ""}${q.vignette ? "vignette · " : ""}answer ${q.correct}`,
+      summary: <Inline text={MockExhibits.parse(q.question).find((p) => p.kind === "text")?.text ?? "(exhibit)"} />,
+      preview: <QuestionPreview q={q} />,
+    });
+  }
 
   return (
     <div className="max-w-5xl">
-      <Link href="/admin/mocks" className="text-sm text-quant hover:underline">
-        ← Mock exams
+      <Link href={noun === "set" ? "/admin/mocks/practice" : "/admin/mocks"} className="text-sm text-quant hover:underline">
+        ← {noun === "set" ? "Practice sets" : "Mock exams"}
       </Link>
       <PageHeader
         title={mock.title}
@@ -63,12 +79,12 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
       />
       {notice === "attempted" && (
         <p role="alert" className="mt-4 text-sm text-gold">
-          Students have sat this mock. To delete it, tick the box by &ldquo;Delete this mock&rdquo; (their results go too), or unpublish it to hide it.
+          Students have sat this. To delete it, tick the box by &ldquo;Delete this&rdquo; (their results go too), or unpublish it to hide it.
         </p>
       )}
-      {!mock.published && mock.questionCount === 0 && <p className="mt-4 text-sm text-muted">Upload the questions before publishing: a mock with none isn&rsquo;t shown.</p>}
+      {!mock.published && mock.questionCount === 0 && <p className="mt-4 text-sm text-muted">Add questions from the bank before publishing: it can&rsquo;t be published with none.</p>}
       {!mock.published && mock.questionCount > 0 && (
-        <p className="mt-4 text-sm text-muted">Draft: students can&rsquo;t see it yet. Try it as a student, fix anything (edit a question or upload the sheet again), then publish.</p>
+        <p className="mt-4 text-sm text-muted">Draft: students can&rsquo;t see it yet. Try it as a student, fix anything, then publish.</p>
       )}
 
       <section aria-labelledby="details" className="mt-8 rounded-lg border border-line p-5">
@@ -94,48 +110,54 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         <h2 id="sheet" className="text-lg">
           Questions
         </h2>
-        <p className="mt-2 text-sm text-muted">
-          Columns: Number, Topic, Vignette (optional), Question, Option_A, Option_B, Option_C, Correct_Option (A, B or C), Explanation (optional). A new upload replaces
-          every question.
-        </p>
-        <div className="mt-4">
-          <MockUploadForm mockId={mock.id} attempted={mock.attempted} />
-        </div>
+        {mock.questionCount > 0 && (
+          <p className="mt-1 text-sm text-muted">
+            At the CFA pace, {mock.questionCount} questions take about {MockContract.minutes(mock.questionCount, mock.mockType)} min; this {noun} is set to {mock.durationMinutes}.
+          </p>
+        )}
         {mock.attempted ? (
-          <p className="mt-4 text-sm text-muted">Students have started this mock, so single questions can&rsquo;t be edited; upload the corrected sheet above instead.</p>
-        ) : (
-          <>
-            {editing === undefined ? (
-              <Link href={`/admin/mocks/${mock.id}?edit=new#editor`} className="mt-6 inline-block text-sm text-quant hover:underline">
-                + Add one question here (easier for tables and term structures)
+          <p className="mt-2 text-sm text-muted">Students have started this {noun}, so its questions are fixed. For changes, make a new one.</p>
+        ) : add ? (
+          <div id="add" className="mt-4 scroll-mt-6 rounded-lg border border-quant/40 p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-medium">Add from the bank</h3>
+              <Link href={`/admin/mocks/${mock.id}`} className="text-sm text-muted hover:text-ink">
+                Close
               </Link>
-            ) : (
-              <div id="editor" className="mt-6 scroll-mt-6 rounded-lg border border-quant/40 p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-medium">{editing ? `Edit question ${editing.number}` : "Add a question"}</h3>
-                  <Link href={`/admin/mocks/${mock.id}`} className="text-sm text-muted hover:text-ink">
-                    Cancel
-                  </Link>
-                </div>
-                <MockQuestionForm
-                  key={editing?.id ?? "new"}
-                  mockId={mock.id}
-                  question={editing ?? undefined}
-                  nextNumber={Math.max(0, ...questions.map((q) => q.number)) + 1}
-                  topics={topics}
-                />
-                {editing && (
-                  <form action={deleteMockQuestion} className="mt-4">
-                    <input type="hidden" name="id" value={mock.id} />
-                    <input type="hidden" name="questionId" value={editing.id} />
-                    <PendingButton pendingLabel="Deleting…" className="text-sm text-red-300 hover:underline">
-                      Delete this question
-                    </PendingButton>
-                  </form>
-                )}
-              </div>
+            </div>
+            {chapters.length > 0 && (
+              <form className="mb-4 flex flex-wrap items-end gap-2">
+                <input type="hidden" name="add" value="1" />
+                <label className="grid gap-1 text-sm text-muted">
+                  Chapter
+                  <select name="chapter" defaultValue={chapter} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink">
+                    <option value="">All chapters</option>
+                    {chapters.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" className="h-9 rounded-md border border-line px-4 text-sm hover:border-quant/50">
+                  Show
+                </button>
+              </form>
             )}
-          </>
+            {groups.size > 0 ? (
+              <MockBankForm key={chapter} mockId={mock.id} topics={[...groups.values()]} chapter={chapter} />
+            ) : (
+              <p className="text-sm text-muted">
+                No questions left to add. Only active questions marked for {noun === "set" ? "practice" : "mocks"} appear here;{" "}
+                <Link href="/admin/mocks/bank" className="text-quant hover:underline">
+                  check the question bank
+                </Link>
+                .
+              </p>
+            )}
+          </div>
+        ) : (
+          <Link href={`/admin/mocks/${mock.id}?add=1#add`} className="mt-3 inline-block text-sm text-quant hover:underline">
+            + Add from the question bank
+          </Link>
         )}
         {questions.length > 0 && (
           <ol className="mt-6 divide-y divide-line rounded-lg border border-line text-sm">
@@ -147,9 +169,28 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                     {q.vignette && " · vignette"} · answer <span className="text-emerald-300">{q.correct}</span>
                   </span>
                   {!mock.attempted && (
-                    <Link href={`/admin/mocks/${mock.id}?edit=${q.id}#editor`} className="text-quant hover:underline">
-                      Edit
-                    </Link>
+                    <span className="flex gap-3">
+                      {(["up", "down"] as const).map((direction) => (
+                        <form key={direction} action={moveMockQuestion}>
+                          <input type="hidden" name="id" value={mock.id} />
+                          <input type="hidden" name="questionId" value={q.id} />
+                          <input type="hidden" name="direction" value={direction} />
+                          <button type="submit" aria-label={`Move question ${q.number} ${direction}`} className="text-quant hover:underline">
+                            {direction === "up" ? "↑" : "↓"}
+                          </button>
+                        </form>
+                      ))}
+                      <Link href={`/admin/mocks/bank?edit=${q.id}#editor`} className="text-quant hover:underline">
+                        Edit in bank
+                      </Link>
+                      <form action={removeMockQuestion}>
+                        <input type="hidden" name="id" value={mock.id} />
+                        <input type="hidden" name="questionId" value={q.id} />
+                        <button type="submit" className="text-red-300 hover:underline">
+                          Remove
+                        </button>
+                      </form>
+                    </span>
                   )}
                 </p>
                 {/* Opens to the question as students see it, tables and charts included. */}
@@ -172,11 +213,11 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         {mock.attempted && (
           <label className="flex items-start gap-2 text-sm text-red-200">
             <input type="checkbox" name="withAttempts" value="1" required className="mt-1" />
-            Students have started this mock. Deleting it deletes their attempts and results too. Tick to go ahead.
+            Students have started this. Deleting it deletes their attempts and results too. The questions stay in the bank. Tick to go ahead.
           </label>
         )}
         <PendingButton pendingLabel="Deleting…" className="text-sm text-red-300 hover:underline">
-          Delete this mock
+          Delete this {noun}
         </PendingButton>
       </form>
     </div>

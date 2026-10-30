@@ -1,6 +1,8 @@
-export type MockType = "book" | "topic" | "random" | "full";
+export type MockType = "book" | "topic" | "chapter" | "random" | "full";
+/** Where a bank question may go: practice sets, mocks, or either. */
+export type QuestionUsage = "practice" | "mock" | "both";
 export type OptionLetter = "A" | "B" | "C";
-/** Who sees a mock: every portal student, those on certain courses, or named clients. */
+/** Who sees a mock: every portal student, those on certain courses, or only students with a grant (the setting for a paid mock). */
 export type MockAudience = "all" | "course" | "clients";
 
 export interface MockAccess {
@@ -9,7 +11,20 @@ export interface MockAccess {
   courses: string[];
   /** Client ids; used when audience is "clients". */
   clients: string[];
+  /** When those clients' access to this mock ends; null: no end. */
+  endsAt: Date | null;
 }
+
+export type AccessProduct = "mocks" | "practice";
+export type GrantSource = "admin" | "package" | "purchase";
+
+/** What a grant gives: a whole product, or one mock. */
+export type GrantTarget = { product: AccessProduct; mockId: null } | { product: null; mockId: string };
+
+export type AccessGrantInput = GrantTarget & { startsAt: Date; endsAt: Date | null };
+
+/** One client's access to a product or a mock, with the mock's title when it's for one. */
+export type AccessGrant = AccessGrantInput & { id: string; mockTitle: string | null; source: GrantSource };
 
 /** A portal student the admin can grant a mock to. */
 export interface MockStudent {
@@ -42,6 +57,9 @@ export interface MockExam extends MockExamInput {
 export interface MockQuestionInput {
   number: number;
   topic: string;
+  /** Free text like the topic; "" when the sheet has none. */
+  chapter: string;
+  usage: QuestionUsage;
   vignette: string;
   question: string;
   options: [string, string, string];
@@ -64,10 +82,16 @@ export interface MockQuestion extends ActiveQuestion {
   explanation: string;
 }
 
-/** A question in the bank, with the mock it was uploaded to. */
+/** A question in the bank. */
 export interface PoolQuestion extends MockQuestion {
-  mockId: string;
-  mockTitle: string;
+  chapter: string;
+  usage: QuestionUsage;
+  /** Can't be picked for a new assessment; stays in the ones that use it. */
+  retired: boolean;
+  /** In an assessment students have started: its text is fixed, as results are graded from it. */
+  locked: boolean;
+  /** Titles of the assessments that use it. */
+  usedIn: string[];
 }
 
 export interface MockResponse {

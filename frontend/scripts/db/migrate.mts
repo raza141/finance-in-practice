@@ -1277,6 +1277,73 @@ const MIGRATIONS: Migration[] = [
     id: "059_mock_pause",
     statements: [`ALTER TABLE mock_attempts ADD COLUMN paused_at timestamptz`],
   },
+  {
+    // The bank is mock_questions on its own: a question needs no mock, and mock_items says which
+    // questions an assessment uses, in what order. Rows keep their ids, so mock_responses and past
+    // results stand; mock_id and number only record where a question first came from. Identical
+    // rows (old bank builds copied them) stay separate rows but share content_key: one question in the bank.
+    id: "060_question_bank",
+    statements: [
+      `CREATE FUNCTION mock_question_key(topic text, vignette text, question text, a text, b text, c text, correct text) RETURNS text
+        LANGUAGE sql IMMUTABLE AS $fn$ SELECT md5(concat_ws(chr(31), lower(trim(topic)), vignette, question, a, b, c, correct)) $fn$`,
+      `ALTER TABLE mock_questions
+        ALTER COLUMN mock_id DROP NOT NULL,
+        ALTER COLUMN number DROP NOT NULL,
+        ADD COLUMN chapter text NOT NULL DEFAULT '' CHECK (char_length(chapter) <= 80),
+        ADD COLUMN usage text NOT NULL DEFAULT 'mock' CHECK (usage IN ('practice', 'mock', 'both')),
+        ADD COLUMN retired boolean NOT NULL DEFAULT false,
+        ADD COLUMN content_key text GENERATED ALWAYS AS (mock_question_key(topic, vignette, question, option_a, option_b, option_c, correct)) STORED`,
+      `CREATE INDEX mock_questions_content_idx ON mock_questions (content_key)`,
+      `ALTER TABLE mock_questions DROP CONSTRAINT mock_questions_mock_id_fkey`,
+      `ALTER TABLE mock_questions ADD CONSTRAINT mock_questions_mock_id_fkey FOREIGN KEY (mock_id) REFERENCES mock_exams (id) ON DELETE SET NULL`,
+      // Deferrable so one UPDATE can swap two numbers. question_id cascades only while the old code
+      // can still delete rows during the deploy; the repository refuses it.
+      `CREATE TABLE mock_items (
+        mock_id     uuid NOT NULL REFERENCES mock_exams (id) ON DELETE CASCADE,
+        question_id uuid NOT NULL REFERENCES mock_questions (id) ON DELETE CASCADE,
+        number      smallint NOT NULL CHECK (number BETWEEN 1 AND 500),
+        PRIMARY KEY (mock_id, question_id),
+        UNIQUE (mock_id, number) DEFERRABLE INITIALLY IMMEDIATE
+      )`,
+      `CREATE INDEX mock_items_question_idx ON mock_items (question_id)`,
+      `INSERT INTO mock_items (mock_id, question_id, number) SELECT mock_id, id, number FROM mock_questions`,
+      `ALTER TABLE mock_exams DROP CONSTRAINT mock_exams_mock_type_check`,
+      `ALTER TABLE mock_exams ADD CONSTRAINT mock_exams_mock_type_check CHECK (mock_type IN ('book', 'topic', 'chapter', 'random', 'full'))`,
+    ],
+  },
+  {
+    // Who has what, from when, until when: a product ("mocks" or "practice", kept apart) or one mock.
+    // Separate from content, so a future payment only writes a row (source 'purchase'). mock_access is
+    // copied here and stays until the old code is gone. mock_open_to is the one access rule.
+    id: "061_access_grants",
+    statements: [
+      `CREATE TABLE access_grants (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id  uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        product    text CHECK (product IN ('mocks', 'practice')),
+        mock_id    uuid REFERENCES mock_exams (id) ON DELETE CASCADE,
+        starts_at  timestamptz NOT NULL DEFAULT now(),
+        ends_at    timestamptz,
+        source     text NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'package', 'purchase')),
+        invoice_id uuid REFERENCES invoices (id) ON DELETE SET NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        CHECK ((product IS NULL) <> (mock_id IS NULL)),
+        CHECK (ends_at IS NULL OR ends_at > starts_at)
+      )`,
+      `CREATE INDEX access_grants_client_idx ON access_grants (client_id)`,
+      `CREATE INDEX access_grants_mock_idx ON access_grants (mock_id)`,
+      `INSERT INTO access_grants (client_id, mock_id) SELECT client_id, mock_id FROM mock_access`,
+      `CREATE FUNCTION mock_open_to(m mock_exams, client uuid) RETURNS boolean LANGUAGE sql STABLE AS $fn$
+        SELECT m.audience = 'all'
+          OR (m.audience = 'course' AND EXISTS (SELECT 1 FROM clients c WHERE c.id = client AND m.courses && c.courses))
+          OR EXISTS (
+            SELECT 1 FROM access_grants g
+            WHERE g.client_id = client AND g.starts_at <= now() AND (g.ends_at IS NULL OR g.ends_at > now())
+              AND (g.mock_id = m.id OR g.product = CASE WHEN m.mock_type IN ('topic', 'chapter') THEN 'practice' ELSE 'mocks' END)
+          )
+      $fn$`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

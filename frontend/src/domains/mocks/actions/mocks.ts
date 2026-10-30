@@ -9,7 +9,6 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { MockSession } from "../server/MockSession";
 import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
-import type { MockType } from "../types";
 
 export type MockActionState = { ok: boolean; message: string; errors?: string[] } | null;
 
@@ -86,83 +85,100 @@ export async function saveMockNote(attemptId: string, questionId: string, notes:
   return { ok: await MockSession.repo().saveNote(attemptId, clientId, questionId, notes.slice(0, MockContract.MAX_NOTES)) };
 }
 
-// --- Admin ---
+// --- Admin: assessments ---
 
-/** Create (no id) or update the mock's details. */
+/** Create (no id) or update the assessment's details. A new one is an empty draft; its questions come from the bank. */
 export async function saveMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require();
   const id = String(form.get("id") ?? "");
-  // A new mock can come with its sheet: checked first, so a bad sheet creates nothing. A blank duration is set from the questions.
-  const file = form.get("file");
-  const sheet = !id && file instanceof File && file.size > 0 ? MockContract.parseSheet(await file.text()) : null;
-  if (sheet && !sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
-  if (sheet?.ok && !String(form.get("durationMinutes") ?? "").trim()) {
-    form.set("durationMinutes", String(MockContract.minutes(sheet.questions.length, String(form.get("mockType")) as MockType)));
-  }
   const parsed = MockContract.parseExam(form);
   if (!parsed.ok) return { ok: false, message: parsed.error };
   const repo = MockSession.repo();
-  if (!id) {
-    const created = await repo.create(parsed.value);
-    if (sheet?.ok) await repo.replaceQuestions(created, sheet.questions);
-    redirect(`/admin/mocks/${created}`);
-  }
+  if (!id) redirect(`/admin/mocks/${await repo.create(parsed.value)}`);
   if (!MockContract.isUuid(id)) return { ok: false, message: "Unknown mock." };
   await repo.update(id, parsed.value);
   refresh();
   return { ok: true, message: "Saved." };
 }
 
-/** The question sheet: a .csv file, or rows pasted from Excel. Replaces every question until someone starts the mock. */
-export async function uploadMockQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+/** Adds to an assessment from the bank: ticked questions and random ones by topic. */
+export async function addMockQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require();
   const id = String(form.get("id"));
-  if (!MockContract.isUuid(id)) return { ok: false, message: "Unknown mock." };
-  const file = form.get("file");
-  const text = file instanceof File && file.size > 0 ? await file.text() : String(form.get("paste") ?? "");
-  if (!text.trim()) return { ok: false, message: "Choose a .csv file or paste the rows from Excel." };
-  const sheet = MockContract.parseSheet(text);
-  if (!sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
-  // Ticked on a mock students have started: their attempts and results are deleted with the old questions.
-  const saved = await MockSession.repo().replaceQuestions(id, sheet.questions, form.get("clearAttempts") === "1");
-  if (!saved) return { ok: false, message: "Students have started this mock. Tick the box to delete their attempts and upload again." };
+  const repo = MockSession.repo();
+  const mock = MockContract.isUuid(id) ? await repo.byId(id) : null;
+  if (!mock) return { ok: false, message: "Unknown mock." };
+  if (mock.attempted) return { ok: false, message: "Students have started this mock, so its questions are fixed." };
+  const pick = MockContract.parsePool(form);
+  if (!pick.ok) return { ok: false, message: pick.error };
+  const added = await repo.addFromBank(mock, pick.value);
+  if (!added) return { ok: false, message: "No bank questions match those topics and ticks." };
   revalidatePath("/student");
-  refresh();
-  return { ok: true, message: `Saved ${sheet.questions.length} questions.` };
-}
-
-/** Adds or edits one question (the bank's way in for exhibit-heavy questions, or a typo); back to the mock's list. */
-export async function saveMockQuestion(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
-  const id = String(form.get("id"));
-  const questionId = String(form.get("questionId") ?? "");
-  if (!MockContract.isUuid(id) || (questionId && !MockContract.isUuid(questionId))) return { ok: false, message: "Unknown mock." };
-  const parsed = MockContract.parseQuestion(form);
-  if (!parsed.ok) return { ok: false, message: "Nothing was saved. Fix these and save again:", errors: parsed.errors };
-  const saved = await MockSession.repo().saveQuestion(id, questionId || null, parsed.value);
-  if (saved === "fixed") return { ok: false, message: "Students have already started this mock, so its questions are fixed. Make a new mock instead." };
-  if (saved === "taken") return { ok: false, message: `Question ${parsed.value.number} already exists in this mock. Pick another number.` };
-  redirect(`/admin/mocks/${id}#q${parsed.value.number}`);
-}
-
-export async function deleteMockQuestion(form: FormData): Promise<void> {
-  await AdminAuth.require();
-  const id = String(form.get("id"));
-  const questionId = String(form.get("questionId"));
-  if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().deleteQuestion(id, questionId);
   redirect(`/admin/mocks/${id}`);
 }
 
-/** A new draft mock from the question bank: ticked questions and random ones by topic; opens it for the preview. */
-export async function buildMockFromPool(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+export async function removeMockQuestion(form: FormData): Promise<void> {
   await AdminAuth.require();
-  const exam = MockContract.parseExam(form);
-  if (!exam.ok) return { ok: false, message: exam.error };
-  const pick = MockContract.parsePool(form);
-  if (!pick.ok) return { ok: false, message: pick.error };
-  const built = await MockSession.repo().buildFromPool(exam.value, pick.value);
-  if (!built) return { ok: false, message: "No uploaded questions match those topics, ticks and mocks." };
-  redirect(`/admin/mocks/${built.id}`);
+  const id = String(form.get("id"));
+  const questionId = String(form.get("questionId"));
+  if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().removeItem(id, questionId);
+  revalidatePath("/student");
+  refresh();
+}
+
+export async function moveMockQuestion(form: FormData): Promise<void> {
+  await AdminAuth.require();
+  const id = String(form.get("id"));
+  const questionId = String(form.get("questionId"));
+  if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().moveItem(id, questionId, form.get("direction") === "up" ? "up" : "down");
+  refresh();
+}
+
+// --- Admin: the question bank ---
+
+/** The question sheet: a .csv file, or rows pasted from Excel. Adds to the bank; nothing joins an assessment until it's picked. */
+export async function uploadBankQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const file = form.get("file");
+  const text = file instanceof File && file.size > 0 ? await file.text() : String(form.get("paste") ?? "");
+  if (!text.trim()) return { ok: false, message: "Choose a .csv file or paste the rows from Excel." };
+  const usage = form.get("usage");
+  const sheet = MockContract.parseSheet(text, MockContract.isUsage(usage) ? usage : "mock");
+  if (!sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
+  const { added, skipped } = await MockSession.repo().importQuestions(sheet.questions);
+  refresh();
+  return { ok: true, message: `Added ${added} question${added === 1 ? "" : "s"}.${skipped ? ` ${skipped} already in the bank, skipped.` : ""}` };
+}
+
+/** Adds or edits one bank question (the way in for exhibit-heavy questions, or a typo). */
+export async function saveBankQuestion(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const questionId = String(form.get("questionId") ?? "");
+  if (questionId && !MockContract.isUuid(questionId)) return { ok: false, message: "Unknown question." };
+  const parsed = MockContract.parseQuestion(form);
+  if (!parsed.ok) return { ok: false, message: "Nothing was saved. Fix these and save again:", errors: parsed.errors };
+  const saved = await MockSession.repo().saveQuestion(questionId || null, parsed.value);
+  if (saved === "locked") return { ok: false, message: "Students have started a mock with this question, so its text is fixed. Use Copy to make an edited version." };
+  revalidatePath("/student");
+  redirect("/admin/mocks/bank");
+}
+
+export async function deleteBankQuestion(form: FormData): Promise<void> {
+  await AdminAuth.require();
+  const questionId = String(form.get("questionId"));
+  const deleted = MockContract.isUuid(questionId) && (await MockSession.repo().deleteQuestion(questionId));
+  redirect(deleted ? "/admin/mocks/bank" : "/admin/mocks/bank?notice=used");
+}
+
+/** The bank's bulk bar: retire, restore, or set where the ticked questions may be used. */
+export async function updateBankQuestions(form: FormData): Promise<void> {
+  await AdminAuth.require();
+  const ids = form.getAll("q").map(String).filter(MockContract.isUuid);
+  const op = form.get("op");
+  const repo = MockSession.repo();
+  if (ids.length && (op === "retire" || op === "restore")) await repo.setRetired(ids, op === "retire");
+  else if (ids.length && MockContract.isUsage(op)) await repo.setUsage(ids, op);
+  refresh();
 }
 
 /** Who can see and start the mock. Students already part-way through keep their attempt. */
@@ -176,6 +192,28 @@ export async function setMockAccess(_prev: MockActionState, form: FormData): Pro
   revalidatePath("/student");
   refresh();
   return { ok: true, message: "Saved." };
+}
+
+/** A client's access to a product or one mock, from their client page. */
+export async function addAccessGrant(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const clientId = String(form.get("clientId"));
+  if (!MockContract.isUuid(clientId)) return { ok: false, message: "Unknown client." };
+  const grant = MockContract.parseGrant(form);
+  if (!grant.ok) return { ok: false, message: grant.error };
+  await MockSession.repo().addGrant(clientId, grant.value);
+  revalidatePath("/student");
+  refresh();
+  return { ok: true, message: "Granted." };
+}
+
+export async function endAccessGrant(form: FormData): Promise<void> {
+  await AdminAuth.require();
+  const clientId = String(form.get("clientId"));
+  const grantId = String(form.get("grantId"));
+  if (MockContract.isUuid(clientId) && MockContract.isUuid(grantId)) await MockSession.repo().endGrant(clientId, grantId);
+  revalidatePath("/student");
+  refresh();
 }
 
 export async function setMockPublished(form: FormData): Promise<void> {
