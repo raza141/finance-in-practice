@@ -35,7 +35,13 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
   const params = await searchParams;
   const [topicKey, chapterKey, usage, status, edit, copy] = (["topic", "chapter", "usage", "status", "edit", "copy"] as const).map((k) => one(params[k]));
   // ponytail: every question's preview is rendered into the page; past a few thousand, load a topic's list on open.
-  const [pool, topics, chapters] = await Promise.all([repo.pool(), repo.topicNames(), repo.chapterNames()]);
+  const [pool, topics, chapters, editing, copying] = await Promise.all([
+    repo.pool(),
+    repo.topicNames(),
+    repo.chapterNames(),
+    MockContract.isUuid(edit) ? repo.bankQuestion(edit) : null,
+    MockContract.isUuid(copy) ? repo.bankQuestion(copy) : null,
+  ]);
 
   const shown = pool.filter(
     (q) =>
@@ -49,9 +55,6 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     const key = q.topic.trim().toLowerCase();
     groups.set(key, [...(groups.get(key) ?? []), q]);
   }
-  const editing = pool.find((q) => q.id === edit);
-  const copying = pool.find((q) => q.id === copy);
-  const editable = editing && !editing.locked;
 
   return (
     <div className="max-w-5xl">
@@ -70,16 +73,19 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         </p>
       )}
 
-      {(edit === "new" || editable || copying) && (
+      {(edit === "new" || editing || copying) && (
         <section id="editor" aria-label="Question editor" className="mt-6 scroll-mt-6 rounded-lg border border-quant/40 p-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-medium">{copying ? "New question from a copy" : editable ? "Edit question" : "Add a question"}</h2>
+            <h2 className="font-medium">{copying ? "New question from a copy" : editing ? "Edit question" : "Add a question"}</h2>
             <Link href="/admin/mocks/bank" className="text-sm text-muted hover:text-ink">
               Cancel
             </Link>
           </div>
-          <MockQuestionForm key={edit + copy} question={copying ?? editing} copying={!!copying} topics={topics} chapters={chapters} />
-          {editable && (
+          {editing?.locked && !copying && (
+            <p className="mb-4 text-sm text-muted">Students have started an assessment with this question, so only its chapter, use and explanation can change. Use Copy for a reworded version.</p>
+          )}
+          <MockQuestionForm key={edit + copy} question={copying ?? editing ?? undefined} copying={!!copying} locked={!copying && !!editing?.locked} topics={topics} chapters={chapters} />
+          {editing && !editing.locked && !copying && (
             <form action={deleteBankQuestion} className="mt-4">
               <input type="hidden" name="questionId" value={editing.id} />
               <PendingButton pendingLabel="Deleting…" className="text-sm text-red-300 hover:underline">
@@ -153,6 +159,15 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
             <button type="submit" name="op" value={status === "retired" ? "restore" : "retire"} className={BULK}>
               {status === "retired" ? "Restore" : "Retire"}
             </button>
+            <input name="chapter" maxLength={80} list="bank-chapters" placeholder="Chapter" aria-label="Chapter for ticked questions" className={FILTER} />
+            <datalist id="bank-chapters">
+              {chapters.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            <button type="submit" name="op" value="chapter" className={BULK}>
+              Set chapter
+            </button>
           </div>
           {[...groups.values()].map((questions) => (
             <section key={questions[0].id} className="rounded-lg border border-line">
@@ -173,15 +188,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                         </div>
                       </details>
                       <span className="flex gap-3 text-xs">
-                        {q.locked ? (
-                          <span title="Students have started an assessment with this question, so it can't change." className="text-muted">
+                        {q.locked && (
+                          <span title="Students have started an assessment with this question, so its wording and answer can't change." className="text-muted">
                             Locked
                           </span>
-                        ) : (
-                          <Link href={`/admin/mocks/bank?edit=${q.id}#editor`} className="text-quant hover:underline">
-                            Edit
-                          </Link>
                         )}
+                        <Link href={`/admin/mocks/bank?edit=${q.id}#editor`} className="text-quant hover:underline">
+                          Edit
+                        </Link>
                         <Link href={`/admin/mocks/bank?copy=${q.id}#editor`} className="text-quant hover:underline">
                           Copy
                         </Link>

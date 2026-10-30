@@ -149,14 +149,29 @@ export class MockRepository {
     `) as MockStudent[];
   }
 
-  /** The access form's ticks replace the admin's grants for this mock; a purchase is never touched. */
+  /**
+   * Grant-only: a newly ticked client gets a grant, an unticked one's ends, and anyone unchanged keeps their
+   * dates. Other audiences leave grants alone. A purchase is never touched.
+   */
   async setAccess(mockId: string, access: MockAccess): Promise<void> {
+    const update = this.sql`UPDATE mock_exams SET audience = ${access.audience}, courses = ${access.courses}::text[] WHERE id = ${mockId}`;
+    if (access.audience !== "clients") {
+      await update;
+      return;
+    }
     await this.sql.transaction([
-      this.sql`UPDATE mock_exams SET audience = ${access.audience}, courses = ${access.courses}::text[] WHERE id = ${mockId}`,
-      this.sql`DELETE FROM access_grants WHERE mock_id = ${mockId} AND source = 'admin'`,
+      update,
+      this.sql`DELETE FROM access_grants WHERE mock_id = ${mockId} AND source = 'admin' AND client_id <> ALL(${access.clients}::uuid[]) AND starts_at >= now()`,
+      this.sql`
+        UPDATE access_grants SET ends_at = now()
+        WHERE mock_id = ${mockId} AND source = 'admin' AND client_id <> ALL(${access.clients}::uuid[]) AND (ends_at IS NULL OR ends_at > now())
+      `,
       this.sql`
         INSERT INTO access_grants (client_id, mock_id, ends_at)
-        SELECT c.id, ${mockId}::uuid, ${access.endsAt}::timestamptz FROM clients c WHERE c.id = ANY(${access.clients}::uuid[])
+        SELECT c.id, ${mockId}::uuid, ${access.endsAt}::timestamptz FROM clients c
+        WHERE c.id = ANY(${access.clients}::uuid[]) AND NOT EXISTS (
+          SELECT 1 FROM access_grants g WHERE g.mock_id = ${mockId} AND g.client_id = c.id AND (g.ends_at IS NULL OR g.ends_at > now())
+        )
       `,
     ]);
   }
@@ -227,8 +242,21 @@ export class MockRepository {
       ORDER BY q.content_key, q.id
     `) as BankRow[];
     return rows
-      .map((r) => ({ ...MockRepository.toActive(r), correct: r.correct, explanation: r.explanation, chapter: r.chapter, usage: r.usage, retired: r.retired, locked: r.locked, usedIn: r.used_in }))
+      .map(MockRepository.toBank)
       .sort((a, b) => a.topic.toLowerCase().localeCompare(b.topic.toLowerCase()) || a.chapter.toLowerCase().localeCompare(b.chapter.toLowerCase()) || a.question.localeCompare(b.question));
+  }
+
+  /** One bank question by the id of any of its copies: an assessment may hold a copy `pool` doesn't list. */
+  async bankQuestion(id: string): Promise<PoolQuestion | null> {
+    const [row] = (await this.sql`
+      SELECT q.id, COALESCE(q.number, 0) AS number, q.topic, q.chapter, q.usage, q.retired, q.vignette, q.question, q.option_a, q.option_b, q.option_c, q.correct, q.explanation,
+        EXISTS (
+          SELECT 1 FROM mock_questions s JOIN mock_items i ON i.question_id = s.id JOIN mock_attempts a ON a.mock_id = i.mock_id WHERE s.content_key = q.content_key
+        ) AS locked,
+        '{}'::text[] AS used_in
+      FROM mock_questions q WHERE q.id = ${id}
+    `) as BankRow[];
+    return row ? MockRepository.toBank(row) : null;
   }
 
   /** Uploads to the bank, leaving out questions it already has (also repeats within the sheet). */
@@ -262,23 +290,39 @@ export class MockRepository {
     return { added: inserted.length, skipped: questions.length - inserted.length };
   }
 
-  /** Adds (no `questionId`) or edits a bank question. "locked" once it's in an assessment students have started. */
-  async saveQuestion(questionId: string | null, q: MockQuestionInput): Promise<"saved" | "locked"> {
-    const rows = questionId
-      ? await this.sql`
-          UPDATE mock_questions t SET topic = ${q.topic}, chapter = ${q.chapter}, usage = ${q.usage}, vignette = ${q.vignette}, question = ${q.question},
-            option_a = ${q.options[0]}, option_b = ${q.options[1]}, option_c = ${q.options[2]}, correct = ${q.correct}, explanation = ${q.explanation}
-          FROM mock_questions me
-          WHERE me.id = ${questionId} AND t.content_key = me.content_key AND NOT EXISTS (
-            SELECT 1 FROM mock_questions s JOIN mock_items i ON i.question_id = s.id JOIN mock_attempts a ON a.mock_id = i.mock_id WHERE s.content_key = me.content_key
-          )
-          RETURNING t.id
-        `
-      : await this.sql`
-          INSERT INTO mock_questions (topic, chapter, usage, vignette, question, option_a, option_b, option_c, correct, explanation)
-          VALUES (${q.topic}, ${q.chapter}, ${q.usage}, ${q.vignette}, ${q.question}, ${q.options[0]}, ${q.options[1]}, ${q.options[2]}, ${q.correct}, ${q.explanation})
-          RETURNING id
-        `;
+  /**
+   * Adds (no `questionId`) or edits a bank question. Once it's in an assessment students have started, only
+   * what can't move a score may change (chapter, usage, explanation): anything else is "locked". "duplicate":
+   * those words and answer are already another question in the bank.
+   */
+  async saveQuestion(questionId: string | null, q: MockQuestionInput): Promise<"saved" | "locked" | "duplicate"> {
+    const [o1, o2, o3] = q.options;
+    const [{ taken }] = (await this.sql`
+      SELECT EXISTS (
+        SELECT 1 FROM mock_questions t WHERE t.content_key = mock_question_key(${q.topic}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct})
+          AND t.content_key IS DISTINCT FROM (SELECT content_key FROM mock_questions WHERE id = ${questionId}::uuid)
+      ) AS taken
+    `) as { taken: boolean }[];
+    if (taken) return "duplicate";
+    if (!questionId) {
+      await this.sql`
+        INSERT INTO mock_questions (topic, chapter, usage, vignette, question, option_a, option_b, option_c, correct, explanation)
+        VALUES (${q.topic}, ${q.chapter}, ${q.usage}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct}, ${q.explanation})
+      `;
+      return "saved";
+    }
+    const rows = await this.sql`
+      UPDATE mock_questions t SET topic = ${q.topic}, chapter = ${q.chapter}, usage = ${q.usage}, vignette = ${q.vignette}, question = ${q.question},
+        option_a = ${o1}, option_b = ${o2}, option_c = ${o3}, correct = ${q.correct}, explanation = ${q.explanation}
+      FROM mock_questions me
+      WHERE me.id = ${questionId} AND t.content_key = me.content_key AND (
+        mock_question_key(${q.topic}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct}) = me.content_key
+        OR NOT EXISTS (
+          SELECT 1 FROM mock_questions s JOIN mock_items i ON i.question_id = s.id JOIN mock_attempts a ON a.mock_id = i.mock_id WHERE s.content_key = me.content_key
+        )
+      )
+      RETURNING t.id
+    `;
     return rows.length > 0 ? "saved" : "locked";
   }
 
@@ -305,6 +349,13 @@ export class MockRepository {
   async setUsage(ids: string[], usage: QuestionUsage): Promise<void> {
     await this.sql`
       UPDATE mock_questions SET usage = ${usage}
+      WHERE content_key IN (SELECT content_key FROM mock_questions WHERE id = ANY(${ids}::uuid[]))
+    `;
+  }
+
+  async setChapter(ids: string[], chapter: string): Promise<void> {
+    await this.sql`
+      UPDATE mock_questions SET chapter = ${chapter}
       WHERE content_key IN (SELECT content_key FROM mock_questions WHERE id = ANY(${ids}::uuid[]))
     `;
   }
@@ -621,6 +672,10 @@ export class MockRepository {
       attempted: r.attempted,
       createdAt: r.created_at,
     };
+  }
+
+  private static toBank(r: BankRow): PoolQuestion {
+    return { ...MockRepository.toActive(r), correct: r.correct, explanation: r.explanation, chapter: r.chapter, usage: r.usage, retired: r.retired, locked: r.locked, usedIn: r.used_in };
   }
 
   private static toActive(r: ActiveRow): ActiveQuestion {

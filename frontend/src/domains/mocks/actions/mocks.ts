@@ -158,7 +158,8 @@ export async function saveBankQuestion(_prev: MockActionState, form: FormData): 
   const parsed = MockContract.parseQuestion(form);
   if (!parsed.ok) return { ok: false, message: "Nothing was saved. Fix these and save again:", errors: parsed.errors };
   const saved = await MockSession.repo().saveQuestion(questionId || null, parsed.value);
-  if (saved === "locked") return { ok: false, message: "Students have started a mock with this question, so its text is fixed. Use Copy to make an edited version." };
+  if (saved === "locked") return { ok: false, message: "Students have started a mock with this question, so only its chapter, use and explanation can change. Use Copy to make an edited version." };
+  if (saved === "duplicate") return { ok: false, message: "The bank already has this question. Change the wording, options or answer." };
   revalidatePath("/student");
   redirect("/admin/mocks/bank");
 }
@@ -170,13 +171,14 @@ export async function deleteBankQuestion(form: FormData): Promise<void> {
   redirect(deleted ? "/admin/mocks/bank" : "/admin/mocks/bank?notice=used");
 }
 
-/** The bank's bulk bar: retire, restore, or set where the ticked questions may be used. */
+/** The bank's bulk bar: retire, restore, or set the ticked questions' chapter or where they may be used. */
 export async function updateBankQuestions(form: FormData): Promise<void> {
   await AdminAuth.require();
   const ids = form.getAll("q").map(String).filter(MockContract.isUuid);
   const op = form.get("op");
   const repo = MockSession.repo();
   if (ids.length && (op === "retire" || op === "restore")) await repo.setRetired(ids, op === "retire");
+  else if (ids.length && op === "chapter") await repo.setChapter(ids, String(form.get("chapter") ?? "").trim().slice(0, 80));
   else if (ids.length && MockContract.isUsage(op)) await repo.setUsage(ids, op);
   refresh();
 }

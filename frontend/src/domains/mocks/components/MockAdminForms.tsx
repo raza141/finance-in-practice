@@ -242,11 +242,14 @@ type QuestionFields = Record<"topic" | "chapter" | "correct" | (typeof TEXT_FIEL
 export function MockQuestionForm({
   question,
   copying = false,
+  locked = false,
   topics,
   chapters,
 }: {
   question?: MockQuestion & { chapter: string; usage: QuestionUsage };
   copying?: boolean;
+  /** Students have started an assessment with it: only the chapter, use and explanation can change. */
+  locked?: boolean;
   topics: string[];
   chapters: string[];
 }) {
@@ -275,7 +278,7 @@ export function MockQuestionForm({
         {question && !copying && <input type="hidden" name="questionId" value={question.id} />}
         <div className="grid grid-cols-[1fr_1fr_6rem] gap-3">
           <Field label="Topic">
-            <input name="topic" required maxLength={80} list="mock-topics" value={f.topic} onChange={set("topic")} className={FIELD} />
+            <input name="topic" required readOnly={locked} maxLength={80} list="mock-topics" value={f.topic} onChange={set("topic")} className={FIELD} />
             <datalist id="mock-topics">
               {topics.map((t) => (
                 <option key={t} value={t} />
@@ -292,7 +295,7 @@ export function MockQuestionForm({
           </Field>
           <Field label="Correct">
             <select name="correct" value={f.correct} onChange={set("correct")} className={FIELD}>
-              {MockContract.LETTERS.map((l) => (
+              {MockContract.LETTERS.filter((l) => !locked || l === f.correct).map((l) => (
                 <option key={l}>{l}</option>
               ))}
             </select>
@@ -309,7 +312,7 @@ export function MockQuestionForm({
         </Field>
         {TEXT_FIELDS.map(([name, label, rows]) => (
           <Field key={name} label={label}>
-            <textarea name={name} rows={rows} required={name === "question" || name.length === 1} value={f[name]} onChange={set(name)} className={`${FIELD} font-mono text-xs`} />
+            <textarea name={name} rows={rows} required={name === "question" || name.length === 1} readOnly={locked && name !== "explanation"} value={f[name]} onChange={set(name)} className={`${FIELD} font-mono text-xs`} />
           </Field>
         ))}
         <div className="flex flex-wrap items-start gap-4">
@@ -429,7 +432,7 @@ export function MockAccessForm({ mock, students, granted }: { mock: MockExam; st
           ))}
         </ul>
         <div className="mt-3 max-w-xs">
-          <Field label="Ticked clients' access ends (blank: no end)">
+          <Field label="Newly ticked clients' access ends (blank: no end)">
             <input name="endsAt" type="date" className={FIELD} />
           </Field>
         </div>
