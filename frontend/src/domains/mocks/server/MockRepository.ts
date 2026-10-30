@@ -400,6 +400,14 @@ export class MockRepository {
     return row.count;
   }
 
+  /** A new draft with its questions; null, and no draft left behind, when nothing matches. */
+  async buildFromBank(m: MockExamInput, pick: PoolPick): Promise<string | null> {
+    const id = await this.create(m);
+    if (await this.addFromBank({ id, mockType: m.mockType }, pick)) return id;
+    await this.remove(id);
+    return null;
+  }
+
   /** Back to the bank; false once anyone has started the mock. The gap in numbers is fine: an attempt numbers its questions 1 to n. */
   async removeItem(mockId: string, questionId: string): Promise<boolean> {
     const rows = await this.sql`

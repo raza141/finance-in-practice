@@ -27,10 +27,10 @@ export default async function AdminMocksPage() {
     <div className="max-w-5xl">
       <PageHeader
         title="Mock exams"
-        description="Create a mock, add questions from the question bank, try it, then publish it."
+        description="Design a mock from one, several or all books, try it, then publish it."
         actions={
-          <Link href="/admin/mocks/bank" className={PRIMARY_ACTION}>
-            Question bank
+          <Link href="/admin/mocks/design" className={PRIMARY_ACTION}>
+            Design a mock
           </Link>
         }
       />
@@ -39,7 +39,7 @@ export default async function AdminMocksPage() {
 
       <section aria-labelledby="new-mock" className="mt-10 rounded-lg border border-line p-5">
         <h2 id="new-mock" className="text-lg">
-          New mock
+          New empty mock
         </h2>
         <div className="mt-4">
           <MockExamForm />

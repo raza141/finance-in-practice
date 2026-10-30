@@ -29,8 +29,8 @@ export default async function AdminPracticeSetsPage() {
         title="Practice sets"
         description="Create a topic or end-of-chapter set, add practice questions from the question bank, try it, then publish it."
         actions={
-          <Link href="/admin/mocks/bank" className={PRIMARY_ACTION}>
-            Question bank
+          <Link href="/admin/mocks/design" className={PRIMARY_ACTION}>
+            Design a mock
           </Link>
         }
       />
@@ -39,7 +39,7 @@ export default async function AdminPracticeSetsPage() {
 
       <section aria-labelledby="new-mock" className="mt-10 rounded-lg border border-line p-5">
         <h2 id="new-mock" className="text-lg">
-          New practice set
+          New empty practice set
         </h2>
         <div className="mt-4">
           <MockExamForm practice />

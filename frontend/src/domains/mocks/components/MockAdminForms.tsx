@@ -5,7 +5,7 @@ import { startTransition, useActionState, useState, type FormEvent, type ReactNo
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { addAccessGrant, addMockQuestions, saveBankQuestion, saveMock, setMockAccess, uploadBankQuestions, type MockActionState } from "../actions/mocks";
+import { addAccessGrant, addMockQuestions, designMock, saveBankQuestion, saveMock, setMockAccess, uploadBankQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockExhibits } from "../services/MockExhibits";
 import type { MockAudience, MockExam, MockQuestion, MockStudent, MockType, QuestionUsage } from "../types";
@@ -144,13 +144,12 @@ export function BankUploadForm() {
 
 const BOX = "flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm has-[:checked]:border-quant/70";
 
-export type BankTopic = { topic: string; questions: { id: string; label: string; summary: ReactNode; preview: ReactNode }[] };
+export type BankTopic = { topic: string; questions: { id: string; usage: QuestionUsage; label: string; summary: ReactNode; preview: ReactNode }[] };
 
 const NUMBER = "h-9 w-20 rounded-md border border-line bg-canvas/70 px-2 text-ink outline-none focus:border-quant/70";
 
-/** Adds to an assessment from the bank: per topic, tick questions and/or give a number (ticked ones count towards it, the rest are drawn at random). */
-export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topics: BankTopic[]; chapter: string }) {
-  const [state, action, busy] = useActionState(addMockQuestions, null);
+/** The numbers and ticks of a pick from the bank. Ticked questions count towards their topic's number; the rest are drawn at random. */
+function useBankPick() {
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [ticked, setTicked] = useState<Set<string>>(() => new Set());
   const toggle = (id: string) =>
@@ -159,68 +158,208 @@ export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topi
       if (!next.delete(id)) next.add(id);
       return next;
     });
-  const inMock = (t: BankTopic) => Math.max(t.questions.filter((q) => ticked.has(q.id)).length, Math.min(Number(counts[t.topic]) || 0, t.questions.length));
-  const total = topics.reduce((n, t) => n + inMock(t), 0);
+  const picked = (t: BankTopic) => Math.max(t.questions.filter((q) => ticked.has(q.id)).length, Math.min(Number(counts[t.topic]) || 0, t.questions.length));
+  return { counts, setCounts, ticked, toggle, picked };
+}
+
+function BankTopicList({ topics, pick }: { topics: BankTopic[]; pick: ReturnType<typeof useBankPick> }) {
+  const { counts, setCounts, ticked, toggle, picked } = pick;
+  return (
+    <ul className="divide-y divide-line rounded-lg border border-line">
+      {topics.map((t) => {
+        const tickedHere = t.questions.filter((q) => ticked.has(q.id)).length;
+        return (
+          <li key={t.topic} className="p-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="min-w-0 basis-full font-medium sm:basis-0 sm:flex-1">
+                {t.topic} <span className="font-mono text-xs text-muted">{t.questions.length} available</span>
+              </p>
+              <input type="hidden" name="topic" value={t.topic} />
+              <label className="flex items-center gap-2 text-sm text-muted">
+                Questions
+                <input
+                  name="count"
+                  type="number"
+                  min={0}
+                  max={t.questions.length}
+                  placeholder="0"
+                  value={counts[t.topic] ?? ""}
+                  onChange={(e) => setCounts((c) => ({ ...c, [t.topic]: e.target.value }))}
+                  className={NUMBER}
+                />
+              </label>
+              <span className="font-mono text-xs whitespace-nowrap text-muted sm:w-36 sm:text-right">
+                {tickedHere > 0 && <span className="text-quant">{tickedHere} ticked · </span>}
+                {picked(t)} chosen
+              </span>
+            </div>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm text-quant">Pick questions</summary>
+              <ul className="mt-2 grid gap-1">
+                {t.questions.map((q) => (
+                  <li key={q.id} className="rounded-md border border-line px-3 py-2 has-[:checked]:border-quant/70">
+                    <label className="flex items-start gap-3 text-sm">
+                      <input type="checkbox" name="q" value={q.id} checked={ticked.has(q.id)} onChange={() => toggle(q.id)} className="mt-1" />
+                      <span className="min-w-0">
+                        <span className="line-clamp-2">{q.summary}</span>
+                        <span className="block font-mono text-xs text-muted">{q.label}</span>
+                      </span>
+                    </label>
+                    <details className="mt-1 pl-7">
+                      <summary className="cursor-pointer text-xs text-muted">Preview</summary>
+                      <div className="mt-2 text-sm">{q.preview}</div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Adds to an existing assessment from the bank. */
+export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topics: BankTopic[]; chapter: string }) {
+  const [state, action, busy] = useActionState(addMockQuestions, null);
+  const pick = useBankPick();
+  const total = topics.reduce((n, t) => n + pick.picked(t), 0);
 
   return (
     <form onSubmit={keep(action)} className="grid gap-6">
       <input type="hidden" name="id" value={mockId} />
       <input type="hidden" name="chapter" value={chapter} />
-      <ul className="divide-y divide-line rounded-lg border border-line">
-        {topics.map((t) => {
-          const picked = t.questions.filter((q) => ticked.has(q.id)).length;
-          return (
-            <li key={t.topic} className="p-4">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <p className="min-w-0 basis-full font-medium sm:basis-0 sm:flex-1">
-                  {t.topic} <span className="font-mono text-xs text-muted">{t.questions.length} available</span>
-                </p>
-                <input type="hidden" name="topic" value={t.topic} />
-                <label className="flex items-center gap-2 text-sm text-muted">
-                  Questions
-                  <input
-                    name="count"
-                    type="number"
-                    min={0}
-                    max={t.questions.length}
-                    placeholder="0"
-                    value={counts[t.topic] ?? ""}
-                    onChange={(e) => setCounts((c) => ({ ...c, [t.topic]: e.target.value }))}
-                    className={NUMBER}
-                  />
-                </label>
-                <span className="font-mono text-xs whitespace-nowrap text-muted sm:w-36 sm:text-right">
-                  {picked > 0 && <span className="text-quant">{picked} ticked · </span>}
-                  {inMock(t)} to add
-                </span>
-              </div>
-              <details className="mt-2">
-                <summary className="cursor-pointer text-sm text-quant">Pick questions</summary>
-                <ul className="mt-2 grid gap-1">
-                  {t.questions.map((q) => (
-                    <li key={q.id} className="rounded-md border border-line px-3 py-2 has-[:checked]:border-quant/70">
-                      <label className="flex items-start gap-3 text-sm">
-                        <input type="checkbox" name="q" value={q.id} checked={ticked.has(q.id)} onChange={() => toggle(q.id)} className="mt-1" />
-                        <span className="min-w-0">
-                          <span className="line-clamp-2">{q.summary}</span>
-                          <span className="block font-mono text-xs text-muted">{q.label}</span>
-                        </span>
-                      </label>
-                      <details className="mt-1 pl-7">
-                        <summary className="cursor-pointer text-xs text-muted">Preview</summary>
-                        <div className="mt-2 text-sm">{q.preview}</div>
-                      </details>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </li>
-          );
-        })}
-      </ul>
+      <BankTopicList topics={topics} pick={pick} />
       <div className="flex flex-wrap items-center gap-4">
         <SaveButton busy={busy} disabled={total === 0} busyLabel="Adding…">
           {`Add ${total} question${total === 1 ? "" : "s"}`}
+        </SaveButton>
+        <Notice state={state} />
+      </div>
+    </form>
+  );
+}
+
+type BookScope = "all" | "one" | "some";
+
+/** A whole draft in one go: which books, how many from each or which questions, and its details. The duration follows the CFA pace until it's typed. */
+export function MockDesignForm({ topics }: { topics: BankTopic[] }) {
+  const [state, action, busy] = useActionState(designMock, null);
+  const pick = useBankPick();
+  const [scope, setScope] = useState<BookScope>("all");
+  const [books, setBooks] = useState<Set<string>>(() => new Set());
+  const [mockType, setMockType] = useState<MockType>("book");
+  const [duration, setDuration] = useState<string | null>(null);
+  const [same, setSame] = useState("");
+
+  // Only what this type may use: mock-only questions stay out of practice sets.
+  const usages = MockContract.usages(mockType);
+  const usable = topics.map((t) => ({ ...t, questions: t.questions.filter((q) => usages.includes(q.usage)) })).filter((t) => t.questions.length > 0);
+  const shown = usable.filter((t) => scope === "all" || books.has(t.topic));
+  const total = shown.reduce((n, t) => n + pick.picked(t), 0);
+  const chooseBook = (topic: string) =>
+    setBooks((b) => {
+      if (scope === "one") return new Set([topic]);
+      const next = new Set(b);
+      if (!next.delete(topic)) next.add(topic);
+      return next;
+    });
+  const applySame = (value: string) => {
+    setSame(value);
+    pick.setCounts((c) => ({ ...c, ...Object.fromEntries(shown.map((t) => [t.topic, value])) }));
+  };
+
+  return (
+    <form onSubmit={keep(action)} className="grid gap-6">
+      <fieldset className="grid gap-3 rounded-lg border border-line p-4">
+        <legend className="px-1 text-sm font-medium">Books</legend>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "All books"],
+              ["one", "One book"],
+              ["some", "Selected books"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className={BOX}>
+              <input
+                type="radio"
+                name="scope"
+                value={value}
+                checked={scope === value}
+                onChange={() => {
+                  setScope(value);
+                  if (value === "one") setBooks((b) => new Set([...b].slice(0, 1)));
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        {scope !== "all" && (
+          <div className="flex flex-wrap gap-2">
+            {usable.map((t) => (
+              <label key={t.topic} className={BOX}>
+                <input type={scope === "one" ? "radio" : "checkbox"} name="book" checked={books.has(t.topic)} onChange={() => chooseBook(t.topic)} />
+                {t.topic} <span className="font-mono text-xs text-muted">{t.questions.length}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </fieldset>
+
+      {shown.length > 0 ? (
+        <div className="grid gap-3">
+          <label className="flex items-center gap-2 justify-self-end text-sm text-muted">
+            Same number for each book
+            <input type="number" min={0} placeholder="0" value={same} onChange={(e) => applySame(e.target.value)} className={NUMBER} />
+          </label>
+          <BankTopicList topics={shown} pick={pick} />
+        </div>
+      ) : (
+        <p className="text-sm text-muted">
+          {usable.length === 0
+            ? `No active questions can go in a ${MockContract.TYPES[mockType]} assessment. Practice types only use questions marked for practice in the question bank.`
+            : "Choose a book above."}
+        </p>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Title" className="sm:col-span-2">
+          <input name="title" required minLength={3} maxLength={120} placeholder="Recall mock: FSA and Derivatives" className={FIELD} />
+        </Field>
+        <Field label="Type">
+          <select name="mockType" value={mockType} onChange={(e) => setMockType(e.target.value as MockType)} className={FIELD}>
+            {Object.entries(MockContract.TYPES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field
+          label="Duration (minutes)"
+          hint={`Set at the CFA pace, ${MockContract.MINUTES_PER_QUESTION} min a question${mockType === "full" ? ", per session (half the questions each)" : ""}. Type to change it.`}
+        >
+          <input
+            name="durationMinutes"
+            type="number"
+            required
+            min={1}
+            max={600}
+            value={duration ?? MockContract.minutes(total, mockType)}
+            onChange={(e) => setDuration(e.target.value)}
+            className={FIELD}
+          />
+        </Field>
+        <Field label="Book or source" className="sm:col-span-2">
+          <input name="source" maxLength={120} defaultValue="Question bank" className={FIELD} />
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <SaveButton busy={busy} disabled={total === 0} busyLabel="Building…">
+          {`Build draft · ${total} question${total === 1 ? "" : "s"}`}
         </SaveButton>
         <Notice state={state} />
       </div>

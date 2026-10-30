@@ -101,6 +101,18 @@ export async function saveMock(_prev: MockActionState, form: FormData): Promise<
   return { ok: true, message: "Saved." };
 }
 
+/** A new draft, details and questions together, from the Design a mock page; opens it for the preview. */
+export async function designMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
+  await AdminAuth.require();
+  const exam = MockContract.parseExam(form);
+  if (!exam.ok) return { ok: false, message: exam.error };
+  const pick = MockContract.parsePool(form);
+  if (!pick.ok) return { ok: false, message: pick.error };
+  const id = await MockSession.repo().buildFromBank(exam.value, pick.value);
+  if (!id) return { ok: false, message: "No bank questions match those books and ticks." };
+  redirect(`/admin/mocks/${id}`);
+}
+
 /** Adds to an assessment from the bank: ticked questions and random ones by topic. */
 export async function addMockQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require();

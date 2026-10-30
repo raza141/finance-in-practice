@@ -11,7 +11,8 @@ import { Inline } from "@/domains/journal/components/RichText";
 import { QuestionPreview } from "@/domains/mocks/components/QuestionPreview";
 import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
 import { deleteMock, moveMockQuestion, removeMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
-import { MockAccessForm, MockBankForm, MockExamForm, type BankTopic } from "@/domains/mocks/components/MockAdminForms";
+import { bankTopics } from "@/domains/mocks/components/bankTopics";
+import { MockAccessForm, MockBankForm, MockExamForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -34,19 +35,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
   const chapters = [...new Set(offered.map((q) => q.chapter.trim()).filter(Boolean))].sort();
   const noun = MockContract.isPractice(mock.mockType) ? "set" : "mock";
 
-  // One group per topic however it was capitalised or spaced, named as first written.
-  const groups = new Map<string, BankTopic>();
-  for (const q of offered) {
-    if (chapter && q.chapter.trim().toLowerCase() !== chapter.toLowerCase()) continue;
-    const key = q.topic.trim().toLowerCase();
-    if (!groups.has(key)) groups.set(key, { topic: q.topic.trim(), questions: [] });
-    groups.get(key)!.questions.push({
-      id: q.id,
-      label: `${q.chapter ? `${q.chapter} · ` : ""}${q.vignette ? "vignette · " : ""}answer ${q.correct}`,
-      summary: <Inline text={MockExhibits.parse(q.question).find((p) => p.kind === "text")?.text ?? "(exhibit)"} />,
-      preview: <QuestionPreview q={q} />,
-    });
-  }
+  const groups = bankTopics(chapter ? offered.filter((q) => q.chapter.trim().toLowerCase() === chapter.toLowerCase()) : offered);
 
   return (
     <div className="max-w-5xl">
@@ -142,8 +131,8 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                 </button>
               </form>
             )}
-            {groups.size > 0 ? (
-              <MockBankForm key={chapter} mockId={mock.id} topics={[...groups.values()]} chapter={chapter} />
+            {groups.length > 0 ? (
+              <MockBankForm key={chapter} mockId={mock.id} topics={groups} chapter={chapter} />
             ) : (
               <p className="text-sm text-muted">
                 No questions left to add. Only active questions marked for {noun === "set" ? "practice" : "mocks"} appear here;{" "}
