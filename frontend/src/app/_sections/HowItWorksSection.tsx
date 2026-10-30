@@ -1,4 +1,4 @@
-import { BookButton } from "@/core/components/ui/BookButton";
+import { BookSplitButton } from "@/core/components/ui/BookButton";
 import { LineIcon } from "@/core/components/ui/LineIcon";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 
@@ -49,7 +49,7 @@ export function HowItWorksSection() {
           ))}
         </ol>
         <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <BookButton size="lg" className="w-full sm:w-auto" />
+          <BookSplitButton />
           <p className="font-mono text-xs tracking-wide text-muted">Free · 30 min · no card needed</p>
         </div>
       </div>

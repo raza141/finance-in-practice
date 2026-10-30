@@ -1,5 +1,5 @@
 import { HeroScene } from "@/core/components/3d/HeroScene";
-import { BookButton } from "@/core/components/ui/BookButton";
+import { BookSplitButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 
 const HEADLINE: { text: string; accent?: boolean }[][] = [
@@ -68,14 +68,14 @@ export function HeroSection() {
 
           <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
             <span data-anim="hero-cta">
-              <BookButton size="lg" className="w-full sm:w-auto" />
+              <BookSplitButton />
             </span>
             <span data-anim="hero-cta">
               <ButtonLink
                 href="/courses"
                 variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto"
+                className="w-full rounded-full! sm:w-auto"
               >
                 See courses
               </ButtonLink>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { RAISED_GOLD, RAISED_PLAIN, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 import { BackToPortal } from "@/domains/students/components/BackToPortal";
 
 import { autosaveMock, pauseMock, resumeMock, submitMock } from "../actions/mocks";
@@ -291,7 +292,7 @@ export function MockPlayer({
               type="button"
               onClick={() => void resume()}
               disabled={state === "resuming"}
-              className="rounded-md bg-gold px-3 py-1.5 text-xs font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60"
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
             >
               {state === "resuming" ? "Resuming…" : "▶ Resume"}
             </button>
@@ -300,7 +301,7 @@ export function MockPlayer({
               type="button"
               onClick={() => void pause()}
               disabled={state === "pausing" || state === "submitting"}
-              className="rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink disabled:opacity-60"
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_PLAIN}`}
             >
               {state === "pausing" ? "Pausing…" : "⏸ Pause"}
             </button>
@@ -444,36 +445,38 @@ export function MockPlayer({
 
       <footer className="sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <button
-            type="button"
-            disabled={current === 0}
-            onClick={() => setCurrent((c) => c - 1)}
-            className="h-10 rounded-md border border-line px-4 text-sm disabled:opacity-40"
-          >
-            ‹ Previous
-          </button>
+          <div className="btn-group min-w-0 flex-1 flex-nowrap! sm:w-64 sm:flex-none">
+            <button
+              type="button"
+              disabled={current === 0}
+              onClick={() => setCurrent((c) => c - 1)}
+              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_PLAIN}`}
+            >
+              ‹ Back
+            </button>
+            <button
+              type="button"
+              disabled={current === questions.length - 1}
+              onClick={() => setCurrent((c) => c + 1)}
+              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_QUANT}`}
+            >
+              Next ›
+            </button>
+          </div>
           {/* Phones: the bar above already shows it, and the buttons keep to one row. */}
           <p className="hidden font-mono text-xs text-muted sm:block">
             Progress: {answered}/{questions.length} ({MockGrader.percent(answered, questions.length)}%)
           </p>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={current === questions.length - 1}
-              onClick={() => setCurrent((c) => c + 1)}
-              className="h-10 rounded-md border border-line px-4 text-sm disabled:opacity-40"
-            >
-              Next ›
-            </button>
             {checked ? (
               <span className="font-mono text-sm">
                 Score {questions.filter((x) => answers[x.id]?.selected === answerKey![x.id]).length}/{questions.length}
-                <a href={exitHref} className="ml-3 rounded-md bg-gold px-4 py-2 font-sans font-semibold text-canvas">
+                <a href={exitHref} className={`ml-3 rounded-md px-4 py-2 font-sans font-semibold ${RAISED_GOLD}`}>
                   Done
                 </a>
               </span>
             ) : (
-            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-60">
+            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className={`h-11 rounded-md px-5 text-sm font-semibold disabled:opacity-60 ${RAISED_GOLD}`}>
               {state === "submitting" ? "Submitting…" : last ? "Submit" : `End session ${session!.index}`}
             </button>
             )}
@@ -490,12 +493,14 @@ export function MockPlayer({
                     ? "Submit your answers? You can't change them afterwards."
                     : `End session ${session!.index}? Its answers lock, and session ${session!.index + 1} follows after an optional break.`}
             </p>
-            <button type="button" onClick={() => setConfirming(false)} className="h-9 rounded-md border border-line px-4">
-              Keep working
-            </button>
-            <button type="button" onClick={() => void submit()} className="h-9 rounded-md bg-gold px-4 font-semibold text-canvas">
-              {last ? "Submit now" : "End session now"}
-            </button>
+            <div className="btn-group">
+              <button type="button" onClick={() => setConfirming(false)} className={`h-9 px-4 ${RAISED_PLAIN}`}>
+                Keep working
+              </button>
+              <button type="button" onClick={() => void submit()} className={`h-9 px-4 font-semibold ${RAISED_GOLD}`}>
+                {last ? "Submit now" : "End session now"}
+              </button>
+            </div>
           </div>
         )}
       </footer>

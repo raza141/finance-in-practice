@@ -15,6 +15,11 @@
   --color-quant: #22d3ee;
   --color-ink: #f8fafc;
   --color-muted: #aab6c8;
+  /* Raised buttons: top light, bottom edge, contact shadow, a glow in the button's own colour. */
+  --shadow-bevel-gold: inset 0 1px 0 #ffffff59, inset 0 -2px 0 #0003, 0 1px 2px #0006, 0 8px 24px -6px #d4af3799;
+  --shadow-bevel-quant: inset 0 1px 0 #ffffff59, inset 0 -2px 0 #0003, 0 1px 2px #0006, 0 8px 24px -6px #22d3ee80;
+  --shadow-bevel-plain: inset 0 1px 0 #ffffff1f, inset 0 -2px 0 #0003, 0 1px 2px #0006;
+  --shadow-bevel-pressed: inset 0 2px 4px #0004;
 
   --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
 }
@@ -231,5 +236,46 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
     &::after {
       animation: none;
     }
+  }
+}
+
+/* Unlayered on purpose: must beat the rounded-* and transition utilities on the buttons inside.
+ * A row of pills sharing the width; the pressed one takes more and squares off. */
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn-group > * {
+  flex: 1;
+  border-radius: 9999px;
+  transition: flex-grow 0.4s, border-radius 0.4s, translate 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+.btn-group > :active:not(:disabled) {
+  flex-grow: 1.5;
+  border-radius: 12px;
+}
+
+/* Split button: the menu hangs off its button, and the chevron turns while it is open. */
+.split-toggle:has(+ :popover-open) svg {
+  rotate: 180deg;
+}
+@supports (anchor-name: --a) {
+  .split-toggle {
+    anchor-name: var(--split-anchor);
+  }
+  .split-menu {
+    position-anchor: var(--split-anchor);
+    position-try-fallbacks: flip-block;
+    inset: auto;
+    top: anchor(bottom);
+    right: anchor(right);
+    margin: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-group > * {
+    transition: none;
   }
 }
