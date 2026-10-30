@@ -16,7 +16,7 @@
   --color-ink: #f8fafc;
   --color-muted: #aab6c8;
   /* Raised buttons: top light, bottom edge, contact shadow, a glow in the button's own colour. */
-  --shadow-bevel-gold: inset 0 1px 0 #ffffff59, inset 0 -2px 0 #0003, 0 1px 2px #0006, 0 8px 24px -6px #d4af3799;
+  --shadow-bevel-gold: inset 0 1px 0 #ffffff2e, inset 0 -2px 0 #0000001f, 0 1px 2px #0006, 0 8px 30px -8px #d4af3780;
   --shadow-bevel-quant: inset 0 1px 0 #ffffff59, inset 0 -2px 0 #0003, 0 1px 2px #0006, 0 8px 24px -6px #22d3ee80;
   --shadow-bevel-plain: inset 0 1px 0 #ffffff1f, inset 0 -2px 0 #0003, 0 1px 2px #0006;
   --shadow-bevel-pressed: inset 0 2px 4px #0004;

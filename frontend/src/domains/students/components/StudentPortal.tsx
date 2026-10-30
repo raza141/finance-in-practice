@@ -10,6 +10,7 @@ import { markFeedSeen } from "@/domains/classroom/actions/classroom";
 
 import { StudentApiClient } from "../services/StudentApiClient";
 import { StudentBookingContract } from "../services/StudentBookingContract";
+import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentSession } from "../types";
 import { BUTTON, JOIN_BUTTON } from "./buttons";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
@@ -142,7 +143,7 @@ export function StudentPortal({
     );
   };
   // Free days, plus any day holding one of their sessions even when it has nothing free.
-  const sessionDays = new Set(sessions?.map((s) => calendar.dateOf(new Date(s.start))));
+  const sessionDays = new Set(StudentSessions.daySpans(sessions ?? [], calendar).map((s) => s.date));
   const shownDays = days.status === "ready" ? days.days.filter((d) => d.slots.length > 0 || sessionDays.has(d.date)) : [];
   const mapLinkInvalid = mapUrl !== "" && !StudentBookingContract.isMapLink(mapUrl);
 

@@ -43,11 +43,14 @@ describe("StudentSessions", () => {
     expect(StudentSessions.past(bookings, NOW).map((s) => s.uid)).toEqual(["past"]);
   });
 
-  it("maps each hour of a session in the viewer's timezone, across midnight too", () => {
-    const [session] = StudentSessions.upcoming([booking("late", "2026-10-20T19:00:00Z", 2)], NOW);
-    const cells = StudentSessions.hourCells([session], new ZonedCalendar("Asia/Dubai"));
-    expect([...cells.keys()]).toEqual(["2026-10-20 23:00", "2026-10-21 00:00"]);
-    expect(cells.get("2026-10-21 00:00")?.uid).toBe("late");
+  it("splits a session into per-day spans in the viewer's timezone, half hours and midnight included", () => {
+    const [late, halfPast] = StudentSessions.upcoming([booking("late", "2026-10-20T19:00:00Z", 2), booking("half", "2026-10-22T08:30:00Z", 4)], NOW);
+    const dubai = new ZonedCalendar("Asia/Dubai");
+    expect(StudentSessions.daySpans([late], dubai).map(({ date, from, to }) => ({ date, from, to }))).toEqual([
+      { date: "2026-10-20", from: 1380, to: 1440 },
+      { date: "2026-10-21", from: 0, to: 60 },
+    ]);
+    expect(StudentSessions.daySpans([halfPast], dubai)[0]).toMatchObject({ date: "2026-10-22", from: 750, to: 990 });
   });
 
   it("remembers distinct in-person addresses, never meeting links", () => {

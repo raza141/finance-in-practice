@@ -2,6 +2,14 @@ import type { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
 import type { StudentSession } from "../types";
 
+/** Part of a session on one day: minutes after that day's midnight. */
+export interface SessionSpan {
+  session: StudentSession;
+  date: string;
+  from: number;
+  to: number;
+}
+
 /** The parts of a Cal.com booking the student portal reads. */
 interface BookingLike {
   uid: string;
@@ -40,15 +48,23 @@ export class StudentSessions {
       });
   }
 
-  /** "YYYY-MM-DD HH:MM" of each hour of each session, in the calendar's timezone, so the week grid can draw them. */
-  static hourCells(sessions: readonly StudentSession[], calendar: Pick<ZonedCalendar, "dateOf" | "timeOf">): Map<string, StudentSession> {
-    const cells = new Map<string, StudentSession>();
-    for (const session of sessions)
-      for (let at = Date.parse(session.start); at < Date.parse(session.end); at += 3_600_000) {
-        const instant = new Date(at);
-        cells.set(`${calendar.dateOf(instant)} ${calendar.timeOf(instant)}`, session);
-      }
-    return cells;
+  /** Each session's stretch of each day it touches, in minutes after midnight in the calendar's timezone, for the week grid. */
+  static daySpans(sessions: readonly StudentSession[], calendar: Pick<ZonedCalendar, "dateOf" | "timeOf">): SessionSpan[] {
+    const clock = (instant: Date) => {
+      const [hours, minutes] = calendar.timeOf(instant).split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+    return sessions.flatMap((session) => {
+      const start = new Date(session.start);
+      const last = new Date(Date.parse(session.end) - 1);
+      const [date, endDate] = [calendar.dateOf(start), calendar.dateOf(last)];
+      return date === endDate
+        ? [{ session, date, from: clock(start), to: clock(last) + 1 }]
+        : [
+            { session, date, from: clock(start), to: 1440 },
+            { session, date: endDate, from: 0, to: clock(last) + 1 },
+          ];
+    });
   }
 
   /** Sessions that already took place (accepted), most recent first. */
