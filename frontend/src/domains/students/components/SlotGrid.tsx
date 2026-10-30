@@ -6,6 +6,8 @@ import type { SlotWire } from "@/domains/booking/services/BookingContract";
 import type { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
 import { StudentBookingContract } from "../services/StudentBookingContract";
+import { StudentSessions } from "../services/StudentSessions";
+import type { StudentSession } from "../types";
 
 export interface SlotSelection {
   start: string;
@@ -17,6 +19,7 @@ const PAGE = 7;
 /** Same classes as the cells below. */
 const LEGEND = [
   ["bg-gold", "Your selection"],
+  ["bg-gold/20", "Your booking"],
   ["bg-quant/10", "Available"],
   ["bg-canvas/40", "Busy or unavailable"],
 ] as const;
@@ -28,10 +31,13 @@ const dayLabel = (iso: string, part: "weekday" | "day") =>
 /**
  * Week grid of free hours, Google Calendar style: click an hour, or drag down
  * (mouse) to book up to the longest allowed length. `fixedMinutes` (moving an
- * existing session) only offers starts where that length fits.
+ * existing session) only offers starts where that length fits. The student's
+ * own `sessions` are drawn with their `name`; nobody else's reach this grid.
  */
 export function SlotGrid({
   days,
+  sessions,
+  name,
   calendar,
   lengths,
   fixedMinutes,
@@ -39,6 +45,8 @@ export function SlotGrid({
   onChange,
 }: {
   days: { date: string; slots: SlotWire[] }[];
+  sessions: readonly StudentSession[];
+  name: string;
   calendar: ZonedCalendar;
   lengths: readonly number[];
   fixedMinutes?: number;
@@ -59,7 +67,10 @@ export function SlotGrid({
   }, []);
 
   const timeOf = (iso: string) => calendar.timeOf(new Date(iso));
-  const rows = [...new Set(visible.flatMap((d) => d.slots.map((s) => timeOf(s.start))))].sort();
+  const mine = StudentSessions.hourCells(sessions, calendar);
+  // Their booking's hours get a row even when no visible day is free then.
+  const mineTimes = visible.flatMap((d) => [...mine.keys()].filter((k) => k.startsWith(`${d.date} `)).map((k) => k.slice(d.date.length + 1)));
+  const rows = [...new Set([...visible.flatMap((d) => d.slots.map((s) => timeOf(s.start))), ...mineTimes])].sort();
   const run = (slots: SlotWire[], index: number) => StudentBookingContract.runLength(slots, index, maxHours);
   const fits = (slots: SlotWire[], index: number) => !fixedMinutes || run(slots, index) * 60 >= fixedMinutes;
 
@@ -140,6 +151,15 @@ export function SlotGrid({
           <div key={time} role="row" className="contents">
             <div className="bg-canvas py-2 pr-2 text-right font-mono text-[10px] text-muted">{time}</div>
             {visible.map((d) => {
+              const own = mine.get(`${d.date} ${time}`);
+              if (own) {
+                const label = `Your booking: ${own.course}${own.status === "pending" ? " (waiting for confirmation)" : ""}`;
+                return (
+                  <div key={d.date} role="gridcell" aria-label={`${dayLabel(d.date, "weekday")} ${dayLabel(d.date, "day")} ${time}. ${label}`} title={label} className="h-9 truncate bg-gold/20 px-1 py-1 text-[10px] font-semibold text-gold">
+                    {timeOf(own.start) === time && name}
+                  </div>
+                );
+              }
               const index = d.slots.findIndex((s) => timeOf(s.start) === time);
               if (index === -1) return <div key={d.date} aria-hidden className="bg-canvas/40" />;
               const selected = inSelection(d.date, d.slots, index);

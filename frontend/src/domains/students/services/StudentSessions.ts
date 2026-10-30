@@ -1,3 +1,5 @@
+import type { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+
 import type { StudentSession } from "../types";
 
 /** The parts of a Cal.com booking the student portal reads. */
@@ -36,6 +38,17 @@ export class StudentSessions {
           group: (b.attendees?.length ?? 0) > 1,
         };
       });
+  }
+
+  /** "YYYY-MM-DD HH:MM" of each hour of each session, in the calendar's timezone, so the week grid can draw them. */
+  static hourCells(sessions: readonly StudentSession[], calendar: Pick<ZonedCalendar, "dateOf" | "timeOf">): Map<string, StudentSession> {
+    const cells = new Map<string, StudentSession>();
+    for (const session of sessions)
+      for (let at = Date.parse(session.start); at < Date.parse(session.end); at += 3_600_000) {
+        const instant = new Date(at);
+        cells.set(`${calendar.dateOf(instant)} ${calendar.timeOf(instant)}`, session);
+      }
+    return cells;
   }
 
   /** Sessions that already took place (accepted), most recent first. */

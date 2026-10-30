@@ -144,6 +144,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
       {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
       <StudentPortal
         readOnly={readOnly}
+        name={student.name.split(" ")[0]}
         courses={courses}
         lengths={siteConfig.studentBooking.lengths}
         sessions={sessions}

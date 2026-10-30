@@ -22,8 +22,20 @@ const STYLE: Record<ScheduleEvent["kind"], string> = {
 /** A booking waiting for the owner's confirmation. */
 const PENDING = "border-dashed border-gold bg-gold/15 text-ink";
 
+// ponytail: hashed, so with more students than colours two can share one (names on the blocks still tell them apart). Store a colour per client if the owner wants to choose.
+const STUDENT_COLOURS = [
+  "border-cyan-400/60 bg-cyan-400/15 text-ink",
+  "border-violet-400/60 bg-violet-400/15 text-ink",
+  "border-emerald-400/60 bg-emerald-400/15 text-ink",
+  "border-rose-400/60 bg-rose-400/15 text-ink",
+  "border-sky-400/60 bg-sky-400/15 text-ink",
+  "border-orange-400/60 bg-orange-400/15 text-ink",
+  "border-lime-400/60 bg-lime-400/15 text-ink",
+  "border-fuchsia-400/60 bg-fuchsia-400/15 text-ink",
+];
+
 const LEGEND: { kind: ScheduleEvent["kind"]; label: string }[] = [
-  { kind: "booking", label: "Website booking" },
+  { kind: "booking", label: "Student booking (one colour each)" },
   { kind: "busy", label: "Google / Apple calendar" },
   { kind: "block", label: "Blocked here" },
 ];
@@ -31,6 +43,9 @@ const LEGEND: { kind: ScheduleEvent["kind"]; label: string }[] = [
 /** Cancelled or declined: kept in the list, struck through, never on the grid. */
 const closed = (e: ScheduleEvent) => e.status === "cancelled" || e.status === "rejected";
 const awaiting = (e: ScheduleEvent) => e.kind === "booking" && e.status === "pending";
+
+const styleOf = (e: ScheduleEvent) =>
+  awaiting(e) ? PENDING : e.kind === "booking" && e.email ? STUDENT_COLOURS[Schedule.colourIndex(e.email, STUDENT_COLOURS.length)] : STYLE[e.kind];
 
 const midnight = (date: string) => Date.parse(`${date}T00:00:00${Schedule.OFFSET}`);
 const time = (iso: string) => DUBAI.timeOf(new Date(iso));
@@ -144,7 +159,7 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
                       type="button"
                       onClick={() => setSelected(e)}
                       aria-pressed={selected?.id === e.id}
-                      className={`absolute inset-x-1 overflow-hidden rounded border px-1.5 py-0.5 text-left text-[11px] leading-tight aria-pressed:ring-2 aria-pressed:ring-ink/60 ${awaiting(e) ? PENDING : STYLE[e.kind]}`}
+                      className={`absolute inset-x-1 overflow-hidden rounded border px-1.5 py-0.5 text-left text-[11px] leading-tight aria-pressed:ring-2 aria-pressed:ring-ink/60 ${styleOf(e)}`}
                       style={{ top, height }}
                     >
                       <span className="block truncate font-medium">{e.title}</span>
@@ -254,7 +269,7 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
                   onClick={() => setSelected(e)}
                   className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left text-sm hover:bg-surface-raised ${closed(e) ? "opacity-50" : ""}`}
                 >
-                  <span aria-hidden className={`h-3 w-4 shrink-0 rounded-sm border ${awaiting(e) ? PENDING : STYLE[e.kind]}`} />
+                  <span aria-hidden className={`h-3 w-4 shrink-0 rounded-sm border ${styleOf(e)}`} />
                   <span className="w-36 shrink-0 font-mono text-xs text-muted">
                     {dayLabel(DUBAI.dateOf(new Date(e.start)), "short")} {time(e.start)}
                   </span>

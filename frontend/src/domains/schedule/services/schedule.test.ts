@@ -13,6 +13,13 @@ const form = (fields: Record<string, string>) => {
 };
 
 describe("Schedule", () => {
+  it("gives one key the same colour regardless of case, within range", () => {
+    expect(Schedule.colourIndex("A@example.com", 8)).toBe(Schedule.colourIndex("a@example.com", 8));
+    const picks = ["a@x.com", "b@x.com", "c@x.com", "d@x.com"].map((k) => Schedule.colourIndex(k, 8));
+    expect(new Set(picks).size).toBeGreaterThan(1);
+    expect(picks.every((p) => p >= 0 && p < 8)).toBe(true);
+  });
+
   it("converts Dubai wall-clock time to UTC", () => {
     expect(Schedule.instant("2026-10-05", "09:00")).toBe("2026-10-05T05:00:00.000Z");
     expect(Schedule.instant("2026-10-05", "24:00")).toBe("2026-10-05T20:00:00.000Z");

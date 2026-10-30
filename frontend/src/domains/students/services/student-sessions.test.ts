@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+
 import { StudentSessions } from "./StudentSessions";
 
 const NOW = new Date("2026-10-14T08:00:00Z");
@@ -39,6 +41,13 @@ describe("StudentSessions", () => {
 
   it("lists past sessions, most recent first, cancelled ones left out", () => {
     expect(StudentSessions.past(bookings, NOW).map((s) => s.uid)).toEqual(["past"]);
+  });
+
+  it("maps each hour of a session in the viewer's timezone, across midnight too", () => {
+    const [session] = StudentSessions.upcoming([booking("late", "2026-10-20T19:00:00Z", 2)], NOW);
+    const cells = StudentSessions.hourCells([session], new ZonedCalendar("Asia/Dubai"));
+    expect([...cells.keys()]).toEqual(["2026-10-20 23:00", "2026-10-21 00:00"]);
+    expect(cells.get("2026-10-21 00:00")?.uid).toBe("late");
   });
 
   it("remembers distinct in-person addresses, never meeting links", () => {

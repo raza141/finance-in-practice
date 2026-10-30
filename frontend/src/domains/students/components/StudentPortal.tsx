@@ -52,6 +52,7 @@ const hours = (minutes: number) => `${minutes / 60} h`;
  * Right: course, place, a drag-to-select week grid and notes.
  */
 export function StudentPortal({
+  name,
   courses,
   lengths,
   sessions,
@@ -64,6 +65,8 @@ export function StudentPortal({
   progress,
   readOnly = false,
 }: {
+  /** Shown on their own bookings in the week grid. */
+  name: string;
   courses: string[];
   lengths: readonly number[];
   sessions: StudentSession[] | null;
@@ -111,7 +114,7 @@ export function StudentPortal({
     let live = true;
     client
       .slots(from, ZonedCalendar.addDays(from, DAYS - 1), zone)
-      .then((range) => live && (setTimeZone(zone), setDays({ status: "ready", days: range.days.filter((d) => d.slots.length > 0) })))
+      .then((range) => live && (setTimeZone(zone), setDays({ status: "ready", days: range.days })))
       .catch((error) => live && setDays({ status: "error", message: messageOf(error) }));
     return () => {
       live = false;
@@ -138,6 +141,9 @@ export function StudentPortal({
       { enableHighAccuracy: true, timeout: 15_000 },
     );
   };
+  // Free days, plus any day holding one of their sessions even when it has nothing free.
+  const sessionDays = new Set(sessions?.map((s) => calendar.dateOf(new Date(s.start))));
+  const shownDays = days.status === "ready" ? days.days.filter((d) => d.slots.length > 0 || sessionDays.has(d.date)) : [];
   const mapLinkInvalid = mapUrl !== "" && !StudentBookingContract.isMapLink(mapUrl);
 
   const done = (text: string) => {
@@ -518,11 +524,11 @@ export function StudentPortal({
                     {days.message}
                   </p>
                 )}
-                {days.status === "ready" && days.days.length === 0 && (
+                {days.status === "ready" && shownDays.length === 0 && (
                   <p className="text-sm text-muted">No free times in the next {DAYS} days. Message us on WhatsApp and we&rsquo;ll find one.</p>
                 )}
-                {days.status === "ready" && days.days.length > 0 && (
-                  <SlotGrid days={days.days} calendar={calendar} lengths={lengths} fixedMinutes={moving?.minutes} value={selection} onChange={setSelection} />
+                {shownDays.length > 0 && (
+                  <SlotGrid days={shownDays} sessions={sessions ?? []} name={name} calendar={calendar} lengths={lengths} fixedMinutes={moving?.minutes} value={selection} onChange={setSelection} />
                 )}
               </div>
 

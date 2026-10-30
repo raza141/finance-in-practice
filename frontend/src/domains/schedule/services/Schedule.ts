@@ -45,6 +45,13 @@ export class Schedule {
     return new Date(`${date}T${time}:00${Schedule.OFFSET}`).toISOString();
   }
 
+  /** A stable pick from `size` options for `key`, so a student keeps one colour every week. */
+  static colourIndex(key: string, size: number): number {
+    let hash = 0;
+    for (const char of key.toLowerCase()) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    return hash % size;
+  }
+
   /** Monday of the week containing `date` (YYYY-MM-DD). */
   static weekStart(date: string): string {
     const d = new Date(`${date}T00:00:00Z`);
