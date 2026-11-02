@@ -66,7 +66,7 @@ export function HeroSection() {
             </li>
           </ul>
 
-          <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <span data-anim="hero-cta">
               <BookSplitButton />
             </span>
@@ -75,7 +75,7 @@ export function HeroSection() {
                 href="/courses"
                 variant="secondary"
                 size="lg"
-                className="w-full rounded-full! sm:w-auto"
+                className="h-11! w-full rounded-full! sm:w-auto"
               >
                 See courses
               </ButtonLink>

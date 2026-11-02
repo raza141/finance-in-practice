@@ -46,12 +46,12 @@ export function BookSplitButton() {
   const menu = `book-menu-${id}`;
   return (
     <div className="flex items-center gap-1" style={{ "--split-anchor": `--book-${id.replace(/\W/g, "")}` } as CSSProperties}>
-      <BookButton size="lg" className="flex-1 rounded-l-full rounded-r-none sm:flex-none" />
+      <BookButton size="lg" className="h-11! flex-1 rounded-l-full rounded-r-none sm:flex-none" />
       <button
         type="button"
         popoverTarget={menu}
         aria-label="Choose a course to book"
-        className={`split-toggle grid size-12 shrink-0 place-items-center rounded-full ${RAISED_GOLD}`}
+        className={`split-toggle grid size-11 shrink-0 place-items-center rounded-full ${RAISED_GOLD}`}
       >
         <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="size-5 transition-[rotate] duration-200 motion-reduce:transition-none">
           <path d="M5 8l5 5 5-5" />
