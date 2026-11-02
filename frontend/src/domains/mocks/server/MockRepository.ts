@@ -462,7 +462,8 @@ export class MockRepository {
 
   /**
    * A drill of `from`: a draw from the bank (as `addFromBank`), or questions by id, kept to ones this student
-   * has already answered in a closed attempt (the notebook's). Null, and nothing left behind, when none go in.
+   * has already answered in a closed attempt (the notebook's). `m.durationMinutes` is for all that was asked;
+   * it's scaled to what went in. Null, and nothing left behind, when none go in.
    */
   async drill(clientId: string, m: MockExamInput, from: PoolPick | string[]): Promise<string | null> {
     const [{ id }] = (await this.sql`
@@ -484,6 +485,9 @@ export class MockRepository {
           `
         ).length
       : await this.addFromBank({ id, mockType: m.mockType, level: m.level }, from);
+    // The clock was set for the number asked for: fewer came back, so it shrinks to match.
+    const asked = Array.isArray(from) ? from.length : from.quotas.reduce((n, q) => n + q.count, 0) + from.ids.length;
+    if (added && added < asked) await this.sql`UPDATE mock_exams SET duration_minutes = ${Math.max(1, Math.ceil((m.durationMinutes * added) / asked))} WHERE id = ${id}`;
     if (added) return id;
     await this.sql`DELETE FROM mock_exams WHERE id = ${id} AND owner_client = ${clientId}`;
     return null;
