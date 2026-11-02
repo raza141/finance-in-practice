@@ -60,7 +60,8 @@ export function SlotGrid({
   const [page, setPage] = useState(0);
   const drag = useRef<{ date: string; index: number } | null>(null);
   const pointer = useRef<string>("mouse");
-  const maxHours = Math.max(...lengths) / 60;
+  // Moving a booking longer than today's longest (an old 4 h session) still needs room for all of it.
+  const maxHours = Math.max(...lengths, fixedMinutes ?? 0) / 60;
   const visible = days.slice(page * PAGE, page * PAGE + PAGE);
   const pages = Math.ceil(days.length / PAGE);
 

@@ -9,6 +9,7 @@ import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 import { SessionLogContract } from "@/domains/students/services/SessionLogContract";
+import { StudentBookingContract } from "@/domains/students/services/StudentBookingContract";
 
 import { BlockRepository } from "../server/BlockRepository";
 import { BlockContract } from "../services/BlockContract";
@@ -81,23 +82,27 @@ export async function declineBooking(uid: string, reason: string): Promise<Sched
   return { ok: true, message: "Declined. Cal.com has emailed the client." };
 }
 
-/** Moves any booking to a new Dubai date and time (same length); Cal.com emails both sides. */
-export async function moveBooking(uid: string, date: string, time: string): Promise<ScheduleActionState> {
+/**
+ * Moves any booking to a new Dubai date and time; Cal.com emails both sides. `minutes` also changes a
+ * student session's length (1, 2 or 3 h); null keeps the booked length.
+ */
+export async function moveBooking(uid: string, date: string, time: string, minutes: number | null = null): Promise<ScheduleActionState> {
   const cal = await bookingClient(uid);
   if (!(cal instanceof CalComClient)) return cal;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Schedule.TIME.test(time)) return { ok: false, message: "Pick a date and a time." };
+  if (minutes !== null && !StudentBookingContract.isLength(minutes)) return { ok: false, message: "Pick a length of 1, 2 or 3 hours." };
   const start = Schedule.instant(date, time);
   if (Number.isNaN(Date.parse(start)) || Date.parse(start) <= Date.now()) return { ok: false, message: "Pick a time in the future." };
   const admin = await AdminAuth.require();
   try {
-    await cal.rescheduleBooking(uid, start, admin.email, "Rescheduled by Finance in Practice");
+    await cal.rescheduleBooking(uid, start, admin.email, "Rescheduled by Finance in Practice", minutes ?? undefined);
   } catch (error) {
     console.error("[schedule] reschedule failed", error);
     const detail = error instanceof Error ? error.message : "";
     return { ok: false, message: `Cal.com refused the new time${detail ? `: ${detail}` : ""}. It may be outside your working hours or already taken.` };
   }
   done();
-  return { ok: true, message: "Moved. Cal.com has emailed the client the new time." };
+  return { ok: true, message: `Moved. Cal.com has emailed the client the new time${minutes ? " and length" : ""}.` };
 }
 
 /** The admin is signed in and the uid looks like a Cal.com booking. */

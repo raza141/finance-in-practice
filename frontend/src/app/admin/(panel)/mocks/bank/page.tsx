@@ -33,7 +33,15 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     );
   }
   const params = await searchParams;
-  const [topicKey, chapterKey, usage, status, edit, copy] = (["topic", "chapter", "usage", "status", "edit", "copy"] as const).map((k) => one(params[k]));
+  const [topicKey, chapterKey, usage, status, edit, copy, levelKey] = (["topic", "chapter", "usage", "status", "edit", "copy", "level"] as const).map((k) => one(params[k]));
+  const level = MockContract.level(levelKey);
+  const search = one(params.q).trim();
+  // Edit and Copy keep these, so saving lands back on the same search.
+  const filters = Object.entries({ level: levelKey, topic: topicKey, chapter: chapterKey, usage, status, q: search }).filter(([, v]) => v);
+  const bank = (extra: Record<string, string> = {}) => {
+    const query = new URLSearchParams([...filters, ...Object.entries(extra)]).toString();
+    return `/admin/mocks/bank${query && `?${query}`}`;
+  };
   // ponytail: every question's preview is rendered into the page; past a few thousand, load a topic's list on open.
   const [pool, topics, chapters, editing, copying] = await Promise.all([
     repo.pool(),
@@ -48,7 +56,9 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
       q.retired === (status === "retired") &&
       (!topicKey || q.topic.trim().toLowerCase() === topicKey.toLowerCase()) &&
       (!chapterKey || q.chapter.trim().toLowerCase() === chapterKey.toLowerCase()) &&
-      (!usage || q.usage === usage),
+      (!usage || q.usage === usage) &&
+      (!level || q.level === level) &&
+      MockContract.matches(q, search),
   );
   const groups = new Map<string, typeof shown>();
   for (const q of shown) {
@@ -77,14 +87,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         <section id="editor" aria-label="Question editor" className="mt-6 scroll-mt-6 rounded-lg border border-quant/40 p-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-medium">{copying ? "New question from a copy" : editing ? "Edit question" : "Add a question"}</h2>
-            <Link href="/admin/mocks/bank" className="text-sm text-muted hover:text-ink">
+            <Link href={bank()} className="text-sm text-muted hover:text-ink">
               Cancel
             </Link>
           </div>
           {editing?.locked && !copying && (
-            <p className="mb-4 text-sm text-muted">Students have started an assessment with this question, so only its chapter, use and explanation can change. Use Copy for a reworded version.</p>
+            <p className="mb-4 text-sm text-muted">Students have started an assessment with this question, so only its chapter, use, level, explanation and why notes can change. Use Copy for a reworded version.</p>
           )}
-          <MockQuestionForm key={edit + copy} question={copying ?? editing ?? undefined} copying={!!copying} locked={!copying && !!editing?.locked} topics={topics} chapters={chapters} />
+          <MockQuestionForm key={edit + copy} question={copying ?? editing ?? undefined} copying={!!copying} locked={!copying && !!editing?.locked} topics={topics} chapters={chapters} back={bank()} />
           {editing && !editing.locked && !copying && (
             <form action={deleteBankQuestion} className="mt-4">
               <input type="hidden" name="questionId" value={editing.id} />
@@ -104,8 +114,23 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
       </details>
 
       <form className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-line p-4">
+        <label className="grid min-w-56 flex-1 gap-1 text-xs text-muted">
+          Search
+          <input type="search" name="q" defaultValue={search} placeholder="Words in the question, options or explanation" className={FILTER} />
+        </label>
         <label className="grid gap-1 text-xs text-muted">
-          Topic
+          Level
+          <select name="level" defaultValue={level ?? ""} className={FILTER}>
+            <option value="">All</option>
+            {Object.entries(MockContract.LEVELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Book
           <select name="topic" defaultValue={topicKey} className={FILTER}>
             <option value="">All</option>
             {topics.map((t) => (
@@ -193,15 +218,16 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                             Locked
                           </span>
                         )}
-                        <Link href={`/admin/mocks/bank?edit=${q.id}#editor`} className="text-quant hover:underline">
+                        <Link href={`${bank({ edit: q.id })}#editor`} className="text-quant hover:underline">
                           Edit
                         </Link>
-                        <Link href={`/admin/mocks/bank?copy=${q.id}#editor`} className="text-quant hover:underline">
+                        <Link href={`${bank({ copy: q.id })}#editor`} className="text-quant hover:underline">
                           Copy
                         </Link>
                       </span>
                     </div>
                     <p className="pl-7 font-mono text-xs text-muted">
+                      {q.level === 2 && "Level II · "}
                       {q.chapter && `${q.chapter} · `}
                       {MockContract.USAGES[q.usage]}
                       {q.vignette && " · vignette"} · answer {q.correct}

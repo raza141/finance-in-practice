@@ -42,7 +42,7 @@ export class StudentBookingContract {
     if (notes.length > LIMITS.notes) throw new BookingValidationError(`Notes can be at most ${LIMITS.notes} characters.`);
 
     const minutes = b.minutes === undefined ? siteConfig.studentBooking.minutes : Number(b.minutes);
-    if (!StudentBookingContract.isLength(minutes)) throw new BookingValidationError("Choose a session of 1 to 4 hours.");
+    if (!StudentBookingContract.isLength(minutes)) throw new BookingValidationError(`Choose a session of 1 to ${Math.max(...siteConfig.studentBooking.lengths) / 60} hours.`);
 
     if (!ZonedCalendar.isValidTimeZone(b.timeZone)) throw new BookingValidationError("timeZone must be a valid IANA zone");
 

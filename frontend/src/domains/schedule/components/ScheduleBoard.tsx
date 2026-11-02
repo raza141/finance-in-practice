@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState, useTransition, type MouseEvent } from "react";
 
+import { siteConfig } from "@/core/config/site";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 
@@ -335,20 +336,24 @@ function ConfirmBar({ uid, onResult }: { uid: string; onResult: (r: ScheduleActi
   );
 }
 
-/** Move a booking to another Dubai date and time, e.g. to fix a student's mistake. */
-function MoveBooking({ uid, date, start, onResult }: { uid: string; date: string; start: string; onResult: (r: ScheduleActionState) => void }) {
+/**
+ * Move a booking to another Dubai date and time, e.g. to fix a student's mistake. A student session
+ * (`minutes` given) can change length too: 1, 2 or 3 h, or keep what was booked (an old 4 h one stays 4 h).
+ */
+function MoveBooking({ uid, date, start, minutes, onResult }: { uid: string; date: string; start: string; minutes?: number; onResult: (r: ScheduleActionState) => void }) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [when, setWhen] = useState({ date, time: start });
+  const [when, setWhen] = useState({ date, time: start, minutes: minutes ?? 0 });
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className="justify-self-start text-xs text-quant hover:underline">
-        Change time…
+        {minutes ? "Change time or length…" : "Change time…"}
       </button>
     );
+  const lengths = minutes ? [...new Set([...siteConfig.studentBooking.lengths, minutes])].sort((a, b) => a - b) : [];
   return (
     <div className="grid gap-2 rounded-md border border-line p-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${minutes ? "grid-cols-3" : "grid-cols-2"}`}>
         <label className="grid gap-1 text-xs text-muted">
           New date
           <input type="date" value={when.date} onChange={(e) => setWhen({ ...when, date: e.target.value })} className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink" />
@@ -357,12 +362,25 @@ function MoveBooking({ uid, date, start, onResult }: { uid: string; date: string
           Start (Dubai)
           <input type="time" step={900} value={when.time} onChange={(e) => setWhen({ ...when, time: e.target.value })} className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink" />
         </label>
+        {minutes ? (
+          <label className="grid gap-1 text-xs text-muted">
+            Length
+            <select value={when.minutes} onChange={(e) => setWhen({ ...when, minutes: Number(e.target.value) })} className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink">
+              {lengths.map((m) => (
+                <option key={m} value={m}>
+                  {hoursLabel(m)}
+                  {m === minutes ? " (booked)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
       <div className="flex gap-2">
         <button
           type="button"
           disabled={pending}
-          onClick={() => startTransition(async () => onResult(await moveBooking(uid, when.date, when.time)))}
+          onClick={() => startTransition(async () => onResult(await moveBooking(uid, when.date, when.time, minutes && when.minutes !== minutes ? when.minutes : null)))}
           className="rounded-md bg-quant/15 px-3 py-1.5 font-medium text-quant hover:bg-quant/25 disabled:opacity-60"
         >
           {pending ? "Moving…" : "Move booking"}
@@ -371,7 +389,7 @@ function MoveBooking({ uid, date, start, onResult }: { uid: string; date: string
           Back
         </button>
       </div>
-      <p className="text-xs text-muted">Same length. Cal.com emails the client the new time.</p>
+      <p className="text-xs text-muted">{minutes ? "Cal.com emails the client the new time and length; their hours follow it." : "Same length. Cal.com emails the client the new time."}</p>
     </div>
   );
 }
@@ -494,7 +512,15 @@ function EventDetail({ event, owner, onClose }: { event: ScheduleEvent; owner: b
           </div>
           {owner && event.ended && !event.group && <StudiedHours key={`${event.id}-${event.studiedMinutes ?? "booked"}`} event={event} />}
           {awaiting(event) && <ConfirmBar uid={event.id} onResult={setResult} />}
-          {!closed(event) && <MoveBooking uid={event.id} date={date} start={time(event.start)} onResult={setResult} />}
+          {!closed(event) && (
+            <MoveBooking
+              uid={event.id}
+              date={date}
+              start={time(event.start)}
+              minutes={event.session && !event.group ? Math.round((Date.parse(event.end) - Date.parse(event.start)) / 60_000) : undefined}
+              onResult={setResult}
+            />
+          )}
           {!closed(event) &&
             !awaiting(event) &&
             (confirming ? (

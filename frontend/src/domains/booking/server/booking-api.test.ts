@@ -194,6 +194,17 @@ describe("CalComClient + BookingGateway", () => {
     });
   });
 
+  it("reschedules at the same length unless a new length is given", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => json(201, { status: "success", data: { uid: "new1", start: "x", end: "y", status: "accepted" } }));
+    const cal = new CalComClient(config, fetchImpl);
+    await cal.rescheduleBooking("old1", "2026-10-05T05:00:00.000Z", "me@example.com", "why");
+    await cal.rescheduleBooking("old1", "2026-10-05T05:00:00.000Z", "me@example.com", "why", 180);
+    const bodies = fetchImpl.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+    expect(String(fetchImpl.mock.calls[0][0])).toBe("https://api.cal.com/v2/bookings/old1/reschedule");
+    expect(bodies[0]).not.toHaveProperty("lengthInMinutes");
+    expect(bodies[1]).toMatchObject({ start: "2026-10-05T05:00:00.000Z", lengthInMinutes: 180 });
+  });
+
   it("maps Cal.com rejections to SLOT_UNAVAILABLE without leaking upstream detail", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchImpl = vi.fn(async () =>

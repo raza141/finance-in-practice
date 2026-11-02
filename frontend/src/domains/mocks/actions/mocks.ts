@@ -9,6 +9,7 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { MockSession } from "../server/MockSession";
 import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
+import { MockNotebook } from "../services/MockNotebook";
 
 export type MockActionState = { ok: boolean; message: string; errors?: string[] } | null;
 
@@ -26,6 +27,50 @@ export async function startMock(form: FormData): Promise<void> {
   const mockId = String(form.get("mockId"));
   const attemptId = MockContract.isUuid(mockId) ? await MockSession.repo().start(clientId, mockId) : null;
   redirect(attemptId ? `/student/mocks/${attemptId}` : "/student");
+}
+
+/**
+ * A new attempt at only what went wrong in one of the student's closed attempts (incorrect, unanswered or
+ * flagged), timed at the mock's pace. Picked here from the stored answers, never from the browser.
+ */
+export async function retakeMistakes(form: FormData): Promise<void> {
+  const { id: clientId } = await student();
+  const from = String(form.get("attemptId"));
+  const repo = MockSession.repo();
+  const attempt = MockContract.isUuid(from) ? await repo.attempt(from, clientId) : null;
+  if (attempt?.status !== "completed") redirect(attempt ? `/student/mocks/${attempt.id}` : "/student");
+  const [{ all }, responses, mock] = await Promise.all([MockSession.questions(repo, attempt), repo.responses(attempt.id), repo.byId(attempt.mockId)]);
+  const questionIds = MockGrader.mistakes(all, responses);
+  const attemptId = mock && questionIds.length ? await repo.start(clientId, mock.id, { questionIds, minutes: MockContract.retakeMinutes(mock, questionIds.length) }) : null;
+  revalidatePath("/student");
+  redirect(attemptId ? `/student/mocks/${attemptId}` : `/student/mocks/${attempt.id}`);
+}
+
+/**
+ * "10 more from my weakest topic": fresh practice questions (none they've met) from the bank, trying their
+ * weakest topics in turn until one has some. Starts it at once.
+ */
+export async function drillWeakestTopic(): Promise<void> {
+  const { id: clientId } = await student();
+  const repo = MockSession.repo();
+  for (const t of (await repo.weakTopics(clientId)).slice(0, 5)) {
+    const exam = { title: `Drill: ${t.topic}`, mockType: "topic" as const, source: "Weakest topic", level: t.level, durationMinutes: MockContract.minutes(MockContract.DRILL_SIZE, "topic", t.level) };
+    const id = await repo.drill(clientId, exam, { quotas: [{ topic: t.topic, count: MockContract.DRILL_SIZE }], ids: [], chapter: "", avoid: [clientId] });
+    if (id) redirect(`/student/mocks/${await repo.start(clientId, id)}`);
+  }
+  redirect("/student/mocks/notebook?notice=no-drill");
+}
+
+/** A practice run of the notebook's newest questions (`MockNotebook.practice`), timed at the CFA pace. */
+export async function practiceNotebook(): Promise<void> {
+  const { id: clientId } = await student();
+  const repo = MockSession.repo();
+  const book = MockNotebook.practice(MockNotebook.build(await repo.notebookRows(clientId)));
+  const level = book.filter((e) => e.level === 2).length > book.length / 2 ? 2 : 1;
+  const minutes = Math.min(600, Math.ceil(book.reduce((n, e) => n + MockContract.MINUTES_PER_QUESTION[e.level], 0)));
+  const exam = { title: `Mistakes notebook: ${book.length} question${book.length === 1 ? "" : "s"}`, mockType: "topic" as const, source: "Mistakes notebook", level, durationMinutes: Math.max(1, minutes) } as const;
+  const id = book.length ? await repo.drill(clientId, exam, book.map((e) => e.id)) : null;
+  redirect(id ? `/student/mocks/${await repo.start(clientId, id)}` : "/student/mocks/notebook");
 }
 
 /** The player's periodic save. `open` false: the attempt (or its session) is closed or its clock ran out, so the player submits. */
@@ -155,7 +200,8 @@ export async function uploadBankQuestions(_prev: MockActionState, form: FormData
   const text = file instanceof File && file.size > 0 ? await file.text() : String(form.get("paste") ?? "");
   if (!text.trim()) return { ok: false, message: "Choose a .csv file or paste the rows from Excel." };
   const usage = form.get("usage");
-  const sheet = MockContract.parseSheet(text, MockContract.isUsage(usage) ? usage : "mock");
+  const level = Number(form.get("level"));
+  const sheet = MockContract.parseSheet(text, MockContract.isUsage(usage) ? usage : "mock", MockContract.isLevel(level) ? level : 1);
   if (!sheet.ok) return { ok: false, message: "Nothing was saved. Fix these rows and upload again:", errors: sheet.errors };
   const { added, skipped } = await MockSession.repo().importQuestions(sheet.questions);
   refresh();
@@ -170,10 +216,12 @@ export async function saveBankQuestion(_prev: MockActionState, form: FormData): 
   const parsed = MockContract.parseQuestion(form);
   if (!parsed.ok) return { ok: false, message: "Nothing was saved. Fix these and save again:", errors: parsed.errors };
   const saved = await MockSession.repo().saveQuestion(questionId || null, parsed.value);
-  if (saved === "locked") return { ok: false, message: "Students have started a mock with this question, so only its chapter, use and explanation can change. Use Copy to make an edited version." };
+  if (saved === "locked") return { ok: false, message: "Students have started a mock with this question, so only its chapter, use, level, explanation and why notes can change. Use Copy to make an edited version." };
   if (saved === "duplicate") return { ok: false, message: "The bank already has this question. Change the wording, options or answer." };
   revalidatePath("/student");
-  redirect("/admin/mocks/bank");
+  // Back to the search the question was found from.
+  const back = String(form.get("back") ?? "");
+  redirect(back.startsWith("/admin/mocks/bank?") ? back : "/admin/mocks/bank");
 }
 
 export async function deleteBankQuestion(form: FormData): Promise<void> {

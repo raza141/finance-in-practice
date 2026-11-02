@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { BUTTON, BOOK_BUTTON } from "@/domains/students/components/buttons";
 
-import { startMock } from "../actions/mocks";
+import { drillWeakestTopic, startMock } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 import type { AttemptSummary, MockExam } from "../types";
@@ -16,9 +16,9 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
     return <p className={`${CARD} text-sm text-muted`}>Couldn&rsquo;t load your mock exams right now. Please refresh in a minute.</p>;
   }
   if (mocks.length === 0 && history.length === 0) return null;
-  const open = new Map(history.filter((h) => h.status === "in_progress").map((h) => [h.mockId, h.id]));
-  // Newest first, so the first completed one per mock is the latest mark.
-  const done = (mockId: string) => history.filter((h) => h.mockId === mockId && h.score !== null);
+  const open = new Map(history.filter((h) => h.status === "in_progress").map((h) => [h.mockId, h]));
+  // Newest first, so the first completed one per mock is the latest mark. A mistakes retake isn't the mock's mark.
+  const done = (mockId: string) => history.filter((h) => h.mockId === mockId && h.score !== null && !h.mistakes);
   const exams = mocks.filter((m) => !MockContract.isPractice(m.mockType));
   const practice = (["topic", "chapter"] as const).map((type) => [type, mocks.filter((m) => m.mockType === type)] as const).filter(([, sets]) => sets.length > 0);
 
@@ -29,7 +29,10 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
         return (
           <li key={m.id} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/60 p-5">
             <div>
-              <p className="font-mono text-[11px] tracking-[0.18em] text-quant uppercase">{MockContract.TYPES[m.mockType]}</p>
+              <p className="font-mono text-[11px] tracking-[0.18em] text-quant uppercase">
+                {m.level === 2 ? `${MockContract.LEVELS[2]} · ` : ""}
+                {MockContract.TYPES[m.mockType]}
+              </p>
               <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
               {m.source && <p className="text-sm text-muted">{m.source}</p>}
             </div>
@@ -39,7 +42,8 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
             </p>
             {done(m.id).length > 0 && (
               <p className="text-xs text-muted">
-                Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}%. A retake shuffles the questions and keeps every mark.
+                Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}%. A retake shuffles the questions and keeps every mark; to redo only your
+                mistakes, open the attempt&rsquo;s results.
               </p>
             )}
             {/* A new attempt opens on the instructions first; an open one goes straight back in. */}
@@ -47,7 +51,7 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
               <form action={startMock} className="mt-auto">
                 <input type="hidden" name="mockId" value={m.id} />
                 <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
-                  {open.has(m.id) ? "Resume" : done(m.id).length ? "Retake" : label}
+                  {open.has(m.id) ? (open.get(m.id)!.mistakes ? "Resume mistakes retake" : "Resume") : done(m.id).length ? "Retake" : label}
                 </button>
               </form>
             ) : (
@@ -86,6 +90,23 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
         </div>
       )}
 
+      {!readOnly && history.some((h) => h.status === "completed") && (
+        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-4">
+          <p className="min-w-0 flex-1 text-sm">
+            <span className="font-semibold">Revise</span>
+            <span className="block text-muted">Questions you missed wait in your notebook until you get them right twice. Or take {MockContract.DRILL_SIZE} new ones from your weakest topic.</span>
+          </p>
+          <Link href="/student/mocks/notebook" className={BUTTON}>
+            Mistakes notebook
+          </Link>
+          <form action={drillWeakestTopic}>
+            <button type="submit" className={BOOK_BUTTON}>
+              Weakest-topic drill
+            </button>
+          </form>
+        </div>
+      )}
+
       {history.length > 0 && (
         <div className="mt-8">
           <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Past attempts</h3>
@@ -94,6 +115,7 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
               <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                 <span>
                   <span className="font-medium">{h.mockTitle}</span>
+                  {h.mistakes && <span className="ml-2 rounded-full border border-gold/40 px-2 py-0.5 text-[11px] text-gold">Mistakes retake</span>}
                   <span className="block font-mono text-xs text-muted">{DAY.format(h.startedAt)}</span>
                 </span>
                 <span className="flex items-center gap-4">

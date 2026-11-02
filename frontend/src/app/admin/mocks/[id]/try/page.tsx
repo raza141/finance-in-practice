@@ -23,6 +23,7 @@ export default async function TryMockPage({ params }: PageProps<"/admin/mocks/[i
   if (questions.length === 0) notFound();
   // ponytail: a full mock is tried as one sitting (all questions, both sessions' time); its break isn't simulated.
   const all = MockGrader.arrange(questions, null).map((q, i) => ({ ...q, number: i + 1 }));
+  const cases = MockGrader.cases(all);
   return (
     <MockPlayer
       attemptId={`try-${mock.id}`}
@@ -30,7 +31,7 @@ export default async function TryMockPage({ params }: PageProps<"/admin/mocks/[i
       title={mock.title}
       tag={[MockContract.TYPES[mock.mockType], mock.source].filter(Boolean).join(" · ")}
       remainingMs={mock.durationMinutes * MockContract.sessions(mock) * 60_000}
-      questions={all.map((q) => renderQuestion(MockGrader.active(q)))}
+      questions={all.map((q) => ({ ...renderQuestion(MockGrader.active(q)), caseId: cases.get(q.id) }))}
       initial={[]}
       answerKey={Object.fromEntries(all.map((q) => [q.id, q.correct]))}
       exitHref={`/admin/mocks/${mock.id}`}

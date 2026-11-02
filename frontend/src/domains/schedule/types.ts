@@ -27,6 +27,8 @@ export interface ScheduleEvent extends TimeRange {
   studiedMinutes?: number | null;
   /** Bookings only: more than one attendee (a group class). */
   group?: boolean;
+  /** Bookings only: a student "session" booking, so its length can be changed (it offers several). */
+  session?: boolean;
   /** Bookings only: accepted and over, so its studied time can be corrected. */
   ended?: boolean;
 }

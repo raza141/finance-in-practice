@@ -542,7 +542,10 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
           <ul className="mt-4 divide-y divide-line rounded-lg border border-line text-sm">
             {mockAttempts.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
-                <span className="flex-1">{a.mockTitle}</span>
+                <span className="flex-1">
+                  {a.mockTitle}
+                  {a.mistakes && <span className="ml-2 text-xs text-gold">mistakes retake</span>}
+                </span>
                 <span className="text-muted">{InvoiceEmails.day(Allowance.dateOf(a.startedAt.toISOString()))}</span>
                 {a.score === null ? (
                   <span className="font-mono text-xs text-gold">In progress</span>

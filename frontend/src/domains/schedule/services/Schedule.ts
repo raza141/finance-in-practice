@@ -1,3 +1,5 @@
+import { siteConfig } from "@/core/config/site";
+
 import type { BookingBlock, ScheduleEvent, TimeRange } from "../types";
 
 interface BookingLike extends TimeRange {
@@ -7,6 +9,7 @@ interface BookingLike extends TimeRange {
   meetingUrl: string | null;
   metadata: Record<string, string>;
   attendees: { name: string; email: string }[];
+  eventType?: { slug?: string } | null;
 }
 
 interface BusyLike extends TimeRange {
@@ -85,6 +88,7 @@ export class Schedule {
         email: b.attendees[0]?.email,
         meetingUrl: b.meetingUrl,
         group: b.attendees.length > 1,
+        session: b.eventType?.slug === siteConfig.studentBooking.eventSlug,
       })),
       ...busy
         .filter((b) => !booked.has(key(b)))

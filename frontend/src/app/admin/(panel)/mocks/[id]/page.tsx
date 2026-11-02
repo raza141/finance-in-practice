@@ -12,7 +12,7 @@ import { QuestionPreview } from "@/domains/mocks/components/QuestionPreview";
 import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
 import { deleteMock, moveMockQuestion, removeMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
 import { bankTopics } from "@/domains/mocks/components/bankTopics";
-import { MockAccessForm, MockBankForm, MockExamForm } from "@/domains/mocks/components/MockAdminForms";
+import { MockAccessForm, MockBankForm, MockExamForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -20,16 +20,21 @@ export const metadata: Metadata = { title: "Edit mock exam" };
 
 export default async function AdminMockPage({ params, searchParams }: PageProps<"/admin/mocks/[id]">) {
   await AdminAuth.require();
-  const [{ id }, { notice, add, chapter: chapterParam }] = await Promise.all([params, searchParams]);
+  const [{ id }, { notice, add, chapter: chapterParam, student: studentParam }] = await Promise.all([params, searchParams]);
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;
   if (!repo || !mock) notFound();
+  const student = typeof studentParam === "string" ? studentParam : "";
+  const adding = !!add && !mock.attempted;
+  // A grant-only mock's readers are known, so what any of them has seen stays out by default.
+  const grantOnly = mock.audience === "clients";
+  const avoid = MockContract.isUuid(student) ? [student] : adding && grantOnly && student !== "none" ? await repo.openClients(mock.id) : [];
   const [questions, students, granted, offered] = await Promise.all([
     repo.questions(mock.id),
     repo.students(),
     repo.accessClients(mock.id),
     // ponytail: every available question's preview is rendered into the page; past a few thousand, load a topic's list on open.
-    add && !mock.attempted ? repo.pool(mock) : [],
+    adding ? repo.pool(mock, avoid) : [],
   ]);
   const chapter = typeof chapterParam === "string" ? chapterParam : "";
   const chapters = [...new Set(offered.map((q) => q.chapter.trim()).filter(Boolean))].sort();
@@ -114,9 +119,11 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                 Close
               </Link>
             </div>
+            <SeenFilter students={students} student={student} everyone={grantOnly} chapter={chapter} />
             {chapters.length > 0 && (
               <form className="mb-4 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="add" value="1" />
+                {student && <input type="hidden" name="student" value={student} />}
                 <label className="grid gap-1 text-sm text-muted">
                   Chapter
                   <select name="chapter" defaultValue={chapter} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink">
@@ -132,10 +139,10 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
               </form>
             )}
             {groups.length > 0 ? (
-              <MockBankForm key={chapter} mockId={mock.id} topics={groups} chapter={chapter} />
+              <MockBankForm key={`${chapter}${student}`} mockId={mock.id} topics={groups} chapter={chapter} avoid={avoid} />
             ) : (
               <p className="text-sm text-muted">
-                No questions left to add. Only active questions marked for {noun === "set" ? "practice" : "mocks"} appear here;{" "}
+                No questions left to add. Only active questions marked for {noun === "set" ? "practice" : "mocks"}{avoid.length > 0 && " that the chosen students haven't seen"} appear here;{" "}
                 <Link href="/admin/mocks/bank" className="text-quant hover:underline">
                   check the question bank
                 </Link>

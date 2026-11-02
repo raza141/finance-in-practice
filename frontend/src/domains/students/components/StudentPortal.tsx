@@ -516,7 +516,7 @@ export function StudentPortal({
                 <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className={LABEL}>Date and time</span>
                   <span className="text-xs text-muted">
-                    {moving ? `Click a new start time (${hours(moving.minutes)})` : "Click a start time, or drag down for 2–4 hours"}
+                    {moving ? `Click a new start time (${hours(moving.minutes)})` : `Click a start time, or drag down for 2–${Math.max(...lengths) / 60} hours`}
                   </span>
                 </p>
                 {days.status === "loading" && <p className="text-sm text-muted">Loading free times…</p>}

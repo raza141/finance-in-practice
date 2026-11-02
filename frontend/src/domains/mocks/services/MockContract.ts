@@ -1,10 +1,10 @@
 import { CsvText } from "@/domains/journal/services/ChartData";
 
 import { MockExhibits } from "./MockExhibits";
-import type { AccessGrantInput, AccessProduct, MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter, QuestionUsage } from "../types";
+import type { AccessGrantInput, AccessProduct, CfaLevel, MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter, PoolQuestion, QuestionUsage } from "../types";
 
-/** How many random questions to draw per topic, plus questions ticked by hand; `chapter` limits the draw to that chapter ("": all). */
-export type PoolPick = { quotas: { topic: string; count: number }[]; ids: string[]; chapter: string };
+/** How many random questions to draw per topic, plus questions ticked by hand; `chapter` limits the draw to that chapter ("": all); nothing `avoid`'s clients have already met goes in. */
+export type PoolPick = { quotas: { topic: string; count: number }[]; ids: string[]; chapter: string; avoid: string[] };
 
 export type SheetResult = { ok: true; questions: MockQuestionInput[] } | { ok: false; errors: string[] };
 
@@ -17,6 +17,7 @@ const COLUMNS = {
   topic: "topic",
   chapter: "chapter",
   usage: "usage",
+  level: "level",
   vignette: "vignette",
   question: "question",
   optiona: "a",
@@ -25,6 +26,9 @@ const COLUMNS = {
   correctoption: "correct",
   correct: "correct",
   explanation: "explanation",
+  whya: "whyA",
+  whyb: "whyB",
+  whyc: "whyC",
 } as const;
 type Column = (typeof COLUMNS)[keyof typeof COLUMNS];
 const REQUIRED: Column[] = ["topic", "question", "a", "b", "c", "correct"];
@@ -52,6 +56,7 @@ export class MockContract {
     practice: "Practice only",
     both: "Mocks and practice",
   };
+  static readonly LEVELS: Record<CfaLevel, string> = { 1: "CFA Level I", 2: "CFA Level II" };
   static readonly LETTERS: readonly OptionLetter[] = ["A", "B", "C"];
   static readonly MAX_QUESTIONS = 500;
   /** The optional break between a full mock's sessions (the CFA exam's is about 30 minutes). */
@@ -61,14 +66,48 @@ export class MockContract {
   static sessions(mock: { mockType: MockType }): 1 | 2 {
     return mock.mockType === "full" ? 2 : 1;
   }
+
+  /** An attempt's sittings: a retake of mistakes is always one, however the mock is split. */
+  static attemptSessions(mock: { mockType: MockType }, attempt: { questionIds: string[] | null }): 1 | 2 {
+    return attempt.questionIds ? 1 : MockContract.sessions(mock);
+  }
+
   static readonly MAX_NOTES = 5000;
-  /** The CFA exam's pace: 135 minutes for 90 questions. */
-  static readonly MINUTES_PER_QUESTION = 1.5;
+  /** Questions in a weakest-topic drill. */
+  static readonly DRILL_SIZE = 10;
+  /** The CFA exam's pace: Level I is 135 minutes for 90 questions, Level II 132 minutes for 44 (11 item sets). */
+  static readonly MINUTES_PER_QUESTION: Record<CfaLevel, number> = { 1: 1.5, 2: 3 };
 
   /** The suggested duration for `count` questions; a full mock's is per session, so half the questions. */
-  static minutes(count: number, mockType: MockType): number {
+  static minutes(count: number, mockType: MockType, level: CfaLevel = 1): number {
     const sitting = MockContract.sessions({ mockType }) === 2 ? Math.ceil(count / 2) : count;
-    return Math.min(600, Math.max(1, Math.ceil(sitting * MockContract.MINUTES_PER_QUESTION)));
+    return Math.min(600, Math.max(1, Math.ceil(sitting * MockContract.MINUTES_PER_QUESTION[level])));
+  }
+
+  /** A mistakes retake's clock: the mock's own pace (both sessions' time over all its questions) for `count` of them. */
+  static retakeMinutes(mock: { mockType: MockType; durationMinutes: number; questionCount: number }, count: number): number {
+    return Math.min(600, Math.max(1, Math.ceil(count * MockContract.pace(mock))));
+  }
+
+  /** The mock's minutes per question: both sessions' time over all its questions. */
+  static pace(mock: { mockType: MockType; durationMinutes: number; questionCount: number }): number {
+    return (mock.durationMinutes * MockContract.sessions(mock)) / Math.max(1, mock.questionCount);
+  }
+
+  static isLevel(value: unknown): value is CfaLevel {
+    return value === 1 || value === 2;
+  }
+
+  /** "2", "L2", "Level II", "II": blank or unknown is null. */
+  static level(raw: string): CfaLevel | null {
+    const v = raw.trim().toLowerCase().replace(/^(cfa\s*)?(level|l)\s*/, "");
+    return v === "1" || v === "i" ? 1 : v === "2" || v === "ii" ? 2 : null;
+  }
+
+  /** The bank's search: every word typed appears somewhere in the question, in any order and case. */
+  static matches(q: Pick<PoolQuestion, "topic" | "chapter" | "vignette" | "question" | "options" | "explanation">, search: string): boolean {
+    const text = [q.topic, q.chapter, q.vignette, q.question, ...q.options, q.explanation].join(" ").toLowerCase();
+    return search.toLowerCase().split(/\s+/).every((word) => text.includes(word));
   }
 
   /** Topic and chapter sets are practice; the rest are mocks. */
@@ -98,13 +137,15 @@ export class MockContract {
     const mockType = String(form.get("mockType") ?? "");
     const source = String(form.get("source") ?? "").trim();
     const durationMinutes = Number(form.get("durationMinutes"));
+    const level = Number(form.get("level") ?? 1);
     if (title.length < 3 || title.length > 120) return { ok: false, error: "The title needs 3 to 120 characters." };
     if (!(mockType in MockContract.TYPES)) return { ok: false, error: "Pick a mock type." };
     if (source.length > 120) return { ok: false, error: "Keep the book or source under 120 characters." };
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 600) {
       return { ok: false, error: "The duration is whole minutes, 1 to 600." };
     }
-    return { ok: true, value: { title, mockType: mockType as MockType, source, durationMinutes } };
+    if (!MockContract.isLevel(level)) return { ok: false, error: "Pick the CFA level." };
+    return { ok: true, value: { title, mockType: mockType as MockType, source, durationMinutes, level } };
   }
 
   /** A yyyy-mm-dd from a date field as that moment in Dubai: `end` is the last second of the day. */
@@ -159,11 +200,12 @@ export class MockContract {
     }
     const ids = [...new Set(form.getAll("q").map(String))].filter(MockContract.isUuid);
     const chapter = String(form.get("chapter") ?? "").trim();
+    const avoid = [...new Set(form.getAll("avoid").map(String))].filter(MockContract.isUuid);
     if (!quotas.length && !ids.length) return { ok: false, error: "Give a topic a number of questions, or tick some." };
     if (quotas.reduce((n, q) => n + q.count, 0) > MockContract.MAX_QUESTIONS || ids.length > MockContract.MAX_QUESTIONS) {
       return { ok: false, error: `At most ${MockContract.MAX_QUESTIONS} questions per mock.` };
     }
-    return { ok: true, value: { quotas, ids, chapter } };
+    return { ok: true, value: { quotas, ids, chapter, avoid } };
   }
 
   /** One question's problems (sheet row or the admin's question form), as "Question is empty". */
@@ -172,6 +214,7 @@ export class MockContract {
     const number = Number(at("number"));
     if (at("number") && (!Number.isInteger(number) || number < 1 || number > MockContract.MAX_QUESTIONS)) problems.push(`Number "${at("number")}" is not 1 to 500`);
     if (at("usage") && !MockContract.isUsage(at("usage").toLowerCase())) problems.push(`Usage must be mock, practice or both (got "${at("usage")}")`);
+    if (at("level") && !MockContract.level(at("level"))) problems.push(`Level must be 1 or 2 (got "${at("level")}")`);
     if (!MockContract.isLetter(at("correct").toUpperCase())) problems.push(`Correct_Option must be A, B or C (got "${at("correct")}")`);
     const limits: [Column, string, number][] = [
       ["topic", "Topic", 80],
@@ -187,6 +230,7 @@ export class MockContract {
     }
     if (at("vignette").length > 20000) problems.push("Vignette is over 20000 characters");
     if (at("explanation").length > 10000) problems.push("Explanation is over 10000 characters");
+    for (const c of ["whyA", "whyB", "whyC"] as const) if (at(c).length > 2000) problems.push(`Why_${c.at(-1)} is over 2000 characters`);
     for (const [c, label] of [["vignette", "Vignette"], ["question", "Question"], ["explanation", "Explanation"]] as const) problems.push(...MockExhibits.problems(at(c), label));
     return problems;
   }
@@ -199,27 +243,31 @@ export class MockContract {
     return { ok: true, value: MockContract.toInput(at) };
   }
 
-  private static toInput(at: (c: Column) => string, usage: QuestionUsage = "mock"): MockQuestionInput {
+  private static toInput(at: (c: Column) => string, usage: QuestionUsage = "mock", level: CfaLevel = 1): MockQuestionInput {
     return {
       number: Number(at("number")),
       topic: at("topic"),
       chapter: at("chapter"),
       usage: (at("usage").toLowerCase() as QuestionUsage) || usage,
-      vignette: at("vignette"),
+      level: MockContract.level(at("level")) ?? level,
+      // Trimmed: an item set is the rows whose vignette matches exactly.
+      vignette: at("vignette").trim(),
       question: at("question"),
       options: [at("a"), at("b"), at("c")],
       correct: at("correct").toUpperCase() as OptionLetter,
       explanation: at("explanation"),
+      why: [at("whyA"), at("whyB"), at("whyC")],
     };
   }
 
   /**
    * A CSV file, or rows copied straight out of Excel (tab-separated). Columns, in any order:
    * Topic | Question | Option_A | Option_B | Option_C | Correct_Option, and optionally Number (the order; rows without
-   * one keep their place), Chapter, Usage (blank: `usage`), Vignette, Explanation.
+   * one keep their place), Chapter, Usage (blank: `usage`), Level (blank: `level`), Vignette, Explanation, and
+   * Why_A, Why_B, Why_C (why that option tempts, shown to a student who picked it wrongly).
    * Every bad row is reported, so the admin can fix the sheet in one go.
    */
-  static parseSheet(text: string, usage: QuestionUsage = "mock"): SheetResult {
+  static parseSheet(text: string, usage: QuestionUsage = "mock", level: CfaLevel = 1): SheetResult {
     const rows = CsvText.parse(text.replace(/^﻿/, ""));
     if (rows.length < 2) return { ok: false, errors: ["The sheet needs a header row and at least one question."] };
     const [header, ...data] = rows;
@@ -245,7 +293,7 @@ export class MockContract {
         continue;
       }
       seen.add(number);
-      questions.push({ ...MockContract.toInput(at, usage), number });
+      questions.push({ ...MockContract.toInput(at, usage, level), number });
     }
     if (errors.length) return { ok: false, errors };
     if (questions.length === 0) return { ok: false, errors: ["The sheet has no questions."] };
@@ -259,7 +307,7 @@ export class MockContract {
     const seen = new Set<string>();
     return input.slice(0, MockContract.MAX_QUESTIONS).flatMap((r): MockResponse[] => {
       if (typeof r !== "object" || r === null) return [];
-      const { questionId, selected, flagged, notes } = r as Record<string, unknown>;
+      const { questionId, selected, flagged, notes, seconds, confidence } = r as Record<string, unknown>;
       if (!MockContract.isUuid(questionId) || seen.has(questionId)) return [];
       seen.add(questionId);
       return [
@@ -268,6 +316,8 @@ export class MockContract {
           selected: MockContract.isLetter(selected) ? selected : null,
           flagged: flagged === true,
           notes: typeof notes === "string" ? notes.slice(0, MockContract.MAX_NOTES) : "",
+          seconds: typeof seconds === "number" && Number.isFinite(seconds) ? Math.min(86_400, Math.max(0, Math.round(seconds))) : 0,
+          confidence: confidence === "sure" || confidence === "guess" ? confidence : null,
         },
       ];
     });

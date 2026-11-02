@@ -81,9 +81,9 @@ export const siteConfig = {
   },
 
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
-  /** `lengths` must match the durations offered on the Cal.com "session" event (60/120/180/240). */
+  /** `lengths` must be durations the Cal.com "session" event offers (it may offer more, e.g. 240; only these are bookable here). */
   /** `maxUpcoming`: a student's own upcoming sessions (pending included) before booking more is refused. */
-  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180, 240], maxUpcoming: 4, href: "/student" },
+  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180], maxUpcoming: 4, href: "/student" },
 
   /** Classroom feed in the portal: mocks below this percentage get a "book a review" prompt (the owner's target, not an official pass mark). */
   classroom: { targetPct: 70 },

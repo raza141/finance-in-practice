@@ -15,13 +15,15 @@ export interface PlayerQuestion {
   id: string;
   number: number;
   vignette: ReactNode | null;
+  /** The first question of its vignette set: questions sharing it are one case (a Level II item set). */
+  caseId?: string;
   question: ReactNode;
   options: [ReactNode, ReactNode, ReactNode];
 }
 
 type Answer = Omit<MockResponse, "questionId">;
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
-const BLANK: Answer = { selected: null, flagged: false, notes: "" };
+const BLANK: Answer = { selected: null, flagged: false, notes: "", seconds: 0, confidence: null };
 const AUTOSAVE_MS = 20_000;
 
 /** The side-panel icon (as in a chat app's sidebar toggle): a window with its left column marked. */
@@ -92,6 +94,8 @@ export function MockPlayer({
   const [state, setState] = useState<"working" | "submitting" | "pausing" | "resuming" | "error">("working");
   const dirty = useRef(false);
   const submitted = useRef(false);
+  // The question on screen and since when: its time so far is added to every save, and to its answer on leaving.
+  const onScreen = useRef<{ id: string; since: number } | null>(null);
 
   // This device's unsaved changes (e.g. notes typed just before a refresh) win over the last autosave.
   useEffect(() => {
@@ -113,7 +117,12 @@ export function MockPlayer({
   }, []);
 
   const list = useCallback(
-    (a: Record<string, Answer>): MockResponse[] => questions.map((q) => ({ questionId: q.id, ...(a[q.id] ?? BLANK) })),
+    (a: Record<string, Answer>): MockResponse[] =>
+      questions.map((q) => {
+        const base = { ...BLANK, ...a[q.id] };
+        const live = onScreen.current?.id === q.id ? Math.round((Date.now() - onScreen.current.since) / 1000) : 0;
+        return { questionId: q.id, ...base, seconds: Math.min(86_400, (base.seconds ?? 0) + live) };
+      }),
     [questions],
   );
 
@@ -212,9 +221,10 @@ export function MockPlayer({
     };
   }, [save]);
 
-  const change = (id: string, patch: Partial<Answer>) => {
+  const change = (id: string, patch: Partial<Answer> | ((before: Answer) => Partial<Answer>)) => {
     setAnswers((a) => {
-      const next = { ...a, [id]: { ...(a[id] ?? BLANK), ...patch } };
+      const before = { ...BLANK, ...a[id] };
+      const next = { ...a, [id]: { ...before, ...(typeof patch === "function" ? patch(before) : patch) } };
       try {
         if (!preview) localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {}
@@ -223,7 +233,27 @@ export function MockPlayer({
     dirty.current = true;
   };
 
+  // Time on each question: counted while it's on screen and the clock runs, added to its answer when the student moves on or pauses.
+  const currentId = questions[current].id;
+  useEffect(() => {
+    if (paused || checked || preview) return;
+    const shown = { id: currentId, since: Date.now() };
+    onScreen.current = shown;
+    return () => {
+      onScreen.current = null;
+      const add = Math.round((Date.now() - shown.since) / 1000);
+      if (add > 0) change(shown.id, (before) => ({ seconds: Math.min(86_400, (before.seconds ?? 0) + add) }));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `change` only writes state; the clock restarts on these alone
+  }, [currentId, paused, checked, preview]);
+
   const q = questions[current];
+
+  // The item set this question belongs to.
+
+  const set = q.caseId ? questions.filter((x) => x.caseId === q.caseId) : [];
+
+  const caseRange = set.length > 1 ? `${set[0].number}–${set.at(-1)!.number}` : "";
   const mine = answers[q.id] ?? BLANK;
   const answered = questions.filter((x) => answers[x.id]?.selected).length;
   const unanswered = questions.length - answered;
@@ -357,10 +387,13 @@ export function MockPlayer({
         )}
 
         <main className="grid min-w-0 content-start gap-4">
-          <div className={`grid gap-4 ${q.vignette ? "xl:grid-cols-2" : ""}`}>
+          <div className={`grid items-start gap-4 ${q.vignette ? "lg:grid-cols-2" : ""}`}>
             {q.vignette && (
-              <section aria-label="Case" className="max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-surface/60 p-5">
-                <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Vignette</h2>
+              // Pinned beside the question: a Level II item set's four questions all read from it, and its scroll stays put between them.
+              <section aria-label="Case" className="max-h-[70vh] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface/60 p-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)]">
+                <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+                  Vignette{caseRange && `: questions ${caseRange}`}
+                </h2>
                 <div className="mt-3 text-ink/90">{q.vignette}</div>
               </section>
             )}
@@ -423,6 +456,28 @@ export function MockPlayer({
                   })}
                 </ul>
               </fieldset>
+              {mine.selected && !checked && (
+                <div role="group" aria-label="How sure are you of this answer?" className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted">How sure are you?</span>
+                  {(
+                    [
+                      ["sure", "Sure"],
+                      ["guess", "A guess"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={mine.confidence === value}
+                      onClick={() => change(q.id, { confidence: mine.confidence === value ? null : value })}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.confidence === value ? (value === "sure" ? "border-emerald-400/70 bg-emerald-400/15 text-emerald-200" : "border-gold bg-gold/15 text-gold") : "border-line text-muted hover:text-ink"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <span className="text-xs text-muted">Guesses come back in your mistakes retake.</span>
+                </div>
+              )}
             </section>
           </div>
 

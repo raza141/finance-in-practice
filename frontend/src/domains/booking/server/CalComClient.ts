@@ -136,11 +136,14 @@ export class CalComClient extends BaseApiClient {
     return response.data ?? [];
   }
 
-  /** Same length and details at a new start; Cal.com emails both sides the change. */
-  async rescheduleBooking(uid: string, start: string, rescheduledBy: string, reason: string): Promise<CalBooking> {
+  /**
+   * Same details at a new start; Cal.com emails both sides the change. `lengthInMinutes` changes the length
+   * too, only for an event type offering several lengths (omitted: the same length).
+   */
+  async rescheduleBooking(uid: string, start: string, rescheduledBy: string, reason: string, lengthInMinutes?: number): Promise<CalBooking> {
     const response = await this.post<{ status: string; data: CalBooking }>(
       `/bookings/${encodeURIComponent(uid)}/reschedule`,
-      { start, rescheduledBy, reschedulingReason: reason },
+      { start, rescheduledBy, reschedulingReason: reason, ...(lengthInMinutes ? { lengthInMinutes } : {}) },
       { headers: { "cal-api-version": CalComClient.BOOKINGS_API_VERSION } },
     );
     return response.data;

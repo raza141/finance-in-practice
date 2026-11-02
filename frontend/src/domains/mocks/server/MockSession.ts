@@ -20,8 +20,8 @@ export class MockSession {
   /** The attempt's questions in its order, and the ones of the session it's in. */
   static async questions(repo: MockRepository, attempt: MockAttempt): Promise<{ all: MockQuestion[]; current: MockQuestion[]; sessions: 1 | 2 }> {
     const [questions, seed, mock] = await Promise.all([repo.questions(attempt.mockId), repo.seed(attempt), repo.byId(attempt.mockId)]);
-    const sessions = mock ? MockContract.sessions(mock) : 1;
-    const all = MockGrader.arrange(questions, seed);
+    const sessions = mock ? MockContract.attemptSessions(mock, attempt) : 1;
+    const all = MockGrader.arrange(MockGrader.subset(questions, attempt.questionIds), seed);
     return { all, current: MockGrader.session(all, sessions, attempt.session), sessions };
   }
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MockQuestion, MockResponse } from "../types";
 import { MockContract } from "./MockContract";
 import { MockGrader } from "./MockGrader";
+import { MockNotebook, type NotebookRow } from "./MockNotebook";
 import { MockProgress } from "./MockProgress";
 
 const HEADER = "Number,Topic,Vignette (Optional),Question,Option_A,Option_B,Option_C,Correct_Option,Explanation (Optional)";
@@ -24,22 +25,26 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
           topic: "FSA",
           chapter: "",
           usage: "mock",
+          level: 1,
           vignette: 'Case: Alder Corp.\nRevenue rose 12%, "adjusted" EBIT 40.',
           question: "Calculate FCFF.",
           options: ["$142.5m", "$158.0m", "$164.2m"],
           correct: "B",
           explanation: "",
+          why: ["", "", ""],
         },
         {
           number: 2,
           topic: "Fixed Income",
           chapter: "",
           usage: "mock",
+          level: 1,
           vignette: "",
           question: "Duration 6.2, convexity 85: price change for +75bp?",
           options: ["$-4.41\\%$", "$-4.65\\%$", "$-4.89\\%$"],
           correct: "A",
           explanation: "Convexity adds back $\\tfrac12 C (\\Delta y)^2$.",
+          why: ["", "", ""],
         },
       ],
     });
@@ -90,6 +95,17 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
   });
 });
 
+describe("MockContract.matches", () => {
+  const q = { topic: "Ethics", chapter: "Standards", vignette: "Delta Corp", question: "Which duty applies?", options: ["Loyalty", "Prudence", "Care"] as [string, string, string], explanation: "Standard III" };
+
+  it("needs every word, in any field, order or case; blank matches all", () => {
+    expect(MockContract.matches(q, "")).toBe(true);
+    expect(MockContract.matches(q, "PRUDENCE delta")).toBe(true);
+    expect(MockContract.matches(q, "standard  iii")).toBe(true);
+    expect(MockContract.matches(q, "delta bond")).toBe(false);
+  });
+});
+
 describe("MockContract.parsePool", () => {
   const form = (entries: [string, string][]) => {
     const f = new FormData();
@@ -117,9 +133,10 @@ describe("MockContract.parsePool", () => {
     ];
     expect(MockContract.parsePool(form(entries))).toEqual({
       ok: true,
-      value: { quotas: [{ topic: "Fixed Income", count: 10 }, { topic: "FSA", count: 20 }], ids: [id], chapter: "Inventories" },
+      value: { quotas: [{ topic: "Fixed Income", count: 10 }, { topic: "FSA", count: 20 }], ids: [id], chapter: "Inventories", avoid: [] },
     });
-    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", ""], ["q", id]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "" } });
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", ""], ["q", id]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [] } });
+    expect(MockContract.parsePool(form([["q", id], ["avoid", id], ["avoid", id], ["avoid", "x"]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [id] } });
   });
 
   it("needs a number or a tick, whole numbers, and at most 500", () => {
@@ -186,7 +203,7 @@ describe("MockContract.parseQuestion", () => {
   it("checks one question as a sheet row is checked", () => {
     expect(MockContract.parseQuestion(form(good))).toEqual({
       ok: true,
-      value: { number: 4, topic: "Fixed Income", chapter: "", usage: "mock", vignette: good.vignette, question: "Q?", options: ["x", "y", "z"], correct: "B", explanation: "" },
+      value: { number: 4, topic: "Fixed Income", chapter: "", usage: "mock", level: 1, vignette: good.vignette, question: "Q?", options: ["x", "y", "z"], correct: "B", explanation: "", why: ["", "", ""] },
     });
     expect(MockContract.parseQuestion(form({ ...good, c: "", correct: "D", vignette: "Chart: Spot\n| Year | Rate |\n| 1 | n/a |" }))).toEqual({
       ok: false,
@@ -224,15 +241,15 @@ describe("MockContract.parseResponses", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     expect(
       MockContract.parseResponses([
-        { questionId: id, selected: "B", flagged: true, notes: "WACC first" },
+        { questionId: id, selected: "B", flagged: true, notes: "WACC first", seconds: 95.4, confidence: "guess" },
         { questionId: id, selected: "A" },
         { questionId: "not-a-uuid", selected: "A" },
-        { questionId: "22222222-2222-4222-8222-222222222222", selected: "D", flagged: "yes", notes: 7 },
+        { questionId: "22222222-2222-4222-8222-222222222222", selected: "D", flagged: "yes", notes: 7, seconds: -3, confidence: "maybe" },
         null,
       ]),
     ).toEqual([
-      { questionId: id, selected: "B", flagged: true, notes: "WACC first" },
-      { questionId: "22222222-2222-4222-8222-222222222222", selected: null, flagged: false, notes: "" },
+      { questionId: id, selected: "B", flagged: true, notes: "WACC first", seconds: 95, confidence: "guess" },
+      { questionId: "22222222-2222-4222-8222-222222222222", selected: null, flagged: false, notes: "", seconds: 0, confidence: null },
     ]);
   });
 });
@@ -246,9 +263,10 @@ const q = (id: string, topic: string, correct: "A" | "B" | "C"): MockQuestion =>
   options: ["a", "b", "c"],
   correct,
   explanation: `Because ${correct}`,
+  why: ["", "", ""],
 });
 const QUESTIONS = [q("1", "FSA", "A"), q("2", "FSA", "B"), q("3", "Quant", "C"), q("4", "FSA", "C"), q("5", "Quant", "A")];
-const r = (questionId: string, selected: MockResponse["selected"], flagged = false, notes = ""): MockResponse => ({ questionId, selected, flagged, notes });
+const r = (questionId: string, selected: MockResponse["selected"], flagged = false, notes = ""): MockResponse => ({ questionId, selected, flagged, notes, seconds: 0, confidence: null });
 
 describe("MockGrader", () => {
   it("scores one mark per correct answer, with the topic breakdown", () => {
@@ -348,5 +366,96 @@ describe("MockGrader.session", () => {
     const sets = [q("1"), q("2", "case"), q("3", "case"), q("4", "case"), q("5")];
     expect(MockGrader.session(sets, 2, 1).map((x) => x.id)).toEqual(["1", "2", "3", "4"]);
     expect(MockGrader.session(sets, 1, 1)).toHaveLength(5);
+  });
+});
+
+describe("CFA levels", () => {
+  it("reads a sheet's Level column in any common spelling, the upload's level for a blank, and refuses anything else", () => {
+    const sheet = MockContract.parseSheet(
+      ["Topic,Level,Vignette,Question,Option_A,Option_B,Option_C,Correct_Option", "Ethics,L2,  Case A  ,Q1,a,b,c,A", "Ethics,,Case A,Q2,a,b,c,B", "Ethics,Level I,,Q3,a,b,c,C"].join("\n"),
+      "mock",
+      2,
+    );
+    expect(sheet.ok && sheet.questions.map((q) => [q.level, q.vignette])).toEqual([
+      [2, "Case A"],
+      [2, "Case A"],
+      [1, ""],
+    ]);
+    expect(MockContract.parseSheet("Topic,Level,Question,Option_A,Option_B,Option_C,Correct_Option\nEthics,3,Q,a,b,c,A")).toEqual({
+      ok: false,
+      errors: ['Row 2: Level must be 1 or 2 (got "3").'],
+    });
+  });
+
+  it("suggests Level II time at its own pace: 132 minutes for 44 questions", () => {
+    expect(MockContract.minutes(44, "book", 2)).toBe(132);
+    expect(MockContract.minutes(88, "full", 2)).toBe(132);
+  });
+});
+
+describe("Mistakes retake", () => {
+  const q = (id: string, correct: "A" | "B" | "C"): MockQuestion => ({ id, number: 1, topic: "T", vignette: "", question: id, options: ["a", "b", "c"], correct, explanation: "", why: ["", "", ""] });
+  const r = (questionId: string, selected: "A" | "B" | "C" | null, flagged = false, confidence: MockResponse["confidence"] = null): MockResponse => ({
+    questionId,
+    selected,
+    flagged,
+    notes: "",
+    seconds: 0,
+    confidence,
+  });
+
+  it("asks again what was wrong, unanswered, flagged or a guess, never a sure right answer", () => {
+    const questions = [q("right", "A"), q("wrong", "A"), q("blank", "A"), q("lucky", "B"), q("silent", "C"), q("guessed", "A")];
+    expect(MockGrader.mistakes(questions, [r("right", "A", false, "sure"), r("wrong", "B"), r("lucky", "B", true), r("guessed", "A", false, "guess")])).toEqual([
+      "wrong",
+      "blank",
+      "lucky",
+      "silent",
+      "guessed",
+    ]);
+  });
+
+  it("keeps an attempt to its own questions", () => {
+    const questions = [q("a", "A"), q("b", "A"), q("c", "A")];
+    expect(MockGrader.subset(questions, null)).toHaveLength(3);
+    expect(MockGrader.subset(questions, ["c", "a"]).map((x) => x.id)).toEqual(["a", "c"]);
+  });
+
+  it("times it at the mock's pace and always as one sitting", () => {
+    // A full mock: 2 × 135 min for 180 questions is 1.5 min each.
+    expect(MockContract.retakeMinutes({ mockType: "full", durationMinutes: 135, questionCount: 180 }, 21)).toBe(32);
+    expect(MockContract.retakeMinutes({ mockType: "book", durationMinutes: 60, questionCount: 30 }, 1)).toBe(2);
+    expect(MockContract.attemptSessions({ mockType: "full" }, { questionIds: ["x"] })).toBe(1);
+    expect(MockContract.attemptSessions({ mockType: "full" }, { questionIds: null })).toBe(2);
+  });
+});
+
+describe("MockNotebook.build", () => {
+  let day = 0;
+  const row = (key: string, selected: "A" | "B" | "C" | null): NotebookRow => ({
+    key,
+    id: `${key}-copy-${day + 1}`,
+    topic: "Ethics",
+    level: 1,
+    vignette: "",
+    question: key,
+    options: ["a", "b", "c"],
+    correct: "A",
+    explanation: "",
+    why: ["", "", ""],
+    selected,
+    at: new Date(Date.UTC(2026, 9, ++day)),
+  });
+
+  it("keeps a question from its first miss until it's right twice in a row", () => {
+    const rows = [row("never-wrong", "A"), row("once-right", "B"), row("once-right", "A"), row("cleared", "C"), row("cleared", "A"), row("cleared", "A")];
+    rows.push(row("slipped", "A"), row("slipped", null), row("slipped", "A"));
+    const book = MockNotebook.build(rows);
+    expect(book.map((e) => [e.question, e.timesWrong, e.streak, e.lastWrong])).toEqual([
+      ["slipped", 1, 1, null],
+      ["once-right", 1, 1, "B"],
+    ]);
+    // The newest copy met, so a drill uses a question still in the bank.
+    expect(book[0].id).toBe(`slipped-copy-${day}`);
   });
 });

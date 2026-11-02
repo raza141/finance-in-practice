@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 
-import { saveMockNote } from "../actions/mocks";
+import { retakeMistakes, saveMockNote } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
-import type { MockGrade, OptionLetter } from "../types";
+import type { Confidence, MockGrade, OptionLetter } from "../types";
 
 /** A graded question, rendered on the server (KaTeX included). */
 export interface ReviewQuestion {
@@ -16,19 +17,41 @@ export interface ReviewQuestion {
   options: [ReactNode, ReactNode, ReactNode];
   correct: OptionLetter;
   explanation: ReactNode | null;
+  /** Why each option tempts (null: none written). */
+  why: [ReactNode | null, ReactNode | null, ReactNode | null];
+  /** Time spent on it; 0 for attempts from before it was tracked. */
+  seconds: number;
+  confidence: Confidence | null;
   selected: OptionLetter | null;
   flagged: boolean;
   notes: string;
 }
 
-type Filter = "all" | "incorrect" | "flagged" | "notes";
+/** The two ways to go again, offered under the score. */
+export interface RetakeOptions {
+  mockId: string;
+  fullQuestions: number;
+  /** Both sessions of a full mock. */
+  fullMinutes: number;
+  /** Incorrect, unanswered or flagged. */
+  mistakes: number;
+  mistakeMinutes: number;
+  /** An attempt already open at this mock: either retake resumes it. */
+  open: { id: string; mistakes: boolean } | null;
+}
+
+type Filter = "all" | "incorrect" | "flagged" | "guessed" | "slow" | "notes";
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
 const FILTERS: [Filter, string][] = [
   ["all", "All"],
   ["incorrect", "Incorrect"],
   ["flagged", "Flagged"],
+  ["guessed", "Guessed"],
+  ["slow", "Slow"],
   ["notes", "Has my notes"],
 ];
+/** Over this many times the mock's pace a question counts as slow. */
+const SLOW = 2;
 
 /** The score card, the topic breakdown, and the questions to revise one at a time (picked from a numbered grid, as in the exam), with notes still editable. */
 export function MockResults({
@@ -37,6 +60,8 @@ export function MockResults({
   grade,
   seconds,
   questions,
+  paceSeconds = null,
+  retake = null,
   readOnly = false,
 }: {
   attemptId: string;
@@ -45,6 +70,9 @@ export function MockResults({
   /** Time taken. */
   seconds: number;
   questions: ReviewQuestion[];
+  /** The mock's time per question, for "Slow"; null: unknown. */
+  paceSeconds?: number | null;
+  retake?: RetakeOptions | null;
   /** The owner reviewing a student's attempt: their notes show, nothing saves. */
   readOnly?: boolean;
 }) {
@@ -53,11 +81,20 @@ export function MockResults({
   const [stored, setStored] = useState(notes);
   const [status, setStatus] = useState<Record<string, "saving" | "saved" | "error" | undefined>>({});
 
-  const shown = questions.filter((q) =>
-    filter === "incorrect" ? q.selected !== q.correct : filter === "flagged" ? q.flagged : filter === "notes" ? notes[q.id]?.trim() : true,
-  );
-  const count = (f: Filter) =>
-    f === "all" ? questions.length : f === "incorrect" ? questions.filter((q) => q.selected !== q.correct).length : f === "flagged" ? questions.filter((q) => q.flagged).length : questions.filter((q) => notes[q.id]?.trim()).length;
+  const timed = questions.some((q) => q.seconds > 0);
+  const keep: Record<Filter, (q: ReviewQuestion) => boolean> = {
+    all: () => true,
+    incorrect: (q) => q.selected !== q.correct,
+    flagged: (q) => q.flagged,
+    guessed: (q) => q.confidence === "guess",
+    slow: (q) => paceSeconds !== null && q.seconds > SLOW * paceSeconds,
+    notes: (q) => !!notes[q.id]?.trim(),
+  };
+  const shown = questions.filter(keep[filter]);
+  const count = (f: Filter) => questions.filter(keep[f]).length;
+  // Guessed and Slow only where there's something to show: older attempts have neither.
+  const filters = FILTERS.filter(([f]) => (f !== "guessed" && f !== "slow") || (f === "slow" ? timed && paceSeconds !== null : questions.some((q) => q.confidence)));
+  const slowRight = paceSeconds === null ? 0 : questions.filter((q) => q.selected === q.correct && q.seconds > SLOW * paceSeconds).length;
 
   /** On leaving the box, if it changed since the last save. */
   const saveNote = async (id: string) => {
@@ -108,8 +145,39 @@ export function MockResults({
           <div>
             <dt className="text-xs text-muted">Time taken</dt>
             <dd className="mt-1 font-mono text-2xl">{MockGrader.clock(seconds)}</dd>
+            {timed && paceSeconds !== null && (
+              <dd className="mt-1 text-xs text-muted">
+                {MockGrader.clock(questions.reduce((n, q) => n + q.seconds, 0) / questions.length)} a question; the pace is {MockGrader.clock(paceSeconds)}
+              </dd>
+            )}
           </div>
         </dl>
+        <AnswerStrip
+          questions={questions}
+          current={q?.id}
+          onPick={(id) => {
+            setFilter("all");
+            setCurrentId(id);
+            card.current?.scrollIntoView({ block: "start" });
+          }}
+        />
+        {slowRight > 0 && (
+          <p className="mt-3 text-sm text-muted">
+            {slowRight} right answer{slowRight === 1 ? "" : "s"} took over {SLOW}× the pace. Right but slow costs marks elsewhere on the day: the <span className="text-ink">Slow</span> filter shows
+            them.
+          </p>
+        )}
+        {retake && <RetakePanel attemptId={attemptId} retake={retake} questions={questions} />}
+        {!readOnly && (
+          <p className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <Link href={`/student/mocks/${attemptId}/notes`} className="text-quant hover:underline">
+              My notes, on one page to print
+            </Link>
+            <Link href="/student/mocks/notebook" className="text-quant hover:underline">
+              Mistakes notebook
+            </Link>
+          </p>
+        )}
         <table className="mt-6 w-full text-sm">
           <caption className="mb-2 text-left font-mono text-[11px] tracking-[0.22em] text-muted uppercase">By topic</caption>
           <thead className="text-left text-xs text-muted">
@@ -120,7 +188,8 @@ export function MockResults({
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {grade.topics.map((t) => {
+            {/* Weakest first: the order to revise in. */}
+            {[...grade.topics].sort((a, b) => a.correct / a.total - b.correct / b.total).map((t) => {
               const p = MockGrader.percent(t.correct, t.total);
               return (
                 <tr key={t.topic}>
@@ -146,7 +215,7 @@ export function MockResults({
       <section aria-label="Review questions" className="grid gap-4 lg:grid-cols-[13rem_1fr]">
         <nav aria-label="Questions" className="self-start rounded-2xl border border-white/10 bg-canvas/90 p-3 lg:sticky lg:top-20">
           <div role="group" aria-label="Show questions" className="grid grid-cols-2 gap-1">
-            {FILTERS.map(([id, label]) => (
+            {filters.map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -202,7 +271,11 @@ export function MockResults({
               <h2 id={`rq-${q.id}`} className="font-mono text-xs tracking-[0.16em] text-quant uppercase">
                 Question {q.number} · {q.topic}
               </h2>
-              <span className="flex gap-2 text-xs font-semibold">
+              <span className="flex flex-wrap gap-2 text-xs font-semibold">
+                {q.seconds > 0 && (
+                  <span className={paceSeconds !== null && q.seconds > SLOW * paceSeconds ? "text-gold" : "font-normal text-muted"}>{MockGrader.clock(q.seconds)}</span>
+                )}
+                {q.confidence && <span className="font-normal text-muted">{q.confidence === "sure" ? "You were sure" : "Your guess"}</span>}
                 {q.flagged && <span className="text-gold">⚑ Flagged</span>}
                 <span className={right ? "text-emerald-300" : "text-red-300"}>{right ? "Correct" : q.selected ? "Incorrect" : "Not answered"}</span>
               </span>
@@ -214,14 +287,15 @@ export function MockResults({
                 const isCorrect = letter === q.correct;
                 const isWrongPick = letter === q.selected && !isCorrect;
                 return (
-                  <li
-                    key={letter}
-                    className={`flex items-center gap-3 rounded-lg border-2 px-4 py-2.5 ${isCorrect ? "border-emerald-400 bg-emerald-400/10" : isWrongPick ? "border-red-400 bg-red-400/10" : "border-line"}`}
-                  >
-                    <span className="font-mono text-sm text-muted">{letter}</span>
-                    <span className="min-w-0 flex-1">{q.options[i]}</span>
-                    {letter === q.selected && <span className="text-xs text-muted">Your answer</span>}
-                    {isCorrect && <span className="text-xs font-semibold text-emerald-300">Correct answer</span>}
+                  <li key={letter} className={`rounded-lg border-2 px-4 py-2.5 ${isCorrect ? "border-emerald-400 bg-emerald-400/10" : isWrongPick ? "border-red-400 bg-red-400/10" : "border-line"}`}>
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-sm text-muted">{letter}</span>
+                      <span className="min-w-0 flex-1">{q.options[i]}</span>
+                      {letter === q.selected && <span className="text-xs text-muted">Your answer</span>}
+                      {isCorrect && <span className="text-xs font-semibold text-emerald-300">Correct answer</span>}
+                    </span>
+                    {/* Why a wrong option tempts: in full for their own pick, quieter for the others. */}
+                    {!isCorrect && q.why[i] && <span className={`mt-1 block pl-7 text-sm ${isWrongPick ? "text-ink/90" : "text-muted"}`}>{q.why[i]}</span>}
                   </li>
                 );
               })}
@@ -277,6 +351,84 @@ export function MockResults({
           </article>
         )}
       </section>
+    </div>
+  );
+}
+
+const segmentTone = (q: Pick<ReviewQuestion, "selected" | "correct">) => (q.selected === q.correct ? "bg-emerald-400" : q.selected ? "bg-red-400" : "bg-line");
+const segmentState = (q: Pick<ReviewQuestion, "selected" | "correct">) => (q.selected === q.correct ? "correct" : q.selected ? "incorrect" : "not answered");
+
+/**
+ * The whole attempt in one line, in the order it was sat: a segment per question, a gold tick over the flagged ones.
+ * A pointer shortcut only: the numbered grid below is the keyboard and screen-reader way to the same questions.
+ */
+function AnswerStrip({ questions, current, onPick }: { questions: ReviewQuestion[]; current?: string; onPick: (id: string) => void }) {
+  return (
+    <ol aria-hidden className={`mt-5 flex h-7 items-end ${questions.length > 60 ? "" : "gap-px"}`}>
+      {questions.map((x) => (
+        <li key={x.id} className="relative h-full min-w-0 flex-1">
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => onPick(x.id)}
+            title={`Question ${x.number}: ${segmentState(x)}${x.flagged ? ", flagged" : ""}`}
+            // Grows by transform, not height; still under reduced motion.
+            className={`absolute inset-x-0 bottom-0 h-6 origin-bottom rounded-[1px] transition-transform hover:scale-y-100 motion-reduce:transition-none ${segmentTone(x)} ${x.id === current ? "scale-y-100" : "scale-y-[0.66]"}`}
+          />
+          {x.flagged && <span aria-hidden className="absolute inset-x-0 top-0 mx-auto h-1 w-full max-w-1.5 rounded-full bg-gold" />}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Go again: the whole mock reshuffled, or only what went wrong. An open retake is resumed instead. */
+function RetakePanel({ attemptId, retake, questions }: { attemptId: string; retake: RetakeOptions; questions: ReviewQuestion[] }) {
+  if (retake.open) {
+    return (
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4 text-sm">
+        <p>You have {retake.open.mistakes ? "a mistakes retake" : "a retake of the whole mock"} open. Finish it before starting another.</p>
+        <Link href={`/student/mocks/${retake.open.id}`} className="rounded-md bg-gold px-4 py-2 font-semibold text-canvas hover:bg-gold-bright">
+          Resume
+        </Link>
+      </div>
+    );
+  }
+  const wrong = questions.filter((q) => q.selected && q.selected !== q.correct).length;
+  const blank = questions.filter((q) => !q.selected).length;
+  const lucky = questions.filter((q) => q.flagged && q.selected === q.correct).length;
+  const parts = [
+    wrong && `${wrong} incorrect`,
+    blank && `${blank} unanswered`,
+    lucky && `${lucky} flagged but right`,
+  ].filter(Boolean);
+  return (
+    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface/60 p-4">
+        <div>
+          <h2 className="font-semibold">Whole mock again</h2>
+          <p className="mt-1 text-sm text-muted">
+            All {retake.fullQuestions} questions in a new order, {retake.fullMinutes} min. Every mark is kept.
+          </p>
+        </div>
+        <Link href={`/student/mocks/start/${retake.mockId}`} className="mt-auto self-start rounded-md border border-line px-4 py-2 text-sm hover:border-quant/60">
+          Retake whole mock
+        </Link>
+      </div>
+      <form action={retakeMistakes} className="flex flex-col gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4">
+        <input type="hidden" name="attemptId" value={attemptId} />
+        <div>
+          <h2 className="font-semibold">Only my mistakes</h2>
+          <p className="mt-1 text-sm text-muted">
+            {retake.mistakes
+              ? `${retake.mistakes} question${retake.mistakes === 1 ? "" : "s"}: ${parts.join(", ")}. ${retake.mistakeMinutes} min, at the mock's pace. Doesn't count in Progress.`
+              : "Nothing to retake: every answer was right and nothing was flagged."}
+          </p>
+        </div>
+        <button type="submit" disabled={!retake.mistakes} className="mt-auto self-start rounded-md bg-gold px-4 py-2 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-40">
+          {retake.mistakes ? `Retake ${retake.mistakes} question${retake.mistakes === 1 ? "" : "s"}` : "Retake mistakes"}
+        </button>
+      </form>
     </div>
   );
 }

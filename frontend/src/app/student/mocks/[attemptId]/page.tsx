@@ -1,17 +1,15 @@
 import "katex/dist/katex.min.css";
 
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { Logo } from "@/core/components/layout/Logo";
 import { MockBreak } from "@/domains/mocks/components/MockBreak";
+import { MockPageShell } from "@/domains/mocks/components/MockPageShell";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
 import { AttemptResults, renderQuestion } from "@/domains/mocks/components/AttemptResults";
 import { MockSession } from "@/domains/mocks/server/MockSession";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 import { MockGrader } from "@/domains/mocks/services/MockGrader";
-import { BackToPortal } from "@/domains/students/components/BackToPortal";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = { title: "Mock exam", robots: { index: false, follow: false } };
@@ -26,7 +24,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
   if (!attempt) notFound();
   const mock = await repo.byId(attempt.mockId);
   if (!mock) notFound();
-  const tag = [MockContract.TYPES[mock.mockType], mock.source].filter(Boolean).join(" · ");
+  const tag = [MockContract.LEVELS[mock.level], MockContract.TYPES[mock.mockType], mock.source].filter(Boolean).join(" · ");
 
   if (MockSession.onBreak(attempt)) {
     return (
@@ -39,10 +37,11 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
   if (attempt.status === "in_progress") {
     // Only the answer-free SELECT feeds an open attempt: nothing here can carry the answer key to the browser.
     const [questions, responses, seed] = await Promise.all([repo.activeQuestions(attempt.mockId), repo.responses(attempt.id), repo.seed(attempt)]);
-    const sessions = MockContract.sessions(mock);
-    // A full mock shows only the session it's in, numbered from 1 like the exam.
-    const current = MockGrader.session(MockGrader.arrange(questions, seed), sessions, attempt.session).map((q, i) => ({ ...q, number: i + 1 }));
+    const sessions = MockContract.attemptSessions(mock, attempt);
+    // A full mock shows only the session it's in, numbered from 1 like the exam; a mistakes retake only its own questions.
+    const current = MockGrader.session(MockGrader.arrange(MockGrader.subset(questions, attempt.questionIds), seed), sessions, attempt.session).map((q, i) => ({ ...q, number: i + 1 }));
     const ids = new Set(current.map((q) => q.id));
+    const cases = MockGrader.cases(current);
     return (
       <div className="-mt-20 bg-canvas">
         <MockPlayer
@@ -50,12 +49,12 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
           key={attempt.session}
           attemptId={attempt.id}
           studentName={student.name}
-          title={mock.title}
+          title={attempt.questionIds ? `${mock.title}: mistakes retake` : mock.title}
           tag={tag}
           // Paused: the time that was left at the pause, and the player opens with its clock stopped.
           remainingMs={MockGrader.remainingMs(attempt.endsAt, attempt.pausedAt ?? undefined)}
           paused={attempt.pausedAt !== null}
-          questions={current.map((q) => renderQuestion(MockGrader.active(q)))}
+          questions={current.map((q) => ({ ...renderQuestion(MockGrader.active(q)), caseId: cases.get(q.id) }))}
           initial={responses.filter((r) => ids.has(r.questionId))}
           session={sessions === 2 ? { index: attempt.session, of: 2 } : null}
         />
@@ -64,20 +63,8 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
   }
 
   return (
-    <div className="relative -mt-20 min-h-screen overflow-clip">
-      {/* The page's grid, still: no animation behind a mock's results. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 bg-canvas bg-grid-lines" />
-      <header className="sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
-        <div className="page-container flex h-16 items-center justify-between gap-4">
-          <Link href="/" aria-label="Finance in Practice website">
-            <Logo height={30} priority />
-          </Link>
-          <BackToPortal />
-        </div>
-      </header>
-      <div className="page-container relative py-8 lg:py-10">
-        <AttemptResults repo={repo} attempt={attempt} title={mock.title} />
-      </div>
-    </div>
+    <MockPageShell>
+      <AttemptResults repo={repo} attempt={attempt} title={mock.title} />
+    </MockPageShell>
   );
 }

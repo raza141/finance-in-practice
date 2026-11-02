@@ -31,6 +31,16 @@ export class MockGrader {
     return session === 1 ? arranged.slice(0, cut) : arranged.slice(cut);
   }
 
+  /** Each question's case: the id of the first in its run of questions sharing one vignette (none: its own). */
+  static cases(arranged: readonly { id: string; vignette: string }[]): Map<string, string> {
+    const out = new Map<string, string>();
+    arranged.forEach((q, i) => {
+      const prev = arranged[i - 1];
+      out.set(q.id, q.vignette && prev?.vignette === q.vignette ? out.get(prev.id)! : q.id);
+    });
+    return out;
+  }
+
   /** FNV-1a, 32-bit: a stable shuffle key, not security. */
   private static hash(text: string): number {
     let h = 0x811c9dc5;
@@ -40,6 +50,24 @@ export class MockGrader {
 
   /** Seconds after the clock ends that answers still count: the auto-submit's round trip. */
   static readonly GRACE_MS = 30_000;
+
+  /** The attempt's own questions: a mistakes retake has a list, a whole-mock attempt (null) has them all. */
+  static subset<T extends { id: string }>(questions: readonly T[], ids: readonly string[] | null): T[] {
+    if (!ids) return [...questions];
+    const keep = new Set(ids);
+    return questions.filter((q) => keep.has(q.id));
+  }
+
+  /** What a mistakes retake asks again: wrong, unanswered, flagged or marked a guess (a lucky guess is worth another look). In the mock's order. */
+  static mistakes(questions: readonly MockQuestion[], responses: readonly MockResponse[]): string[] {
+    const mine = new Map(responses.map((r) => [r.questionId, r]));
+    return questions
+      .filter((q) => {
+        const r = mine.get(q.id);
+        return r?.selected !== q.correct || r.flagged || r.confidence === "guess";
+      })
+      .map((q) => q.id);
+  }
 
   /** Whitelisted, so the answer and explanation can never ride along to an open attempt's page. */
   static active(q: MockQuestion | ActiveQuestion): ActiveQuestion {

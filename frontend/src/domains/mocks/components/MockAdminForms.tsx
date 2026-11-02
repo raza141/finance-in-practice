@@ -8,10 +8,23 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { addAccessGrant, addMockQuestions, designMock, saveBankQuestion, saveMock, setMockAccess, uploadBankQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockExhibits } from "../services/MockExhibits";
-import type { MockAudience, MockExam, MockQuestion, MockStudent, MockType, QuestionUsage } from "../types";
+import type { CfaLevel, MockAudience, MockExam, MockQuestion, MockStudent, MockType, QuestionUsage } from "../types";
 import { QuestionPreview } from "./QuestionPreview";
 
 const SAVE = "h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright";
+
+/** CFA level: which half of the bank a question or an assessment belongs to. */
+function LevelSelect({ value, className = FIELD }: { value: CfaLevel; className?: string }) {
+  return (
+    <select name="level" defaultValue={value} className={className}>
+      {Object.entries(MockContract.LEVELS).map(([v, label]) => (
+        <option key={v} value={v}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function Notice({ state }: { state: MockActionState }) {
   if (!state) return null;
@@ -56,6 +69,9 @@ export function MockExamForm({ mock, practice = mock ? MockContract.isPractice(m
       <Field label="Title" className="sm:col-span-2">
         <input name="title" required minLength={3} maxLength={120} defaultValue={mock?.title} placeholder={practice ? "Inventories: end of chapter" : "Book 3 · Financial Statement Analysis"} className={FIELD} />
       </Field>
+      <Field label="Level" hint={mock?.questionCount ? "Questions already in it stay; new ones come from this level's bank." : "Level II draws whole item sets (a vignette and its questions)."}>
+        <LevelSelect value={mock?.level ?? 1} />
+      </Field>
       <Field label="Type">
         <select name="mockType" defaultValue={mock?.mockType ?? types[0][0]} className={FIELD}>
           {types.map(([value, label]) => (
@@ -72,7 +88,7 @@ export function MockExamForm({ mock, practice = mock ? MockContract.isPractice(m
             ? "Open attempts keep the time they started with."
             : practice
               ? "Up to you: give a practice set plenty of time if it shouldn't feel timed."
-              : `CFA pace is ${MockContract.MINUTES_PER_QUESTION} min a question. Full syllabus sits in two sessions (half the questions each) with this time per session and an optional 30-minute break: CFA Level I is 135. Other types are one sitting.`
+              : `CFA pace is ${MockContract.MINUTES_PER_QUESTION[1]} min a question at Level I, ${MockContract.MINUTES_PER_QUESTION[2]} at Level II. Full syllabus sits in two sessions (half the questions each) with this time per session and an optional 30-minute break: 135 at Level I, 132 at Level II. Other types are one sitting.`
         }
       >
         <input name="durationMinutes" type="number" required min={1} max={600} defaultValue={mock?.durationMinutes} className={FIELD} />
@@ -99,7 +115,7 @@ export function BankUploadForm() {
         <a href="/templates/mock-questions-template.xlsx" download className="text-quant hover:underline">
           Download the Excel template
         </a>{" "}
-        (the columns, topic and answer dropdowns, and examples of a question set, a table and a term-structure chart). Add Chapter and Usage columns if you want them; Number is optional.
+        (the columns, topic and answer dropdowns, and examples of a question set, a table and a term-structure chart). Add Chapter, Usage, Level (1 or 2) and Why_A, Why_B, Why_C (why that option tempts) columns if you want them; Number is optional.
       </p>
       <Field label="Use these questions in" hint="For rows with no Usage. Mock-only questions never appear in practice sets, so students can't see them early.">
         <select name="usage" defaultValue="mock" className={FIELD}>
@@ -109,6 +125,9 @@ export function BankUploadForm() {
             </option>
           ))}
         </select>
+      </Field>
+      <Field label="Level" hint="For rows with no Level column. Level II: repeat the case text exactly in the Vignette cell of each of its questions, so they stay one item set.">
+        <LevelSelect value={1} />
       </Field>
       <Field label="CSV file" hint="In Excel: File → Save As → CSV UTF-8. Maths as $…$ or $$…$$; amounts like $40m stay text, but write \$ for a dollar sign that could pair up.">
         <input name="file" type="file" accept=".csv,.tsv,.txt,text/csv" className={`${FIELD} text-sm`} />
@@ -220,8 +239,59 @@ function BankTopicList({ topics, pick }: { topics: BankTopic[]; pick: ReturnType
   );
 }
 
+/**
+ * Whose past assessments to keep out of the pick; reloads the page so the counts and lists are the real ones.
+ * `everyone`: the mock is grant-only, so by default everyone with access counts.
+ */
+export function SeenFilter({
+  students,
+  student,
+  everyone = false,
+  chapter,
+  level,
+}: {
+  students: MockStudent[];
+  student: string;
+  everyone?: boolean;
+  chapter?: string;
+  /** The Design page picks its level here too; a mock's own page has it fixed. */
+  level?: CfaLevel;
+}) {
+  return (
+    <form className="mb-4 flex flex-wrap items-end gap-2">
+      {level && (
+        <label className="grid gap-1 text-sm text-muted">
+          Level
+          <LevelSelect value={level} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink" />
+        </label>
+      )}
+      {chapter !== undefined && <input type="hidden" name="add" value="1" />}
+      {chapter && <input type="hidden" name="chapter" value={chapter} />}
+      <label className="grid gap-1 text-sm text-muted">
+        Leave out questions already seen by
+        <select name="student" defaultValue={student} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink">
+          <option value="">{everyone ? "Everyone with access" : "No one"}</option>
+          {everyone && <option value="none">No one</option>}
+          {students.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="submit" className="h-9 rounded-md border border-line px-4 text-sm hover:border-quant/50">
+        Show
+      </button>
+    </form>
+  );
+}
+
+function AvoidFields({ avoid }: { avoid: string[] }) {
+  return avoid.map((id) => <input key={id} type="hidden" name="avoid" value={id} />);
+}
+
 /** Adds to an existing assessment from the bank. */
-export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topics: BankTopic[]; chapter: string }) {
+export function MockBankForm({ mockId, topics, chapter, avoid }: { mockId: string; topics: BankTopic[]; chapter: string; avoid: string[] }) {
   const [state, action, busy] = useActionState(addMockQuestions, null);
   const pick = useBankPick();
   const total = topics.reduce((n, t) => n + pick.picked(t), 0);
@@ -230,6 +300,7 @@ export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topi
     <form onSubmit={keep(action)} className="grid gap-6">
       <input type="hidden" name="id" value={mockId} />
       <input type="hidden" name="chapter" value={chapter} />
+      <AvoidFields avoid={avoid} />
       <BankTopicList topics={topics} pick={pick} />
       <div className="flex flex-wrap items-center gap-4">
         <SaveButton busy={busy} disabled={total === 0} busyLabel="Adding…">
@@ -244,7 +315,7 @@ export function MockBankForm({ mockId, topics, chapter }: { mockId: string; topi
 type BookScope = "all" | "one" | "some";
 
 /** A whole draft in one go: which books, how many from each or which questions, and its details. The duration follows the CFA pace until it's typed. */
-export function MockDesignForm({ topics }: { topics: BankTopic[] }) {
+export function MockDesignForm({ topics, avoid, level }: { topics: BankTopic[]; avoid: string[]; level: CfaLevel }) {
   const [state, action, busy] = useActionState(designMock, null);
   const pick = useBankPick();
   const [scope, setScope] = useState<BookScope>("all");
@@ -272,6 +343,8 @@ export function MockDesignForm({ topics }: { topics: BankTopic[] }) {
 
   return (
     <form onSubmit={keep(action)} className="grid gap-6">
+      <AvoidFields avoid={avoid} />
+      <input type="hidden" name="level" value={level} />
       <fieldset className="grid gap-3 rounded-lg border border-line p-4">
         <legend className="px-1 text-sm font-medium">Books</legend>
         <div className="flex flex-wrap gap-2">
@@ -340,7 +413,7 @@ export function MockDesignForm({ topics }: { topics: BankTopic[] }) {
         </Field>
         <Field
           label="Duration (minutes)"
-          hint={`Set at the CFA pace, ${MockContract.MINUTES_PER_QUESTION} min a question${mockType === "full" ? ", per session (half the questions each)" : ""}. Type to change it.`}
+          hint={`Set at the ${MockContract.LEVELS[level]} pace, ${MockContract.MINUTES_PER_QUESTION[level]} min a question${mockType === "full" ? ", per session (half the questions each)" : ""}. Type to change it.`}
         >
           <input
             name="durationMinutes"
@@ -348,7 +421,7 @@ export function MockDesignForm({ topics }: { topics: BankTopic[] }) {
             required
             min={1}
             max={600}
-            value={duration ?? MockContract.minutes(total, mockType)}
+            value={duration ?? MockContract.minutes(total, mockType, level)}
             onChange={(e) => setDuration(e.target.value)}
             className={FIELD}
           />
@@ -374,7 +447,12 @@ const TEXT_FIELDS = [
   ["b", "Option B", 2],
   ["c", "Option C", 2],
   ["explanation", "Explanation (optional)", 4],
+  ["whyA", "Why A tempts (optional: shown to a student who picks it wrongly)", 2],
+  ["whyB", "Why B tempts (optional)", 2],
+  ["whyC", "Why C tempts (optional)", 2],
 ] as const;
+/** What can change once students have sat the question: none of it moves a score. */
+const ALWAYS_EDITABLE: readonly string[] = ["explanation", "whyA", "whyB", "whyC"];
 type QuestionFields = Record<"topic" | "chapter" | "correct" | (typeof TEXT_FIELDS)[number][0], string>;
 
 /** One bank question, added (no `question`) or edited; `copying` starts a new one from `question`. The preview beside it is as students will see it. */
@@ -384,13 +462,16 @@ export function MockQuestionForm({
   locked = false,
   topics,
   chapters,
+  back,
 }: {
-  question?: MockQuestion & { chapter: string; usage: QuestionUsage };
+  question?: MockQuestion & { chapter: string; usage: QuestionUsage; level: CfaLevel };
   copying?: boolean;
-  /** Students have started an assessment with it: only the chapter, use and explanation can change. */
+  /** Students have started an assessment with it: only the chapter, use, level, explanation and why notes can change. */
   locked?: boolean;
   topics: string[];
   chapters: string[];
+  /** Where saving returns to. */
+  back?: string;
 }) {
   const [state, action, busy] = useActionState(saveBankQuestion, null);
   const [f, setF] = useState<QuestionFields>(() => ({
@@ -403,6 +484,9 @@ export function MockQuestionForm({
     b: question?.options[1] ?? "",
     c: question?.options[2] ?? "",
     explanation: question?.explanation ?? "",
+    whyA: question?.why[0] ?? "",
+    whyB: question?.why[1] ?? "",
+    whyC: question?.why[2] ?? "",
   }));
   const set = (k: keyof QuestionFields) => (e: { target: { value: string } }) => setF((v) => ({ ...v, [k]: e.target.value }));
   const exhibitProblems = [
@@ -415,6 +499,7 @@ export function MockQuestionForm({
     <div className="grid gap-6 lg:grid-cols-2">
       <form onSubmit={keep(action)} className="grid content-start gap-4">
         {question && !copying && <input type="hidden" name="questionId" value={question.id} />}
+        {back && <input type="hidden" name="back" value={back} />}
         <div className="grid grid-cols-[1fr_1fr_6rem] gap-3">
           <Field label="Topic">
             <input name="topic" required readOnly={locked} maxLength={80} list="mock-topics" value={f.topic} onChange={set("topic")} className={FIELD} />
@@ -440,18 +525,23 @@ export function MockQuestionForm({
             </select>
           </Field>
         </div>
-        <Field label="Use in">
-          <select name="usage" defaultValue={question?.usage ?? "mock"} className={FIELD}>
-            {Object.entries(MockContract.USAGES).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Use in">
+            <select name="usage" defaultValue={question?.usage ?? "mock"} className={FIELD}>
+              {Object.entries(MockContract.USAGES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Level">
+            <LevelSelect value={question?.level ?? 1} />
+          </Field>
+        </div>
         {TEXT_FIELDS.map(([name, label, rows]) => (
           <Field key={name} label={label}>
-            <textarea name={name} rows={rows} required={name === "question" || name.length === 1} readOnly={locked && name !== "explanation"} value={f[name]} onChange={set(name)} className={`${FIELD} font-mono text-xs`} />
+            <textarea name={name} rows={rows} required={name === "question" || name.length === 1} readOnly={locked && !ALWAYS_EDITABLE.includes(name)} value={f[name]} onChange={set(name)} className={`${FIELD} font-mono text-xs`} />
           </Field>
         ))}
         <div className="flex flex-wrap items-start gap-4">

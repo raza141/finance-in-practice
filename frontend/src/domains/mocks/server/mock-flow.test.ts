@@ -24,9 +24,9 @@ const MOCK = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const qid = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 const QUESTIONS: MockQuestion[] = [
-  { id: qid(1), number: 1, topic: "FSA", vignette: "Alder Corp: EBIT $40$m.", question: "FCFF?", options: ["$142.5m", "$158.0m", "$164.2m"], correct: "B", explanation: "SECRET-1: add back D&A." },
-  { id: qid(2), number: 2, topic: "FSA", vignette: "", question: "Quick ratio?", options: ["0.8", "1.1", "1.4"], correct: "A", explanation: "SECRET-2" },
-  { id: qid(3), number: 3, topic: "Quant", vignette: "", question: "$\\sigma$ of the sample?", options: ["2", "4", "16"], correct: "A", explanation: "SECRET-3" },
+  { id: qid(1), number: 1, topic: "FSA", vignette: "Alder Corp: EBIT $40$m.", question: "FCFF?", options: ["$142.5m", "$158.0m", "$164.2m"], correct: "B", explanation: "SECRET-1: add back D&A.", why: ["", "", ""] },
+  { id: qid(2), number: 2, topic: "FSA", vignette: "", question: "Quick ratio?", options: ["0.8", "1.1", "1.4"], correct: "A", explanation: "SECRET-2", why: ["", "", ""] },
+  { id: qid(3), number: 3, topic: "Quant", vignette: "", question: "$\\sigma$ of the sample?", options: ["2", "4", "16"], correct: "A", explanation: "SECRET-3", why: ["", "", ""] },
 ];
 
 /** The repository in memory: what the page and the actions read and write. */
@@ -37,13 +37,19 @@ class FakeRepo {
   mockType = "book";
 
   constructor(endsAt: Date) {
-    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null, pausedAt: null };
+    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null, pausedAt: null, questionIds: null };
   }
   async attempt(id: string, clientId: string) {
     return id === ATTEMPT && clientId === CLIENT ? { ...this.attemptRow } : null;
   }
+  async published() {
+    return [await this.byId()];
+  }
+  async openAttempt() {
+    return null;
+  }
   async byId() {
-    return { id: MOCK, title: "Book 3 · FSA", mockType: this.mockType, source: "Book 3", durationMinutes: 135, published: true, questionCount: 3, attempted: true, createdAt: new Date() };
+    return { id: MOCK, title: "Book 3 · FSA", mockType: this.mockType, source: "Book 3", durationMinutes: 135, level: 1, published: true, questionCount: 3, attempted: true, createdAt: new Date() };
   }
   // Deliberately returns the full rows, answers included: the page must still never pass them on.
   async activeQuestions() {
@@ -145,9 +151,9 @@ describe("an open attempt's page (anti-cheat)", () => {
 
 describe("submitting (grading and notes)", () => {
   const sent = [
-    { questionId: qid(1), selected: "B", flagged: true, notes: "FCFF = EBIT(1-t) + D&A - capex - ΔWC" },
-    { questionId: qid(2), selected: "C", flagged: false, notes: "" },
-    { questionId: qid(3), selected: null, flagged: true, notes: "revise std dev" },
+    { questionId: qid(1), selected: "B", flagged: true, notes: "FCFF = EBIT(1-t) + D&A - capex - ΔWC", seconds: 140, confidence: "guess" },
+    { questionId: qid(2), selected: "C", flagged: false, notes: "", seconds: 0, confidence: null },
+    { questionId: qid(3), selected: null, flagged: true, notes: "revise std dev", seconds: 12, confidence: null },
   ];
 
   it("grades exactly, saves the notes, and the results page returns them with the answers", async () => {
@@ -178,22 +184,22 @@ describe("submitting (grading and notes)", () => {
   it("a second submit changes nothing", async () => {
     await submitMock(ATTEMPT, sent);
     const first = repo.completed;
-    await submitMock(ATTEMPT, [{ questionId: qid(2), selected: "A", flagged: false, notes: "" }]);
+    await submitMock(ATTEMPT, [{ questionId: qid(2), selected: "A", flagged: false, notes: "", seconds: 0, confidence: null }]);
     expect(repo.completed).toBe(first);
   });
 
   it("after the clock, a late answer doesn't count but its notes do", async () => {
     repo = new FakeRepo(new Date(Date.now() - 5 * 60_000));
-    repo.saved = [{ questionId: qid(2), selected: "C", flagged: false, notes: "" }];
+    repo.saved = [{ questionId: qid(2), selected: "C", flagged: false, notes: "", seconds: 0, confidence: null }];
     vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
     await submitMock(ATTEMPT, [{ questionId: qid(2), selected: "A", flagged: true, notes: "should have been A" }]);
     expect(repo.completed?.grade.score).toBe(0);
-    expect(repo.completed?.responses).toEqual([{ questionId: qid(2), selected: "C", flagged: true, notes: "should have been A" }]);
+    expect(repo.completed?.responses).toEqual([{ questionId: qid(2), selected: "C", flagged: true, notes: "should have been A", seconds: 0, confidence: null }]);
   });
 
   it("coming back to an attempt whose clock ran out closes it from the autosaved answers", async () => {
     repo = new FakeRepo(new Date(Date.now() - 5 * 60_000));
-    repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "kept" }];
+    repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "kept", seconds: 0, confidence: null }];
     vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
     const results = await resultsOf(await render());
     expect(results).not.toBeNull();
@@ -218,9 +224,9 @@ describe("a full mock in two sessions", () => {
 
     // Ending session 1 keeps only its own answers: q3 belongs to session 2.
     await submitMock(ATTEMPT, [
-      { questionId: qid(1), selected: "B", flagged: false, notes: "" },
-      { questionId: qid(2), selected: "A", flagged: false, notes: "" },
-      { questionId: qid(3), selected: "A", flagged: false, notes: "" },
+      { questionId: qid(1), selected: "B", flagged: false, notes: "", seconds: 0, confidence: null },
+      { questionId: qid(2), selected: "A", flagged: false, notes: "", seconds: 0, confidence: null },
+      { questionId: qid(3), selected: "A", flagged: false, notes: "", seconds: 0, confidence: null },
     ]);
     expect(repo.completed).toBeNull();
     expect(repo.saved.map((r) => r.questionId)).toEqual([qid(1), qid(2)]);
@@ -233,8 +239,8 @@ describe("a full mock in two sessions", () => {
 
     // Trying to change a session-1 answer now does nothing.
     await submitMock(ATTEMPT, [
-      { questionId: qid(1), selected: "C", flagged: false, notes: "" },
-      { questionId: qid(3), selected: "A", flagged: false, notes: "" },
+      { questionId: qid(1), selected: "C", flagged: false, notes: "", seconds: 0, confidence: null },
+      { questionId: qid(3), selected: "A", flagged: false, notes: "", seconds: 0, confidence: null },
     ]);
     expect(repo.completed?.grade.score).toBe(3);
     expect(repo.completed?.responses.find((r) => r.questionId === qid(1))?.selected).toBe("B");
@@ -243,7 +249,7 @@ describe("a full mock in two sessions", () => {
   it("away past session 1's clock: it closes from the autosave and the break counts from when the clock ended", async () => {
     repo = new FakeRepo(new Date(Date.now() - 5 * 60_000));
     repo.mockType = "full";
-    repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "" }];
+    repo.saved = [{ questionId: qid(1), selected: "B", flagged: false, notes: "", seconds: 0, confidence: null }];
     vi.spyOn(MockRepository, "fromEnv").mockReturnValue(repo as unknown as MockRepository);
     const brk = find(await render(), MockBreak);
     expect(brk).not.toBeNull();

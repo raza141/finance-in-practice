@@ -2,6 +2,8 @@ export type MockType = "book" | "topic" | "chapter" | "random" | "full";
 /** Where a bank question may go: practice sets, mocks, or either. */
 export type QuestionUsage = "practice" | "mock" | "both";
 export type OptionLetter = "A" | "B" | "C";
+/** CFA level: Level II is item sets, a vignette with four questions. */
+export type CfaLevel = 1 | 2;
 /** Who sees a mock: every portal student, those on certain courses, or only students with a grant (the setting for a paid mock). */
 export type MockAudience = "all" | "course" | "clients";
 
@@ -40,6 +42,7 @@ export interface MockExamInput {
   /** "Book 2: Quantitative Methods", or "Random pool". */
   source: string;
   durationMinutes: number;
+  level: CfaLevel;
 }
 
 export interface MockExam extends MockExamInput {
@@ -60,11 +63,14 @@ export interface MockQuestionInput {
   /** Free text like the topic; "" when the sheet has none. */
   chapter: string;
   usage: QuestionUsage;
+  level: CfaLevel;
   vignette: string;
   question: string;
   options: [string, string, string];
   correct: OptionLetter;
   explanation: string;
+  /** Why each option tempts, shown on a wrong pick ("" for none; the correct option's is unused). */
+  why: [string, string, string];
 }
 
 /** A question as a student sees it during an attempt: no answer, no explanation. */
@@ -80,12 +86,14 @@ export interface ActiveQuestion {
 export interface MockQuestion extends ActiveQuestion {
   correct: OptionLetter;
   explanation: string;
+  why: [string, string, string];
 }
 
 /** A question in the bank. */
 export interface PoolQuestion extends MockQuestion {
   chapter: string;
   usage: QuestionUsage;
+  level: CfaLevel;
   /** Can't be picked for a new assessment; stays in the ones that use it. */
   retired: boolean;
   /** In an assessment students have started: its text is fixed, as results are graded from it. */
@@ -94,11 +102,17 @@ export interface PoolQuestion extends MockQuestion {
   usedIn: string[];
 }
 
+export type Confidence = "sure" | "guess";
+
 export interface MockResponse {
   questionId: string;
   selected: OptionLetter | null;
   flagged: boolean;
   notes: string;
+  /** Time spent on the question, all visits added up. */
+  seconds: number;
+  /** The student's own mark on their answer; null: not given. */
+  confidence: Confidence | null;
 }
 
 export type AttemptStatus = "in_progress" | "completed";
@@ -119,6 +133,8 @@ export interface MockAttempt {
   breakUntil: Date | null;
   /** Set while the student has paused: the clock is stopped and the questions hidden until they resume. */
   pausedAt: Date | null;
+  /** A retake of one attempt's mistakes: just these questions, in one sitting. Null: the whole mock. */
+  questionIds: string[] | null;
 }
 
 /** Lobby history row. */
@@ -131,6 +147,8 @@ export interface AttemptSummary {
   score: number | null;
   total: number;
   status: AttemptStatus;
+  /** A retake of only the incorrect and flagged questions. */
+  mistakes: boolean;
 }
 
 export interface TopicScore {
@@ -154,4 +172,25 @@ export interface TopicMark {
   topic: string;
   correct: number;
   total: number;
+}
+
+/** A question in the student's mistakes notebook: wrong at least once, not yet right twice in a row since. */
+export interface NotebookEntry {
+  /** The newest copy the student met. */
+  id: string;
+  topic: string;
+  level: CfaLevel;
+  vignette: string;
+  question: string;
+  options: [string, string, string];
+  correct: OptionLetter;
+  explanation: string;
+  why: [string, string, string];
+  /** Their pick the last time they got it wrong (null: left blank). */
+  lastWrong: OptionLetter | null;
+  timesWrong: number;
+  /** Right answers since the last wrong one: two takes it out. */
+  streak: number;
+  /** When they last met it (ISO). */
+  at: string;
 }

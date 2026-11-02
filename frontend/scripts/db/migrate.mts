@@ -1344,6 +1344,39 @@ const MIGRATIONS: Migration[] = [
       $fn$`,
     ],
   },
+  {
+    // Revision tools. A retake of only what went wrong: question_ids is the attempt's own list (NULL: the
+    // whole mock). CFA level on the bank and on assessments, so Level II item sets never mix into a Level I
+    // pick. Why each wrong option tempts (why_a/b/c), time per question and sure/guess on each answer.
+    // A drill is a mock one student made for themselves (owner_client): open only to them, nowhere else.
+    id: "062_mock_revision",
+    statements: [
+      `ALTER TABLE mock_attempts ADD COLUMN question_ids uuid[] CHECK (cardinality(question_ids) BETWEEN 1 AND 500)`,
+      `ALTER TABLE mock_questions
+        ADD COLUMN level smallint NOT NULL DEFAULT 1 CHECK (level IN (1, 2)),
+        ADD COLUMN why_a text NOT NULL DEFAULT '' CHECK (char_length(why_a) <= 2000),
+        ADD COLUMN why_b text NOT NULL DEFAULT '' CHECK (char_length(why_b) <= 2000),
+        ADD COLUMN why_c text NOT NULL DEFAULT '' CHECK (char_length(why_c) <= 2000)`,
+      `ALTER TABLE mock_exams
+        ADD COLUMN level smallint NOT NULL DEFAULT 1 CHECK (level IN (1, 2)),
+        ADD COLUMN owner_client uuid REFERENCES clients (id) ON DELETE CASCADE`,
+      `CREATE INDEX mock_exams_owner_idx ON mock_exams (owner_client) WHERE owner_client IS NOT NULL`,
+      `ALTER TABLE mock_responses
+        ADD COLUMN seconds integer NOT NULL DEFAULT 0 CHECK (seconds BETWEEN 0 AND 86400),
+        ADD COLUMN confidence text CHECK (confidence IN ('sure', 'guess'))`,
+      `CREATE OR REPLACE FUNCTION mock_open_to(m mock_exams, client uuid) RETURNS boolean LANGUAGE sql STABLE AS $fn$
+        SELECT m.owner_client = client OR (m.owner_client IS NULL AND (
+          m.audience = 'all'
+          OR (m.audience = 'course' AND EXISTS (SELECT 1 FROM clients c WHERE c.id = client AND m.courses && c.courses))
+          OR EXISTS (
+            SELECT 1 FROM access_grants g
+            WHERE g.client_id = client AND g.starts_at <= now() AND (g.ends_at IS NULL OR g.ends_at > now())
+              AND (g.mock_id = m.id OR g.product = CASE WHEN m.mock_type IN ('topic', 'chapter') THEN 'practice' ELSE 'mocks' END)
+          )
+        ))
+      $fn$`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
