@@ -77,7 +77,7 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
   const panel = (
     <div className="space-y-7">
       <label className="block">
-        <span className="text-sm font-semibold text-ink">Search</span>
+        <span className="block text-sm font-semibold text-ink">Search</span>
         <input
           type="search"
           name="q"
@@ -180,23 +180,26 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
         </aside>
 
         <section aria-label="Questions">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-4">
-            <p className="text-lg" aria-live="polite">
-              <span className="font-semibold">{shown.length}</span> {shown.length === 1 ? "question" : "questions"}
-              {active > 0 && <span className="text-muted"> match your filters</span>}
-            </p>
-            {answered > 0 && (
-              <div className="min-w-48 text-sm text-muted">
-                <p>
-                  You&rsquo;ve answered {answered} of {questions.length}
-                  {right + wrong > 0 && `, ${right} right`}
+          {/* Lines up with the filter column: this row sits on the "Search" label's line, the rule under it (the progress bar once anything is answered) on the search box's bottom edge (20 + 8 + 44 = 72px). */}
+          <div className={`flex flex-col justify-between gap-3 lg:h-18 ${answered > 0 ? "" : "border-b border-line pb-4"}`}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-sm">
+              <p aria-live="polite" className="font-semibold text-ink">
+                {shown.length} {shown.length === 1 ? "question" : "questions"}
+                {active > 0 && <span className="font-normal text-muted"> match your filters</span>}
+              </p>
+              {answered > 0 && (
+                <p className="text-muted tabular-nums">
+                  {answered} of {questions.length} answered
+                  {right + wrong > 0 && <> &middot; {right} right</>}
                 </p>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
-                  <div
-                    className="h-full rounded-full bg-emerald-400 transition-[width] duration-500"
-                    style={{ width: `${(answered / questions.length) * 100}%` }}
-                  />
-                </div>
+              )}
+            </div>
+            {answered > 0 && (
+              <div className="h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                <div
+                  className="h-full rounded-full bg-emerald-400 transition-[width] duration-500"
+                  style={{ width: `${(answered / questions.length) * 100}%` }}
+                />
               </div>
             )}
           </div>
@@ -216,8 +219,8 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
             </div>
           ) : (
             groups.map((g) => (
-              <div key={g.slug} className="mt-8">
-                <h2 className="flex items-baseline justify-between gap-4 text-xl font-bold">
+              <div key={g.slug} className="mt-7">
+                <h2 className="flex items-center justify-between gap-4 text-xl font-bold">
                   {filters.topic ? (
                     g.name
                   ) : (
@@ -229,7 +232,9 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
                       {g.name}
                     </button>
                   )}
-                  <span className="text-sm font-normal text-muted">{g.questions.length}</span>
+                  <span className="grid h-6 min-w-6 place-items-center rounded-md bg-surface-raised px-1.5 font-mono text-xs font-normal text-muted tabular-nums [corner-shape:squircle]">
+                    {g.questions.length}
+                  </span>
                 </h2>
                 <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface/40">
                   {g.questions.map((q) => (
@@ -298,7 +303,8 @@ function Row({ q, result }: { q: QuestionSummary; result?: Result }) {
         <span className="block font-semibold text-ink group-hover:text-quant">{q.title}</span>
         <span className="mt-0.5 block text-sm text-muted">{QuestionTaxonomy.levelLabel(q.level)}</span>
       </span>
-      <span className="hidden text-sm text-muted sm:block">
+      {/* Fixed width so the meters form one column down the list. */}
+      <span className="hidden w-20 shrink-0 text-sm text-muted sm:block">
         <DifficultyMeter difficulty={q.difficulty} label />
       </span>
       <span className="sm:hidden">
@@ -316,14 +322,16 @@ function TodayCard({ q, result }: { q: QuestionSummary; result?: Result }) {
       <h2 id="today-title" className="mt-2 max-w-3xl font-serif text-2xl leading-snug font-bold sm:text-3xl">
         {q.title}
       </h2>
-      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+      <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
         <span>{QuestionTaxonomy.levelLabel(q.level)}</span>
+        <span aria-hidden className="text-muted/50">&middot;</span>
         <span>{topic}</span>
+        <span aria-hidden className="text-muted/50">&middot;</span>
         <DifficultyMeter difficulty={q.difficulty} label />
       </p>
       <Link
         href="/cfa/question-of-the-day"
-        className="mt-6 inline-flex h-12 items-center rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="mt-6 inline-flex h-12 items-center rounded-btn bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
       >
         {result ? "See your answer" : "Solve today's question"}
       </Link>

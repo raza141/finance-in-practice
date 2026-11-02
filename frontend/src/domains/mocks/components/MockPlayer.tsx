@@ -43,7 +43,7 @@ const ICON_BUTTON = "grid size-8 shrink-0 place-items-center rounded-md text-mut
  * browser (no server call per click). Every change is kept in localStorage at once and
  * autosaved every 20 seconds and whenever the tab is hidden. The clock is the server's
  * end time, so a refresh resumes it; at zero the attempt submits itself. Paused, the student
- * stays on this screen with the clock stopped (notes and answers stay open) until Resume.
+ * stays on this screen with the clock stopped and the questions hidden (no answering or moving on paused time) until Resume.
  */
 export function MockPlayer({
   attemptId,
@@ -339,7 +339,7 @@ export function MockPlayer({
         </div>
         {paused && (
           <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
-            Paused: the clock has stopped. You can keep writing notes; press Resume to carry on.{preview ? "" : " Your work is kept: you can go back to the portal and resume from there."}
+            Paused: the clock has stopped and the questions are hidden until you press Resume.{preview ? "" : " Your work is kept: you can go back to the portal and resume from there."}
           </p>
         )}
       </header>
@@ -358,6 +358,7 @@ export function MockPlayer({
                 <li key={x.id}>
                   <button
                     type="button"
+                    disabled={paused}
                     onClick={() => {
                       setCurrent(i);
                       // Phones: back to the question once one is picked.
@@ -365,7 +366,7 @@ export function MockPlayer({
                     }}
                     aria-current={i === current ? "true" : undefined}
                     aria-label={`Question ${x.number}${answers[x.id]?.selected ? ", answered" : ""}${answers[x.id]?.flagged ? ", flagged" : ""}`}
-                    className={`h-9 w-full rounded-md border font-mono text-xs transition-colors ${tile(i)}`}
+                    className={`h-9 w-full rounded-btn border font-mono text-xs transition-colors disabled:opacity-40 ${tile(i)}`}
                   >
                     {x.number}
                   </button>
@@ -387,6 +388,23 @@ export function MockPlayer({
         )}
 
         <main className="grid min-w-0 content-start gap-4">
+          {paused ? (
+            <section aria-label="Paused" className="grid place-items-center gap-3 rounded-xl border border-gold/40 bg-gold/5 px-5 py-20 text-center">
+              <p className="font-serif text-2xl font-bold">Mock paused</p>
+              <p className="max-w-md text-sm text-muted">
+                The clock is stopped at {MockGrader.clock(left)}. The questions stay hidden while you&rsquo;re on a break, so every minute you work on them is timed.
+              </p>
+              <button
+                type="button"
+                onClick={() => void resume()}
+                disabled={state === "resuming"}
+                className={`mt-2 h-11 rounded-btn px-6 text-sm font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
+              >
+                {state === "resuming" ? "Resuming…" : "▶ Resume"}
+              </button>
+            </section>
+          ) : (
+          <>
           <div className={`grid items-start gap-4 ${q.vignette ? "lg:grid-cols-2" : ""}`}>
             {q.vignette && (
               // Pinned beside the question: a Level II item set's four questions all read from it, and its scroll stays put between them.
@@ -495,34 +513,15 @@ export function MockPlayer({
               className="mt-2 w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 font-mono text-sm text-ink outline-none placeholder:text-muted/50 focus:border-quant/70"
             />
           </section>
+          </>
+          )}
         </main>
       </div>
 
       <footer className="sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="btn-group min-w-0 flex-1 flex-nowrap! sm:w-64 sm:flex-none">
-            <button
-              type="button"
-              disabled={current === 0}
-              onClick={() => setCurrent((c) => c - 1)}
-              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_PLAIN}`}
-            >
-              ‹ Back
-            </button>
-            <button
-              type="button"
-              disabled={current === questions.length - 1}
-              onClick={() => setCurrent((c) => c + 1)}
-              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_QUANT}`}
-            >
-              Next ›
-            </button>
-          </div>
-          {/* Phones: the bar above already shows it, and the buttons keep to one row. */}
-          <p className="hidden font-mono text-xs text-muted sm:block">
-            Progress: {answered}/{questions.length} ({MockGrader.percent(answered, questions.length)}%)
-          </p>
-          <div className="flex items-center gap-2">
+          {/* Submit stays on the left, away from Next: a student clicking through on the right never lands on it. */}
+          <div className="flex shrink-0 items-center gap-2">
             {checked ? (
               <span className="font-mono text-sm">
                 Score {questions.filter((x) => answers[x.id]?.selected === answerKey![x.id]).length}/{questions.length}
@@ -531,14 +530,36 @@ export function MockPlayer({
                 </a>
               </span>
             ) : (
-            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className={`h-11 rounded-md px-5 text-sm font-semibold disabled:opacity-60 ${RAISED_GOLD}`}>
+            <button type="button" onClick={() => setConfirming(true)} disabled={state === "submitting" || paused} title={paused ? "Resume to submit" : undefined} className={`h-11 rounded-btn px-5 text-sm font-semibold disabled:opacity-60 ${RAISED_GOLD}`}>
               {state === "submitting" ? "Submitting…" : last ? "Submit" : `End session ${session!.index}`}
             </button>
             )}
           </div>
+          {/* Phones: the bar above already shows it, and the buttons keep to one row. */}
+          <p className="hidden font-mono text-xs text-muted sm:block">
+            Progress: {answered}/{questions.length} ({MockGrader.percent(answered, questions.length)}%)
+          </p>
+          <div className="btn-group min-w-0 flex-1 flex-nowrap! sm:w-64 sm:flex-none">
+            <button
+              type="button"
+              disabled={paused || current === 0}
+              onClick={() => setCurrent((c) => c - 1)}
+              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_PLAIN}`}
+            >
+              ‹ Back
+            </button>
+            <button
+              type="button"
+              disabled={paused || current === questions.length - 1}
+              onClick={() => setCurrent((c) => c + 1)}
+              className={`h-11 px-2 text-sm font-semibold whitespace-nowrap disabled:opacity-40 sm:px-4 ${RAISED_QUANT}`}
+            >
+              Next ›
+            </button>
+          </div>
         </div>
         {(confirming || state === "error") && state !== "submitting" && !paused && (
-          <div role="alertdialog" aria-label="Submit the mock" className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-4 py-3 text-sm sm:px-6">
+          <div role="alertdialog" aria-label="Submit the mock" className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 text-sm sm:px-6">
             <p className={state === "error" ? "text-red-300" : "text-ink"}>
               {state === "error"
                 ? "Submitting didn't work. Your answers are kept on this device; please try again."
