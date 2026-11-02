@@ -48,7 +48,7 @@ const FILTERS: [Filter, string][] = [
   ["flagged", "Flagged"],
   ["guessed", "Guessed"],
   ["slow", "Slow"],
-  ["notes", "Has my notes"],
+  ["notes", "Has notes"],
 ];
 /** Over this many times the mock's pace a question counts as slow. */
 const SLOW = 2;
@@ -76,7 +76,8 @@ export function MockResults({
   /** The owner reviewing a student's attempt: their notes show, nothing saves. */
   readOnly?: boolean;
 }) {
-  const [filter, setFilter] = useState<Filter>("all");
+  // The owner opens a review to see what went wrong, so it starts on the incorrect ones.
+  const [filter, setFilter] = useState<Filter>(readOnly ? "incorrect" : "all");
   const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(questions.map((q) => [q.id, q.notes])));
   const [stored, setStored] = useState(notes);
   const [status, setStatus] = useState<Record<string, "saving" | "saved" | "error" | undefined>>({});
@@ -275,7 +276,7 @@ export function MockResults({
                 {q.seconds > 0 && (
                   <span className={paceSeconds !== null && q.seconds > SLOW * paceSeconds ? "text-gold" : "font-normal text-muted"}>{MockGrader.clock(q.seconds)}</span>
                 )}
-                {q.confidence && <span className="font-normal text-muted">{q.confidence === "sure" ? "You were sure" : "Your guess"}</span>}
+                {q.confidence && <span className="font-normal text-muted">{q.confidence === "sure" ? (readOnly ? "They were sure" : "You were sure") : readOnly ? "Their guess" : "Your guess"}</span>}
                 {q.flagged && <span className="text-gold">⚑ Flagged</span>}
                 <span className={right ? "text-emerald-300" : "text-red-300"}>{right ? "Correct" : q.selected ? "Incorrect" : "Not answered"}</span>
               </span>
@@ -291,7 +292,7 @@ export function MockResults({
                     <span className="flex items-center gap-3">
                       <span className="font-mono text-sm text-muted">{letter}</span>
                       <span className="min-w-0 flex-1">{q.options[i]}</span>
-                      {letter === q.selected && <span className="text-xs text-muted">Your answer</span>}
+                      {letter === q.selected && <span className="text-xs text-muted">{readOnly ? "Their answer" : "Your answer"}</span>}
                       {isCorrect && <span className="text-xs font-semibold text-emerald-300">Correct answer</span>}
                     </span>
                     {/* Why a wrong option tempts: in full for their own pick, quieter for the others. */}
