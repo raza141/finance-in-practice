@@ -309,7 +309,7 @@ export function OrderTicketForm() {
 
           <button
             type="submit"
-            className="h-12 rounded-md bg-gold font-semibold tracking-wider text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+            className="h-12 rounded-btn bg-gold font-semibold tracking-wider text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
           >
             {busy ? "Sending…" : "Submit review"}
           </button>

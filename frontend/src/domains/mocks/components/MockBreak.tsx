@@ -41,7 +41,7 @@ export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: 
         </p>
         <form action={startNextSession} className="mt-6">
           <input type="hidden" name="attemptId" value={attemptId} />
-          <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
+          <button type="submit" className="h-11 rounded-btn bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
             Start session {next} now
           </button>
         </form>

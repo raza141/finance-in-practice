@@ -66,7 +66,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
               </span>
               <span className="hidden max-w-48 truncate text-ink sm:inline">{student.name}</span>
               <form action={signOutStudent}>
-                <button type="submit" className="rounded-md border border-line px-3 py-1.5 text-muted hover:border-red-300/50 hover:text-red-300">
+                <button type="submit" className="rounded-btn border border-line px-3 py-1.5 text-muted hover:border-red-300/50 hover:text-red-300">
                   Sign out
                 </button>
               </form>

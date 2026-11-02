@@ -53,7 +53,7 @@ export function CodeBlockView({
               type="button"
               onClick={copy}
               aria-live="polite"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-quant/15 px-3 text-xs font-semibold text-quant transition-colors hover:bg-quant/25"
+              className="inline-flex h-8 items-center gap-1.5 rounded-btn bg-quant/15 px-3 text-xs font-semibold text-quant transition-colors hover:bg-quant/25"
             >
               {copied === "copied" ? "✓ Copied" : copied === "failed" ? "Copy failed" : "Copy code"}
             </button>

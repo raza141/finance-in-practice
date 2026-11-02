@@ -448,7 +448,7 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
                   <button
                     type="submit"
                     disabled={!slot || execution !== "idle"}
-                    className="h-11 rounded-md bg-gold px-5 text-sm font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
+                    className="h-11 rounded-btn bg-gold px-5 text-sm font-bold tracking-widest text-canvas transition-colors hover:bg-gold-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
                   >
                     {execution === "submitting" ? "BOOKING…" : "CONFIRM FREE SESSION"}
                   </button>

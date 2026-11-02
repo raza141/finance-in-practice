@@ -322,7 +322,7 @@ export function MockPlayer({
               type="button"
               onClick={() => void resume()}
               disabled={state === "resuming"}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
+              className={`rounded-btn px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
             >
               {state === "resuming" ? "Resuming…" : "▶ Resume"}
             </button>
@@ -331,7 +331,7 @@ export function MockPlayer({
               type="button"
               onClick={() => void pause()}
               disabled={state === "pausing" || state === "submitting"}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_PLAIN}`}
+              className={`rounded-btn px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_PLAIN}`}
             >
               {state === "pausing" ? "Pausing…" : "⏸ Pause"}
             </button>
@@ -526,7 +526,7 @@ export function MockPlayer({
             {checked ? (
               <span className="font-mono text-sm">
                 Score {questions.filter((x) => answers[x.id]?.selected === answerKey![x.id]).length}/{questions.length}
-                <a href={exitHref} className={`ml-3 rounded-md px-4 py-2 font-sans font-semibold ${RAISED_GOLD}`}>
+                <a href={exitHref} className={`ml-3 rounded-btn px-4 py-2 font-sans font-semibold ${RAISED_GOLD}`}>
                   Done
                 </a>
               </span>

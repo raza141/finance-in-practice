@@ -137,7 +137,7 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <BackToPortal />
-            <button type="submit" className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
+            <button type="submit" className="h-11 rounded-btn bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
               Begin exam
             </button>
           </div>

@@ -281,11 +281,11 @@ export function InvoiceForm({
         value="send"
         disabled={pending || !emailEnabled || !client.clientEmail.trim()}
         title={!emailEnabled ? "Email is not configured" : client.clientEmail.trim() ? undefined : "Add the client's email to send it, or issue and share on WhatsApp"}
-        className="h-10 rounded-md bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+        className="h-10 rounded-btn bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
         Issue &amp; email {label}
       </button>
-      <button type="submit" name="intent" value="issue" disabled={pending} className="h-10 rounded-md border border-line px-4 text-sm text-muted transition-colors hover:text-ink disabled:opacity-60">
+      <button type="submit" name="intent" value="issue" disabled={pending} className="h-10 rounded-btn border border-line px-4 text-sm text-muted transition-colors hover:text-ink disabled:opacity-60">
         Issue without emailing
       </button>
     </>
@@ -605,10 +605,10 @@ export function InvoiceForm({
       )}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
-        <button type="button" onClick={openPreview} disabled={pending} className="h-10 rounded-md border border-quant/50 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/10 disabled:opacity-60">
+        <button type="button" onClick={openPreview} disabled={pending} className="h-10 rounded-btn border border-quant/50 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/10 disabled:opacity-60">
           Preview {label}
         </button>
-        <button type="submit" name="intent" value="save" disabled={pending} className="h-10 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/25 disabled:opacity-60">
+        <button type="submit" name="intent" value="save" disabled={pending} className="h-10 rounded-btn bg-quant/15 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/25 disabled:opacity-60">
           {saving ? "Saving…" : "Save draft"}
         </button>
         {issueButtons}
@@ -649,7 +649,7 @@ export function InvoiceForm({
             Reference (optional)
             <input name="reference" maxLength={80} className={`${FIELD} mt-1`} />
           </label>
-          <button type="submit" name="intent" value="issue-paid" className="h-10 rounded-md bg-emerald-400/15 px-4 text-sm font-medium text-emerald-300 hover:bg-emerald-400/25 sm:col-span-4 sm:justify-self-start">
+          <button type="submit" name="intent" value="issue-paid" className="h-10 rounded-btn bg-emerald-400/15 px-4 text-sm font-medium text-emerald-300 hover:bg-emerald-400/25 sm:col-span-4 sm:justify-self-start">
             Issue and record payment
           </button>
           <p className="text-xs text-muted sm:col-span-4">The invoice shows as paid only once this payment covers it. A receipt is issued for the payment.</p>

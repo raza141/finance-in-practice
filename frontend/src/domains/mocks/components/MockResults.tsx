@@ -426,7 +426,7 @@ function RetakePanel({ attemptId, retake, questions }: { attemptId: string; reta
               : "Nothing to retake: every answer was right and nothing was flagged."}
           </p>
         </div>
-        <button type="submit" disabled={!retake.mistakes} className="mt-auto self-start rounded-md bg-gold px-4 py-2 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-40">
+        <button type="submit" disabled={!retake.mistakes} className="mt-auto self-start rounded-btn bg-gold px-4 py-2 text-sm font-semibold text-canvas hover:bg-gold-bright disabled:opacity-40">
           {retake.mistakes ? `Retake ${retake.mistakes} question${retake.mistakes === 1 ? "" : "s"}` : "Retake mistakes"}
         </button>
       </form>

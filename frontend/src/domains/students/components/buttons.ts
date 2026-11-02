@@ -4,7 +4,7 @@
  */
 import { RAISED_GOLD, RAISED_PLAIN, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 
-const BASE = "inline-flex items-center justify-center gap-2 rounded-md font-mono font-semibold whitespace-nowrap";
+const BASE = "inline-flex items-center justify-center gap-2 rounded-btn font-mono font-semibold whitespace-nowrap";
 /** Cyan outline: go somewhere in the portal or open a file. */
 export const BUTTON = `${BASE} h-9 px-3.5 text-xs ${RAISED_PLAIN}`;
 /** Gold: booking. */

@@ -133,7 +133,7 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <BookButton className="ml-1 hidden h-8 rounded-full px-4 text-[13px] lg:inline-flex" />
+            <BookButton className="ml-1 hidden h-8 px-4 text-[13px] lg:inline-flex" />
           </div>
         </TiltSurface>
 
@@ -142,9 +142,9 @@ export function Navbar() {
           <Link
             href={siteConfig.studentBooking.href}
             aria-current={isActive(siteConfig.studentBooking.href) ? "page" : undefined}
-            className="group hidden h-11 items-center gap-2.5 rounded-full border border-gold/30 bg-[#151E32]/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
+            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-[#151E32]/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
           >
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-gold/15 text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
+            <span className="grid h-9 w-9 place-items-center rounded-md [corner-shape:squircle] bg-gold/15 text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
                 <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

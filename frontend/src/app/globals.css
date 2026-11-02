@@ -209,6 +209,24 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   display: none;
 }
 
+/* ---------------------------------------------------------------------------
+ * Button shape (system rule): every button is an Apple-style squircle, a
+ * modest radius whose curve eases in with no seam, never a soft round blob.
+ *   rounded-btn  → the one button radius; use it on every new button.
+ *   Any <button> keeps its own radius but still gets the squircle corner.
+ * corner-shape is progressive: browsers without it draw plain rounded corners.
+ * ------------------------------------------------------------------------- */
+@utility rounded-btn {
+  border-radius: 10px;
+  corner-shape: squircle;
+}
+
+@layer base {
+  :where(button, [role="button"], input:is([type="submit"], [type="button"], [type="reset"])) {
+    corner-shape: squircle;
+  }
+}
+
 /* The site's grid lines on a dark band, e.g. the invoice header and footer. */
 @utility bg-grid-lines {
   background-image: var(--grid-lines);
@@ -240,7 +258,7 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
 }
 
 /* Unlayered on purpose: must beat the rounded-* and transition utilities on the buttons inside.
- * A row of pills sharing the width; the pressed one takes more and squares off. */
+ * A row of squircle buttons sharing the width; the pressed one takes more and squares off. */
 .btn-group {
   display: flex;
   flex-wrap: wrap;
@@ -248,12 +266,13 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
 }
 .btn-group > * {
   flex: 1;
-  border-radius: 9999px;
+  border-radius: 10px;
+  corner-shape: squircle;
   transition: flex-grow 0.4s, border-radius 0.4s, translate 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 .btn-group > :active:not(:disabled) {
   flex-grow: 1.5;
-  border-radius: 12px;
+  border-radius: 4px;
 }
 
 /* Split button: the menu hangs off its button, and the chevron turns while it is open. */

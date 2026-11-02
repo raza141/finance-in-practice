@@ -58,7 +58,7 @@ export default async function AdminServicesPage({ searchParams }: PageProps<"/ad
         <form className="flex gap-2" role="search">
           {archived && <input type="hidden" name="view" value="archived" />}
           <input name="q" type="search" defaultValue={q} placeholder="Code or name" aria-label="Search services" className={`${FIELD} mt-0 w-56`} />
-          <button type="submit" className="rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+          <button type="submit" className="rounded-btn border border-line px-3 text-sm text-muted hover:text-ink">
             Search
           </button>
         </form>

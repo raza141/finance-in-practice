@@ -75,7 +75,7 @@ export function HeroSection() {
                 href="/courses"
                 variant="secondary"
                 size="lg"
-                className="h-11! w-full rounded-full! sm:w-auto"
+                className="h-11! w-full sm:w-auto"
               >
                 See courses
               </ButtonLink>

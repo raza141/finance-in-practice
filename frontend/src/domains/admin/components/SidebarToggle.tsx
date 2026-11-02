@@ -24,7 +24,7 @@ export function SidebarToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="mb-4 hidden h-8 items-center rounded-md border border-line px-3 font-mono text-[11px] tracking-wider text-muted uppercase transition-colors hover:text-ink md:inline-flex"
+      className="mb-4 hidden h-8 items-center rounded-btn border border-line px-3 font-mono text-[11px] tracking-wider text-muted uppercase transition-colors hover:text-ink md:inline-flex"
     >
       <span className="admin-sidebar-hide">« Hide menu</span>
       <span className="admin-sidebar-show">☰ Show menu</span>

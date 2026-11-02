@@ -208,7 +208,7 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
                 <button
                   type="button"
                   onClick={clear}
-                  className="mt-4 inline-flex h-11 items-center rounded-md border border-line px-5 text-sm hover:border-quant/60"
+                  className="mt-4 inline-flex h-11 items-center rounded-btn border border-line px-5 text-sm hover:border-quant/60"
                 >
                   Clear filters
                 </button>
@@ -263,7 +263,7 @@ function Segment({ on, empty, onClick, title, children }: { on: boolean; empty: 
       aria-pressed={on}
       onClick={onClick}
       title={title}
-      className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-quant ${on ? "bg-quant/15 text-quant shadow-[inset_0_0_0_1px] shadow-quant/60" : empty ? "text-muted/50 hover:bg-surface-raised" : "text-ink/90 hover:bg-surface-raised"}`}
+      className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-btn px-1 py-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-quant ${on ? "bg-quant/15 text-quant shadow-[inset_0_0_0_1px] shadow-quant/60" : empty ? "text-muted/50 hover:bg-surface-raised" : "text-ink/90 hover:bg-surface-raised"}`}
     >
       {children}
     </button>

@@ -36,7 +36,7 @@ export function LoginForm({ initialMessage }: { initialMessage?: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="h-11 rounded-md bg-gold px-5 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+        className="h-11 rounded-btn bg-gold px-5 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>

@@ -89,7 +89,7 @@ export function QuickReceiptForm({ clients, currency, today, submissionKey }: { 
       </fieldset>
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending} className="h-10 rounded-md bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60">
+        <button type="submit" disabled={pending} className="h-10 rounded-btn bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60">
           {saving ? "Issuing…" : "Issue receipt"}
         </button>
         {state.message && (

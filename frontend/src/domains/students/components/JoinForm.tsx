@@ -210,7 +210,7 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="inline-flex h-11 items-center justify-center rounded-md bg-gold px-6 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+        className="inline-flex h-11 items-center justify-center rounded-btn bg-gold px-6 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
       >
         {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>
@@ -258,7 +258,7 @@ export function EmailSignIn() {
         <button
           type="submit"
           disabled={state.kind === "sending"}
-          className="h-10 shrink-0 rounded-md border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
+          className="h-10 shrink-0 rounded-btn border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
         >
           {state.kind === "sending" ? "Sending…" : "Email me a link"}
         </button>

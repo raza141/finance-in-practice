@@ -30,7 +30,7 @@ export function ButtonLink({
   return (
     <Link
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-md font-semibold whitespace-nowrap ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-btn font-semibold whitespace-nowrap ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
     />
   );
 }

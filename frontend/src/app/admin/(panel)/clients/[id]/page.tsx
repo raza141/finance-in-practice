@@ -470,7 +470,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
             Statement for
             <input name="month" type="month" required defaultValue={today.slice(0, 7)} className={`${FIELD} mt-1 py-1.5`} />
           </label>
-          <button type="submit" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+          <button type="submit" className="h-9 rounded-btn border border-line px-3 text-sm text-muted hover:text-ink">
             Statement PDF ↓
           </button>
         </form>

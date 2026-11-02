@@ -35,7 +35,7 @@ export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
       <button
         type="submit"
         disabled={pending}
-        className="h-11 w-fit rounded-md bg-gold px-5 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+        className="h-11 w-fit rounded-btn bg-gold px-5 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
       >
         {pending ? "Saving…" : hasPassword ? "Change password" : "Set password"}
       </button>

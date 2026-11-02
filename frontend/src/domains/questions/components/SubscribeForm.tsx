@@ -53,7 +53,7 @@ export function SubscribeForm() {
         <button
           type="submit"
           disabled={state.kind === "sending"}
-          className="h-12 shrink-0 rounded-md bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+          className="h-12 shrink-0 rounded-btn bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
         >
           {state.kind === "sending" ? "Sending…" : "Send me the questions"}
         </button>

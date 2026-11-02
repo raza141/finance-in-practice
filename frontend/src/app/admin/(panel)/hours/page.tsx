@@ -56,7 +56,7 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
               Month
               <input name="month" type="month" defaultValue={month} className={`${FIELD} mt-1 py-1.5`} />
             </label>
-            <button type="submit" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+            <button type="submit" className="h-9 rounded-btn border border-line px-3 text-sm text-muted hover:text-ink">
               Show
             </button>
           </form>

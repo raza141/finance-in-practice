@@ -62,7 +62,7 @@ export function QuoteAcceptPanel({ token, agreement }: { token: string; agreemen
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="justify-self-start rounded-md bg-slate-900 px-5 py-2.5 font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+        className="justify-self-start rounded-btn bg-slate-900 px-5 py-2.5 font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
       >
         {state.kind === "sending" ? "Accepting…" : "Accept"}
       </button>

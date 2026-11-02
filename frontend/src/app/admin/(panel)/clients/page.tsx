@@ -88,7 +88,7 @@ export default async function AdminClientsPage({ searchParams }: { searchParams:
           Search clients
         </label>
         <input id="client-search" name="q" type="search" defaultValue={search} placeholder="Name, email, phone or course…" autoComplete="off" className={`${FIELD} mt-0`} />
-        <button type="submit" className="h-10 rounded-md border border-line px-4 text-sm text-muted hover:text-ink">
+        <button type="submit" className="h-10 rounded-btn border border-line px-4 text-sm text-muted hover:text-ink">
           Search
         </button>
       </form>

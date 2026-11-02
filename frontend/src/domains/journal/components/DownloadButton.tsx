@@ -25,7 +25,7 @@ export function DownloadButton({
     <button
       type="button"
       onClick={download}
-      className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-line px-3 text-xs text-muted transition-colors hover:border-quant/60 hover:text-ink ${className}`}
+      className={`inline-flex h-8 items-center gap-1.5 rounded-btn border border-line px-3 text-xs text-muted transition-colors hover:border-quant/60 hover:text-ink ${className}`}
     >
       <span aria-hidden>↓</span> {label}
     </button>

@@ -379,7 +379,7 @@ export function CourseEditor({
             type="submit"
             value="save"
             disabled={pending}
-            className="h-10 rounded-md border border-line px-5 text-sm font-semibold transition-colors hover:border-quant/60 disabled:cursor-wait disabled:opacity-60"
+            className="h-10 rounded-btn border border-line px-5 text-sm font-semibold transition-colors hover:border-quant/60 disabled:cursor-wait disabled:opacity-60"
           >
             {saving ? "Saving…" : live ? "Save changes" : "Save draft"}
           </button>
@@ -388,7 +388,7 @@ export function CourseEditor({
               type="submit"
               value={live ? "unpublish" : "publish"}
               disabled={pending}
-              className={`h-10 rounded-md px-5 text-sm font-semibold transition-colors disabled:opacity-60 ${live ? "text-muted hover:text-ink" : "bg-gold text-canvas hover:bg-gold-bright"}`}
+              className={`h-10 rounded-btn px-5 text-sm font-semibold transition-colors disabled:opacity-60 ${live ? "text-muted hover:text-ink" : "bg-gold text-canvas hover:bg-gold-bright"}`}
             >
               {live ? "Unpublish" : course ? "Save & publish" : "Create & publish"}
             </button>

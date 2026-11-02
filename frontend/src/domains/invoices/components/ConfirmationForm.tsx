@@ -83,7 +83,7 @@ export function ConfirmationForm({
         <button
           type="submit"
           disabled={sending || !emailEnabled}
-          className="h-10 rounded-md bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+          className="h-10 rounded-btn bg-gold px-4 text-sm font-medium text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
         >
           {sending ? "Sending…" : "Send confirmation"}
         </button>

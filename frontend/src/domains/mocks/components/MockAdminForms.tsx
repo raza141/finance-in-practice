@@ -279,7 +279,7 @@ export function SeenFilter({
           ))}
         </select>
       </label>
-      <button type="submit" className="h-9 rounded-md border border-line px-4 text-sm hover:border-quant/50">
+      <button type="submit" className="h-9 rounded-btn border border-line px-4 text-sm hover:border-quant/50">
         Show
       </button>
     </form>

@@ -44,13 +44,13 @@ export default async function NotebookPage({ searchParams }: PageProps<"/student
           <div className="mt-5 flex flex-wrap gap-3">
             {book.length > 0 && (
               <form action={practiceNotebook}>
-                <button type="submit" className="h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright">
+                <button type="submit" className="h-10 rounded-btn bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright">
                   Practise {practice === book.length ? "all" : `the newest ${practice}`} ({practice})
                 </button>
               </form>
             )}
             <form action={drillWeakestTopic}>
-              <button type="submit" className="h-10 rounded-md border border-line px-5 text-sm hover:border-quant/60">
+              <button type="submit" className="h-10 rounded-btn border border-line px-5 text-sm hover:border-quant/60">
                 {MockContract.DRILL_SIZE} new questions from my weakest topic
               </button>
             </form>

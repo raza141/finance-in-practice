@@ -146,7 +146,7 @@ export function InstructorForm({ instructor }: { instructor?: Instructor }) {
         <button
           type="submit"
           disabled={pending}
-          className="h-11 rounded-md bg-gold px-6 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:cursor-wait disabled:opacity-60"
+          className="h-11 rounded-btn bg-gold px-6 font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:cursor-wait disabled:opacity-60"
         >
           {saving ? "Saving…" : instructor ? "Save changes" : "Create instructor"}
         </button>

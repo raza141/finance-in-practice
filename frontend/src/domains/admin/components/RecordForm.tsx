@@ -72,7 +72,7 @@ export function RecordForm({
       </fieldset>
       {extra && <fieldset disabled={saving || !hydrated}>{extra(errors)}</fieldset>}
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={saving || !hydrated} className="h-10 rounded-md bg-quant/15 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/25 disabled:opacity-60">
+        <button type="submit" disabled={saving || !hydrated} className="h-10 rounded-btn bg-quant/15 px-4 text-sm font-medium text-quant transition-colors hover:bg-quant/25 disabled:opacity-60">
           {saving ? "Saving…" : submitLabel}
         </button>
         {state.message && (

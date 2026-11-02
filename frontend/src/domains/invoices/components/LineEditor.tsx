@@ -189,7 +189,7 @@ export function LineEditor({
         </span>
         <span className="py-2 font-mono text-sm tabular-nums">{amount}</span>
       </div>
-      <button type="button" disabled={!canRemove} onClick={onRemove} className="self-center rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-raised hover:text-ink disabled:opacity-30">
+      <button type="button" disabled={!canRemove} onClick={onRemove} className="self-center rounded-btn px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-raised hover:text-ink disabled:opacity-30">
         Remove
       </button>
 
