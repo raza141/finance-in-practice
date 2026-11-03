@@ -131,7 +131,7 @@ export function MockPlayer({
     answersRef.current = answers;
   }, [answers]);
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (auto = false) => {
     if (preview) {
       setConfirming(false);
       return setChecked(true);
@@ -140,8 +140,10 @@ export function MockPlayer({
     submitted.current = true;
     setState("submitting");
     try {
-      const { ok } = await submitMock(attemptId, list(answersRef.current));
+      const { ok, stale } = await submitMock(attemptId, list(answersRef.current), auto);
       if (!ok) throw new Error("submit refused");
+      // Still open on the server (paused or resumed elsewhere): reload onto its real clock.
+      if (stale) return window.location.reload();
       try {
         localStorage.removeItem(storageKey);
       } catch {}
@@ -157,7 +159,7 @@ export function MockPlayer({
     dirty.current = false;
     try {
       const { open } = await autosaveMock(attemptId, list(answersRef.current));
-      if (!open) void submit();
+      if (!open) void submit(true);
     } catch {
       dirty.current = true;
     }
@@ -205,7 +207,7 @@ export function MockPlayer({
     const tick = () => {
       const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setLeft(s);
-      if (s === 0) void submit();
+      if (s === 0) void submit(true);
     };
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);

@@ -80,6 +80,8 @@ export async function autosaveMock(attemptId: string, responses: unknown): Promi
   const repo = MockSession.repo();
   const attempt = await repo.attempt(attemptId, clientId);
   if (attempt?.status !== "in_progress") return { open: false };
+  // Paused from another tab or device: still open, so this tab must not submit it.
+  if (attempt.pausedAt) return { open: true };
   // Only the session the attempt is in: a full mock's first half is locked once its break starts.
   const { current } = await MockSession.questions(repo, attempt);
   return { open: await repo.autosave(attemptId, clientId, MockSession.only(MockContract.parseResponses(responses), current), attempt.session) };
@@ -111,13 +113,19 @@ export async function startNextSession(form: FormData): Promise<void> {
   redirect(MockContract.isUuid(attemptId) ? `/student/mocks/${attemptId}` : "/student");
 }
 
-/** Grades and closes the attempt; the page then re-renders as the results. A repeat submit is a no-op. */
-export async function submitMock(attemptId: string, responses: unknown): Promise<{ ok: boolean }> {
+/**
+ * Grades and closes the attempt; the page then re-renders as the results. A repeat submit is a no-op.
+ * `auto` (the player's clock or a refused save): skipped while the server's clock is paused or still has
+ * time (another tab paused and resumed it), so a stale tab can't close it; the refresh shows the real clock.
+ */
+export async function submitMock(attemptId: string, responses: unknown, auto = false): Promise<{ ok: boolean; stale?: boolean }> {
   const { id: clientId } = await student();
   if (!MockContract.isUuid(attemptId)) return { ok: false };
   const repo = MockSession.repo();
   const attempt = await repo.attempt(attemptId, clientId);
   if (!attempt) return { ok: false };
+  const stale = attempt.pausedAt !== null || (auto && MockGrader.remainingMs(attempt.endsAt) > 5_000);
+  if (attempt.status === "in_progress" && stale) return { ok: true, stale: true };
   if (attempt.status === "in_progress") await MockSession.finish(repo, attempt, MockContract.parseResponses(responses));
   revalidatePath("/student");
   return { ok: true };
