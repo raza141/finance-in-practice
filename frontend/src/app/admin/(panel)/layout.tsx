@@ -17,6 +17,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
         "/admin/clients": { count: inbox.clients, label: "new students, Classroom or package requests to look at" },
         "/admin/schedule": { count: inbox.pendingBookings, label: "bookings waiting for confirmation" },
         "/admin/hours": { count: inbox.hourRequests, label: "requests for more hours" },
+        "/admin/mocks/activity": { count: inbox.mocksFinished + inbox.mocksLong, label: "finished mocks to see, or mocks open over a day" },
       }
     : {};
 

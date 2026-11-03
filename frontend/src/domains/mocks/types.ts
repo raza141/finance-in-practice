@@ -194,3 +194,43 @@ export interface NotebookEntry {
   /** When they last met it (ISO). */
   at: string;
 }
+
+/** One attempt on the owner's mock activity page (drills left out). */
+export interface MockActivityRow {
+  attemptId: string;
+  clientId: string;
+  clientName: string;
+  mockId: string;
+  mockTitle: string;
+  mockType: MockType;
+  startedAt: Date;
+  endsAt: Date;
+  submittedAt: Date | null;
+  pausedAt: Date | null;
+  score: number | null;
+  total: number;
+  status: AttemptStatus;
+  /** A second go at the mock, or a retake of one attempt's mistakes. */
+  retake: boolean;
+  /** The owner has marked a finished attempt seen. */
+  seen: boolean;
+}
+
+/** A published mock open to a student who hasn't started it. */
+export interface MockAssignment {
+  mockId: string;
+  mockTitle: string;
+  clientId: string;
+  clientName: string;
+  /** When their grant to it ends; null: no end, or open through audience/course. */
+  endsAt: Date | null;
+}
+
+/** A grant whose end date has passed: the student can no longer open it. */
+export interface ExpiredGrant {
+  clientId: string;
+  clientName: string;
+  /** "All mocks", "All practice sets", or the mock's title. */
+  target: string;
+  endedAt: Date;
+}

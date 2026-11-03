@@ -10,8 +10,11 @@ import type {
   AttemptSummary,
   CfaLevel,
   Confidence,
+  ExpiredGrant,
   MockAttempt,
   MockAccess,
+  MockActivityRow,
+  MockAssignment,
   MockAudience,
   MockExam,
   MockExamInput,
@@ -213,6 +216,91 @@ export class MockRepository {
       this.sql`DELETE FROM access_grants WHERE id = ${grantId} AND client_id = ${clientId} AND starts_at >= now()`,
       this.sql`UPDATE access_grants SET ends_at = now() WHERE id = ${grantId} AND client_id = ${clientId} AND (ends_at IS NULL OR ends_at > now())`,
     ]);
+  }
+
+  // --- The owner's activity page (drills, owner_client set, left out) ---
+
+  /** Every open attempt, and those closed in the last 30 days or not yet seen; newest first. */
+  async activity(): Promise<MockActivityRow[]> {
+    const rows = (await this.sql`
+      SELECT * FROM (
+        SELECT a.id, a.client_id, c.name AS client_name, a.mock_id, e.title, e.mock_type, a.started_at, a.ends_at, a.submitted_at, a.paused_at,
+          a.score, a.total, a.status, a.seen_at,
+          a.question_ids IS NOT NULL OR row_number() OVER (PARTITION BY a.client_id, a.mock_id ORDER BY a.started_at) > 1 AS retake
+        FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id JOIN clients c ON c.id = a.client_id
+        WHERE e.owner_client IS NULL
+      ) x
+      WHERE status = 'in_progress' OR seen_at IS NULL OR submitted_at > now() - interval '30 days'
+      ORDER BY COALESCE(submitted_at, started_at) DESC
+      LIMIT 500
+    `) as (Omit<AttemptRow, "session" | "break_until" | "question_ids"> & { client_name: string; title: string; mock_type: MockType; seen_at: Date | null; retake: boolean })[];
+    return rows.map((r) => ({
+      attemptId: r.id,
+      clientId: r.client_id,
+      clientName: r.client_name,
+      mockId: r.mock_id,
+      mockTitle: r.title,
+      mockType: r.mock_type,
+      startedAt: r.started_at,
+      endsAt: r.ends_at,
+      submittedAt: r.submitted_at,
+      pausedAt: r.paused_at,
+      score: r.score,
+      total: r.total,
+      status: r.status,
+      retake: r.retake,
+      seen: r.seen_at !== null,
+    }));
+  }
+
+  /** Published mocks open to a portal student (same rule as `start`) that they haven't started. */
+  async assignments(): Promise<MockAssignment[]> {
+    const rows = (await this.sql`
+      SELECT e.id AS mock_id, e.title, c.id AS client_id, c.name,
+        (SELECT max(g.ends_at) FROM access_grants g WHERE g.client_id = c.id AND g.mock_id = e.id AND (g.ends_at IS NULL OR g.ends_at > now())) AS ends_at
+      FROM mock_exams e CROSS JOIN clients c
+      WHERE e.published AND e.owner_client IS NULL AND cardinality(c.courses) > 0 AND mock_open_to(e, c.id)
+        AND EXISTS (SELECT 1 FROM mock_items i WHERE i.mock_id = e.id)
+        AND NOT EXISTS (SELECT 1 FROM mock_attempts a WHERE a.mock_id = e.id AND a.client_id = c.id)
+      ORDER BY e.created_at DESC, lower(c.name)
+      LIMIT 2000
+    `) as { mock_id: string; title: string; client_id: string; name: string; ends_at: Date | null }[];
+    return rows.map((r) => ({ mockId: r.mock_id, mockTitle: r.title, clientId: r.client_id, clientName: r.name, endsAt: r.ends_at }));
+  }
+
+  /** Grants that ended in the last 60 days. */
+  async expiredGrants(): Promise<ExpiredGrant[]> {
+    const rows = (await this.sql`
+      SELECT g.client_id, c.name, g.product, e.title, g.ends_at
+      FROM access_grants g JOIN clients c ON c.id = g.client_id LEFT JOIN mock_exams e ON e.id = g.mock_id
+      WHERE g.ends_at <= now() AND g.ends_at > now() - interval '60 days' AND e.owner_client IS NULL
+      ORDER BY g.ends_at DESC LIMIT 200
+    `) as { client_id: string; name: string; product: AccessGrant["product"]; title: string | null; ends_at: Date }[];
+    return rows.map((r) => ({
+      clientId: r.client_id,
+      clientName: r.name,
+      target: r.title ?? (r.product === "practice" ? "All practice sets" : "All mocks"),
+      endedAt: r.ends_at,
+    }));
+  }
+
+  /** Published grant-only mocks nobody can open any more: every grant has ended. */
+  async openToNobody(): Promise<Pick<MockExam, "id" | "title">[]> {
+    return (await this.sql`
+      SELECT e.id, e.title FROM mock_exams e
+      WHERE e.published AND e.owner_client IS NULL AND e.audience = 'clients'
+        AND EXISTS (SELECT 1 FROM access_grants g WHERE g.mock_id = e.id)
+        AND NOT EXISTS (SELECT 1 FROM clients c WHERE mock_open_to(e, c.id))
+      ORDER BY e.title
+    `) as Pick<MockExam, "id" | "title">[];
+  }
+
+  /** Marks finished attempts seen: the ones given, or all when `ids` is null. */
+  async markSeen(ids: string[] | null): Promise<void> {
+    await this.sql`
+      UPDATE mock_attempts SET seen_at = now()
+      WHERE status = 'completed' AND seen_at IS NULL AND (${ids}::uuid[] IS NULL OR id = ANY(${ids}::uuid[]))
+    `;
   }
 
   // --- The question bank ---

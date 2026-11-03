@@ -293,3 +293,11 @@ export async function deleteMock(form: FormData): Promise<void> {
   revalidatePath("/student");
   redirect("/admin/mocks");
 }
+
+/** Clears finished attempts from the activity badge: one (`attemptId`) or all. */
+export async function markMockAttemptsSeen(form: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const id = String(form.get("attemptId") ?? "");
+  await MockSession.repo().markSeen(MockContract.isUuid(id) ? [id] : null);
+  refresh();
+}

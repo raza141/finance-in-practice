@@ -1377,6 +1377,15 @@ const MIGRATIONS: Migration[] = [
       $fn$`,
     ],
   },
+  {
+    // The owner's mock activity page: a finished attempt is news until the owner marks it seen.
+    // Attempts already closed count as seen, so the badge starts at zero.
+    id: "063_mock_seen",
+    statements: [
+      `ALTER TABLE mock_attempts ADD COLUMN seen_at timestamptz`,
+      `UPDATE mock_attempts SET seen_at = now() WHERE status = 'completed'`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

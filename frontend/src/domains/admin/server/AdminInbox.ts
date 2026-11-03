@@ -12,6 +12,10 @@ export interface InboxCounts {
   pendingBookings: number;
   /** Students asking for more hours on their monthly allowance. */
   hourRequests: number;
+  /** Finished mock attempts the owner hasn't marked seen. */
+  mocksFinished: number;
+  /** Mock attempts open for more than a day. */
+  mocksLong: number;
 }
 
 /** What needs the owner's attention, for the badges in the admin menu. */
@@ -45,8 +49,12 @@ export class AdminInbox {
                 UNION SELECT client_id FROM classroom_access WHERE status = 'requested'
                 UNION SELECT id FROM clients WHERE requested_package_id IS NOT NULL
               ) waiting) AS clients,
-              (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests
-          ` as unknown as Promise<{ clients: number; hour_requests: number }[]>)
+              (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests,
+              (SELECT count(*)::int FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id
+                WHERE e.owner_client IS NULL AND a.status = 'completed' AND a.seen_at IS NULL) AS mocks_finished,
+              (SELECT count(*)::int FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id
+                WHERE e.owner_client IS NULL AND a.status = 'in_progress' AND a.started_at < now() - interval '1 day') AS mocks_long
+          ` as unknown as Promise<{ clients: number; hour_requests: number; mocks_finished: number; mocks_long: number }[]>)
         : Promise.resolve([]),
       AdminInbox.pendingBookings(),
     ]);
@@ -57,6 +65,8 @@ export class AdminInbox {
       clients: row?.clients ?? 0,
       pendingBookings: bookings.status === "fulfilled" ? bookings.value : 0,
       hourRequests: row?.hour_requests ?? 0,
+      mocksFinished: row?.mocks_finished ?? 0,
+      mocksLong: row?.mocks_long ?? 0,
     };
   }
 
