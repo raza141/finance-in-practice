@@ -73,63 +73,7 @@ export async function practiceNotebook(): Promise<void> {
   redirect(id ? `/student/mocks/${await repo.start(clientId, id)}` : "/student/mocks/notebook");
 }
 
-/** The player's periodic save. `open` false: the attempt (or its session) is closed or its clock ran out, so the player submits. */
-export async function autosaveMock(attemptId: string, responses: unknown): Promise<{ open: boolean }> {
-  const { id: clientId } = await student();
-  if (!MockContract.isUuid(attemptId)) return { open: false };
-  const repo = MockSession.repo();
-  const attempt = await repo.attempt(attemptId, clientId);
-  if (attempt?.status !== "in_progress") return { open: false };
-  // Paused from another tab or device: still open, so this tab must not submit it.
-  if (attempt.pausedAt) return { open: true };
-  // Only the session the attempt is in: a full mock's first half is locked once its break starts.
-  const { current } = await MockSession.questions(repo, attempt);
-  return { open: await repo.autosave(attemptId, clientId, MockSession.only(MockContract.parseResponses(responses), current), attempt.session) };
-}
-
-/** Ends a full mock's break early: session 2's clock starts now. */
-/** Saves what the browser has, then stops the clock. */
-export async function pauseMock(attemptId: string, responses: unknown): Promise<{ ok: boolean }> {
-  const { id: clientId } = await student();
-  if (!MockContract.isUuid(attemptId)) return { ok: false };
-  await autosaveMock(attemptId, responses);
-  return { ok: await MockSession.repo().pause(attemptId, clientId) };
-}
-
-/** Restarts the clock; the player carries on from the server's new end time. Null: the attempt isn't open any more. */
-export async function resumeMock(attemptId: string): Promise<{ remainingMs: number | null }> {
-  const { id: clientId } = await student();
-  if (!MockContract.isUuid(attemptId)) return { remainingMs: null };
-  const repo = MockSession.repo();
-  await repo.resume(attemptId, clientId);
-  const attempt = await repo.attempt(attemptId, clientId);
-  return { remainingMs: attempt?.status === "in_progress" && !attempt.pausedAt ? MockGrader.remainingMs(attempt.endsAt) : null };
-}
-
-export async function startNextSession(form: FormData): Promise<void> {
-  const { id: clientId } = await student();
-  const attemptId = String(form.get("attemptId"));
-  if (MockContract.isUuid(attemptId)) await MockSession.repo().startSession(attemptId, clientId);
-  redirect(MockContract.isUuid(attemptId) ? `/student/mocks/${attemptId}` : "/student");
-}
-
-/**
- * Grades and closes the attempt; the page then re-renders as the results. A repeat submit is a no-op.
- * `auto` (the player's clock or a refused save): skipped while the server's clock is paused or still has
- * time (another tab paused and resumed it), so a stale tab can't close it; the refresh shows the real clock.
- */
-export async function submitMock(attemptId: string, responses: unknown, auto = false): Promise<{ ok: boolean; stale?: boolean }> {
-  const { id: clientId } = await student();
-  if (!MockContract.isUuid(attemptId)) return { ok: false };
-  const repo = MockSession.repo();
-  const attempt = await repo.attempt(attemptId, clientId);
-  if (!attempt) return { ok: false };
-  const stale = attempt.pausedAt !== null || (auto && MockGrader.remainingMs(attempt.endsAt) > 5_000);
-  if (attempt.status === "in_progress" && stale) return { ok: true, stale: true };
-  if (attempt.status === "in_progress") await MockSession.finish(repo, attempt, MockContract.parseResponses(responses));
-  revalidatePath("/student");
-  return { ok: true };
-}
+// The open exam's save, pause, resume, submit and next session live in MockPlayerApi (a Route Handler): they must survive a deploy.
 
 /** Revision notes, editable on the results page. */
 export async function saveMockNote(attemptId: string, questionId: string, notes: string): Promise<{ ok: boolean }> {

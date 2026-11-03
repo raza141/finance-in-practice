@@ -1,13 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { RAISED_GOLD, RAISED_PLAIN, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 import { BackToPortal } from "@/domains/students/components/BackToPortal";
 
-import { autosaveMock, pauseMock, resumeMock, submitMock } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
+import { playerCall } from "./playerCall";
 import type { MockResponse, OptionLetter } from "../types";
 
 /** A question with its text already rendered on the server (KaTeX included). No answer, no explanation. */
@@ -25,6 +24,8 @@ type Answer = Omit<MockResponse, "questionId">;
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
 const BLANK: Answer = { selected: null, flagged: false, notes: "", seconds: 0, confidence: null };
 const AUTOSAVE_MS = 20_000;
+// At zero the player submits; if that fails it tries again this often, not on every tick.
+const AUTO_SUBMIT_RETRY_MS = 10_000;
 
 /** The side-panel icon (as in a chat app's sidebar toggle): a window with its left column marked. */
 function PanelIcon() {
@@ -78,7 +79,6 @@ export function MockPlayer({
   const preview = answerKey !== undefined;
   const [checked, setChecked] = useState(false);
   const last = !session || session.index === session.of;
-  const router = useRouter();
   const storageKey = `fip-mock:${attemptId}${session ? `:${session.index}` : ""}`;
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, a])));
   const [current, setCurrent] = useState(0);
@@ -92,8 +92,11 @@ export function MockPlayer({
   // The numbered palette: open beside the question on wide screens, closed on phones (it would push the question down).
   const [palette, setPalette] = useState(true);
   const [state, setState] = useState<"working" | "submitting" | "pausing" | "resuming" | "error">("working");
+  // The last autosave failed: the student is told, and the answers wait in localStorage for the next one.
+  const [unsaved, setUnsaved] = useState(false);
   const dirty = useRef(false);
   const submitted = useRef(false);
+  const lastAutoSubmit = useRef(0);
   // The question on screen and since when: its time so far is added to every save, and to its answer on leaving.
   const onScreen = useRef<{ id: string; since: number } | null>(null);
 
@@ -140,28 +143,32 @@ export function MockPlayer({
     submitted.current = true;
     setState("submitting");
     try {
-      const { ok, stale } = await submitMock(attemptId, list(answersRef.current), auto);
+      const { ok, stale } = await playerCall<{ ok: boolean; stale?: boolean }>(attemptId, { op: "submit", responses: list(answersRef.current), auto });
       if (!ok) throw new Error("submit refused");
-      // Still open on the server (paused or resumed elsewhere): reload onto its real clock.
-      if (stale) return window.location.reload();
-      try {
-        localStorage.removeItem(storageKey);
-      } catch {}
-      router.refresh();
+      // A full reload, not router.refresh(): it also picks up a deploy made during the exam.
+      // Stale (paused or resumed elsewhere): the page reopens on the server's real clock, answers kept.
+      if (!stale) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {}
+      }
+      window.location.reload();
     } catch {
       submitted.current = false;
       setState("error");
     }
-  }, [attemptId, list, preview, router, storageKey]);
+  }, [attemptId, list, preview, storageKey]);
 
   const save = useCallback(async () => {
     if (!dirty.current || submitted.current || pausedRef.current || preview) return;
     dirty.current = false;
     try {
-      const { open } = await autosaveMock(attemptId, list(answersRef.current));
+      const { open } = await playerCall<{ open: boolean }>(attemptId, { op: "save", responses: list(answersRef.current) });
+      setUnsaved(false);
       if (!open) void submit(true);
     } catch {
       dirty.current = true;
+      setUnsaved(true);
     }
   }, [attemptId, list, preview, submit]);
 
@@ -173,7 +180,7 @@ export function MockPlayer({
       return setPaused(true);
     }
     setState("pausing");
-    const res = await pauseMock(attemptId, list(answersRef.current)).catch(() => null);
+    const res = await playerCall<{ ok: boolean }>(attemptId, { op: "pause", responses: list(answersRef.current) }).catch(() => null);
     if (res?.ok) {
       pausedRef.current = true;
       dirty.current = false;
@@ -190,9 +197,9 @@ export function MockPlayer({
       return setPaused(false);
     }
     setState("resuming");
-    const res = await resumeMock(attemptId).catch(() => null);
+    const res = await playerCall<{ remainingMs: number | null }>(attemptId, { op: "resume" }).catch(() => null);
     if (!res) return setState("working");
-    if (res.remainingMs === null) return router.refresh();
+    if (res.remainingMs === null) return window.location.reload();
     pausedRef.current = false;
     setDeadline(Date.now() + res.remainingMs);
     setPaused(false);
@@ -207,7 +214,10 @@ export function MockPlayer({
     const tick = () => {
       const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setLeft(s);
-      if (s === 0) void submit(true);
+      if (s === 0 && Date.now() - lastAutoSubmit.current >= AUTO_SUBMIT_RETRY_MS) {
+        lastAutoSubmit.current = Date.now();
+        void submit(true);
+      }
     };
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
@@ -250,9 +260,7 @@ export function MockPlayer({
   }, [currentId, paused, checked, preview]);
 
   const q = questions[current];
-
   // The item set this question belongs to.
-
   const set = q.caseId ? questions.filter((x) => x.caseId === q.caseId) : [];
 
   const caseRange = set.length > 1 ? `${set[0].number}–${set.at(-1)!.number}` : "";
@@ -560,6 +568,11 @@ export function MockPlayer({
             </button>
           </div>
         </div>
+        {unsaved && !paused && (
+          <p role="status" className="border-t border-red-400/40 bg-red-400/10 px-4 py-2 text-sm text-red-300 sm:px-6">
+            Not saved: check your connection. Your answers are kept on this device and save again on their own.
+          </p>
+        )}
         {(confirming || state === "error") && state !== "submitting" && !paused && (
           <div role="alertdialog" aria-label="Submit the mock" className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 text-sm sm:px-6">
             <p className={state === "error" ? "text-red-300" : "text-ink"}>

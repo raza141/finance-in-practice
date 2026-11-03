@@ -200,9 +200,7 @@ export interface MockActivityRow {
   attemptId: string;
   clientId: string;
   clientName: string;
-  mockId: string;
   mockTitle: string;
-  mockType: MockType;
   startedAt: Date;
   endsAt: Date;
   submittedAt: Date | null;

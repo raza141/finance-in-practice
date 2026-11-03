@@ -1,17 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { startNextSession } from "../actions/mocks";
+import { RAISED_GOLD } from "@/core/components/ui/buttonStyles";
+
 import { MockGrader } from "../services/MockGrader";
+import { playerCall } from "./playerCall";
 
 /**
  * Between a full mock's sessions: an optional break, like the exam's. Session 2's clock starts
  * when the countdown ends, or now with the button. The end time is the server's.
  */
 export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: string; title: string; remainingMs: number; next: number }) {
-  const router = useRouter();
+  const [starting, setStarting] = useState(false);
   const [deadline] = useState(() => Date.now() + remainingMs);
   const [left, setLeft] = useState(Math.ceil(remainingMs / 1000));
   useEffect(() => {
@@ -20,11 +21,18 @@ export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: 
       setLeft(s);
       if (s === 0) {
         window.clearInterval(timer);
-        router.refresh();
+        window.location.reload();
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [deadline, router]);
+  }, [deadline]);
+
+  // Through the exam's Route Handler, then a full reload onto session 2 (a deploy during the break can't break it).
+  const startNow = async () => {
+    setStarting(true);
+    await playerCall(attemptId, { op: "next" }).catch(() => null);
+    window.location.reload();
+  };
 
   return (
     <div className="grid min-h-screen place-items-center p-6">
@@ -39,12 +47,9 @@ export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: 
         <p className="mt-4 text-sm text-muted">
           Session {next - 1}&rsquo;s answers are locked. Session {next} starts on its own when the break ends, so be back before then; or start it now.
         </p>
-        <form action={startNextSession} className="mt-6">
-          <input type="hidden" name="attemptId" value={attemptId} />
-          <button type="submit" className="h-11 rounded-btn bg-gold px-6 font-semibold text-canvas hover:bg-gold-bright">
-            Start session {next} now
-          </button>
-        </form>
+        <button type="button" onClick={() => void startNow()} disabled={starting} className={`mt-6 h-11 rounded-btn px-6 font-semibold disabled:opacity-60 ${RAISED_GOLD}`}>
+          {starting ? "Starting…" : `Start session ${next} now`}
+        </button>
       </section>
     </div>
   );

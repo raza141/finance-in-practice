@@ -2,10 +2,12 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { NextRequest } from "next/server";
+
+import { POST } from "@/app/api/student/mocks/[attemptId]/route";
 import MockAttemptPage from "@/app/student/mocks/[attemptId]/page";
 import type { Sql } from "@/core/db/Database";
 
-import { submitMock } from "../actions/mocks";
 import { AttemptResults } from "../components/AttemptResults";
 import { MockBreak } from "../components/MockBreak";
 import { MockPlayer } from "../components/MockPlayer";
@@ -21,6 +23,12 @@ vi.mock("@/domains/students/server/StudentAuth", () => ({
 const CLIENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ATTEMPT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const MOCK = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+/** The player's submit, through its Route Handler as the browser sends it. */
+async function submitMock(attemptId: string, responses: unknown, { auto = false, origin = "https://financeinpractice.me" } = {}) {
+  const request = new NextRequest(`https://financeinpractice.me/api/student/mocks/${attemptId}`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ op: "submit", responses, auto }) });
+  const res = await POST(request, { params: Promise.resolve({ attemptId }) });
+  return res.status === 200 ? await res.json() : { status: res.status };
+}
 const qid = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 const QUESTIONS: MockQuestion[] = [
@@ -118,6 +126,27 @@ describe("a paused attempt", () => {
     expect(player?.props.remainingMs).toBe(25 * 60_000);
     expect(JSON.stringify(player?.props)).not.toMatch(/"correct"|"explanation"|SECRET/);
     expect(repo.completed).toBeNull();
+  });
+});
+
+describe("the player's submit route", () => {
+  it("refuses another site's request", async () => {
+    expect(await submitMock(ATTEMPT, [], { origin: "https://evil.example" })).toEqual({ status: 403 });
+    expect(repo.completed).toBeNull();
+  });
+
+  it("never closes a paused attempt (a save or the clock in another tab)", async () => {
+    repo.attemptRow = { ...repo.attemptRow, pausedAt: new Date() };
+    expect(await submitMock(ATTEMPT, [], { auto: true })).toEqual({ ok: true, stale: true });
+    expect(await submitMock(ATTEMPT, [])).toEqual({ ok: true, stale: true });
+    expect(repo.completed).toBeNull();
+  });
+
+  it("an auto submit from a tab whose clock is behind the server's leaves the attempt open; the student's own submit closes it", async () => {
+    expect(await submitMock(ATTEMPT, [], { auto: true })).toEqual({ ok: true, stale: true });
+    expect(repo.completed).toBeNull();
+    expect(await submitMock(ATTEMPT, [])).toEqual({ ok: true });
+    expect(repo.completed).not.toBeNull();
   });
 });
 

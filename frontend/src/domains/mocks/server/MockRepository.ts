@@ -224,7 +224,7 @@ export class MockRepository {
   async activity(): Promise<MockActivityRow[]> {
     const rows = (await this.sql`
       SELECT * FROM (
-        SELECT a.id, a.client_id, c.name AS client_name, a.mock_id, e.title, e.mock_type, a.started_at, a.ends_at, a.submitted_at, a.paused_at,
+        SELECT a.id, a.client_id, c.name AS client_name, e.title, a.started_at, a.ends_at, a.submitted_at, a.paused_at,
           a.score, a.total, a.status, a.seen_at,
           a.question_ids IS NOT NULL OR row_number() OVER (PARTITION BY a.client_id, a.mock_id ORDER BY a.started_at) > 1 AS retake
         FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id JOIN clients c ON c.id = a.client_id
@@ -233,14 +233,12 @@ export class MockRepository {
       WHERE status = 'in_progress' OR seen_at IS NULL OR submitted_at > now() - interval '30 days'
       ORDER BY COALESCE(submitted_at, started_at) DESC
       LIMIT 500
-    `) as (Omit<AttemptRow, "session" | "break_until" | "question_ids"> & { client_name: string; title: string; mock_type: MockType; seen_at: Date | null; retake: boolean })[];
+    `) as (Omit<AttemptRow, "mock_id" | "session" | "break_until" | "question_ids"> & { client_name: string; title: string; seen_at: Date | null; retake: boolean })[];
     return rows.map((r) => ({
       attemptId: r.id,
       clientId: r.client_id,
       clientName: r.client_name,
-      mockId: r.mock_id,
       mockTitle: r.title,
-      mockType: r.mock_type,
       startedAt: r.started_at,
       endsAt: r.ends_at,
       submittedAt: r.submitted_at,
@@ -827,7 +825,6 @@ export class MockRepository {
     return row.n > 0;
   }
 
-  /** Ends the break early: session 2's clock starts now. False when the break is already over. */
   /** Stops the clock while a session is running; answers aren't taken until resume. */
   async pause(attemptId: string, clientId: string): Promise<boolean> {
     const rows = await this.sql`
@@ -849,6 +846,7 @@ export class MockRepository {
     return rows.length > 0;
   }
 
+  /** Ends the break early: session 2's clock starts now. False when the break is already over. */
   async startSession(attemptId: string, clientId: string): Promise<boolean> {
     const rows = await this.sql`
       UPDATE mock_attempts a SET break_until = now(), ends_at = now() + make_interval(mins => e.duration_minutes)
