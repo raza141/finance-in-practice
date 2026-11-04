@@ -2,11 +2,10 @@ import type { ReactNode } from "react";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { WHATSAPP_GLYPH } from "@/core/components/ui/WhatsAppButton";
+import { siteConfig } from "@/core/config/site";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
-/** The courses on offer, printed in the document footer. */
-const TAGLINE = "CFA Level I & II · FRM · University Finance";
 
 /** Gold, letter-spaced section label: From, Bill to, Details, Payment desk, Terms. */
 export const LABEL = "font-mono text-[11px] font-semibold tracking-[0.25em] text-gold uppercase";
@@ -62,9 +61,13 @@ export function DocumentFrame({
         </div>
       </header>
       <div className="px-8 py-10 sm:px-12 print:flex print:flex-1 print:flex-col print:py-6">{children}</div>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 sm:px-12 print:py-4">
-        <p className="font-mono text-xs font-semibold tracking-[0.25em] text-gold uppercase">{TAGLINE}</p>
-        <p className="text-xs text-slate-300">{[business.website, business.phone].filter(Boolean).join(" · ")}</p>
+      <footer className="grid gap-1.5 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 text-center sm:px-12 print:py-4">
+        <p className="text-sm">
+          <span className="font-semibold text-gold">{business.name}</span>
+          <span className="text-slate-300"> | {siteConfig.letterhead.motto}</span>
+        </p>
+        <p className="font-mono text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">{siteConfig.letterhead.courses}</p>
+        <p className="text-xs text-slate-300">{[business.address, business.phone, business.website].filter(Boolean).join(" | ")}</p>
       </footer>
     </article>
   );

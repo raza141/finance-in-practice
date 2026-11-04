@@ -13,6 +13,13 @@ export const siteConfig = {
   description:
     "1-on-1 CFA® Level 1 & 2 and FRM® Part 1 tutoring, classes and coaching: at home in Abu Dhabi or live online across the UAE. Book a free diagnostic session.",
 
+  /** The footer of every billing document and client email (name, address and phone come from Settings on documents). */
+  letterhead: {
+    motto: "Learn finance the way it is practiced.",
+    courses: "CFA® Level I & II • FRM® • University Finance",
+    address: "Abu Dhabi, UAE",
+  },
+
   /** Where 1-on-1 sessions happen: at the learner's home in Abu Dhabi (base: Khalifa City), online everywhere else. */
   delivery: {
     line: "At your home anywhere in Abu Dhabi, or in Khalifa City · live online for Dubai and the rest of the UAE.",

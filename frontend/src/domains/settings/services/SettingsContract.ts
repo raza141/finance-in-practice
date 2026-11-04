@@ -31,7 +31,7 @@ export class SettingsContract {
     business: {
       name: siteConfig.name,
       sender: "Ahmed Raza",
-      address: "Abu Dhabi, UAE",
+      address: siteConfig.letterhead.address,
       phone: siteConfig.contact.whatsapp.display,
       email: siteConfig.contact.email ?? "",
       website: siteConfig.domain,

@@ -67,6 +67,18 @@ export class EmailHtml {
     );
   }
 
+  /** Name and motto, the courses, then address, phone and website: the same three lines as the documents' footer. */
+  private static footer(): string {
+    const { letterhead, name, url, domain, contact } = siteConfig;
+    const e = EmailHtml.escape;
+    return (
+      `<tr><td style="padding:16px 28px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.6;text-align:center">` +
+      `<strong style="color:#0f172a">${e(name)}</strong> | ${e(letterhead.motto)}<br>` +
+      `<span style="color:#a16207;letter-spacing:0.05em">${e(letterhead.courses)}</span><br>` +
+      `${e(letterhead.address)} | ${e(contact.whatsapp.display)} | <a href="${url}" style="color:#64748b">${e(domain)}</a></td></tr>`
+    );
+  }
+
   /** Branded shell around already-built (safe) body HTML. `follow`: add the LinkedIn strip (client emails). */
   static document(title: string, bodyHtml: string, { follow = false }: { follow?: boolean } = {}): string {
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${EmailHtml.escape(title)}</title></head>
@@ -76,7 +88,7 @@ export class EmailHtml {
 <tr><td style="background:#0b1120;padding:20px 28px;color:#d4af37;font-family:Georgia,serif;font-size:20px;font-style:italic">${EmailHtml.escape(siteConfig.name)}</td></tr>
 <tr><td style="padding:28px;font-size:15px">${bodyHtml}</td></tr>
 ${follow ? EmailHtml.follow() : ""}
-<tr><td style="padding:16px 28px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px">${EmailHtml.escape(siteConfig.name)} · <a href="${siteConfig.url}" style="color:#64748b">${siteConfig.domain}</a></td></tr>
+${EmailHtml.footer()}
 </table></td></tr></table></body></html>`;
   }
 }
