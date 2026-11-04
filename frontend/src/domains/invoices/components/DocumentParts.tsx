@@ -5,8 +5,8 @@ import { WHATSAPP_GLYPH } from "@/core/components/ui/WhatsAppButton";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import type { BillingSettings } from "@/domains/settings/types";
 
-/** The tagline from the logo artwork. */
-const TAGLINE = "Learn Finance the way it is practiced.";
+/** The courses on offer, printed in the document footer. */
+const TAGLINE = "CFA Level I & II · FRM · University Finance";
 
 /** Gold, letter-spaced section label: From, Bill to, Details, Payment desk, Terms. */
 export const LABEL = "font-mono text-[11px] font-semibold tracking-[0.25em] text-gold uppercase";
