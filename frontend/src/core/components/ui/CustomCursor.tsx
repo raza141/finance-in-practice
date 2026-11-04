@@ -10,16 +10,17 @@ const FINE_POINTER = "(pointer: fine)";
 /**
  * Global trailing-ring cursor for mouse users. Renders nothing on touch /
  * coarse-pointer devices, where the native cursor hiding in globals.css is
- * also scoped out by the same media query. The admin panel and client
- * invoices keep the native cursor: native dropdowns, date pickers and modal
- * dialogs draw above the page, where the ring can't follow.
+ * also scoped out by the same media query. The admin panel, client invoices
+ * and the student portal with its mock exams keep the native cursor: native
+ * dropdowns, date pickers and dialogs draw above the page where the ring can't
+ * follow, and a trailing ring feels slow when students click through an exam.
  */
 export function CustomCursor() {
   const ref = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
   const pathname = usePathname();
-  const native = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/invoice/");
+  const native = ["/admin", "/invoice", "/student"].some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   useEffect(() => {
     const query = window.matchMedia(FINE_POINTER);
