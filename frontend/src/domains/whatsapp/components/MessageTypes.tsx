@@ -113,7 +113,7 @@ export async function MessageType({ type, settings, link, origin }: { type: Mess
           <Card id="compose" title="Write a message" hint="Your own message to one student, a course, a batch or everyone. Students without a phone number, or who replied STOP, aren't listed.">
             <Composer students={await audience()} batch={batch} action={sendOwnMessage} starters={WhatsAppText.starters(sign)} />
           </Card>
-          <Card title="First message to someone new" hint="Goes once, before the first message to each student. Fixed wording.">
+          <Card title="First message to someone new" hint="Goes once, before the first message, only to students who joined after this number was first linked. Students from before already know the number and never get it. Fixed wording.">
             <p className="rounded-md bg-[#0b141a] p-3 text-xs whitespace-pre-wrap text-[#e9edef]">{WhatsAppText.intro("Sara Khan", sign.sender)}</p>
           </Card>
         </>

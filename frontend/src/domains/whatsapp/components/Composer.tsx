@@ -172,8 +172,8 @@ export function Composer({
             />
           </label>
           <p className="text-xs text-muted">
-            {"{firstName}"} becomes each student&rsquo;s first name. Goes out at any hour, a few seconds apart. Anyone new gets the &ldquo;save this
-            number&rdquo; message first.
+            {"{firstName}"} becomes each student&rsquo;s first name. Goes out at any hour, a few seconds apart. A newly joined student gets the
+            &ldquo;save this number&rdquo; message first.
           </p>
         </div>
       )}

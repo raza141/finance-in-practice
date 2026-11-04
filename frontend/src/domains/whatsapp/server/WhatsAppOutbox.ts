@@ -65,20 +65,28 @@ export class WhatsAppOutbox {
 
   /**
    * Queues a message, plus the client's "save this number" intro first when this
-   * phone hasn't had one. Nothing for a client who replied STOP or has no usable
+   * phone hasn't had one. Only students who joined after the number was first linked get the intro. Nothing for a client who replied STOP or has no usable
    * number. Returns false when nothing was queued.
    */
   async enqueue(message: OutgoingMessage, sender: string): Promise<boolean> {
     const phone = WhatsAppText.phone(message.phone);
     if (!phone || !UUID.test(message.clientId)) return false;
+    // known: a student from before the number was first linked, who already talks to the business on it.
     const [client] = (await this.sql`
-      SELECT name, whatsapp_intro_phone, whatsapp_off FROM clients WHERE id = ${message.clientId}
-    `) as { name: string; whatsapp_intro_phone: string | null; whatsapp_off: boolean }[];
+      SELECT c.name, c.whatsapp_intro_phone, c.whatsapp_off, coalesce(c.created_at < l.enabled_at, true) AS known
+      FROM clients c LEFT JOIN whatsapp_link l ON l.id = 1 WHERE c.id = ${message.clientId}
+    `) as { name: string; whatsapp_intro_phone: string | null; whatsapp_off: boolean; known: boolean }[];
     if (!client || client.whatsapp_off) return false;
     const queued = await this.insert({ ...message, phone });
     // Only with a message actually queued (claim sends the intro first): the scan re-offers the same booking every
     // 5 minutes, and in test mode the intro never marks the student introduced, so it would go out each time.
     if (queued && client.whatsapp_intro_phone !== phone && message.kind !== "intro" && message.kind !== "number") {
+      if (client.known) {
+        // No "save this number" for them: they're marked introduced (which lets their messages go out) instead.
+        await this.sql`UPDATE clients SET whatsapp_intro_phone = ${phone} WHERE id = ${message.clientId}`;
+        await this.sql`UPDATE whatsapp_messages SET status = 'cancelled' WHERE client_id = ${message.clientId} AND kind = 'intro' AND status = 'queued'`;
+        return queued;
+      }
       await this.insert(
         { dedupeKey: `intro:${message.clientId}:${phone}`, kind: "intro", clientId: message.clientId, phone, body: WhatsAppText.intro(client.name, sender) },
         true,
