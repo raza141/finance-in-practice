@@ -4,6 +4,8 @@ import { refresh, updateTag } from "next/cache";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { AdminInbox } from "@/domains/admin/server/AdminInbox";
+import { siteConfig } from "@/core/config/site";
+import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
@@ -29,9 +31,53 @@ export async function blockTime(_prev: ScheduleActionState, form: FormData): Pro
   const admin = await AdminAuth.require();
   const input = BlockContract.parse(form);
   if (!input.ok) return input;
+  const clientId = String(form.get("clientId") ?? "");
+  if (clientId) return bookFor(clientId, input.range, form);
   await blocks().create(input.range, input.reason, admin.id);
   refresh();
   return { ok: true, message: "Blocked. Those slots are hidden from the website now." };
+}
+
+/**
+ * The owner books a student session from the Block time form: the same Cal.com "session" booking the
+ * portal makes (same emails, counts in the student's portal and hours), confirmed at once. Unlike the
+ * portal it may cover time the owner blocked here, and skips the student's limits (terms, upcoming cap,
+ * hours left). Cal.com still refuses times outside working hours or over a calendar event.
+ */
+async function bookFor(clientId: string, range: { start: string; end: string }, form: FormData): Promise<ScheduleActionState> {
+  const client = await ClientRepository.fromEnv()?.byId(clientId);
+  if (!client?.email) return { ok: false, message: "That student has no email. Add one on their client page first." };
+  const minutes = (Date.parse(range.end) - Date.parse(range.start)) / 60_000;
+  if (!StudentBookingContract.isLength(minutes)) return { ok: false, message: "A session is 1, 2 or 3 hours: set From and To to match." };
+  if (Date.parse(range.start) <= Date.now()) return { ok: false, message: "Pick a time in the future." };
+  const inPerson = form.get("mode") === "in_person";
+  const address = String(form.get("address") ?? "").trim().slice(0, 200);
+  if (inPerson && address.length < 5) return { ok: false, message: "Add the address for the in-person session." };
+  const course = String(form.get("course") ?? "").trim().slice(0, 120) || "Session";
+  const cal = CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug);
+  if (!cal) return { ok: false, message: "Cal.com is not configured." };
+  try {
+    const booking = await new BookingGateway(cal, null).book(
+      {
+        start: range.start,
+        attendee: { name: client.name, email: client.email, timeZone: Schedule.TIME_ZONE, language: "en" },
+        location: inPerson ? { type: "attendeeAddress", address } : { type: "integration", integration: "google-meet" },
+        bookingFieldsResponses: {
+          notes: [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${inPerson ? `In person: ${address}` : "Online (Google Meet)"}`, "Booked by your instructor"].join("\n"),
+        },
+        lengthInMinutes: minutes,
+        metadata: { source: "financeinpractice.me/admin", clientId: client.id, course },
+      },
+      minutes,
+    );
+    if (booking.status.toLowerCase() === "pending") await cal.confirmBooking(booking.uid);
+  } catch (error) {
+    console.error("[schedule] booking for a student failed", error);
+    const detail = error instanceof Error ? error.message : "";
+    return { ok: false, message: `Cal.com refused this time${detail ? `: ${detail}` : ""}. It may be outside your working hours or clash with your calendar.` };
+  }
+  done();
+  return { ok: true, message: `Booked for ${client.name}. Cal.com has emailed them the confirmation${inPerson ? "" : " and the Meet link"}.` };
 }
 
 export async function removeBlock(id: string): Promise<void> {

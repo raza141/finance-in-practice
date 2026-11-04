@@ -72,7 +72,20 @@ const pad = (minutes: number) => `${String(Math.floor(minutes / 60) % 24).padSta
  * Week view of everything that makes the owner unavailable, plus the block-time
  * form. Clicking an empty spot prefills the form with that half hour.
  */
-export function ScheduleBoard({ weekStart, today, events, owner = false }: { weekStart: string; today: string; events: ScheduleEvent[]; owner?: boolean }) {
+export function ScheduleBoard({
+  weekStart,
+  today,
+  events,
+  owner = false,
+  students = [],
+}: {
+  weekStart: string;
+  today: string;
+  events: ScheduleEvent[];
+  owner?: boolean;
+  /** Clients with an email: the Block time form can book a session for one of them instead. */
+  students?: { id: string; name: string }[];
+}) {
   const days = Array.from({ length: 7 }, (_, i) => ZonedCalendar.addDays(weekStart, i));
   const visible = events.filter((e) => !closed(e));
 
@@ -90,6 +103,9 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
   const hours = Array.from({ length: last - first }, (_, i) => first + i);
 
   const [form, setForm] = useState({ date: today, from: "09:00", to: "10:00", allDay: false });
+  const [student, setStudent] = useState("");
+  const [inPerson, setInPerson] = useState(false);
+  const allDay = form.allDay && !student;
   const [selected, setSelected] = useState<ScheduleEvent | null>(null);
   const [state, submit] = useActionState(blockTime, null);
 
@@ -184,11 +200,25 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
         {selected && <EventDetail key={selected.id} event={events.find((e) => e.id === selected.id) ?? selected} owner={owner} onClose={() => setSelected(null)} />}
 
         <form id="block-form" action={submit} className="grid gap-3 rounded-lg border border-line bg-surface p-4">
-          <h2 className="font-serif text-lg italic">Block time</h2>
+          <h2 className="font-serif text-lg italic">{student ? "Book for a student" : "Block time"}</h2>
           <p className="text-xs text-muted">
-            Hides these times from the booking widget on the website. For recurring commitments, add a repeating event in
-            Google or Apple Calendar instead: Cal.com already reads those.
+            {student
+              ? "Books a 1, 2 or 3 hour session in their name, confirmed at once: Cal.com emails them exactly as when they book themselves, and it shows in their portal and counts in their hours."
+              : "Hides these times from the booking widget on the website. For recurring commitments, add a repeating event in Google or Apple Calendar instead: Cal.com already reads those."}
           </p>
+          {students.length > 0 && (
+            <label className="grid gap-1 text-sm">
+              For a student (optional)
+              <select name="clientId" value={student} onChange={(e) => setStudent(e.target.value)} className="rounded-md border border-line bg-canvas px-3 py-2">
+                <option value="">Nobody: just block the time</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="grid gap-1 text-sm">
             Date
             <input
@@ -200,11 +230,13 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
               className="rounded-md border border-line bg-canvas px-3 py-2"
             />
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="allDay" checked={form.allDay} onChange={(e) => setForm({ ...form, allDay: e.target.checked })} />
-            All day
-          </label>
-          {form.allDay ? (
+          {!student && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="allDay" checked={form.allDay} onChange={(e) => setForm({ ...form, allDay: e.target.checked })} />
+              All day
+            </label>
+          )}
+          {allDay ? (
             <label className="grid gap-1 text-sm">
               Until (optional, for several days)
               <input type="date" name="until" min={form.date} className="rounded-md border border-line bg-canvas px-3 py-2" />
@@ -237,17 +269,43 @@ export function ScheduleBoard({ weekStart, today, events, owner = false }: { wee
               </label>
             </div>
           )}
-          <label className="grid gap-1 text-sm">
-            Label (only you see it)
-            <input
-              name="reason"
-              maxLength={120}
-              placeholder="Offline client, personal…"
-              className="rounded-md border border-line bg-canvas px-3 py-2"
-            />
-          </label>
-          <PendingButton pendingLabel="Blocking…" className="rounded-md bg-gold px-4 py-2 text-sm font-medium text-canvas">
-            Block time
+          {student ? (
+            <>
+              <label className="grid gap-1 text-sm">
+                Course or topic
+                <input name="course" maxLength={120} placeholder="CFA Level 1, FSA…" className="rounded-md border border-line bg-canvas px-3 py-2" />
+              </label>
+              <fieldset className="flex gap-4 text-sm">
+                <legend className="sr-only">Where</legend>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="mode" value="online" checked={!inPerson} onChange={() => setInPerson(false)} />
+                  Online (Google Meet)
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="mode" value="in_person" checked={inPerson} onChange={() => setInPerson(true)} />
+                  In person
+                </label>
+              </fieldset>
+              {inPerson && (
+                <label className="grid gap-1 text-sm">
+                  Address
+                  <input name="address" required minLength={5} maxLength={200} className="rounded-md border border-line bg-canvas px-3 py-2" />
+                </label>
+              )}
+            </>
+          ) : (
+            <label className="grid gap-1 text-sm">
+              Label (only you see it)
+              <input
+                name="reason"
+                maxLength={120}
+                placeholder="Offline client, personal…"
+                className="rounded-md border border-line bg-canvas px-3 py-2"
+              />
+            </label>
+          )}
+          <PendingButton pendingLabel={student ? "Booking…" : "Blocking…"} className="rounded-md bg-gold px-4 py-2 text-sm font-medium text-canvas">
+            {student ? "Book session" : "Block time"}
           </PendingButton>
           {state && (
             <p role="status" className={`text-sm ${state.ok ? "text-quant" : "text-gold"}`}>

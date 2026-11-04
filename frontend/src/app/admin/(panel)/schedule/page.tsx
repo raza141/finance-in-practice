@@ -5,6 +5,7 @@ import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ScheduleBoard } from "@/domains/schedule/components/ScheduleBoard";
+import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { Schedule } from "@/domains/schedule/services/Schedule";
@@ -37,11 +38,12 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
 
   const cal = CalComClient.fromEnv();
   const repo = BlockRepository.fromEnv();
-  const [bookings, busy, blocks, unconfirmed] = await Promise.allSettled([
+  const [bookings, busy, blocks, unconfirmed, clients] = await Promise.allSettled([
     cal ? cal.bookings(from, to) : Promise.resolve([]),
     cal ? cal.busyTimes(weekStart, weekEnd, Schedule.TIME_ZONE) : Promise.resolve([]),
     repo ? repo.between(from, to) : Promise.resolve([]),
     cal ? cal.unconfirmed() : Promise.resolve([]),
+    ClientRepository.fromEnv()?.all() ?? Promise.resolve([]),
   ]);
   const warnings: string[] = [];
   if (!cal) warnings.push("Cal.com is not configured (CAL_API_KEY), so bookings and calendars are not shown.");
@@ -60,6 +62,9 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
     : new Map<string, number>();
   const events = Schedule.markEnded(merged.map((e) => (studied.has(e.id) ? { ...e, studiedMinutes: studied.get(e.id) } : e)));
 
+  const students = settled(clients, [], "Clients", warnings)
+    .filter((c) => c.email)
+    .map((c) => ({ id: c.id, name: c.name }));
   const waiting = awaitingConfirmation(settled(unconfirmed, [], "Bookings waiting for confirmation", warnings));
   const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
 
@@ -117,7 +122,7 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
           </ul>
         </section>
       )}
-      <ScheduleBoard key={weekStart} weekStart={weekStart} today={today} events={events} owner={owner} />
+      <ScheduleBoard key={weekStart} weekStart={weekStart} today={today} events={events} owner={owner} students={students} />
     </div>
   );
 }
