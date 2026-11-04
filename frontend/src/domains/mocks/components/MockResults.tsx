@@ -40,11 +40,12 @@ export interface RetakeOptions {
   open: { id: string; mistakes: boolean } | null;
 }
 
-type Filter = "all" | "incorrect" | "flagged" | "guessed" | "slow" | "notes";
+type Filter = "all" | "incorrect" | "unanswered" | "flagged" | "guessed" | "slow" | "notes";
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
 const FILTERS: [Filter, string][] = [
   ["all", "All"],
   ["incorrect", "Incorrect"],
+  ["unanswered", "Unanswered"],
   ["flagged", "Flagged"],
   ["guessed", "Guessed"],
   ["slow", "Slow"],
@@ -86,6 +87,7 @@ export function MockResults({
   const keep: Record<Filter, (q: ReviewQuestion) => boolean> = {
     all: () => true,
     incorrect: (q) => q.selected !== q.correct,
+    unanswered: (q) => q.selected === null,
     flagged: (q) => q.flagged,
     guessed: (q) => q.confidence === "guess",
     slow: (q) => paceSeconds !== null && q.seconds > SLOW * paceSeconds,
