@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { MockBreak } from "@/domains/mocks/components/MockBreak";
 import { MockPageShell } from "@/domains/mocks/components/MockPageShell";
 import { MockPlayer } from "@/domains/mocks/components/MockPlayer";
+import { SubmittedNotice } from "@/domains/mocks/components/SubmittedNotice";
 import { AttemptResults, renderQuestion } from "@/domains/mocks/components/AttemptResults";
 import { MockSession } from "@/domains/mocks/server/MockSession";
 import { MockContract } from "@/domains/mocks/services/MockContract";
@@ -65,6 +66,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/student/mo
   return (
     <MockPageShell>
       <AttemptResults repo={repo} attempt={attempt} title={mock.title} />
+      <SubmittedNotice attemptId={attempt.id} />
     </MockPageShell>
   );
 }

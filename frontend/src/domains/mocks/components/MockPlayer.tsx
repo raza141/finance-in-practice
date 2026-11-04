@@ -7,6 +7,7 @@ import { BackToPortal } from "@/domains/students/components/BackToPortal";
 
 import { MockGrader } from "../services/MockGrader";
 import { playerCall } from "./playerCall";
+import { SubmittedNotice } from "./SubmittedNotice";
 import type { MockResponse, OptionLetter } from "../types";
 
 /** A question with its text already rendered on the server (KaTeX included). No answer, no explanation. */
@@ -94,6 +95,8 @@ export function MockPlayer({
   const [state, setState] = useState<"working" | "submitting" | "pausing" | "resuming" | "error">("working");
   // The last autosave failed: the student is told, and the answers wait in localStorage for the next one.
   const [unsaved, setUnsaved] = useState(false);
+  // The browser has no connection: the student is told at once, not only when the next autosave fails.
+  const [offline, setOffline] = useState(false);
   const dirty = useRef(false);
   const submitted = useRef(false);
   const lastAutoSubmit = useRef(0);
@@ -150,6 +153,8 @@ export function MockPlayer({
       if (!stale) {
         try {
           localStorage.removeItem(storageKey);
+          // The results page confirms it (SubmittedNotice); a full mock only after its last session.
+          if (last) sessionStorage.setItem(SubmittedNotice.key(attemptId), auto ? "auto" : "manual");
         } catch {}
       }
       window.location.reload();
@@ -157,7 +162,7 @@ export function MockPlayer({
       submitted.current = false;
       setState("error");
     }
-  }, [attemptId, list, preview, storageKey]);
+  }, [attemptId, last, list, preview, storageKey]);
 
   const save = useCallback(async () => {
     if (!dirty.current || submitted.current || pausedRef.current || preview) return;
@@ -207,6 +212,22 @@ export function MockPlayer({
     dirty.current = true;
     void save();
   };
+
+  // Offline: a banner; back online: save straight away instead of waiting for the next autosave.
+  useEffect(() => {
+    if (preview) return;
+    const update = () => {
+      setOffline(!navigator.onLine);
+      if (navigator.onLine) void save();
+    };
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, [preview, save]);
 
   // The clock, from the server's end time. Stopped while paused.
   useEffect(() => {
@@ -347,6 +368,11 @@ export function MockPlayer({
             </button>
           )}
         </div>
+        {offline && (
+          <p role="alert" className="border-t border-red-400/40 bg-red-400/10 px-4 py-2 text-sm text-red-300 sm:px-6">
+            You&rsquo;re offline. Keep going: your answers are kept on this device and save as soon as you&rsquo;re back online. The clock keeps running.
+          </p>
+        )}
         {paused && (
           <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
             Paused: the clock has stopped and the questions are hidden until you press Resume.{preview ? "" : " Your work is kept: you can go back to the portal and resume from there."}
@@ -568,7 +594,7 @@ export function MockPlayer({
             </button>
           </div>
         </div>
-        {unsaved && !paused && (
+        {unsaved && !offline && !paused && (
           <p role="status" className="border-t border-red-400/40 bg-red-400/10 px-4 py-2 text-sm text-red-300 sm:px-6">
             Not saved: check your connection. Your answers are kept on this device and save again on their own.
           </p>
