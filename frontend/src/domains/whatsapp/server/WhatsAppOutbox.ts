@@ -72,13 +72,16 @@ export class WhatsAppOutbox {
       SELECT name, whatsapp_intro_phone, whatsapp_off FROM clients WHERE id = ${message.clientId}
     `) as { name: string; whatsapp_intro_phone: string | null; whatsapp_off: boolean }[];
     if (!client || client.whatsapp_off) return false;
-    if (client.whatsapp_intro_phone !== phone && message.kind !== "intro" && message.kind !== "number") {
+    const queued = await this.insert({ ...message, phone });
+    // Only with a message actually queued (claim sends the intro first): the scan re-offers the same booking every
+    // 5 minutes, and in test mode the intro never marks the student introduced, so it would go out each time.
+    if (queued && client.whatsapp_intro_phone !== phone && message.kind !== "intro" && message.kind !== "number") {
       await this.insert(
         { dedupeKey: `intro:${message.clientId}:${phone}`, kind: "intro", clientId: message.clientId, phone, body: WhatsAppText.intro(client.name, sender) },
         true,
       );
     }
-    return this.insert({ ...message, phone });
+    return queued;
   }
 
   /** `requeue`: an intro that expired or was cancelled is queued again, or the client's messages would wait on it forever. */

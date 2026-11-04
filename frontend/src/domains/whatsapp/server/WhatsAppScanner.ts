@@ -97,6 +97,8 @@ export class WhatsAppScanner {
       const start = new Date(b.start);
       if (start <= now) continue;
       const createdAt = new Date(b.createdAt);
+      // Cal.com's title reads "session between <host> and <student>": name the course instead.
+      const title = b.metadata?.course?.trim() || "Your session";
       await this.outbox.cancelOtherTimes(`booking:${b.uid}`, `booking:${b.uid}:${b.start}:`);
       for (const attendee of b.attendees) {
         const client = await this.clientByEmail(attendee.email);
@@ -109,7 +111,7 @@ export class WhatsAppScanner {
               ...base,
               dedupeKey: `booking:${b.uid}:${b.start}:${client.id}:confirmed`,
               kind: "booking",
-              body: WhatsAppText.bookingConfirmed(client.name, b.title, start, attendee.timeZone, where, this.settings.whatsapp.booking),
+              body: WhatsAppText.bookingConfirmed(client.name, title, start, attendee.timeZone, where, this.settings.whatsapp.booking),
               expiresAt: start,
             },
             this.sender,
@@ -124,7 +126,7 @@ export class WhatsAppScanner {
               ...base,
               dedupeKey: `booking:${b.uid}:${b.start}:${client.id}:${plan.key}`,
               kind: "reminder",
-              body: WhatsAppText.reminder(plan.key, client.name, b.title, start, attendee.timeZone, where, this.settings.whatsapp.reminder),
+              body: WhatsAppText.reminder(plan.key, client.name, title, start, attendee.timeZone, where, this.settings.whatsapp.reminder),
               notBefore: plan.notBefore,
               expiresAt: plan.expiresAt,
               quietOk: plan.quietOk,
