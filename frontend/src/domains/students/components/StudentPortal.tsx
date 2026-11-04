@@ -211,7 +211,7 @@ export function StudentPortal({
   };
 
   const courseLabel = course === OTHER ? (topic ? `Other: ${topic}` : "Other") : course;
-  const where = mode === "online" ? "Online · Google Meet" : address || "In person · Abu Dhabi (add the address)";
+  const where = mode === "online" ? "Online · Zoom" : address || "In person · Abu Dhabi (add the address)";
   const noticeEl = notice && (
     <p role={notice.tone === "ok" ? "status" : "alert"} className={`text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
       {notice.text}
@@ -439,7 +439,7 @@ export function StudentPortal({
                     <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Location">
                       {(
                         [
-                          ["online", "Online · Google Meet"],
+                          ["online", "Online · Zoom"],
                           ["in_person", "In person · Abu Dhabi"],
                         ] as const
                       ).map(([value, label]) => (

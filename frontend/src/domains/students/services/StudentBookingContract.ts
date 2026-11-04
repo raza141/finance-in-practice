@@ -105,7 +105,7 @@ export class StudentBookingContract {
     return [
       `Course: ${request.course === StudentBookingContract.OTHER ? `Other: ${request.topic}` : request.course}`,
       `Length: ${request.minutes / 60} h`,
-      `Where: ${request.mode === "online" ? "Online (Google Meet)" : `In person: ${request.address}`}`,
+      `Where: ${request.mode === "online" ? "Online (Zoom)" : `In person: ${request.address}`}`,
       request.mapUrl && `Map: ${request.mapUrl}`,
       request.notes && `Notes: ${request.notes}`,
     ]

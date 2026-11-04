@@ -18,7 +18,7 @@ export interface CalBookingInput {
   attendee: { name: string; email: string; timeZone: string; language: string };
   metadata: Record<string, string>;
   /** Omitted: the event type's first location. */
-  location?: { type: "attendeeAddress"; address: string } | { type: "integration"; integration: "google-meet" | "cal-video" };
+  location?: { type: "attendeeAddress"; address: string } | { type: "integration"; integration: "zoom" | "google-meet" | "cal-video" };
   /** Booking-field slug -> answer, e.g. { notes } (shown in Cal.com's emails). */
   bookingFieldsResponses?: Record<string, string>;
   /** Only for event types offering several lengths; omitted: the default length. */

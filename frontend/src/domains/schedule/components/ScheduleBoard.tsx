@@ -279,7 +279,7 @@ export function ScheduleBoard({
                 <legend className="sr-only">Where</legend>
                 <label className="flex items-center gap-2">
                   <input type="radio" name="mode" value="online" checked={!inPerson} onChange={() => setInPerson(false)} />
-                  Online (Google Meet)
+                  Online (Zoom)
                 </label>
                 <label className="flex items-center gap-2">
                   <input type="radio" name="mode" value="in_person" checked={inPerson} onChange={() => setInPerson(true)} />

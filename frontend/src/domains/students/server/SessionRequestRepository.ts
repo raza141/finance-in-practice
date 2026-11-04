@@ -83,7 +83,7 @@ export class SessionRequestRepository {
       metadata: { source: "financeinpractice.me/student", clientId: r.clientId, course: r.course, ...(r.rescheduleOf ? { moveOf: r.rescheduleOf } : {}) },
       attendees: [{ name: r.name, email: r.email, timeZone: r.timeZone }],
       createdAt: r.createdAt,
-      location: r.mode === "online" ? "integrations:google:meet" : r.address,
+      location: r.mode === "online" ? "integrations:zoom" : r.address,
       eventType: { slug: siteConfig.studentBooking.eventSlug },
     };
   }
@@ -106,7 +106,7 @@ export class SessionRequestRepository {
     const end = new Date(Date.parse(start) + minutes * 60_000).toISOString();
     const address = StudentSessions.address(booking.location) ?? "";
     const course = (booking.metadata?.course || booking.title).slice(0, 500);
-    const summary = [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${address ? `In person: ${address}` : "Online (Google Meet)"}`, "Moved by the student"].join("\n");
+    const summary = [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${address ? `In person: ${address}` : "Online (Zoom)"}`, "Moved by the student"].join("\n");
     try {
       const [row] = (await this.sql`
         INSERT INTO session_requests (client_id, starts_at, ends_at, time_zone, course, mode, address, summary, reschedule_of)

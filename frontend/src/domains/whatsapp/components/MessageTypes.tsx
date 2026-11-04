@@ -57,7 +57,7 @@ function samples(sign: Signature): Record<string, Record<string, string>> {
   const start = new Date(Date.now() + 26 * 3_600_000);
   const when = WhatsAppText.when(start, WhatsAppText.ZONE);
   const doc = { firstName: "Sara", number: "FIP-INV-0042", amount: "AED 1,500.00", balance: "AED 1,500.00", dueDate: "11 Nov 2026", link: `${siteConfig.url}/invoice/…`, ...sign };
-  const session = { firstName: "Sara", session: "CFA Level I", when, where: "https://meet.google.com/abc-defg-hij", link: WhatsAppText.PORTAL_SESSIONS, lead: "in about an hour", ...sign };
+  const session = { firstName: "Sara", session: "CFA Level I", when, where: "https://us06web.zoom.us/j/1234567890", link: WhatsAppText.PORTAL_SESSIONS, lead: "in about an hour", ...sign };
   return {
     "wa.booking": session,
     "wa.reminder": session,

@@ -64,9 +64,9 @@ async function bookFor(clientId: string, range: { start: string; end: string }, 
       {
         start: range.start,
         attendee: { name: client.name, email: client.email, timeZone: Schedule.TIME_ZONE, language: "en" },
-        location: inPerson ? { type: "attendeeAddress", address } : { type: "integration", integration: "google-meet" },
+        location: inPerson ? { type: "attendeeAddress", address } : { type: "integration", integration: "zoom" },
         bookingFieldsResponses: {
-          notes: [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${inPerson ? `In person: ${address}` : "Online (Google Meet)"}`, "Booked by your instructor"].join("\n"),
+          notes: [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${inPerson ? `In person: ${address}` : "Online (Zoom)"}`, "Booked by your instructor"].join("\n"),
         },
         lengthInMinutes: minutes,
         metadata: { source: "financeinpractice.me/admin", clientId: client.id, course },
@@ -80,7 +80,7 @@ async function bookFor(clientId: string, range: { start: string; end: string }, 
     return { ok: false, message: `Cal.com refused this time${detail ? `: ${detail}` : ""}. It may be outside your working hours or clash with your calendar.` };
   }
   done();
-  return { ok: true, message: `Booked for ${client.name}. Cal.com has emailed them the confirmation${inPerson ? "" : " and the Meet link"}.` };
+  return { ok: true, message: `Booked for ${client.name}. Cal.com has emailed them the confirmation${inPerson ? "" : " and the Zoom link"}.` };
 }
 
 export async function removeBlock(id: string): Promise<void> {
@@ -265,7 +265,7 @@ async function approveRequest(id: string): Promise<ScheduleActionState> {
       {
         start: r.start,
         attendee: { name: r.name, email: r.email, timeZone: r.timeZone, language: "en" },
-        location: r.mode === "online" ? { type: "integration", integration: "google-meet" } : { type: "attendeeAddress", address: r.address },
+        location: r.mode === "online" ? { type: "integration", integration: "zoom" } : { type: "attendeeAddress", address: r.address },
         // The owner may have changed the length since the student asked.
         bookingFieldsResponses: { notes: r.summary.replace(/^Length: .*$/m, `Length: ${minutes / 60} h`) },
         lengthInMinutes: minutes,
@@ -284,7 +284,7 @@ async function approveRequest(id: string): Promise<ScheduleActionState> {
   // Booked: a failure here leaves the request showing, and approving again is refused by Cal.com (the time is taken).
   if (!(await repo.decide(id, "approved", { bookingUid }))) console.error("[schedule] request booked but not marked approved", id, bookingUid);
   done();
-  return { ok: true, message: `Approved. Cal.com has emailed ${r.name} the confirmation${r.mode === "online" ? " and the Meet link" : ""}.` };
+  return { ok: true, message: `Approved. Cal.com has emailed ${r.name} the confirmation${r.mode === "online" ? " and the Zoom link" : ""}.` };
 }
 
 /** Closes a waiting request; the student gets one email and one WhatsApp message with the reason. */
