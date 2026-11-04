@@ -129,6 +129,8 @@ class WhatsAppLink {
   private readonly authDir: string;
   private sock: WASocket | null = null;
   private linking = false;
+  /** When a QR was last scanned (ms). */
+  private pairedAt = 0;
   private stopping = false;
   private readonly logger = pino({ level: process.env.LOG_LEVEL || "warn" });
 
@@ -139,6 +141,14 @@ class WhatsAppLink {
   /** A QR round is running. */
   get isLinking(): boolean {
     return this.linking;
+  }
+
+  /**
+   * A QR was scanned in the last minute. The admin's Link request stays pending until the site sees
+   * "connected", so for that long it must not start a new round: that would wipe the session just made.
+   */
+  get justPaired(): boolean {
+    return Date.now() - this.pairedAt < 60_000;
   }
 
   get hasSession(): boolean {
@@ -183,6 +193,7 @@ class WhatsAppLink {
         this.state = "pairing";
       }
       if (update.connection === "open") {
+        if (this.linking) this.pairedAt = Date.now();
         this.state = "connected";
         this.qr = null;
         this.linking = false;
@@ -212,6 +223,7 @@ class WhatsAppLink {
           return;
         }
         // After scanning WhatsApp asks for a restart (515); other drops are network. Reconnect with the saved session.
+        if (this.linking) this.pairedAt = Date.now();
         this.linking = false;
         this.state = "connecting";
         await sleep(code === DisconnectReason.restartRequired ? 500 : 5_000);
@@ -340,7 +352,7 @@ class Gateway {
     }
     // Link: one QR round. The site clears the request once linked (or when the round runs out), so a
     // pending request while connected means "switch to another number".
-    if (command?.type === "link" && !this.link.isLinking) {
+    if (command?.type === "link" && !this.link.isLinking && !this.link.justPaired) {
       log("Linking (admin): showing a QR code");
       if (this.link.state === "connected") await this.link.logout();
       await this.link.connect(true);
