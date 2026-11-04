@@ -1,4 +1,4 @@
-export type MessageKind = "intro" | "number" | "booking" | "reminder" | "invoice" | "receipt" | "overdue" | "class" | "nudge";
+export type MessageKind = "intro" | "number" | "booking" | "reminder" | "invoice" | "receipt" | "overdue" | "class" | "nudge" | "mock" | "manual";
 export type MessageStatus = "queued" | "sending" | "sent" | "failed" | "unknown" | "cancelled" | "expired";
 export type LinkState = "offline" | "connecting" | "pairing" | "connected" | "logged_out";
 export type ClassPostKind = "mock" | "assignment" | "material" | "announcement";

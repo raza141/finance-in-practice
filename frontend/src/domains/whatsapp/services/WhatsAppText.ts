@@ -2,6 +2,7 @@ import { siteConfig } from "@/core/config/site";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
+import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 
 import type { ClassPostKind } from "../types";
 
@@ -92,28 +93,49 @@ export class WhatsAppText {
     ].join("\n\n");
   }
 
-  static bookingConfirmed(name: string, title: string, start: Date, timeZone: string, where: string | null): string {
-    return [
-      `Hi ${WhatsAppText.first(name)}, your session is confirmed ✅`,
-      `${title}\n${WhatsAppText.when(start, timeZone)}${where ? `\n${where}` : ""}`,
-      "To reschedule, reply here or use the link in your Cal.com email.",
-    ].join("\n\n");
+  private static readonly WORDS = SettingsContract.DEFAULTS.whatsapp;
+
+  /**
+   * Fills {placeholders} (unknown ones stay as typed), then tidies what an empty one leaves:
+   * trailing spaces, runs of blank lines, a blank start or end.
+   */
+  static fill(template: string, values: Record<string, string>): string {
+    return template
+      .replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match)
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
-  static reminder(key: ReminderPlan["key"], name: string, title: string, start: Date, timeZone: string, where: string | null): string {
-    const lead = key === "r24" ? "tomorrow" : "in about an hour";
-    return [`Hi ${WhatsAppText.first(name)}, a reminder: your session is ${lead}.`, `${title}\n${WhatsAppText.when(start, timeZone)}${where ? `\n${where}` : ""}`].join(
-      "\n\n",
-    );
+  private static session(name: string, title: string, start: Date, timeZone: string, where: string | null): Record<string, string> {
+    return { firstName: WhatsAppText.first(name), session: title, when: WhatsAppText.when(start, timeZone), where: where ?? "" };
   }
 
-  static overdue(name: string, number: string, balance: string, dueDate: string, link: string, sender: string): string {
-    return [
-      `Hi ${WhatsAppText.first(name)}, a gentle reminder that invoice ${number} (${balance}) was due on ${InvoiceEmails.day(dueDate)}.`,
-      `You can view it here: ${link}`,
-      "If you've already paid, thank you, and please ignore this message.",
-      sender,
-    ].join("\n\n");
+  static bookingConfirmed(name: string, title: string, start: Date, timeZone: string, where: string | null, template = WhatsAppText.WORDS.booking): string {
+    return WhatsAppText.fill(template, WhatsAppText.session(name, title, start, timeZone, where));
+  }
+
+  static reminder(
+    key: ReminderPlan["key"],
+    name: string,
+    title: string,
+    start: Date,
+    timeZone: string,
+    where: string | null,
+    template = WhatsAppText.WORDS.reminder,
+  ): string {
+    return WhatsAppText.fill(template, { ...WhatsAppText.session(name, title, start, timeZone, where), lead: key === "r24" ? "tomorrow" : "in about an hour" });
+  }
+
+  static overdue(name: string, number: string, balance: string, dueDate: string, link: string, sender: string, template = WhatsAppText.WORDS.overdue): string {
+    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), number, balance, dueDate: InvoiceEmails.day(dueDate), link, sender });
+  }
+
+  /** A mock, or a whole product ("all mock exams"), given to a student; `from` when access starts later. */
+  static mockGiven(name: string, mock: string, from: Date | null, sender: string, template = WhatsAppText.WORDS.mock): string {
+    const later = from && from.getTime() > Date.now() + HOUR;
+    const day = later ? new Intl.DateTimeFormat("en-GB", { timeZone: WhatsAppText.ZONE, weekday: "short", day: "numeric", month: "short" }).format(from) : "";
+    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), mock, from: later ? ` from ${day}` : "", link: WhatsAppText.PORTAL, sender });
   }
 
   static readonly KIND_LABEL: Record<ClassPostKind, string> = {

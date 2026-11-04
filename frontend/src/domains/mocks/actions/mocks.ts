@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
+import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 
 import { MockSession } from "../server/MockSession";
 import { MockContract } from "../services/MockContract";
@@ -202,7 +203,14 @@ export async function setMockAccess(_prev: MockActionState, form: FormData): Pro
   if (!MockContract.isUuid(id)) return { ok: false, message: "Unknown mock." };
   const access = MockContract.parseAccess(form);
   if (!access.ok) return { ok: false, message: access.error };
-  await MockSession.repo().setAccess(id, access.value);
+  const repo = MockSession.repo();
+  const before = access.value.audience === "clients" ? await repo.grantees(id) : null;
+  await repo.setAccess(id, access.value);
+  // Students newly picked hear about it on WhatsApp, once the mock is published.
+  const exam = before ? await repo.byId(id) : null;
+  if (before && exam?.published) {
+    await WhatsAppOutbox.fromEnv()?.mockGiven(access.value.clients.filter((c) => !before.has(c)), exam.title, null, `${id}:${Date.now()}`);
+  }
   revalidatePath("/student");
   refresh();
   return { ok: true, message: "Saved." };
@@ -215,7 +223,13 @@ export async function addAccessGrant(_prev: MockActionState, form: FormData): Pr
   if (!MockContract.isUuid(clientId)) return { ok: false, message: "Unknown client." };
   const grant = MockContract.parseGrant(form);
   if (!grant.ok) return { ok: false, message: grant.error };
-  await MockSession.repo().addGrant(clientId, grant.value);
+  const repo = MockSession.repo();
+  await repo.addGrant(clientId, grant.value);
+  // The student hears about it on WhatsApp (a single mock only once it is published).
+  const { product, mockId, startsAt } = grant.value;
+  const exam = mockId ? await repo.byId(mockId) : null;
+  const what = product ? MockContract.PRODUCT_NAMES[product] : exam?.published ? exam.title : null;
+  if (what) await WhatsAppOutbox.fromEnv()?.mockGiven([clientId], what, startsAt, `${product ?? mockId}:${Date.now()}`);
   revalidatePath("/student");
   refresh();
   return { ok: true, message: "Granted." };

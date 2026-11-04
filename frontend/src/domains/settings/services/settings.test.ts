@@ -19,6 +19,7 @@ const formFields = (overrides: Record<string, string> = {}) => {
     "terms.default": "net7",
     "terms.days": "",
     "card.note": D.card.note,
+    ...Object.fromEntries(Object.entries(D.whatsapp).map(([key, value]) => [`wa.${key}`, value])),
   };
   for (const [unit, config] of Object.entries(D.units)) {
     fields[`unit.${unit}.label`] = config.label;

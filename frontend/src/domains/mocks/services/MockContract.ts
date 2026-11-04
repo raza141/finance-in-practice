@@ -51,6 +51,8 @@ export class MockContract {
     mocks: "All mocks",
     practice: "Topic practice",
   };
+  /** How a WhatsApp message names a product given to a student. */
+  static readonly PRODUCT_NAMES: Record<AccessProduct, string> = { mocks: "all mock exams", practice: "topic practice" };
   static readonly USAGES: Record<QuestionUsage, string> = {
     mock: "Mocks only",
     practice: "Practice only",

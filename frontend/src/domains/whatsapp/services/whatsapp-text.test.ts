@@ -39,6 +39,18 @@ describe("WhatsAppText", () => {
     expect(WhatsAppText.command("stop sending me the mock")).toBeNull();
   });
 
+  it("default wording reads as before, dropping the line an empty placeholder leaves", () => {
+    const start = new Date("2026-10-21T15:00:00Z");
+    expect(WhatsAppText.bookingConfirmed("Sara Khan", "Session", start, "Asia/Dubai", null)).toBe(
+      `Hi Sara, your session is confirmed ✅\n\nSession\n${WhatsAppText.when(start, "Asia/Dubai")}\n\nTo reschedule, reply here or use the link in your Cal.com email.`,
+    );
+    expect(WhatsAppText.reminder("r1", "Sara Khan", "Session", start, "Asia/Dubai", "https://meet.google.com/x")).toBe(
+      `Hi Sara, a reminder: your session is in about an hour.\n\nSession\n${WhatsAppText.when(start, "Asia/Dubai")}\nhttps://meet.google.com/x`,
+    );
+    expect(WhatsAppText.fill("Hi {firstName}, {odd}", { firstName: "Sara" })).toBe("Hi Sara, {odd}");
+    expect(WhatsAppText.mockGiven("Sara Khan", "Mock 3", null, "Ahmed")).toContain("access to *Mock 3* on your study portal.");
+  });
+
   it("personalises the class-post template", () => {
     const text = WhatsAppText.personal(WhatsAppText.classPost("mock", "CFA Level I · Nov 2026", "Mock 3", null, "https://classroom.google.com/x"), "Sara Khan");
     expect(text).toContain("Hi Sara, New mock exam in CFA Level I · Nov 2026:");

@@ -63,6 +63,36 @@ export async function retryMessage(formData: FormData): Promise<void> {
   redirect(`${PAGE}?notice=retried#outbox`);
 }
 
+/** A message that already went out (or was cancelled), once more. */
+export async function resendMessage(formData: FormData): Promise<void> {
+  await (await owner()).resend(String(formData.get("id")));
+  redirect(`${PAGE}?notice=resent#outbox`);
+}
+
+/**
+ * The owner's own message to one or more students; {name} becomes each one's first name. Goes out in
+ * quiet hours too (the owner chose to send it now). `back`: the page to return to (a client page sends one).
+ */
+export async function sendOwnMessage(formData: FormData): Promise<void> {
+  const outbox = await owner();
+  const text = String(formData.get("message") ?? "").trim().slice(0, 3000);
+  const chosen = new Set(formData.getAll("clientId").map(String));
+  const back = String(formData.get("back") ?? "");
+  const to = back.startsWith("/admin/clients/") ? back : `${PAGE}`;
+  if (!text || chosen.size === 0) redirect(`${to}?notice=nobody#compose`);
+  const { business } = await SettingsRepository.load();
+  const batch = crypto.randomUUID();
+  let queued = 0;
+  for (const c of (await outbox.reachable()).filter((r) => chosen.has(r.id))) {
+    const ok = await outbox.enqueue(
+      { dedupeKey: `manual:${batch}:${c.id}`, kind: "manual", clientId: c.id, phone: c.phone, body: WhatsAppText.personal(text, c.name), quietOk: true },
+      business.sender,
+    );
+    if (ok) queued++;
+  }
+  redirect(`${to}?notice=own-sent&n=${queued}#compose`);
+}
+
 export async function cancelMessage(formData: FormData): Promise<void> {
   await (await owner()).cancel(String(formData.get("id")));
   redirect(`${PAGE}?notice=cancelled#outbox`);

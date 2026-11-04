@@ -3,7 +3,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { Currency, DocumentLayout, ItemUnit, PaymentTerms } from "@/domains/invoices/types";
 
-import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig } from "../types";
+import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig, WhatsAppTextKey, WhatsAppTexts } from "../types";
 
 export type SettingsFieldErrors = Partial<Record<string, string>>;
 
@@ -75,6 +75,21 @@ export class SettingsContract {
       },
     },
     card: { show: false, note: "Card payments may include a processing fee." },
+    whatsapp: {
+      booking: "Hi {firstName}, your session is confirmed ✅\n\n{session}\n{when}\n{where}\n\nTo reschedule, reply here or use the link in your Cal.com email.",
+      reminder: "Hi {firstName}, a reminder: your session is {lead}.\n\n{session}\n{when}\n{where}",
+      overdue:
+        "Hi {firstName}, a gentle reminder that invoice {number} ({balance}) was due on {dueDate}.\n\nYou can view it here: {link}\n\nIf you've already paid, thank you, and please ignore this message.\n\n{sender}",
+      mock: "Hi {firstName}, you now have access to *{mock}* on your study portal{from}.\n\nOpen it here: {link}\n\n{sender}",
+    },
+  };
+
+  /** The automatic WhatsApp messages the owner can reword, with the placeholders each understands. */
+  static readonly WHATSAPP_TEXTS: Readonly<Record<WhatsAppTextKey, { label: string; placeholders: string }>> = {
+    booking: { label: "Session confirmed", placeholders: "{firstName} {session} {when} {where}" },
+    reminder: { label: "Session reminder (a day and an hour before)", placeholders: "{firstName} {lead} {session} {when} {where}" },
+    overdue: { label: "Overdue invoice", placeholders: "{firstName} {number} {balance} {dueDate} {link} {sender}" },
+    mock: { label: "Mock or practice given", placeholders: "{firstName} {mock} {from} {link} {sender}" },
   };
 
   static readonly LIMITS = { name: 120, sender: 80, address: 200, phone: 40, email: 254, website: 120, terms: 1500, notes: 1000, message: 1000, cardNote: 200 } as const;
@@ -122,6 +137,7 @@ export class SettingsContract {
       prefixes: pick(d.prefixes, s.prefixes),
       documents,
       card: pick(d.card, s.card),
+      whatsapp: pick(d.whatsapp, s.whatsapp),
     };
   }
 
@@ -194,9 +210,12 @@ export class SettingsContract {
     ) as Record<DocumentType, DocumentTexts>;
 
     const card = { show: fields["card.show"] === "on", note: bounded("card.note", LIMITS.cardNote) };
+    const whatsapp = Object.fromEntries(
+      (Object.keys(SettingsContract.WHATSAPP_TEXTS) as WhatsAppTextKey[]).map((key) => [key, bounded(`wa.${key}`, LIMITS.message, true)]),
+    ) as WhatsAppTexts;
 
     if (Object.keys(errors).length > 0) return { ok: false, errors };
-    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, terms: terms!, units, prefixes, documents, card } };
+    return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, terms: terms!, units, prefixes, documents, card, whatsapp } };
   }
 
   /** Default terms from stored or submitted values: day-count terms only; days only with "custom". Null when invalid. */

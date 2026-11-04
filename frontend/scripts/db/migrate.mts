@@ -1386,6 +1386,14 @@ const MIGRATIONS: Migration[] = [
       `UPDATE mock_attempts SET seen_at = now() WHERE status = 'completed'`,
     ],
   },
+  {
+    // WhatsApp: "mock" when the owner gives a student a mock, "manual" for the owner's own messages.
+    id: "064_whatsapp_kinds",
+    statements: [
+      `ALTER TABLE whatsapp_messages DROP CONSTRAINT whatsapp_messages_kind_check`,
+      `ALTER TABLE whatsapp_messages ADD CONSTRAINT whatsapp_messages_kind_check CHECK (kind IN ('intro', 'number', 'booking', 'reminder', 'invoice', 'receipt', 'overdue', 'class', 'nudge', 'mock', 'manual'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

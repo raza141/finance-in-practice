@@ -2,6 +2,8 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
+import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
+
 import { WhatsAppText } from "../services/WhatsAppText";
 import type { GatewayMessage, GatewayReport, MessageRow, OutgoingMessage, WhatsAppLink } from "../types";
 
@@ -290,6 +292,51 @@ export class WhatsAppOutbox {
       UPDATE whatsapp_messages SET status = 'queued', error = NULL, claimed_at = NULL, created_at = now(), expires_at = NULL, not_before = now()
       WHERE id = ${id} AND status IN ('failed', 'unknown', 'expired')
     `;
+  }
+
+  /**
+   * Sends a message that went out (or was cancelled) once more, as a new row so the first stays in the
+   * history. It keeps its kind and document, so a voided invoice is still never sent. Owner's action: may go in quiet hours.
+   */
+  async resend(id: string): Promise<void> {
+    if (!UUID.test(id)) return;
+    await this.sql`
+      INSERT INTO whatsapp_messages (dedupe_key, kind, client_id, phone, body, ref, document_token, attachment_name, quiet_ok)
+      SELECT 'resend:' || gen_random_uuid() || ':' || left(dedupe_key, 150), kind, client_id, phone, body, ref, document_token, attachment_name, true
+      FROM whatsapp_messages WHERE id = ${id} AND status IN ('sent', 'cancelled')
+    `;
+  }
+
+  /**
+   * "You now have access to …" to each student given a mock or a product. Nothing before WhatsApp was
+   * first linked. `key` makes a repeat of the same save queue nothing. Never throws: giving access must not fail on WhatsApp.
+   */
+  async mockGiven(clientIds: readonly string[], what: string, from: Date | null, key: string): Promise<void> {
+    try {
+      if (clientIds.length === 0 || !(await this.link()).enabledAt) return;
+      const settings = await SettingsRepository.load();
+      const clients = (await this.sql`SELECT id, name, phone FROM clients WHERE id = ANY(${clientIds as string[]}::uuid[]) AND phone <> ''`) as { id: string; name: string; phone: string }[];
+      for (const c of clients) {
+        await this.enqueue(
+          {
+            dedupeKey: `mock:${key}:${c.id}`.slice(0, 200),
+            kind: "mock",
+            clientId: c.id,
+            phone: c.phone,
+            body: WhatsAppText.mockGiven(c.name, what, from, settings.business.sender, settings.whatsapp.mock),
+            quietOk: false,
+          },
+          settings.business.sender,
+        );
+      }
+    } catch (error) {
+      console.error("[whatsapp] mock message not queued", error);
+    }
+  }
+
+  /** Clients a message can go to: a phone number, and they haven't replied STOP. */
+  async reachable(): Promise<{ id: string; name: string; phone: string }[]> {
+    return (await this.sql`SELECT id, name, phone FROM clients WHERE phone <> '' AND NOT whatsapp_off ORDER BY lower(name)`) as { id: string; name: string; phone: string }[];
   }
 
   async cancel(id: string): Promise<void> {

@@ -51,4 +51,9 @@ export interface BillingSettings {
     show: boolean;
     note: string;
   };
+  /** WhatsApp wording for the automatic messages (invoices and receipts are under documents). */
+  whatsapp: WhatsAppTexts;
 }
+
+export type WhatsAppTextKey = "booking" | "reminder" | "overdue" | "mock";
+export type WhatsAppTexts = Record<WhatsAppTextKey, string>;

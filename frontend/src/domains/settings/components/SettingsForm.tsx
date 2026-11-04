@@ -9,7 +9,7 @@ import type { ItemUnit } from "@/domains/invoices/types";
 
 import { saveSettings, type SettingsFormState } from "../actions/settings";
 import { SettingsContract } from "../services/SettingsContract";
-import type { BillingSettings, DocumentType } from "../types";
+import type { BillingSettings, DocumentType, WhatsAppTextKey } from "../types";
 
 const noSubscribe = () => () => {};
 const { LIMITS } = SettingsContract;
@@ -149,6 +149,17 @@ export function SettingsForm({ settings }: { settings: BillingSettings }) {
                 {textarea(`doc.${type}.email`, "Email opening line", settings.documents[type].email, LIMITS.message)}
               </div>
             </details>
+          ))}
+        </section>
+
+        <section className="grid gap-3">
+          <h2 className="text-sm text-quant">WhatsApp messages</h2>
+          <p className="text-xs text-muted">
+            The wording of the automatic messages; invoice and receipt messages are under Document texts. A line left empty by a placeholder (no
+            address for an online session) is dropped. Changes apply to messages queued after you save.
+          </p>
+          {(Object.entries(SettingsContract.WHATSAPP_TEXTS) as [WhatsAppTextKey, { label: string; placeholders: string }][]).map(([key, { label, placeholders }]) => (
+            <div key={key}>{textarea(`wa.${key}`, label, settings.whatsapp[key], LIMITS.message, `Placeholders: ${placeholders}`)}</div>
           ))}
         </section>
 

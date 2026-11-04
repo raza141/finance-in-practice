@@ -190,6 +190,12 @@ export class MockRepository {
     ]);
   }
 
+  /** Clients holding open access to one mock now (any source). */
+  async grantees(mockId: string): Promise<Set<string>> {
+    const rows = (await this.sql`SELECT client_id FROM access_grants WHERE mock_id = ${mockId} AND (ends_at IS NULL OR ends_at > now())`) as { client_id: string }[];
+    return new Set(rows.map((r) => r.client_id));
+  }
+
   /** Everything granted to one client, current first. */
   async grants(clientId: string): Promise<AccessGrant[]> {
     const rows = (await this.sql`

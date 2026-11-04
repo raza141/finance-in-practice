@@ -43,6 +43,7 @@ import { AccessGrantForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 import { MockGrader } from "@/domains/mocks/services/MockGrader";
+import { OwnMessageForm } from "@/domains/whatsapp/components/OwnMessageForm";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -54,6 +55,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "package-applied": { text: "Package applied from today: their previous package agreement ended and the new one is under Agreements.", tone: "ok" },
   "package-dismissed": { text: "Request closed.", tone: "ok" },
   "package-refused": { text: "Package not changed.", tone: "warn" },
+  "own-sent": { text: "WhatsApp message queued: it goes out within a minute.", tone: "ok" },
+  nobody: { text: "WhatsApp message not sent: write a message first.", tone: "warn" },
   "hours-saved": { text: "Hours saved: their Hours & payments tab shows them now.", tone: "ok" },
   "hours-refused": { text: "Hours not saved.", tone: "warn" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
@@ -159,6 +162,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     ["mocks", "Mock exams"],
     ["access", "Access"],
     ["classroom", "Classroom"],
+    ["compose", "WhatsApp"],
     ["details", "Details"],
   ] as const;
 
@@ -722,6 +726,17 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section id="compose" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
+        <h2 className="text-lg">WhatsApp message</h2>
+        {client.phone ? (
+          <div className="mt-4">
+            <OwnMessageForm students={[{ id: client.id, name: client.name }]} back={`/admin/clients/${client.id}`} />
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted">Add their phone number under Details to message them.</p>
         )}
       </section>
 

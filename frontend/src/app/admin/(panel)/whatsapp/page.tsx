@@ -11,6 +11,7 @@ import {
   linkNumber,
   nudgeClassPost,
   remindInvoice,
+  resendMessage,
   retryMessage,
   sendClassPost,
   setGatewayOn,
@@ -18,6 +19,7 @@ import {
   unlinkNumber,
 } from "@/domains/whatsapp/actions/whatsapp";
 import { AutoRefresh } from "@/domains/whatsapp/components/AutoRefresh";
+import { OwnMessageForm } from "@/domains/whatsapp/components/OwnMessageForm";
 import { WhatsAppClassPosts } from "@/domains/whatsapp/server/WhatsAppClassPosts";
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
@@ -32,6 +34,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   live: { text: "Live: messages now go to students.", tone: "ok" },
   test: { text: "Test mode: every message goes to your test number, marked with who it was for.", tone: "ok" },
   retried: { text: "Queued again.", tone: "ok" },
+  resent: { text: "Queued to send again.", tone: "ok" },
+  "own-sent": { text: "Queued: your message goes out within a minute.", tone: "ok" },
   cancelled: { text: "Cancelled.", tone: "ok" },
   "class-sent": { text: "Queued for the chosen students.", tone: "ok" },
   nobody: { text: "Not sent: tick at least one student and keep a message.", tone: "warn" },
@@ -75,13 +79,14 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
   const outbox = WhatsAppOutbox.fromEnv();
   const posts = WhatsAppClassPosts.fromEnv();
   if (!outbox || !posts) return <p className="text-sm text-gold">DATABASE_URL is not configured.</p>;
-  const [link, messages, pending, nudgeable, overdue, optedOut] = await Promise.all([
+  const [link, messages, pending, nudgeable, overdue, optedOut, reachable] = await Promise.all([
     outbox.link(),
     outbox.recent(),
     posts.pending(),
     posts.nudgeable(),
     posts.overdueInvoices(),
     outbox.optedOut(),
+    outbox.reachable(),
   ]);
   const seenAgo = link.seenMinutes;
   const running = seenAgo !== null && seenAgo <= 3;
@@ -99,7 +104,7 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
     <div className="max-w-5xl">
       <PageHeader
         title="WhatsApp"
-        description="Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, reminders (the day before and an hour before), invoices and receipts with the PDF, one reminder 5 days after an invoice is due, and private-class posts. Batch-class posts wait below for you to choose who gets them. Quiet 22:00–08:00 (Dubai) except the hour-before reminder."
+        description="Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, reminders (the day before and an hour before), invoices and receipts with the PDF, a mock or practice given to a student, one reminder 5 days after an invoice is due, and private-class posts. Reword them in Settings → WhatsApp messages. Batch-class posts wait below for you to choose who gets them. Quiet 22:00–08:00 (Dubai) except the hour-before reminder."
       />
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>
@@ -310,6 +315,12 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
         </ul>
       </section>
 
+      <section id="compose" className="mt-8 scroll-mt-16 rounded-lg border border-line p-5">
+        <h2 className="text-lg">Write a message</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">To one student or several. Students without a phone number, or who replied STOP, aren&rsquo;t listed.</p>
+        <OwnMessageForm students={reachable} />
+      </section>
+
       <section id="outbox" className="mt-8 rounded-lg border border-line p-5">
         <h2 className="text-lg">Messages</h2>
         <p className="mt-1 text-sm text-muted">
@@ -332,6 +343,14 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
                     <input type="hidden" name="id" value={m.id} />
                     <PendingButton pendingLabel="…" className={SMALL}>
                       Send again
+                    </PendingButton>
+                  </form>
+                )}
+                {(m.status === "sent" || m.status === "cancelled") && (
+                  <form action={resendMessage}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <PendingButton pendingLabel="…" className={SMALL}>
+                      Resend
                     </PendingButton>
                   </form>
                 )}
