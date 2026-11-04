@@ -47,8 +47,9 @@ export class QuestionContract {
     const imageAlt = str("imageAlt", 300);
     if (imageUrl && !imageAlt) fail("Describe the solution image in a sentence (for screen readers and search).");
 
-    const publishAt = form.get("status") === "publish" ? QuestionContract.fromGst(str("publishAt", 20)) : null;
-    if (form.get("status") === "publish" && !publishAt) fail("Pick the date and time it goes live.");
+    const status = form.get("status");
+    const publishAt = status === "now" ? new Date() : status === "publish" ? QuestionContract.fromGst(str("publishAt", 20)) : null;
+    if (status === "publish" && !publishAt) fail("Pick the date and time it goes live.");
 
     return {
       level: level as 1 | 2 | 3,

@@ -257,13 +257,17 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
             <input type="radio" name="status" value="draft" checked={d.status === "draft"} onChange={() => set("status", "draft")} />
             Draft (not on the site)
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" name="status" value="now" checked={d.status === "now"} onChange={() => set("status", "now")} />
+            Publish now
+          </label>
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <input type="radio" name="status" value="publish" checked={d.status === "publish"} onChange={() => set("status", "publish")} />
             Goes live at
             <input type="datetime-local" {...bind("publishAt")} className={`${FIELD} mt-0 w-auto`} />
             <span className="text-muted">GST (UAE time)</span>
           </label>
-          <p className="text-xs text-muted">The newest live question is the Question of the Day. Pick a past time to publish now.</p>
+          <p className="text-xs text-muted">The newest live question is the Question of the Day.</p>
         </fieldset>
 
         <div className="flex flex-wrap items-center gap-4">
