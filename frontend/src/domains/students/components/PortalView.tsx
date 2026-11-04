@@ -29,6 +29,7 @@ import { AccountPanel, AccountSummaryCard } from "./AccountPanel";
 import { BOOK_BUTTON } from "./buttons";
 import { ClassroomPanel } from "./ClassroomPanel";
 import { PortalOverview } from "./PortalOverview";
+import { CardSkeleton } from "./PortalSkeleton";
 import { StudentPortal } from "./StudentPortal";
 import { StudyPlanTimeline } from "./StudyPlanTimeline";
 
@@ -119,7 +120,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         (error): FeedResult => (console.error("student: could not load the class feed", error), { status: "error" }),
       )
     : Promise.resolve({ status: "off" });
-  const loading = (label: string) => <p className="rounded-3xl border border-white/10 bg-canvas/70 p-6 text-sm text-muted">Loading {label}…</p>;
+  const loading = (label: string) => <CardSkeleton label={label} />;
 
   return (
     <div className="grid gap-6">

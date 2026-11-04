@@ -48,6 +48,22 @@
   font-feature-settings: "tnum";
 }
 
+/* Loading placeholder: a gradient twice the box's width slides across it; the box itself never moves. */
+@utility shimmer {
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-line) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: sweep 1.2s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes sweep {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @keyframes pulse-soft {
   0%,
   100% {
