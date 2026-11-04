@@ -134,6 +134,11 @@ export class WhatsAppText {
     return WhatsAppText.fill(template, WhatsAppText.session(name, title, start, timeZone, where, link, sign));
   }
 
+  /** A portal request the owner declined; `reason` is theirs, sent as written. */
+  static requestDeclined(name: string, start: Date, timeZone: string, reason: string, sign: Signature, template = WhatsAppText.WORDS.declined): string {
+    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), when: WhatsAppText.when(start, timeZone), reason, link: WhatsAppText.PORTAL, ...sign });
+  }
+
   static reminder(
     name: string,
     title: string,

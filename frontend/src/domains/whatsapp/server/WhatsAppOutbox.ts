@@ -353,6 +353,30 @@ export class WhatsAppOutbox {
     return queued;
   }
 
+  /** A portal session request the owner declined. Best effort: never throws. */
+  async requestDeclined(clientId: string, requestId: string, start: Date, timeZone: string, reason: string): Promise<boolean> {
+    try {
+      if (!(await this.link()).enabledAt) return false;
+      const { business, whatsapp } = await SettingsRepository.load();
+      const [c] = (await this.sql`SELECT id, name, phone FROM clients WHERE id = ${clientId} AND phone <> ''`) as { id: string; name: string; phone: string }[];
+      if (!c) return false;
+      return await this.enqueue(
+        {
+          dedupeKey: `request:${requestId}:declined`,
+          kind: "booking",
+          clientId: c.id,
+          phone: c.phone,
+          ref: `request:${requestId}`,
+          body: WhatsAppText.requestDeclined(c.name, start, timeZone, reason, { sender: business.sender, business: business.name }, whatsapp.declined),
+        },
+        business.sender,
+      );
+    } catch (error) {
+      console.error("[whatsapp] declined message not queued", error);
+      return false;
+    }
+  }
+
   /** Clients a message can go to: a phone number, and they haven't replied STOP. */
   async reachable(): Promise<Reachable[]> {
     return (await this.sql`

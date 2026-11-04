@@ -5,7 +5,7 @@ import { RequestGuard } from "@/core/http/RequestGuard";
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
-import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
+import { HeldTime } from "@/domains/schedule/server/HeldTime";
 import { StudentRepository } from "@/domains/students/server/StudentRepository";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { BookingContract } from "@/domains/booking/services/BookingContract";
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         "You're already a Finance in Practice student, so the free diagnostic isn't needed. Sign in at financeinpractice.me/student to book your next session.",
       );
     }
-    const result = await new BookingGateway(cal, BlockRepository.fromEnv()).create(booking);
+    const result = await new BookingGateway(cal, HeldTime.fromEnv()).create(booking);
     // The booking is made: a failure saving the client record must not undo or hide it.
     try {
       await ClientRepository.fromEnv()?.recordBooking({ name: booking.name, email: booking.email, phone: booking.phone ?? "" });

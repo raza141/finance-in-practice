@@ -9,7 +9,9 @@ import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
+import { RequestNotice } from "@/domains/students/server/RequestNotice";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
+import { RequestOverlapError, SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { SessionLogContract } from "@/domains/students/services/SessionLogContract";
 import { StudentBookingContract } from "@/domains/students/services/StudentBookingContract";
 
@@ -88,6 +90,8 @@ export async function removeBlock(id: string): Promise<void> {
 
 /** Cal.com emails the client and removes the event from the connected calendars. */
 export async function cancelBooking(uid: string, reason: string): Promise<ScheduleActionState> {
+  const requestId = SessionRequestRepository.idOf(uid);
+  if (requestId) return declineRequest(requestId, reason);
   const cal = await bookingClient(uid);
   if (!(cal instanceof CalComClient)) return cal;
   try {
@@ -102,6 +106,8 @@ export async function cancelBooking(uid: string, reason: string): Promise<Schedu
 
 /** Accepts a booking waiting for confirmation. */
 export async function confirmBooking(uid: string): Promise<ScheduleActionState> {
+  const requestId = SessionRequestRepository.idOf(uid);
+  if (requestId) return approveRequest(requestId);
   const cal = await bookingClient(uid);
   if (!(cal instanceof CalComClient)) return cal;
   try {
@@ -116,6 +122,8 @@ export async function confirmBooking(uid: string): Promise<ScheduleActionState> 
 
 /** Rejects a booking waiting for confirmation; the reason goes to the client. */
 export async function declineBooking(uid: string, reason: string): Promise<ScheduleActionState> {
+  const requestId = SessionRequestRepository.idOf(uid);
+  if (requestId) return declineRequest(requestId, reason);
   const cal = await bookingClient(uid);
   if (!(cal instanceof CalComClient)) return cal;
   try {
@@ -139,6 +147,18 @@ export async function moveBooking(uid: string, date: string, time: string, minut
   if (minutes !== null && !StudentBookingContract.isLength(minutes)) return { ok: false, message: "Pick a length of 1, 2 or 3 hours." };
   const start = Schedule.instant(date, time);
   if (Number.isNaN(Date.parse(start)) || Date.parse(start) <= Date.now()) return { ok: false, message: "Pick a time in the future." };
+  const requestId = SessionRequestRepository.idOf(uid);
+  if (requestId) {
+    // Not confirmed yet, so nobody is told: approving it sends the confirmation at the new time.
+    try {
+      if (!(await requests().move(requestId, start, minutes))) return { ok: false, message: "That request was already decided." };
+    } catch (error) {
+      if (error instanceof RequestOverlapError) return { ok: false, message: "Another request is waiting for that time." };
+      throw error;
+    }
+    done();
+    return { ok: true, message: "Moved. Still waiting: approve it to send the confirmation." };
+  }
   const admin = await AdminAuth.require();
   try {
     await cal.rescheduleBooking(uid, start, admin.email, "Rescheduled by Finance in Practice", minutes ?? undefined);
@@ -193,6 +213,66 @@ async function bookingClient(uid: string): Promise<CalComClient | Exclude<Schedu
   if (!cal) return { ok: false, message: "Cal.com is not configured." };
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(uid)) return { ok: false, message: "Unknown booking." };
   return cal;
+}
+
+function requests(): SessionRequestRepository {
+  const repo = SessionRequestRepository.fromEnv();
+  if (!repo) throw new Error("DATABASE_URL is not configured");
+  return repo;
+}
+
+/**
+ * Books a waiting portal request on Cal.com, which emails both sides the one confirmation (and the
+ * WhatsApp scan sends its own). Admin blocks don't apply: the owner is the one approving.
+ */
+async function approveRequest(id: string): Promise<ScheduleActionState> {
+  await AdminAuth.require();
+  const cal = CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug);
+  if (!cal) return { ok: false, message: "Cal.com is not configured." };
+  const repo = requests();
+  const r = await repo.open(id);
+  if (!r) return { ok: false, message: "That request was already decided, or its time has passed." };
+  const minutes = Math.round((Date.parse(r.end) - Date.parse(r.start)) / 60_000);
+  let bookingUid: string;
+  try {
+    const booking = await new BookingGateway(cal, null).book(
+      {
+        start: r.start,
+        attendee: { name: r.name, email: r.email, timeZone: r.timeZone, language: "en" },
+        location: r.mode === "online" ? { type: "integration", integration: "google-meet" } : { type: "attendeeAddress", address: r.address },
+        // The owner may have changed the length since the student asked.
+        bookingFieldsResponses: { notes: r.summary.replace(/^Length: .*$/m, `Length: ${minutes / 60} h`) },
+        lengthInMinutes: minutes,
+        metadata: { source: "financeinpractice.me/student", clientId: r.clientId, course: r.course },
+      },
+      minutes,
+    );
+    // While "Requires confirmation" is still on for the session event, Cal.com holds it as pending: confirm at once.
+    if (booking.status.toLowerCase() === "pending") await cal.confirmBooking(booking.uid);
+    bookingUid = booking.uid;
+  } catch (error) {
+    console.error("[schedule] approving request failed", id, error);
+    const detail = error instanceof Error ? error.message : "";
+    return { ok: false, message: `Cal.com refused this time${detail ? `: ${detail}` : ""}. It may clash with your calendar: move or decline the request.` };
+  }
+  // Booked: a failure here leaves the request showing, and approving again is refused by Cal.com (the time is taken).
+  if (!(await repo.decide(id, "approved", { bookingUid }))) console.error("[schedule] request booked but not marked approved", id, bookingUid);
+  done();
+  return { ok: true, message: `Approved. Cal.com has emailed ${r.name} the confirmation${r.mode === "online" ? " and the Meet link" : ""}.` };
+}
+
+/** Closes a waiting request; the student gets one email and one WhatsApp message with the reason. */
+async function declineRequest(id: string, reason: string): Promise<ScheduleActionState> {
+  await AdminAuth.require();
+  const repo = requests();
+  const r = await repo.open(id);
+  if (!r) return { ok: false, message: "That request was already decided, or its time has passed." };
+  const text = reason.trim().slice(0, 300) || "This time isn't available. Please pick another.";
+  if (!(await repo.decide(id, "declined", { reason: text }))) return { ok: false, message: "That request was already decided." };
+  const sent = await RequestNotice.declined(r, text);
+  done();
+  const told = [sent.email && "emailed", sent.whatsapp && "sent a WhatsApp to"].filter(Boolean).join(" and ");
+  return { ok: true, message: told ? `Declined. We've ${told} ${r.name}.` : `Declined, but no email or WhatsApp could be sent to ${r.name}: let them know yourself.` };
 }
 
 function done(): void {

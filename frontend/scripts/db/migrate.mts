@@ -1394,6 +1394,31 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE whatsapp_messages ADD CONSTRAINT whatsapp_messages_kind_check CHECK (kind IN ('intro', 'number', 'booking', 'reminder', 'invoice', 'receipt', 'overdue', 'class', 'nudge', 'mock', 'manual'))`,
     ],
   },
+  {
+    // A portal booking waits here for the owner's approval; only then is it booked on Cal.com (one email,
+    // the confirmation). A waiting request holds its time: two can never overlap (the EXCLUDE).
+    id: "065_session_requests",
+    statements: [
+      `CREATE TABLE session_requests (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id   uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        starts_at   timestamptz NOT NULL,
+        ends_at     timestamptz NOT NULL CHECK (ends_at > starts_at),
+        time_zone   text NOT NULL,
+        course      text NOT NULL CHECK (char_length(course) <= 500),
+        mode        text NOT NULL CHECK (mode IN ('online', 'in_person')),
+        address     text NOT NULL DEFAULT '' CHECK (char_length(address) <= 200),
+        summary     text NOT NULL CHECK (char_length(summary) <= 2000),
+        status      text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined', 'cancelled')),
+        booking_uid text,
+        reason      text NOT NULL DEFAULT '' CHECK (char_length(reason) <= 300),
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        decided_at  timestamptz,
+        EXCLUDE USING gist (tstzrange(starts_at, ends_at) WITH &&) WHERE (status = 'pending')
+      )`,
+      `CREATE INDEX session_requests_client ON session_requests (client_id, starts_at)`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

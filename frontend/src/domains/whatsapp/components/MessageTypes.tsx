@@ -61,6 +61,7 @@ function samples(sign: Signature): Record<string, Record<string, string>> {
   return {
     "wa.booking": session,
     "wa.reminder": session,
+    "wa.declined": { firstName: "Sara", when, reason: "I'm teaching another class then. Could you pick an evening?", link: WhatsAppText.PORTAL, ...sign },
     "wa.overdue": { ...doc, dueDate: "1 Nov 2026" },
     "wa.mock": { firstName: "Sara", mock: "CFA Level I Mock 3", from: "", link: WhatsAppText.PORTAL_MOCKS, ...sign },
     "wa.class": { firstName: "Sara", kind: "assignment", class: "CFA Level I · Nov 2026", title: "FSA practice set", due: `Due: ${when}`, link: "https://classroom.google.com/…", ...sign },
@@ -130,11 +131,11 @@ export async function MessageType({ type, settings, link, origin }: { type: Mess
             title={type === "booking" ? "Session confirmed" : "Session reminder"}
             hint={
               type === "booking"
-                ? "Sent automatically when a session is booked or confirmed. The link opens Cal.com's page for that booking, where they can reschedule or cancel."
+                ? "Sent automatically when you approve a session request (or book one for a student). The link opens Cal.com's page for that booking, where they can reschedule or cancel. A request you decline gets the second message, with your reason."
                 : "Sent automatically an hour before each session booked at least 3 hours ahead, at any hour."
             }
           >
-            <Wording settings={settings} keys={[type]} />
+            <Wording settings={settings} keys={type === "booking" ? ["booking", "declined"] : [type]} />
           </Card>
           <Card title="Send by hand" hint={`Upcoming sessions in the next 30 days. Sends the ${type === "booking" ? "confirmation" : "reminder"} now, with that session's details.`}>
             {!scanner ? (

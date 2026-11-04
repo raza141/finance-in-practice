@@ -183,6 +183,7 @@ describe("CalComClient + BookingGateway", () => {
       start: "2026-10-05T05:00:00.000Z",
       attendee: { name: "Ada Lovelace", email: "ada@example.com", timeZone: "Europe/London", language: "en" },
       metadata: { track: "frm", source: "financeinpractice.me" },
+      bookingFieldsResponses: { notes: "Course: FRM® Part I exam prep" },
       username: "raza141",
       eventTypeSlug: "30min",
     });
@@ -192,6 +193,23 @@ describe("CalComClient + BookingGateway", () => {
       end: "2026-10-05T05:30:00.000Z",
       status: "accepted",
     });
+  });
+
+  it("isFree: every hour of a request must be a free slot, minus held time", async () => {
+    // 09:00, 10:00 and 12:00 Dubai, an hour each.
+    const slots = {
+      "2026-10-05": [
+        { start: "2026-10-05T09:00:00+04:00", end: "2026-10-05T10:00:00+04:00" },
+        { start: "2026-10-05T10:00:00+04:00", end: "2026-10-05T11:00:00+04:00" },
+        { start: "2026-10-05T12:00:00+04:00", end: "2026-10-05T13:00:00+04:00" },
+      ],
+    };
+    const fetchImpl = vi.fn<typeof fetch>(async () => json(200, { status: "success", data: slots }));
+    const held = { between: async () => [{ start: "2026-10-05T08:00:00.000Z", end: "2026-10-05T09:00:00.000Z" }] }; // 12:00 Dubai
+    const gateway = new BookingGateway(new CalComClient(config, fetchImpl), held);
+    expect(await gateway.isFree("2026-10-05T05:00:00.000Z", 120, "Asia/Dubai")).toBe(true); // 09:00–11:00
+    expect(await gateway.isFree("2026-10-05T06:00:00.000Z", 120, "Asia/Dubai")).toBe(false); // 11:00 not offered
+    expect(await gateway.isFree("2026-10-05T08:00:00.000Z", 60, "Asia/Dubai")).toBe(false); // held by a request
   });
 
   it("reschedules at the same length unless a new length is given", async () => {

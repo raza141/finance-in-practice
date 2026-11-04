@@ -77,6 +77,7 @@ export class SettingsContract {
     card: { show: false, note: "Card payments may include a processing fee." },
     whatsapp: {
       booking: `Hi {firstName},\n\nYour session is confirmed ✅\n\n*{session}*\n{when}\n{where}\n\nTo reschedule or cancel: {link}\n\n${SIGN_OFF}`,
+      declined: `Hi {firstName},\n\nSorry, your session request for {when} couldn't be confirmed.\n\n{reason}\n\nPlease pick another time on your portal: {link}\n\n${SIGN_OFF}`,
       reminder: `Hi {firstName},\n\nA reminder: your session starts {lead}.\n\n*{session}*\n{when}\n{where}\n\nTo reschedule or cancel: {link}\n\n${SIGN_OFF}`,
       overdue: `Hi {firstName},\n\nA gentle reminder that invoice {number} ({balance}) was due on {dueDate}.\n\nView or download it here: {link}\n\nIf you have already paid, thank you, and please ignore this message.\n\n${SIGN_OFF}`,
       mock: `Hi {firstName},\n\nYou now have access to *{mock}* on your study portal{from}.\n\nOpen it here: {link}\n\nAll the best with your preparation.\n\n${SIGN_OFF}`,
@@ -87,6 +88,7 @@ export class SettingsContract {
   /** The automatic WhatsApp messages the owner can reword, with the placeholders each understands. */
   static readonly WHATSAPP_TEXTS: Readonly<Record<WhatsAppTextKey, { label: string; placeholders: string }>> = {
     booking: { label: "Session confirmed", placeholders: "{firstName} {session} {when} {where} {link} {sender} {business}" },
+    declined: { label: "Session request declined", placeholders: "{firstName} {when} {reason} {link} {sender} {business}" },
     reminder: { label: "Session reminder (an hour before)", placeholders: "{firstName} {lead} {session} {when} {where} {link} {sender} {business}" },
     overdue: { label: "Overdue invoice", placeholders: "{firstName} {number} {balance} {dueDate} {link} {sender} {business}" },
     mock: { label: "Mock or practice given", placeholders: "{firstName} {mock} {from} {link} {sender} {business}" },

@@ -4,10 +4,14 @@ import type { NextRequest } from "next/server";
 import { siteConfig } from "@/core/config/site";
 import { RequestGuard } from "@/core/http/RequestGuard";
 import { AdminInbox } from "@/domains/admin/server/AdminInbox";
-import { BookingGateway } from "@/domains/booking/server/BookingGateway";
+import { BookingGateway, SlotBlockedError } from "@/domains/booking/server/BookingGateway";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
-import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { HeldTime } from "@/domains/schedule/server/HeldTime";
+import { Schedule } from "@/domains/schedule/services/Schedule";
+import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
+import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
 import { TermsRepository } from "@/domains/settings/server/TermsRepository";
@@ -31,7 +35,8 @@ function reject(status: number, error: string, message: string) {
  * POST /api/student/book
  *   body: { start, timeZone, course, topic?, mode, address?, notes?, minutes? }
  *   Name and email come from the signed-in student's client record, never the body.
- *   200 -> { uid, start, end, status }  (status "pending" when the event needs confirmation)
+ *   200 -> { uid, start, end, status: "pending" }: a request held for the owner's approval (SessionRequestRepository);
+ *   the owner gets an email, the student none until it is approved or declined.
  */
 /** The booking's allowance (a package, or a monthly agreement with an hours limit), with the owner's corrections applied; null = no limit. */
 async function allowanceFor(clientId: string, existing: CalBookingDetail[], start: string) {
@@ -70,11 +75,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [courses, existing, termsAccepted] = await Promise.all([
+    const requests = SessionRequestRepository.fromEnv();
+    const [courses, booked, waiting, termsAccepted] = await Promise.all([
       StudentRepository.fromEnv()?.bookableCourses(student) ?? student.courses,
       cal.bookingsFor(student.email),
+      requests?.waiting(student.id) ?? [],
       TermsRepository.fromEnv()?.acceptedCurrent(student.id) ?? true,
     ]);
+    // Requests waiting for approval count towards the upcoming cap and the hours, like booked sessions.
+    const existing = [...booked, ...waiting.map(SessionRequestRepository.asBooking)];
     if (!termsAccepted) return reject(409, "TERMS_NOT_ACCEPTED", "Please accept the terms and conditions at the top of your portal, then book.");
     // A self-joined account can't hold the whole calendar: group classes the instructor added don't count.
     const { maxUpcoming } = siteConfig.studentBooking;
@@ -94,24 +103,26 @@ export async function POST(request: NextRequest) {
           : `You've used ${hours}. Ask for more hours under Hours & payments, or a new package, and book once your instructor approves.`,
       );
     }
-    const result = await new BookingGateway(cal, BlockRepository.fromEnv()).book(
-      {
-        start: booking.start,
-        attendee: { name: student.name, email: student.email, timeZone: booking.timeZone, language: "en" },
-        location:
-          booking.mode === "online"
-            ? { type: "integration", integration: "google-meet" }
-            : { type: "attendeeAddress", address: booking.address },
-        bookingFieldsResponses: { notes: StudentBookingContract.summary(booking) },
-        lengthInMinutes: booking.minutes,
-        metadata: {
-          source: "financeinpractice.me/student",
-          clientId: student.id,
-          course: (booking.course === StudentBookingContract.OTHER ? `Other: ${booking.topic}` : booking.course).slice(0, 500),
-        },
-      },
-      booking.minutes,
+    // Held for the owner's approval: nothing reaches Cal.com (or anyone's inbox) until then.
+    if (!requests) return reject(503, "NOT_CONFIGURED", "Online booking is not configured.");
+    if (!(await new BookingGateway(cal, HeldTime.fromEnv()).isFree(booking.start, booking.minutes, booking.timeZone))) throw new SlotBlockedError();
+    const uid = await requests.create(student.id, booking);
+    const end = new Date(Date.parse(booking.start) + booking.minutes * 60_000).toISOString();
+    const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
+    await OwnerNotice.send(
+      `Session request: ${student.name}, ${dubai.dateOf(new Date(booking.start))} ${dubai.timeOf(new Date(booking.start))}`,
+      "A session is waiting for your approval",
+      [
+        ["Student", student.name],
+        ["When (Dubai)", `${dubai.dateOf(new Date(booking.start))} ${dubai.timeOf(new Date(booking.start))}, ${booking.minutes / 60} h`],
+        ...StudentBookingContract.summary(booking)
+          .split("\n")
+          .map((line): [string, string] => [line.slice(0, line.indexOf(":")), line.slice(line.indexOf(":") + 1).trim()]),
+      ],
+      student.id,
+      { path: `/admin/schedule?week=${Schedule.weekStart(dubai.dateOf(new Date(booking.start)))}`, label: "Approve or decline" },
     );
+    const result = { uid, start: booking.start, end, status: "pending" };
     revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
     return Response.json(result, { status: 200, headers: NO_STORE });
   } catch (error) {

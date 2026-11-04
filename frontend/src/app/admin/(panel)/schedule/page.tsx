@@ -10,6 +10,7 @@ import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
 import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { Schedule } from "@/domains/schedule/services/Schedule";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
+import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 
 export const metadata: Metadata = { title: "Schedule" };
 
@@ -38,11 +39,16 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
 
   const cal = CalComClient.fromEnv();
   const repo = BlockRepository.fromEnv();
+  // Portal requests waiting for approval read as pending bookings (SessionRequestRepository.asBooking).
+  const waitingRequests = (SessionRequestRepository.fromEnv()?.waiting() ?? Promise.resolve([])).then((list) => list.map(SessionRequestRepository.asBooking));
   const [bookings, busy, blocks, unconfirmed, clients] = await Promise.allSettled([
-    cal ? cal.bookings(from, to) : Promise.resolve([]),
+    Promise.all([cal ? cal.bookings(from, to) : [], waitingRequests]).then(([booked, held]) => [
+      ...booked,
+      ...held.filter((b) => Date.parse(b.start) < Date.parse(to) && Date.parse(b.end) > Date.parse(from)),
+    ]),
     cal ? cal.busyTimes(weekStart, weekEnd, Schedule.TIME_ZONE) : Promise.resolve([]),
     repo ? repo.between(from, to) : Promise.resolve([]),
-    cal ? cal.unconfirmed() : Promise.resolve([]),
+    Promise.all([cal ? cal.unconfirmed() : [], waitingRequests]).then(([booked, held]) => [...booked, ...held]),
     ClientRepository.fromEnv()?.all() ?? Promise.resolve([]),
   ]);
   const warnings: string[] = [];

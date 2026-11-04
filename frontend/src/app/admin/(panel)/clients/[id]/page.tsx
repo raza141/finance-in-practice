@@ -32,6 +32,7 @@ import { SessionLogEditor } from "@/domains/students/components/SessionLogEditor
 import { StudyPlanEditor } from "@/domains/students/components/StudyPlanEditor";
 import { HourRequestRepository } from "@/domains/students/server/HourRequestRepository";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
+import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { Allowance } from "@/domains/students/services/Allowance";
 import { StudentSessions } from "@/domains/students/services/StudentSessions";
 import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/actions/classroom";
@@ -114,10 +115,15 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     classroomRepo?.classroomEmail(client.id) ?? null,
     classroomRepo?.batchCourses() ?? [],
     // Null (not empty) when Cal.com is unreachable, so the editor says so.
-    (CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(client.email) ?? Promise.resolve([])).catch((error) => {
-      console.error("admin: could not load Cal.com sessions", error);
-      return null;
-    }),
+    Promise.all([
+      CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(client.email) ?? [],
+      SessionRequestRepository.fromEnv()?.waiting(client.id) ?? [],
+    ])
+      .then(([booked, waiting]) => [...booked, ...waiting.map(SessionRequestRepository.asBooking)])
+      .catch((error) => {
+        console.error("admin: could not load Cal.com sessions", error);
+        return null;
+      }),
     // Never takes the client page down (e.g. before 049_session_log is applied).
     (SessionLogRepository.fromEnv()?.forClient(client.id) ?? Promise.resolve([])).catch((error) => {
       console.error("admin: could not load the session log", error);

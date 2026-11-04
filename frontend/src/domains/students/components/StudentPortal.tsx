@@ -168,7 +168,11 @@ export function StudentPortal({
     try {
       if (moving) {
         await client.reschedule(moving.uid, selection.start);
-        done(`Moved to ${when(selection.start, moving.minutes)}. Cal.com has emailed you the new time.`);
+        done(
+          moving.status === "pending"
+            ? `Moved to ${when(selection.start, moving.minutes)}. Still waiting for confirmation.`
+            : `Moved to ${when(selection.start, moving.minutes)}. Cal.com has emailed you the new time.`,
+        );
       } else {
         const booking = await client.book({ start: selection.start, timeZone, course, topic, mode, address, notes, mapUrl, minutes: selection.minutes });
         done(

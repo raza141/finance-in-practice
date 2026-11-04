@@ -4,7 +4,7 @@ import { siteConfig } from "@/core/config/site";
 import { BookingGateway } from "@/domains/booking/server/BookingGateway";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { BookingContract, BookingValidationError } from "@/domains/booking/services/BookingContract";
-import { BlockRepository } from "@/domains/schedule/server/BlockRepository";
+import { HeldTime } from "@/domains/schedule/server/HeldTime";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   try {
     const query = BookingContract.parseSlotsQuery(request.nextUrl.searchParams);
     if (query.kind !== "range") throw new BookingValidationError("provide start and end as YYYY-MM-DD");
-    const body = await new BookingGateway(cal, BlockRepository.fromEnv()).range(query.start, query.end, query.timeZone);
+    const body = await new BookingGateway(cal, HeldTime.fromEnv()).range(query.start, query.end, query.timeZone);
     return Response.json(body, { headers: NO_STORE });
   } catch (error) {
     const { status, body } = BookingGateway.errorResponse(error);

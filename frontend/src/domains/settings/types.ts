@@ -55,5 +55,5 @@ export interface BillingSettings {
   whatsapp: WhatsAppTexts;
 }
 
-export type WhatsAppTextKey = "booking" | "reminder" | "overdue" | "mock" | "class";
+export type WhatsAppTextKey = "booking" | "declined" | "reminder" | "overdue" | "mock" | "class";
 export type WhatsAppTexts = Record<WhatsAppTextKey, string>;

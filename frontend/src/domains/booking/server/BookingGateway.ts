@@ -12,6 +12,7 @@ import {
   type RangeSlotsResponse,
   type SlotWire,
 } from "../services/BookingContract";
+import { BookingCatalog } from "../services/BookingCatalog";
 import { ZonedCalendar } from "../services/ZonedCalendar";
 import { Schedule } from "@/domains/schedule/services/Schedule";
 import type { TimeRange } from "@/domains/schedule/types";
@@ -59,6 +60,8 @@ export class BookingGateway {
         language: "en",
       },
       metadata: { track: request.track, source: "financeinpractice.me" },
+      // Metadata never shows in Cal.com's emails: the course goes in the notes too.
+      bookingFieldsResponses: { notes: `Course: ${new BookingCatalog().track(request.track).title}` },
     });
   }
 
@@ -70,6 +73,16 @@ export class BookingGateway {
     }
     const booking = await this.cal.createBooking(input);
     return { uid: booking.uid, start: booking.start, end: booking.end, status: booking.status };
+  }
+
+  /**
+   * True when `minutes` from `start` are free on Cal.com and not blocked or held here: one free hourly
+   * slot per hour, the way the portal's grid offers longer sessions. For a request, which Cal.com never sees.
+   */
+  async isFree(start: string, minutes: number, timeZone: string): Promise<boolean> {
+    const { slots } = await this.day(new ZonedCalendar(timeZone).dateOf(new Date(start)), timeZone);
+    const free = new Set(slots.map((s) => s.start));
+    return Array.from({ length: Math.ceil(minutes / 60) }, (_, k) => new Date(Date.parse(start) + k * 3_600_000).toISOString()).every((s) => free.has(s));
   }
 
   /** Moves a booking, refused when the new time overlaps time blocked in admin. */

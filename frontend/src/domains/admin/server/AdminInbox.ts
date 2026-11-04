@@ -8,7 +8,7 @@ import { CalComClient } from "@/domains/booking/server/CalComClient";
 export interface InboxCounts {
   /** Clients to look at: self-joined (or a new course) and not opened yet, or asking for a Classroom. */
   clients: number;
-  /** Website bookings waiting for the owner to confirm or decline. */
+  /** Bookings waiting for the owner to confirm or decline: portal requests and Cal.com's unconfirmed ones. */
   pendingBookings: number;
   /** Students asking for more hours on their monthly allowance. */
   hourRequests: number;
@@ -50,11 +50,12 @@ export class AdminInbox {
                 UNION SELECT id FROM clients WHERE requested_package_id IS NOT NULL
               ) waiting) AS clients,
               (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests,
+              (SELECT count(*)::int FROM session_requests WHERE status = 'pending' AND ends_at > now()) AS session_requests,
               (SELECT count(*)::int FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id
                 WHERE e.owner_client IS NULL AND a.status = 'completed' AND a.seen_at IS NULL) AS mocks_finished,
               (SELECT count(*)::int FROM mock_attempts a JOIN mock_exams e ON e.id = a.mock_id
                 WHERE e.owner_client IS NULL AND a.status = 'in_progress' AND a.started_at < now() - interval '1 day') AS mocks_long
-          ` as unknown as Promise<{ clients: number; hour_requests: number; mocks_finished: number; mocks_long: number }[]>)
+          ` as unknown as Promise<{ clients: number; hour_requests: number; session_requests: number; mocks_finished: number; mocks_long: number }[]>)
         : Promise.resolve([]),
       AdminInbox.pendingBookings(),
     ]);
@@ -63,7 +64,8 @@ export class AdminInbox {
     const row = db.status === "fulfilled" ? db.value[0] : undefined;
     return {
       clients: row?.clients ?? 0,
-      pendingBookings: bookings.status === "fulfilled" ? bookings.value : 0,
+      // Cal.com's own unconfirmed bookings (from before 065) plus portal requests waiting here.
+      pendingBookings: (bookings.status === "fulfilled" ? bookings.value : 0) + (row?.session_requests ?? 0),
       hourRequests: row?.hour_requests ?? 0,
       mocksFinished: row?.mocks_finished ?? 0,
       mocksLong: row?.mocks_long ?? 0,

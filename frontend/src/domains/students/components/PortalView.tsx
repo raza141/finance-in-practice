@@ -20,6 +20,7 @@ import { TermsRepository } from "@/domains/settings/server/TermsRepository";
 import { acceptTerms } from "../actions/account";
 import { HourRequestRepository } from "../server/HourRequestRepository";
 import { SessionLogRepository } from "../server/SessionLogRepository";
+import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { StudentRepository } from "../server/StudentRepository";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
 import { StudentAccount } from "../services/StudentAccount";
@@ -48,9 +49,13 @@ async function portalData(student: Student) {
   const invoices = InvoiceRepository.fromEnv();
   const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
-    safely("sessions", async (): Promise<CalBookingDetail[]> =>
-      (await CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email)) ?? [],
-    ),
+    safely("sessions", async (): Promise<CalBookingDetail[]> => {
+      const [booked, waiting] = await Promise.all([
+        CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email) ?? [],
+        SessionRequestRepository.fromEnv()?.waiting(student.id) ?? [],
+      ]);
+      return [...booked, ...waiting.map(SessionRequestRepository.asBooking)];
+    }),
     safely("study plan", async (): Promise<StudyPlanItem[]> => (await StudyPlanRepository.fromEnv()?.forClient(student.id)) ?? []),
     safely("classrooms", async () => (await classrooms?.forClient(student.id, student.courses)) ?? []),
     safely("private classrooms", async () => (await classrooms?.privateFor(student.id)) ?? []),
