@@ -20,10 +20,10 @@ describe("WhatsAppText", () => {
 
   it("plans reminders only when the booking was made well ahead", () => {
     const start = new Date("2026-10-21T15:00:00Z");
-    expect(WhatsAppText.reminders(start, new Date(start.getTime() - 3 * 24 * HOUR)).map((p) => p.key)).toEqual(["r24", "r1"]);
+    expect(WhatsAppText.reminders(start, new Date(start.getTime() - 3 * 24 * HOUR)).map((p) => p.key)).toEqual(["r1"]);
     expect(WhatsAppText.reminders(start, new Date(start.getTime() - 5 * HOUR)).map((p) => p.key)).toEqual(["r1"]);
     expect(WhatsAppText.reminders(start, new Date(start.getTime() - HOUR))).toEqual([]);
-    const [, r1] = WhatsAppText.reminders(start, new Date(start.getTime() - 3 * 24 * HOUR));
+    const [r1] = WhatsAppText.reminders(start, new Date(start.getTime() - 3 * 24 * HOUR));
     expect(r1.quietOk).toBe(true);
     expect(r1.notBefore.getTime()).toBe(start.getTime() - HOUR);
   });

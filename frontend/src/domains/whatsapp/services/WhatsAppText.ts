@@ -40,13 +40,12 @@ export class WhatsAppText {
   }
 
   /**
-   * Day-before and hour-before reminders. A reminder is only planned when the
-   * booking was made well before it (booked 3 hours ahead: no day-before one).
+   * The hour-before reminder, only when the booking was made at least 3 hours ahead. No day-before
+   * one: the owner sends anything in between by hand.
    */
   static reminders(start: Date, createdAt: Date): ReminderPlan[] {
     const lead = start.getTime() - createdAt.getTime();
     const plans: ReminderPlan[] = [];
-    if (lead >= 26 * HOUR) plans.push({ key: "r24", notBefore: new Date(start.getTime() - 24 * HOUR), expiresAt: new Date(start.getTime() - 2 * HOUR), quietOk: false });
     if (lead >= 3 * HOUR) plans.push({ key: "r1", notBefore: new Date(start.getTime() - HOUR), expiresAt: start, quietOk: true });
     return plans;
   }

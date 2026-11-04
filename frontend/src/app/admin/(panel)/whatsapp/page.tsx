@@ -104,7 +104,7 @@ export default async function AdminWhatsAppPage({ searchParams }: { searchParams
     <div className="max-w-5xl">
       <PageHeader
         title="WhatsApp"
-        description="Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, reminders (the day before and an hour before), invoices and receipts with the PDF, a mock or practice given to a student, one reminder 5 days after an invoice is due, and private-class posts. Reword them in Settings → WhatsApp messages. Batch-class posts wait below for you to choose who gets them. Quiet 22:00–08:00 (Dubai) except the hour-before reminder."
+        description="Sent from the number linked to the gateway on your Mac. Automatic: booking confirmations, a reminder an hour before each session, invoices and receipts with the PDF, a mock or practice given to a student, one reminder 5 days after an invoice is due, and private-class posts. Reword them in Settings → WhatsApp messages. Batch-class posts wait below for you to choose who gets them. Quiet 22:00–08:00 (Dubai) except the hour-before reminder and your own messages."
       />
       {notice && (
         <p role="status" className={`mt-4 text-sm ${notice.tone === "ok" ? "text-quant" : "text-gold"}`}>

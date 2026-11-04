@@ -87,7 +87,7 @@ export class SettingsContract {
   /** The automatic WhatsApp messages the owner can reword, with the placeholders each understands. */
   static readonly WHATSAPP_TEXTS: Readonly<Record<WhatsAppTextKey, { label: string; placeholders: string }>> = {
     booking: { label: "Session confirmed", placeholders: "{firstName} {session} {when} {where}" },
-    reminder: { label: "Session reminder (a day and an hour before)", placeholders: "{firstName} {lead} {session} {when} {where}" },
+    reminder: { label: "Session reminder (an hour before)", placeholders: "{firstName} {lead} {session} {when} {where}" },
     overdue: { label: "Overdue invoice", placeholders: "{firstName} {number} {balance} {dueDate} {link} {sender}" },
     mock: { label: "Mock or practice given", placeholders: "{firstName} {mock} {from} {link} {sender}" },
   };
