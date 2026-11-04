@@ -22,8 +22,8 @@ const STAMP: Record<string, string> = {
 };
 
 /**
- * The paper every billing document prints on: navy header with the logo, the
- * title and number, and the navy tagline footer. In print it fills the A4 page
+ * The paper every billing document prints on: navy header with the logo (name and
+ * tagline), the title and number, and the navy footer (courses and website). In print it fills the A4 page
  * (just under 297mm, so rounding never adds a blank page) and the footer sits
  * at the bottom edge. Site palette on white; the
  * navy bands force background printing so the light logo stays visible.
@@ -62,12 +62,9 @@ export function DocumentFrame({
       </header>
       <div className="px-8 py-10 sm:px-12 print:flex print:flex-1 print:flex-col print:py-6">{children}</div>
       <footer className="grid gap-1.5 border-t-4 border-gold bg-canvas bg-grid-lines px-8 py-6 text-center sm:px-12 print:py-4">
-        <p className="text-sm">
-          <span className="font-semibold text-gold">{business.name}</span>
-          <span className="text-slate-300"> | {siteConfig.letterhead.motto}</span>
-        </p>
+        {/* Name and tagline are in the header logo; address and phone are in the body. */}
         <p className="font-mono text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">{siteConfig.letterhead.courses}</p>
-        <p className="text-xs text-slate-300">{[business.address, business.phone, business.website].filter(Boolean).join(" | ")}</p>
+        {business.website && <p className="text-xs text-slate-300">{business.website}</p>}
       </footer>
     </article>
   );
@@ -81,7 +78,7 @@ export function FromBlock({ settings, trn }: { settings: BillingSettings; trn: s
       <h2 className={LABEL}>From</h2>
       <p className="mt-3 font-serif text-lg font-bold text-canvas">{business.name}</p>
       <p className="mt-1 text-slate-500">
-        {[business.sender, business.address, business.phone, business.email, business.website, trn && `TRN: ${trn}`].filter(Boolean).map((line) => (
+        {[business.address, business.email, trn && `TRN: ${trn}`].filter(Boolean).map((line) => (
           <span key={line} className="block">
             {line}
           </span>
