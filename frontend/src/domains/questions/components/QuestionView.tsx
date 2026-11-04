@@ -8,6 +8,7 @@ import { siteConfig } from "@/core/config/site";
 import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
 import type { Instructor } from "@/domains/team/types";
 import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichText";
+import { ExhibitText } from "@/domains/mocks/components/ExhibitText";
 
 import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
 import type { Question, QuestionSummary } from "../types";
@@ -118,7 +119,7 @@ export function QuestionView({
       )}
       {q.solution && (
         <Section title={`Why ${letter(q.correct)} is correct`} tone="border-emerald-400/60">
-          <RichText text={q.solution} />
+          <ExhibitText text={q.solution} />
         </Section>
       )}
       {q.imageUrl && (
@@ -139,7 +140,7 @@ export function QuestionView({
       )}
       {q.trap && (
         <Section title="Common exam trap" tone="border-gold/60">
-          <RichText text={q.trap} />
+          <ExhibitText text={q.trap} />
         </Section>
       )}
     </div>
@@ -212,7 +213,7 @@ export function QuestionView({
 
       <section aria-label="Question" className="mt-8 rounded-xl border border-line bg-surface/60 p-5 sm:p-8">
         <p className="font-mono text-[11px] tracking-[0.16em] text-quant">{q.code}</p>
-        <RichText text={q.stem} className="mt-3 text-[1.05rem] leading-relaxed text-ink sm:text-lg" />
+        <ExhibitText text={q.stem} className="mt-3 text-[1.05rem] leading-relaxed text-ink sm:text-lg" />
       </section>
 
       <div className="mt-6">

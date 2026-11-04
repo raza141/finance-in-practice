@@ -7,6 +7,7 @@ import { useActionState, useState, type ChangeEvent } from "react";
 import { FIELD, Field } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichText";
+import { ExhibitText } from "@/domains/mocks/components/ExhibitText";
 
 import { saveQuestion, uploadSolutionImage } from "../actions/questions";
 import { QuestionContract } from "../services/QuestionContract";
@@ -16,7 +17,9 @@ import type { Difficulty, Question } from "../types";
 const MATH_HINT = (
   <>
     Maths: <code>$x^2$</code> inside a sentence, <code>$$…$$</code> on its own lines for a display equation. **bold**, blank line = new
-    paragraph, &ldquo;- &rdquo; or &ldquo;1. &rdquo; lines = list. Write <code>\$</code> or USD for a dollar amount.
+    paragraph, &ldquo;- &rdquo; or &ldquo;1. &rdquo; lines = list. Write <code>\$</code> or USD for a dollar amount. Table: a title line
+    (<code>Exhibit 1: …</code> or <code>Table: …</code>, or <code>Chart: …</code> for a line chart), then rows like{" "}
+    <code>| Year | 2025 | 2024 |</code>, first row the header.
   </>
 );
 
@@ -288,7 +291,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
               ))}
           </ul>
           <h2 className="text-2xl font-black">{d.title || "Title"}</h2>
-          <RichText text={d.stem || "The question appears here."} className="text-ink" />
+          <ExhibitText text={d.stem || "The question appears here."} className="text-ink" />
           <ol className="grid gap-2">
             {Array.from({ length: optionCount }, (_, i) => (
               <li
@@ -303,7 +306,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
             ))}
           </ol>
           {d.formula && <div className="overflow-x-auto text-lg" dangerouslySetInnerHTML={{ __html: texToHtml(d.formula.trim().replace(/^\$\$?([\s\S]*?)\$\$?$/, "$1"), true) }} />}
-          {d.solution && <RichText text={d.solution} className="text-ink/90" />}
+          {d.solution && <ExhibitText text={d.solution} className="text-ink/90" />}
           {d.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- admin preview of an uploaded Blob image
             <img src={d.imageUrl} alt={d.imageAlt} className="max-h-96 w-auto rounded-lg border border-line bg-white" />
@@ -319,7 +322,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
           {d.trap && (
             <div className="border-l-2 border-gold/60 pl-3 text-sm">
               <p className="text-muted">Common exam trap</p>
-              <RichText text={d.trap} />
+              <ExhibitText text={d.trap} />
             </div>
           )}
           {d.insight && (
