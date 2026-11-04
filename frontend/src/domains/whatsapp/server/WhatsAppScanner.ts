@@ -15,8 +15,8 @@ import { ClassroomRepository } from "@/domains/students/server/ClassroomReposito
 import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 import type { BillingSettings } from "@/domains/settings/types";
 
-import { WhatsAppText } from "../services/WhatsAppText";
-import type { ClassPostKind, ClassRecipient, WhatsAppLink } from "../types";
+import { WhatsAppText, type Signature } from "../services/WhatsAppText";
+import type { ClassPostKind, ClassRecipient, OutgoingMessage, WhatsAppLink } from "../types";
 import { WhatsAppOutbox } from "./WhatsAppOutbox";
 
 const DAY = 86_400_000;
@@ -48,6 +48,10 @@ export class WhatsAppScanner {
 
   private get sender(): string {
     return this.settings.business.sender;
+  }
+
+  private get sign(): Signature {
+    return { sender: this.settings.business.sender, business: this.settings.business.name };
   }
 
   async run(now = new Date()): Promise<Record<string, string>> {
@@ -83,7 +87,7 @@ export class WhatsAppScanner {
     return location;
   }
 
-  /** Confirmed bookings: a confirmation once, and the day-before and hour-before reminders. Cancelled ones drop what's queued. */
+  /** Confirmed bookings: a confirmation once, and the hour-before reminder. Cancelled ones drop what's queued. */
   async bookings(now: Date): Promise<number> {
     const cal = CalComClient.fromEnv();
     if (!cal) return 0;
@@ -97,47 +101,78 @@ export class WhatsAppScanner {
       const start = new Date(b.start);
       if (start <= now) continue;
       const createdAt = new Date(b.createdAt);
-      // Cal.com's title reads "session between <host> and <student>": name the course instead.
-      const title = b.metadata?.course?.trim() || "Your session";
       await this.outbox.cancelOtherTimes(`booking:${b.uid}`, `booking:${b.uid}:${b.start}:`);
       for (const attendee of b.attendees) {
         const client = await this.clientByEmail(attendee.email);
         if (!client) continue;
-        const base = { clientId: client.id, phone: client.phone, ref: `booking:${b.uid}` };
-        const where = WhatsAppScanner.where(b);
-        if (createdAt > this.link.enabledAt!) {
-          const ok = await this.outbox.enqueue(
-            {
-              ...base,
-              dedupeKey: `booking:${b.uid}:${b.start}:${client.id}:confirmed`,
-              kind: "booking",
-              body: WhatsAppText.bookingConfirmed(client.name, title, start, attendee.timeZone, where, this.settings.whatsapp.booking),
-              expiresAt: start,
-            },
-            this.sender,
-          );
-          if (ok) queued++;
-        }
+        if (createdAt > this.link.enabledAt! && (await this.outbox.enqueue(this.bookingMessage(b, client, attendee.timeZone, "confirmed"), this.sender))) queued++;
         for (const plan of WhatsAppText.reminders(start, createdAt)) {
           // Queued only once due soon, so a booking cancelled in between never had one waiting.
           if (plan.notBefore.getTime() - now.getTime() > 30 * 60_000) continue;
-          const ok = await this.outbox.enqueue(
-            {
-              ...base,
-              dedupeKey: `booking:${b.uid}:${b.start}:${client.id}:${plan.key}`,
-              kind: "reminder",
-              body: WhatsAppText.reminder(plan.key, client.name, title, start, attendee.timeZone, where, this.settings.whatsapp.reminder),
-              notBefore: plan.notBefore,
-              expiresAt: plan.expiresAt,
-              quietOk: plan.quietOk,
-            },
-            this.sender,
-          );
-          if (ok) queued++;
+          const message = { ...this.bookingMessage(b, client, attendee.timeZone, "reminder"), notBefore: plan.notBefore, expiresAt: plan.expiresAt, quietOk: plan.quietOk };
+          if (await this.outbox.enqueue(message, this.sender)) queued++;
         }
       }
     }
     return queued;
+  }
+
+  /**
+   * One booking's confirmation or hour-before reminder for one student. `manual`: sent from the owner's
+   * button, so it has a key of its own (never a duplicate of the automatic one) and goes at any hour.
+   */
+  private bookingMessage(b: CalBookingDetail, client: Client, timeZone: string, which: "confirmed" | "reminder", manual?: string): OutgoingMessage {
+    const start = new Date(b.start);
+    // Cal.com's title reads "session between <host> and <student>": name the course instead.
+    const title = b.metadata?.course?.trim() || "Your session";
+    const where = WhatsAppScanner.where(b);
+    const link = WhatsAppText.manageLink(b.uid);
+    const body =
+      which === "confirmed"
+        ? WhatsAppText.bookingConfirmed(client.name, title, start, timeZone, where, link, this.sign, this.settings.whatsapp.booking)
+        : WhatsAppText.reminder(client.name, title, start, timeZone, where, link, this.sign, this.settings.whatsapp.reminder);
+    const key = which === "confirmed" ? "confirmed" : "r1";
+    return {
+      dedupeKey: `booking:${b.uid}:${b.start}:${client.id}:${manual ? `${key}:manual:${manual}` : key}`,
+      kind: which === "confirmed" ? "booking" : "reminder",
+      clientId: client.id,
+      phone: client.phone,
+      ref: `booking:${b.uid}`,
+      body,
+      expiresAt: start,
+      quietOk: Boolean(manual),
+    };
+  }
+
+  /** Upcoming confirmed sessions with the students they match, for the owner's "send by hand" buttons. */
+  async upcoming(now = new Date()): Promise<{ uid: string; start: Date; title: string; students: { id: string; name: string }[] }[]> {
+    const cal = CalComClient.fromEnv();
+    if (!cal) return [];
+    const list = await cal.bookings(now.toISOString(), new Date(now.getTime() + 30 * DAY).toISOString());
+    const out = [];
+    for (const b of list) {
+      if (b.status.toLowerCase() !== "accepted" || new Date(b.start) <= now) continue;
+      const students = [];
+      for (const a of b.attendees) {
+        const c = await this.clientByEmail(a.email);
+        if (c) students.push({ id: c.id, name: c.name });
+      }
+      if (students.length > 0) out.push({ uid: b.uid, start: new Date(b.start), title: b.metadata?.course?.trim() || "Session", students });
+    }
+    return out.sort((x, y) => x.start.getTime() - y.start.getTime());
+  }
+
+  /** The owner's button: one booking's confirmation or reminder to one of its students, now. */
+  async sendBooking(uid: string, clientId: string, which: "confirmed" | "reminder"): Promise<boolean> {
+    const cal = CalComClient.fromEnv();
+    if (!cal || !/^[A-Za-z0-9_-]{6,64}$/.test(uid)) return false;
+    const b = await cal.booking(uid);
+    if (b.status.toLowerCase() !== "accepted" || Date.parse(b.start) <= Date.now()) return false;
+    for (const attendee of b.attendees) {
+      const client = await this.clientByEmail(attendee.email);
+      if (client?.id === clientId) return this.outbox.enqueue(this.bookingMessage(b, client, attendee.timeZone, which, String(Date.now())), this.sender);
+    }
+    return false;
   }
 
   /** Invoices and receipts issued since WhatsApp was switched on, each once, with its PDF. */
@@ -149,32 +184,33 @@ export class WhatsAppScanner {
         AND NOT EXISTS (SELECT 1 FROM whatsapp_messages m WHERE m.dedupe_key = 'doc:' || d.id)
       ORDER BY d.sent_at LIMIT 20
     `) as { id: string }[];
-    const repo = InvoiceRepository.fromEnv();
-    if (!repo) return 0;
     let queued = 0;
-    for (const { id } of rows) {
-      const doc = await repo.byId(id);
-      if (!doc?.clientId) continue;
-      const client = await this.clientById(doc.clientId);
-      const phone = client?.phone || doc.clientPhone;
-      if (!client || !phone) continue;
-      const url = `${this.origin}/invoice/${doc.token}`;
-      const ok = await this.outbox.enqueue(
-        {
-          dedupeKey: `doc:${doc.id}`,
-          kind: doc.docType === "receipt" ? "receipt" : "invoice",
-          clientId: client.id,
-          phone,
-          body: InvoiceEmails.whatsappText(doc, url, this.settings),
-          ref: `doc:${doc.id}`,
-          documentToken: doc.token,
-          attachmentName: `${DocumentFormat.filename(doc)}.pdf`,
-        },
-        this.sender,
-      );
-      if (ok) queued++;
-    }
+    for (const { id } of rows) if (await this.document(id)) queued++;
     return queued;
+  }
+
+  /** One issued invoice or receipt, with its PDF. `manual`: the owner's button (a key of its own, any hour). */
+  async document(id: string, manual?: string): Promise<boolean> {
+    const doc = await InvoiceRepository.fromEnv()?.byId(id);
+    if (!doc?.clientId || (doc.docType !== "invoice" && doc.docType !== "receipt") || doc.status === "draft" || doc.status === "void") return false;
+    const client = await this.clientById(doc.clientId);
+    const phone = client?.phone || doc.clientPhone;
+    if (!client || !phone) return false;
+    const url = `${this.origin}/invoice/${doc.token}`;
+    return this.outbox.enqueue(
+      {
+        dedupeKey: manual ? `doc:${doc.id}:manual:${manual}` : `doc:${doc.id}`,
+        kind: doc.docType,
+        clientId: client.id,
+        phone,
+        body: InvoiceEmails.whatsappText(doc, url, this.settings),
+        ref: `doc:${doc.id}`,
+        documentToken: doc.token,
+        attachmentName: `${DocumentFormat.filename(doc)}.pdf`,
+        quietOk: Boolean(manual),
+      },
+      this.sender,
+    );
   }
 
   private async clientById(id: string): Promise<Client | null> {
@@ -214,7 +250,7 @@ export class WhatsAppScanner {
         kind: "overdue",
         clientId: client.id,
         phone,
-        body: WhatsAppText.overdue(client.name, doc.number, InvoiceMath.money(balance, doc.currency), doc.dueDate, url, this.sender, this.settings.whatsapp.overdue),
+        body: WhatsAppText.overdue(client.name, doc.number, InvoiceMath.money(balance, doc.currency), doc.dueDate, url, this.sign, this.settings.whatsapp.overdue),
         ref: `doc:${doc.id}`,
         documentToken: doc.token,
         attachmentName: `${DocumentFormat.filename(doc)}.pdf`,
@@ -276,7 +312,7 @@ export class WhatsAppScanner {
               kind: "class",
               clientId: owner.id,
               phone: owner.phone,
-              body: WhatsAppText.personal(WhatsAppText.classPost(post.kind, classTitle, post.title, post.dueAt, post.link), owner.name),
+              body: WhatsAppText.personal(WhatsAppText.classPost(post.kind, classTitle, post.title, post.dueAt, post.link, this.sign, this.settings.whatsapp.class), owner.name),
               ref: `class:${post.id}`,
             },
             this.sender,

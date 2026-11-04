@@ -107,7 +107,7 @@ async function portalData(student: Student) {
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
-export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
+export async function Portal({ student, readOnly = false, tab }: { student: Student; readOnly?: boolean; tab?: string }) {
   const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
@@ -145,6 +145,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
       {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
       <StudentPortal
         readOnly={readOnly}
+        initialTab={tab}
         name={student.name.split(" ")[0]}
         courses={courses}
         lengths={siteConfig.studentBooking.lengths}

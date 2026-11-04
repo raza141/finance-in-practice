@@ -18,7 +18,7 @@ export async function saveSettings(_state: SettingsFormState, formData: FormData
   const admin = await AdminAuth.requireOwner();
   const repo = SettingsRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
-  const parsed = SettingsContract.parse(Object.fromEntries(formData));
+  const parsed = SettingsContract.parse(Object.fromEntries(formData), await repo.get());
   if (!parsed.ok) return { errors: parsed.errors, message: "Please fix the highlighted fields." };
   await repo.save(parsed.settings, admin.id);
   revalidatePath("/admin", "layout");

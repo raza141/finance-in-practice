@@ -297,7 +297,7 @@ describe("InvoiceEmails.whatsapp", () => {
     const href = InvoiceEmails.whatsapp(invoice, "https://financeinpractice.me/invoice/tok", SETTINGS);
     expect(href.startsWith("https://wa.me/971502304045?text=")).toBe(true);
     const text = decodeURIComponent(href.split("?text=")[1]);
-    expect(text).toContain("Hi Sara, invoice FIP-2026-0007 for AED 4,000.00 is ready, due 13 Oct 2026.");
+    expect(text).toContain("Hi Sara,\n\nInvoice FIP-2026-0007 for AED 4,000.00 is ready, due 13 Oct 2026.");
     expect(text).toContain("https://financeinpractice.me/invoice/tok");
     expect(InvoiceEmails.whatsapp({ ...invoice, clientPhone: "" }, "u", SETTINGS).startsWith("https://wa.me/?text=")).toBe(true);
   });

@@ -65,6 +65,7 @@ export function StudentPortal({
   overview,
   progress,
   readOnly = false,
+  initialTab,
 }: {
   /** Shown on their own bookings in the week grid. */
   name: string;
@@ -85,6 +86,8 @@ export function StudentPortal({
   progress: ReactNode | null;
   /** An admin viewing as this student: shown as they see it, but nothing is booked, changed or marked seen. */
   readOnly?: boolean;
+  /** From the URL (?tab=), e.g. a WhatsApp link; anything not allow-listed opens the overview. */
+  initialTab?: string;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
@@ -102,7 +105,8 @@ export function StudentPortal({
   const [moving, setMoving] = useState<StudentSession | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>("overview");
+  // A WhatsApp link may open a tab (/student?tab=plan); only these, never anything that names a record.
+  const [tab, setTab] = useState<Tab>(initialTab === "sessions" || initialTab === "plan" || initialTab === "account" ? initialTab : "overview");
   const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.

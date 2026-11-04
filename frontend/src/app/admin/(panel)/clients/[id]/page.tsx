@@ -24,6 +24,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceEmails } from "@/domains/invoices/services/InvoiceEmails";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import { Ledger } from "@/domains/invoices/services/Ledger";
+import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 import { SettingsContract } from "@/domains/settings/services/SettingsContract";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient } from "@/domains/booking/server/CalComClient";
@@ -43,7 +44,9 @@ import { AccessGrantForm } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 import { MockGrader } from "@/domains/mocks/services/MockGrader";
-import { OwnMessageForm } from "@/domains/whatsapp/components/OwnMessageForm";
+import { Composer } from "@/domains/whatsapp/components/Composer";
+import { sendOwnMessage } from "@/domains/whatsapp/actions/whatsapp";
+import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -56,7 +59,8 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "package-dismissed": { text: "Request closed.", tone: "ok" },
   "package-refused": { text: "Package not changed.", tone: "warn" },
   "own-sent": { text: "WhatsApp message queued: it goes out within a minute.", tone: "ok" },
-  nobody: { text: "WhatsApp message not sent: write a message first.", tone: "warn" },
+  nobody: { text: "WhatsApp message not sent: write a message first, or reload the page and try again.", tone: "warn" },
+  unedited: { text: "WhatsApp message not sent: the ready-made text needs your own words first.", tone: "warn" },
   "hours-saved": { text: "Hours saved: their Hours & payments tab shows them now.", tone: "ok" },
   "hours-refused": { text: "Hours not saved.", tone: "warn" },
   "plan-refused": { text: "Study plan not saved.", tone: "warn" },
@@ -172,6 +176,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     (packageRepo?.ofClient(client.id) ?? Promise.resolve(null)).catch(() => null),
     (packageRepo?.active() ?? Promise.resolve([])).catch(() => []),
   ]);
+  const { business } = await SettingsRepository.load();
   return (
     <div className="max-w-5xl">
       <Link href="/admin/clients" className="text-sm text-muted hover:text-ink">
@@ -733,7 +738,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
         <h2 className="text-lg">WhatsApp message</h2>
         {client.phone ? (
           <div className="mt-4">
-            <OwnMessageForm students={[{ id: client.id, name: client.name }]} back={`/admin/clients/${client.id}`} />
+            <Composer
+              fixed={{ id: client.id, name: client.name }}
+              batch={crypto.randomUUID()}
+              action={sendOwnMessage}
+              back={`/admin/clients/${client.id}`}
+              starters={WhatsAppText.starters({ sender: business.sender, business: business.name })}
+            />
           </div>
         ) : (
           <p className="mt-1 text-sm text-muted">Add their phone number under Details to message them.</p>

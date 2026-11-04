@@ -3,7 +3,7 @@ import { InvoiceContract } from "@/domains/invoices/services/InvoiceContract";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { Currency, DocumentLayout, ItemUnit, PaymentTerms } from "@/domains/invoices/types";
 
-import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig, WhatsAppTextKey, WhatsAppTexts } from "../types";
+import type { BillingSettings, DocumentTexts, DocumentType, UnitConfig, WhatsAppTextKey } from "../types";
 
 export type SettingsFieldErrors = Partial<Record<string, string>>;
 
@@ -52,45 +52,69 @@ export class SettingsContract {
       invoice: {
         terms: INVOICE_TERMS,
         notes: "",
-        whatsapp: `Hi {firstName}, invoice {number} for {amount} is ready, due {dueDate}.\n\nView or download: {link}\n\n${SIGN_OFF}`,
+        whatsapp: `Hi {firstName},\n\nInvoice {number} for {amount} is ready, due {dueDate}.\n\nView or download it here: {link}\n\n${SIGN_OFF}`,
         email: "Invoice {number} for {amount} is ready.",
       },
       receipt: {
         terms: "",
         notes: "",
-        whatsapp: `Hi {firstName}, payment of {amount} has been received. Receipt {number}: {link}\n\n${SIGN_OFF}`,
+        whatsapp: `Hi {firstName},\n\nWe have received your payment of {amount}. Thank you!\n\nYour receipt {number}: {link}\n\n${SIGN_OFF}`,
         email: "Payment of {amount} has been received. Receipt {number} is linked below.",
       },
       quote: {
         terms: "Validity: This quote is valid until the date shown.\nAcceptance: Work is scheduled once the quote is accepted in writing.",
         notes: "",
-        whatsapp: `Hi {firstName}, quote {number} for {amount} is ready, valid until {dueDate}: {link}\n\n${SIGN_OFF}`,
+        whatsapp: `Hi {firstName},\n\nQuote {number} for {amount} is ready, valid until {dueDate}.\n\nView it here: {link}\n\n${SIGN_OFF}`,
         email: "Quote {number} for {amount} is ready for review.",
       },
       credit_note: {
         terms: "",
         notes: "",
-        whatsapp: `Hi {firstName}, credit note {number} for {amount} has been issued: {link}\n\n${SIGN_OFF}`,
+        whatsapp: `Hi {firstName},\n\nCredit note {number} for {amount} has been issued.\n\nView it here: {link}\n\n${SIGN_OFF}`,
         email: "Credit note {number} for {amount} has been issued.",
       },
     },
     card: { show: false, note: "Card payments may include a processing fee." },
     whatsapp: {
-      booking: "Hi {firstName}, your session is confirmed ✅\n\n{session}\n{when}\n{where}\n\nTo reschedule, reply here or use the link in your Cal.com email.",
-      reminder: "Hi {firstName}, a reminder: your session is {lead}.\n\n{session}\n{when}\n{where}",
-      overdue:
-        "Hi {firstName}, a gentle reminder that invoice {number} ({balance}) was due on {dueDate}.\n\nYou can view it here: {link}\n\nIf you've already paid, thank you, and please ignore this message.\n\n{sender}",
-      mock: "Hi {firstName}, you now have access to *{mock}* on your study portal{from}.\n\nOpen it here: {link}\n\n{sender}",
+      booking: `Hi {firstName},\n\nYour session is confirmed ✅\n\n*{session}*\n{when}\n{where}\n\nTo reschedule or cancel: {link}\n\n${SIGN_OFF}`,
+      reminder: `Hi {firstName},\n\nA reminder: your session starts {lead}.\n\n*{session}*\n{when}\n{where}\n\nTo reschedule or cancel: {link}\n\n${SIGN_OFF}`,
+      overdue: `Hi {firstName},\n\nA gentle reminder that invoice {number} ({balance}) was due on {dueDate}.\n\nView or download it here: {link}\n\nIf you have already paid, thank you, and please ignore this message.\n\n${SIGN_OFF}`,
+      mock: `Hi {firstName},\n\nYou now have access to *{mock}* on your study portal{from}.\n\nOpen it here: {link}\n\nAll the best with your preparation.\n\n${SIGN_OFF}`,
+      class: `Hi {firstName},\n\nNew {kind} in {class}:\n*{title}*\n{due}\n\nOpen it here: {link}\n\n${SIGN_OFF}`,
     },
   };
 
   /** The automatic WhatsApp messages the owner can reword, with the placeholders each understands. */
   static readonly WHATSAPP_TEXTS: Readonly<Record<WhatsAppTextKey, { label: string; placeholders: string }>> = {
-    booking: { label: "Session confirmed", placeholders: "{firstName} {session} {when} {where}" },
-    reminder: { label: "Session reminder (an hour before)", placeholders: "{firstName} {lead} {session} {when} {where}" },
-    overdue: { label: "Overdue invoice", placeholders: "{firstName} {number} {balance} {dueDate} {link} {sender}" },
-    mock: { label: "Mock or practice given", placeholders: "{firstName} {mock} {from} {link} {sender}" },
+    booking: { label: "Session confirmed", placeholders: "{firstName} {session} {when} {where} {link} {sender} {business}" },
+    reminder: { label: "Session reminder (an hour before)", placeholders: "{firstName} {lead} {session} {when} {where} {link} {sender} {business}" },
+    overdue: { label: "Overdue invoice", placeholders: "{firstName} {number} {balance} {dueDate} {link} {sender} {business}" },
+    mock: { label: "Mock or practice given", placeholders: "{firstName} {mock} {from} {link} {sender} {business}" },
+    class: { label: "Classroom post", placeholders: "{firstName} {kind} {class} {title} {due} {link} {sender} {business}" },
   };
+
+  /**
+   * One WhatsApp wording by its field name ("wa.booking", "doc.invoice"), replaced. Null for any other
+   * name: the name comes from a form, so it is matched against the known keys, never used to index blindly.
+   */
+  static withWhatsAppText(settings: BillingSettings, field: string, text: string): BillingSettings | null {
+    const [group, key] = field.split(".");
+    if (group === "wa" && Object.hasOwn(SettingsContract.WHATSAPP_TEXTS, key)) return { ...settings, whatsapp: { ...settings.whatsapp, [key]: text } };
+    if (group === "doc" && Object.hasOwn(SettingsContract.DOCUMENT_TYPES, key)) {
+      const type = key as DocumentType;
+      return { ...settings, documents: { ...settings.documents, [type]: { ...settings.documents[type], whatsapp: text } } };
+    }
+    return null;
+  }
+
+  /** The default wording for a field name as above; null for an unknown name. */
+  static whatsappDefault(field: string): string | null {
+    const d = SettingsContract.DEFAULTS;
+    const [group, key] = field.split(".");
+    if (group === "wa" && Object.hasOwn(SettingsContract.WHATSAPP_TEXTS, key)) return d.whatsapp[key as WhatsAppTextKey];
+    if (group === "doc" && Object.hasOwn(SettingsContract.DOCUMENT_TYPES, key)) return d.documents[key as DocumentType].whatsapp;
+    return null;
+  }
 
   static readonly LIMITS = { name: 120, sender: 80, address: 200, phone: 40, email: 254, website: 120, terms: 1500, notes: 1000, message: 1000, cardNote: 200 } as const;
 
@@ -141,8 +165,11 @@ export class SettingsContract {
     };
   }
 
-  /** The settings form, field names as in SettingsForm ("business.name", "doc.invoice.terms", …). */
-  static parse(fields: Record<string, unknown>): { ok: true; settings: BillingSettings } | { ok: false; errors: SettingsFieldErrors } {
+  /**
+   * The settings form, field names as in SettingsForm ("business.name", "doc.invoice.terms", …). The WhatsApp
+   * wording is edited on the WhatsApp page, so it is kept from `stored`.
+   */
+  static parse(fields: Record<string, unknown>, stored: BillingSettings = SettingsContract.DEFAULTS): { ok: true; settings: BillingSettings } | { ok: false; errors: SettingsFieldErrors } {
     const text = (name: string) => (typeof fields[name] === "string" ? (fields[name] as string).trim() : "");
     const { LIMITS } = SettingsContract;
     const errors: SettingsFieldErrors = {};
@@ -203,16 +230,14 @@ export class SettingsContract {
         {
           terms: bounded(`doc.${type}.terms`, LIMITS.terms),
           notes: bounded(`doc.${type}.notes`, LIMITS.notes),
-          whatsapp: bounded(`doc.${type}.whatsapp`, LIMITS.message, true),
+          whatsapp: stored.documents[type].whatsapp,
           email: bounded(`doc.${type}.email`, LIMITS.message, true),
         },
       ]),
     ) as Record<DocumentType, DocumentTexts>;
 
     const card = { show: fields["card.show"] === "on", note: bounded("card.note", LIMITS.cardNote) };
-    const whatsapp = Object.fromEntries(
-      (Object.keys(SettingsContract.WHATSAPP_TEXTS) as WhatsAppTextKey[]).map((key) => [key, bounded(`wa.${key}`, LIMITS.message, true)]),
-    ) as WhatsAppTexts;
+    const whatsapp = stored.whatsapp;
 
     if (Object.keys(errors).length > 0) return { ok: false, errors };
     return { ok: true, settings: { business, vat: { registered, trn, rateBp }, currency, terms: terms!, units, prefixes, documents, card, whatsapp } };
@@ -231,6 +256,18 @@ export class SettingsContract {
   static readonly DEFAULT_TERMS: readonly PaymentTerms[] = InvoiceContract.OFFERED_TERMS.filter((t) => t !== "date");
 
   /** Fills {placeholders} in a message template; unknown ones are left as typed. */
+  /**
+   * A WhatsApp message: fills {placeholders} (unknown ones stay as typed), then tidies what an empty one
+   * leaves: trailing spaces, runs of blank lines, a blank start or end.
+   */
+  static fillMessage(template: string, values: Readonly<Record<string, string>>): string {
+    return template
+      .replace(/\{(\w+)\}/g, (match, key: string) => (Object.hasOwn(values, key) ? values[key] : match))
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   static fill(template: string, values: Partial<Record<(typeof SettingsContract.PLACEHOLDERS)[number], string>>): string {
     return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key as keyof typeof values] ?? match);
   }

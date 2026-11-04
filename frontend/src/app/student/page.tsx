@@ -38,8 +38,8 @@ const PERKS = [
   "See your progress against your target score",
 ];
 
-export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
-  const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
+export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string; tab?: string }> }) {
+  const [student, { error, view, tab }] = await Promise.all([StudentAuth.current(), searchParams]);
 
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
@@ -79,7 +79,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
 
       <div className="page-container relative py-8 lg:py-10">
         {student ? (
-          <Portal student={student} />
+          <Portal student={student} tab={tab} />
         ) : (
           // Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding).
           <div className="grid min-h-[calc(100svh-4rem-5rem)] content-center">

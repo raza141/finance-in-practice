@@ -8,9 +8,15 @@ import type { ClassPostKind } from "../types";
 
 const HOUR = 3_600_000;
 
+/** Who a message is from, for the {sender} and {business} sign-off. */
+export interface Signature {
+  sender: string;
+  business: string;
+}
+
 /** A booking's reminder: when it may go out and when it is no longer worth sending. */
 export interface ReminderPlan {
-  key: "r24" | "r1";
+  key: "r1";
   notBefore: Date;
   expiresAt: Date;
   /** The 1-hour reminder may go out in quiet hours (an 08:30 session). */
@@ -27,6 +33,13 @@ export class WhatsAppText {
   static readonly QUIET_FROM = 22;
   static readonly QUIET_UNTIL = 8;
   static readonly PORTAL = `${siteConfig.url}/student`;
+  /** The portal's "Exams & mocks" tab. */
+  static readonly PORTAL_MOCKS = `${WhatsAppText.PORTAL}?tab=plan`;
+
+  /** Cal.com's own page for one booking: reschedule or cancel without signing in. */
+  static manageLink(uid: string): string {
+    return `https://cal.com/booking/${encodeURIComponent(uid)}`;
+  }
 
   /** "+971 50 230 4045" / "050 230 4045" -> "971502304045"; empty when unusable. */
   static phone(raw: string): string {
@@ -94,47 +107,55 @@ export class WhatsAppText {
 
   private static readonly WORDS = SettingsContract.DEFAULTS.whatsapp;
 
-  /**
-   * Fills {placeholders} (unknown ones stay as typed), then tidies what an empty one leaves:
-   * trailing spaces, runs of blank lines, a blank start or end.
-   */
-  static fill(template: string, values: Record<string, string>): string {
-    return template
-      .replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match)
-      .replace(/[ \t]+$/gm, "")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-  }
+  static readonly fill = SettingsContract.fillMessage;
 
-  private static session(name: string, title: string, start: Date, timeZone: string, where: string | null): Record<string, string> {
-    return { firstName: WhatsAppText.first(name), session: title, when: WhatsAppText.when(start, timeZone), where: where ?? "" };
-  }
-
-  static bookingConfirmed(name: string, title: string, start: Date, timeZone: string, where: string | null, template = WhatsAppText.WORDS.booking): string {
-    return WhatsAppText.fill(template, WhatsAppText.session(name, title, start, timeZone, where));
-  }
-
-  static reminder(
-    key: ReminderPlan["key"],
+  private static session(
     name: string,
     title: string,
     start: Date,
     timeZone: string,
     where: string | null,
-    template = WhatsAppText.WORDS.reminder,
-  ): string {
-    return WhatsAppText.fill(template, { ...WhatsAppText.session(name, title, start, timeZone, where), lead: key === "r24" ? "tomorrow" : "in about an hour" });
+    link: string,
+    sign: Signature,
+  ): Record<string, string> {
+    return { firstName: WhatsAppText.first(name), session: title, when: WhatsAppText.when(start, timeZone), where: where ?? "", link, ...sign };
   }
 
-  static overdue(name: string, number: string, balance: string, dueDate: string, link: string, sender: string, template = WhatsAppText.WORDS.overdue): string {
-    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), number, balance, dueDate: InvoiceEmails.day(dueDate), link, sender });
+  static bookingConfirmed(
+    name: string,
+    title: string,
+    start: Date,
+    timeZone: string,
+    where: string | null,
+    link: string,
+    sign: Signature,
+    template = WhatsAppText.WORDS.booking,
+  ): string {
+    return WhatsAppText.fill(template, WhatsAppText.session(name, title, start, timeZone, where, link, sign));
+  }
+
+  static reminder(
+    name: string,
+    title: string,
+    start: Date,
+    timeZone: string,
+    where: string | null,
+    link: string,
+    sign: Signature,
+    template = WhatsAppText.WORDS.reminder,
+  ): string {
+    return WhatsAppText.fill(template, { ...WhatsAppText.session(name, title, start, timeZone, where, link, sign), lead: "in about an hour" });
+  }
+
+  static overdue(name: string, number: string, balance: string, dueDate: string, link: string, sign: Signature, template = WhatsAppText.WORDS.overdue): string {
+    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), number, balance, dueDate: InvoiceEmails.day(dueDate), link, ...sign });
   }
 
   /** A mock, or a whole product ("all mock exams"), given to a student; `from` when access starts later. */
-  static mockGiven(name: string, mock: string, from: Date | null, sender: string, template = WhatsAppText.WORDS.mock): string {
+  static mockGiven(name: string, mock: string, from: Date | null, sign: Signature, template = WhatsAppText.WORDS.mock): string {
     const later = from && from.getTime() > Date.now() + HOUR;
     const day = later ? new Intl.DateTimeFormat("en-GB", { timeZone: WhatsAppText.ZONE, weekday: "short", day: "numeric", month: "short" }).format(from) : "";
-    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), mock, from: later ? ` from ${day}` : "", link: WhatsAppText.PORTAL, sender });
+    return WhatsAppText.fill(template, { firstName: WhatsAppText.first(name), mock, from: later ? ` from ${day}` : "", link: WhatsAppText.PORTAL_MOCKS, ...sign });
   }
 
   static readonly KIND_LABEL: Record<ClassPostKind, string> = {
@@ -144,25 +165,55 @@ export class WhatsAppText {
     announcement: "announcement",
   };
 
-  /** The class-post message; `{name}` is replaced per student when sent from the button. */
-  static classPost(kind: ClassPostKind, classTitle: string, title: string, due: Date | null, link: string | null): string {
-    const head = kind === "announcement" ? `New announcement in ${classTitle}:` : `New ${WhatsAppText.KIND_LABEL[kind]} in ${classTitle}:`;
+  /** The class-post message, with {firstName} left for each student (`personal`). */
+  static classPost(
+    kind: ClassPostKind,
+    classTitle: string,
+    title: string,
+    due: Date | null,
+    link: string | null,
+    sign: Signature,
+    template = WhatsAppText.WORDS.class,
+  ): string {
+    return WhatsAppText.fill(template, {
+      kind: WhatsAppText.KIND_LABEL[kind],
+      class: classTitle,
+      title,
+      due: due ? `Due: ${WhatsAppText.when(due, WhatsAppText.ZONE)}` : "",
+      link: link ?? WhatsAppText.PORTAL,
+      ...sign,
+    });
+  }
+
+  static nudge(title: string, due: Date | null, link: string | null, sign: Signature): string {
     return [
-      `Hi {name}, ${head}\n*${title}*${due ? `\nDue: ${WhatsAppText.when(due, WhatsAppText.ZONE)}` : ""}`,
-      [link ? `Open it in Google Classroom: ${link}` : "", `Your portal: ${WhatsAppText.PORTAL}`].filter(Boolean).join("\n"),
+      "Hi {firstName},",
+      `A reminder: *${title}* ${due ? `is due ${WhatsAppText.when(due, WhatsAppText.ZONE)}` : "is waiting"} and isn't handed in yet.`,
+      `Open it here: ${link ?? WhatsAppText.PORTAL}`,
+      WhatsAppText.signOff(sign),
     ].join("\n\n");
   }
 
-  static nudge(title: string, due: Date | null, link: string | null): string {
-    return [
-      `Hi {name}, a reminder: *${title}* ${due ? `is due ${WhatsAppText.when(due, WhatsAppText.ZONE)}` : "is waiting"} and isn't handed in yet.`,
-      link ? `Open it in Google Classroom: ${link}` : `Your portal: ${WhatsAppText.PORTAL}`,
-    ].join("\n\n");
+  static signOff(sign: Signature): string {
+    return `Thank you,\n${sign.sender}\n${sign.business}`;
   }
 
-  /** Fills the `{name}` placeholder with the student's first name. */
+  /** Ready-made beginnings for the owner's own message; {firstName} is filled per student. */
+  static starters(sign: Signature): { label: string; text: string }[] {
+    const letter = (...lines: string[]) => ["Hi {firstName},", ...lines, WhatsAppText.signOff(sign)].join("\n\n");
+    return [
+      { label: "Blank", text: letter("") },
+      { label: "Session update", text: letter("A quick update about your session:", `You can see and change your sessions here: ${WhatsAppText.PORTAL}`) },
+      { label: "Payment reminder", text: letter("A friendly reminder about your payment for this month.", "If you have already paid, thank you, and please ignore this message.") },
+      { label: "New mock", text: letter("A new mock exam is ready for you on your study portal.", `Open it here: ${WhatsAppText.PORTAL_MOCKS}`) },
+      { label: "Class update", text: letter("An update about your class:", `Your portal: ${WhatsAppText.PORTAL}`) },
+    ];
+  }
+
+  /** Fills {firstName} (and the older {name}) with the student's first name. */
   static personal(template: string, name: string): string {
-    return template.replaceAll("{name}", WhatsAppText.first(name));
+    const first = WhatsAppText.first(name);
+    return template.replaceAll("{firstName}", first).replaceAll("{name}", first);
   }
 
   /** STOP / START replies, as WhatsApp users type them. */

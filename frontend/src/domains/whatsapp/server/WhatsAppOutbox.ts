@@ -5,7 +5,10 @@ import { Database, type Sql } from "@/core/db/Database";
 import { SettingsRepository } from "@/domains/settings/server/SettingsRepository";
 
 import { WhatsAppText } from "../services/WhatsAppText";
-import type { GatewayMessage, GatewayReport, MessageRow, OutgoingMessage, WhatsAppLink } from "../types";
+import type { GatewayMessage, GatewayReport, MessageRow, OutgoingMessage, Recipient, WhatsAppLink } from "../types";
+
+/** A student a message can go to; the phone never leaves the server (`Recipient` is what the browser gets). */
+export type Reachable = Recipient & { phone: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -312,34 +315,45 @@ export class WhatsAppOutbox {
 
   /**
    * "You now have access to …" to each student given a mock or a product. Nothing before WhatsApp was
-   * first linked. `key` makes a repeat of the same save queue nothing. Never throws: giving access must not fail on WhatsApp.
+   * first linked. `key` makes a repeat of the same save queue nothing. `quietOk`: the owner sent it by hand.
+   * Returns how many were queued. Never throws: giving access must not fail on WhatsApp.
    */
-  async mockGiven(clientIds: readonly string[], what: string, from: Date | null, key: string): Promise<void> {
+  async mockGiven(clientIds: readonly string[], what: string, from: Date | null, key: string, quietOk = false): Promise<number> {
+    let queued = 0;
     try {
-      if (clientIds.length === 0 || !(await this.link()).enabledAt) return;
-      const settings = await SettingsRepository.load();
+      if (clientIds.length === 0 || !(await this.link()).enabledAt) return 0;
+      const { business, whatsapp } = await SettingsRepository.load();
+      const sign = { sender: business.sender, business: business.name };
       const clients = (await this.sql`SELECT id, name, phone FROM clients WHERE id = ANY(${clientIds as string[]}::uuid[]) AND phone <> ''`) as { id: string; name: string; phone: string }[];
       for (const c of clients) {
-        await this.enqueue(
+        const ok = await this.enqueue(
           {
             dedupeKey: `mock:${key}:${c.id}`.slice(0, 200),
             kind: "mock",
             clientId: c.id,
             phone: c.phone,
-            body: WhatsAppText.mockGiven(c.name, what, from, settings.business.sender, settings.whatsapp.mock),
-            quietOk: false,
+            body: WhatsAppText.mockGiven(c.name, what, from, sign, whatsapp.mock),
+            quietOk,
           },
-          settings.business.sender,
+          business.sender,
         );
+        if (ok) queued++;
       }
     } catch (error) {
       console.error("[whatsapp] mock message not queued", error);
     }
+    return queued;
   }
 
   /** Clients a message can go to: a phone number, and they haven't replied STOP. */
-  async reachable(): Promise<{ id: string; name: string; phone: string }[]> {
-    return (await this.sql`SELECT id, name, phone FROM clients WHERE phone <> '' AND NOT whatsapp_off ORDER BY lower(name)`) as { id: string; name: string; phone: string }[];
+  async reachable(): Promise<Reachable[]> {
+    return (await this.sql`
+      SELECT c.id, c.name, c.phone, c.courses,
+        coalesce(array_agg(b.course || ' · ' || b.label ORDER BY b.course) FILTER (WHERE b.client_id IS NOT NULL), '{}') AS batches
+      FROM clients c LEFT JOIN client_batches b ON b.client_id = c.id
+      WHERE c.phone <> '' AND NOT c.whatsapp_off
+      GROUP BY c.id ORDER BY lower(c.name)
+    `) as Reachable[];
   }
 
   async cancel(id: string): Promise<void> {

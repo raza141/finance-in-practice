@@ -39,22 +39,36 @@ describe("WhatsAppText", () => {
     expect(WhatsAppText.command("stop sending me the mock")).toBeNull();
   });
 
-  it("default wording reads as before, dropping the line an empty placeholder leaves", () => {
-    const start = new Date("2026-10-21T15:00:00Z");
-    expect(WhatsAppText.bookingConfirmed("Sara Khan", "Session", start, "Asia/Dubai", null)).toBe(
-      `Hi Sara, your session is confirmed ✅\n\nSession\n${WhatsAppText.when(start, "Asia/Dubai")}\n\nTo reschedule, reply here or use the link in your Cal.com email.`,
+  const sign = { sender: "Ahmed Raza", business: "Finance in Practice" };
+  const start = new Date("2026-10-21T15:00:00Z");
+  const SIGN_OFF = "Thank you,\nAhmed Raza\nFinance in Practice";
+
+  it("default wording: greeting, purpose, details, one link, sign-off; an empty placeholder drops its line", () => {
+    const link = WhatsAppText.manageLink("abc123");
+    expect(WhatsAppText.bookingConfirmed("Sara Khan", "CFA Level I", start, "Asia/Dubai", null, link, sign)).toBe(
+      `Hi Sara,\n\nYour session is confirmed ✅\n\n*CFA Level I*\n${WhatsAppText.when(start, "Asia/Dubai")}\n\nTo reschedule or cancel: https://cal.com/booking/abc123\n\n${SIGN_OFF}`,
     );
-    expect(WhatsAppText.reminder("r1", "Sara Khan", "Session", start, "Asia/Dubai", "https://meet.google.com/x")).toBe(
-      `Hi Sara, a reminder: your session is in about an hour.\n\nSession\n${WhatsAppText.when(start, "Asia/Dubai")}\nhttps://meet.google.com/x`,
+    expect(WhatsAppText.reminder("Sara Khan", "CFA Level I", start, "Asia/Dubai", "https://meet.google.com/x", link, sign)).toContain(
+      "your session starts in about an hour.\n\n*CFA Level I*",
     );
-    expect(WhatsAppText.fill("Hi {firstName}, {odd}", { firstName: "Sara" })).toBe("Hi Sara, {odd}");
-    expect(WhatsAppText.mockGiven("Sara Khan", "Mock 3", null, "Ahmed")).toContain("access to *Mock 3* on your study portal.");
+    expect(WhatsAppText.fill("Hi {firstName}, {odd} {constructor}", { firstName: "Sara" })).toBe("Hi Sara, {odd} {constructor}");
+    const mock = WhatsAppText.mockGiven("Sara Khan", "Mock 3", null, sign);
+    expect(mock).toContain("access to *Mock 3* on your study portal.");
+    expect(mock).toContain("/student?tab=plan");
+    expect(mock.endsWith(SIGN_OFF)).toBe(true);
   });
 
-  it("personalises the class-post template", () => {
-    const text = WhatsAppText.personal(WhatsAppText.classPost("mock", "CFA Level I · Nov 2026", "Mock 3", null, "https://classroom.google.com/x"), "Sara Khan");
-    expect(text).toContain("Hi Sara, New mock exam in CFA Level I · Nov 2026:");
-    expect(text).not.toContain("{name}");
+  it("class posts and starters leave only {firstName}, which personal() fills (old {name} too)", () => {
+    const post = WhatsAppText.classPost("mock", "CFA Level I · Nov 2026", "Mock 3", null, "https://classroom.google.com/x", sign);
+    expect(post).not.toContain("Due:");
+    const text = WhatsAppText.personal(post, "Sara Khan");
+    expect(text).toContain("Hi Sara,\n\nNew mock exam in CFA Level I · Nov 2026:\n*Mock 3*\n\nOpen it here: https://classroom.google.com/x");
+    const due = WhatsAppText.classPost("assignment", "FRM", "Set 2", start, null, sign);
+    expect(due).toContain(`Due: ${WhatsAppText.when(start, WhatsAppText.ZONE)}`);
+    for (const t of [text, ...WhatsAppText.starters(sign).map((s) => WhatsAppText.personal(s.text, "Sara Khan")), WhatsAppText.personal("Hi {name}", "Sara")]) {
+      expect(t).not.toMatch(/\{\w+\}/);
+    }
+    expect(WhatsAppText.personal(WhatsAppText.nudge("Set 2", null, null, sign), "Sara Khan")).toMatch(/^Hi Sara,/);
   });
 });
 

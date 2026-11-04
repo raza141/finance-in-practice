@@ -3,7 +3,7 @@ import "server-only";
 import { Database, type Sql } from "@/core/db/Database";
 import { ClassroomApi } from "@/domains/classroom/server/ClassroomApi";
 
-import { WhatsAppText } from "../services/WhatsAppText";
+import { WhatsAppText, type Signature } from "../services/WhatsAppText";
 import type { ClassPost, ClassRecipient } from "../types";
 import { WhatsAppOutbox } from "./WhatsAppOutbox";
 
@@ -113,7 +113,7 @@ export class WhatsAppClassPosts {
   }
 
   /** "Not handed in yet" to the post's students whose work isn't turned in or returned. One nudge per student per day. */
-  async nudge(itemId: string, sender: string, today: string): Promise<number> {
+  async nudge(itemId: string, sign: Signature, today: string): Promise<number> {
     const post = await this.byId(itemId);
     const api = await ClassroomApi.fromEnv();
     if (!post || post.status !== "sent" || !api) return 0;
@@ -133,10 +133,10 @@ export class WhatsAppClassPosts {
           kind: "nudge",
           clientId: c.id,
           phone: c.phone,
-          body: WhatsAppText.personal(WhatsAppText.nudge(post.title, post.dueAt, post.link), c.name),
+          body: WhatsAppText.personal(WhatsAppText.nudge(post.title, post.dueAt, post.link, sign), c.name),
           ref: `class:${itemId}`,
         },
-        sender,
+        sign.sender,
       );
       if (ok) queued++;
     }
@@ -153,5 +153,18 @@ export class WhatsAppClassPosts {
       ORDER BY d.due_date LIMIT 30
     `) as { id: string; number: string; client_name: string; due_date: string; last_reminded: Date | null }[];
     return rows.map((r) => ({ id: r.id, number: r.number, clientName: r.client_name, dueDate: r.due_date, lastReminded: r.last_reminded }));
+  }
+
+  /** Invoices and receipts issued in the last 60 days, newest first, with when WhatsApp last carried each. */
+  async recentDocuments(): Promise<{ id: string; number: string; docType: "invoice" | "receipt"; clientName: string; sentAt: Date; lastSent: Date | null }[]> {
+    const rows = (await this.sql`
+      SELECT d.id, d.number, d.doc_type, d.client_name, d.sent_at,
+        (SELECT max(m.created_at) FROM whatsapp_messages m WHERE m.ref = 'doc:' || d.id AND m.kind = d.doc_type) AS last_sent
+      FROM invoices d
+      WHERE d.doc_type IN ('invoice', 'receipt') AND d.status NOT IN ('draft', 'void') AND d.client_id IS NOT NULL
+        AND d.sent_at > now() - interval '60 days'
+      ORDER BY d.sent_at DESC LIMIT 40
+    `) as { id: string; number: string; doc_type: "invoice" | "receipt"; client_name: string; sent_at: Date; last_sent: Date | null }[];
+    return rows.map((r) => ({ id: r.id, number: r.number, docType: r.doc_type, clientName: r.client_name, sentAt: r.sent_at, lastSent: r.last_sent }));
   }
 }

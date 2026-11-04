@@ -19,7 +19,6 @@ const formFields = (overrides: Record<string, string> = {}) => {
     "terms.default": "net7",
     "terms.days": "",
     "card.note": D.card.note,
-    ...Object.fromEntries(Object.entries(D.whatsapp).map(([key, value]) => [`wa.${key}`, value])),
   };
   for (const [unit, config] of Object.entries(D.units)) {
     fields[`unit.${unit}.label`] = config.label;
@@ -28,12 +27,23 @@ const formFields = (overrides: Record<string, string> = {}) => {
   }
   for (const [type, texts] of Object.entries(D.documents)) {
     fields[`prefix.${type}`] = D.prefixes[type as keyof typeof D.prefixes];
-    for (const [key, value] of Object.entries(texts)) fields[`doc.${type}.${key}`] = value;
+    for (const [key, value] of Object.entries(texts)) if (key !== "whatsapp") fields[`doc.${type}.${key}`] = value;
   }
   return { ...fields, ...overrides };
 };
 
 describe("SettingsContract", () => {
+  it("keeps the stored WhatsApp wording on a Settings save, and edits one wording only by a known name", () => {
+    const stored = SettingsContract.withWhatsAppText(D, "wa.booking", "Hi {firstName}, booked.")!;
+    const parsed = SettingsContract.parse(formFields(), stored);
+    expect(parsed.ok && parsed.settings.whatsapp.booking).toBe("Hi {firstName}, booked.");
+    expect(SettingsContract.withWhatsAppText(D, "doc.receipt", "Paid")?.documents.receipt.whatsapp).toBe("Paid");
+    expect(SettingsContract.withWhatsAppText(D, "wa.__proto__", "x")).toBeNull();
+    expect(SettingsContract.withWhatsAppText(D, "business.name", "x")).toBeNull();
+    expect(SettingsContract.whatsappDefault("doc.invoice")).toBe(D.documents.invoice.whatsapp);
+    expect(SettingsContract.whatsappDefault("wa.toString")).toBeNull();
+  });
+
   it("reads stored settings over the defaults and ignores malformed values", () => {
     const merged = SettingsContract.merge({ business: { name: "FIP", phone: 42 }, vat: { registered: true }, currency: "XXX", prefixes: { invoice: "INV" } });
     expect(merged.business.name).toBe("FIP");

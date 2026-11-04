@@ -95,3 +95,12 @@ export interface GatewayMessage {
   pdfUrl: string | null;
   fileName: string | null;
 }
+
+/** A student in the message composer: what the browser may see (no phone). */
+export interface Recipient {
+  id: string;
+  name: string;
+  courses: string[];
+  /** "CFA Level I · Nov 2026" */
+  batches: string[];
+}
