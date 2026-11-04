@@ -1419,6 +1419,15 @@ const MIGRATIONS: Migration[] = [
       `CREATE INDEX session_requests_client ON session_requests (client_id, starts_at)`,
     ],
   },
+  {
+    // A student moving a confirmed session asks too: the Cal.com booking (reschedule_of) stays until the
+    // owner approves the new time. One waiting move per booking.
+    id: "066_request_reschedule",
+    statements: [
+      `ALTER TABLE session_requests ADD COLUMN reschedule_of text CHECK (char_length(reschedule_of) <= 64)`,
+      `CREATE UNIQUE INDEX session_requests_one_move ON session_requests (reschedule_of) WHERE status = 'pending' AND reschedule_of IS NOT NULL`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

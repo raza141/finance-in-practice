@@ -210,6 +210,10 @@ describe("CalComClient + BookingGateway", () => {
     expect(await gateway.isFree("2026-10-05T05:00:00.000Z", 120, "Asia/Dubai")).toBe(true); // 09:00–11:00
     expect(await gateway.isFree("2026-10-05T06:00:00.000Z", 120, "Asia/Dubai")).toBe(false); // 11:00 not offered
     expect(await gateway.isFree("2026-10-05T08:00:00.000Z", 60, "Asia/Dubai")).toBe(false); // held by a request
+    // Moving a 10:00–12:00 session an hour later: 11:00 is its own hour, 12:00 is still held.
+    const own = { start: "2026-10-05T06:00:00.000Z", end: "2026-10-05T08:00:00.000Z" };
+    expect(await gateway.isFree("2026-10-05T06:00:00.000Z", 60, "Asia/Dubai", own)).toBe(true);
+    expect(await gateway.isFree("2026-10-05T07:00:00.000Z", 120, "Asia/Dubai", own)).toBe(false);
   });
 
   it("reschedules at the same length unless a new length is given", async () => {

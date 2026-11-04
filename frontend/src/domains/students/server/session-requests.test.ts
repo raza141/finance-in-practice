@@ -18,6 +18,7 @@ const request: SessionRequest = {
   mode: "in_person",
   address: "Al Reem Island, Abu Dhabi",
   summary: "Course: CFA Level II\nLength: 2 h",
+  rescheduleOf: null,
   name: "Sara Khan",
   email: "sara@example.com",
   createdAt: "2030-01-01T00:00:00.000Z",
@@ -38,6 +39,17 @@ describe("session requests", () => {
     expect(event).toMatchObject({ kind: "booking", id: `req_${ID}`, status: "pending", session: true, title: "Sara Khan" });
     // Online: no address leaks from the integration key.
     expect(StudentSessions.upcoming([SessionRequestRepository.asBooking({ ...request, mode: "online" })], new Date(0))[0].address).toBeNull();
+  });
+
+  it("a waiting move shows at its new time in place of the session it moves, counted once", () => {
+    const booked = { ...SessionRequestRepository.asBooking(request), uid: "calUid123", status: "accepted", start: "2030-01-06T05:00:00.000Z", end: "2030-01-06T07:00:00.000Z" };
+    const other = { ...booked, uid: "calUid456" };
+    const list = SessionRequestRepository.merge([booked, other], [{ ...request, rescheduleOf: "calUid123" }]);
+    expect(list.map((b) => b.uid)).toEqual(["calUid456", `req_${ID}`]);
+    expect(list[1].metadata.moveOf).toBe("calUid123");
+    expect(Schedule.merge([list[1]], [], [])[0].detail).toBe("Move request: CFA Level II");
+    // A new-session request hides nothing.
+    expect(SessionRequestRepository.merge([booked], [request]).map((b) => b.uid)).toEqual(["calUid123", `req_${ID}`]);
   });
 
   it("an overlapping request answers like a taken slot", () => {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { siteConfig } from "@/core/config/site";
 import { Database, type Sql } from "@/core/db/Database";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ClassroomApi } from "@/domains/classroom/server/ClassroomApi";
@@ -126,7 +127,9 @@ export class WhatsAppScanner {
     // Cal.com's title reads "session between <host> and <student>": name the course instead.
     const title = b.metadata?.course?.trim() || "Your session";
     const where = WhatsAppScanner.where(b);
-    const link = WhatsAppText.manageLink(b.uid);
+    // A student session is moved on the portal, where a move waits for the owner's approval; anything
+    // else (the free diagnostic) on Cal.com's own page.
+    const link = b.eventType?.slug === siteConfig.studentBooking.eventSlug ? WhatsAppText.PORTAL_SESSIONS : WhatsAppText.manageLink(b.uid);
     const body =
       which === "confirmed"
         ? WhatsAppText.bookingConfirmed(client.name, title, start, timeZone, where, link, this.sign, this.settings.whatsapp.booking)

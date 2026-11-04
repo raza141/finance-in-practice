@@ -119,7 +119,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(client.email) ?? [],
       SessionRequestRepository.fromEnv()?.waiting(client.id) ?? [],
     ])
-      .then(([booked, waiting]) => [...booked, ...waiting.map(SessionRequestRepository.asBooking)])
+      .then(([booked, waiting]) => SessionRequestRepository.merge(booked, waiting))
       .catch((error) => {
         console.error("admin: could not load Cal.com sessions", error);
         return null;

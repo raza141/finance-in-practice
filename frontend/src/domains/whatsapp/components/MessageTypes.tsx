@@ -57,7 +57,7 @@ function samples(sign: Signature): Record<string, Record<string, string>> {
   const start = new Date(Date.now() + 26 * 3_600_000);
   const when = WhatsAppText.when(start, WhatsAppText.ZONE);
   const doc = { firstName: "Sara", number: "FIP-INV-0042", amount: "AED 1,500.00", balance: "AED 1,500.00", dueDate: "11 Nov 2026", link: `${siteConfig.url}/invoice/…`, ...sign };
-  const session = { firstName: "Sara", session: "CFA Level I", when, where: "https://meet.google.com/abc-defg-hij", link: WhatsAppText.manageLink("sample"), lead: "in about an hour", ...sign };
+  const session = { firstName: "Sara", session: "CFA Level I", when, where: "https://meet.google.com/abc-defg-hij", link: WhatsAppText.PORTAL_SESSIONS, lead: "in about an hour", ...sign };
   return {
     "wa.booking": session,
     "wa.reminder": session,
@@ -131,7 +131,7 @@ export async function MessageType({ type, settings, link, origin }: { type: Mess
             title={type === "booking" ? "Session confirmed" : "Session reminder"}
             hint={
               type === "booking"
-                ? "Sent automatically when you approve a session request (or book one for a student). The link opens Cal.com's page for that booking, where they can reschedule or cancel. A request you decline gets the second message, with your reason."
+                ? "Sent automatically when you approve a session request (or book one for a student). The link opens the student's portal, where they can move (you approve it) or cancel. A request you decline gets the second message, with your reason."
                 : "Sent automatically an hour before each session booked at least 3 hours ahead, at any hour."
             }
           >

@@ -8,6 +8,7 @@ import { BookingGateway, SlotBlockedError } from "@/domains/booking/server/Booki
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 import { HeldTime } from "@/domains/schedule/server/HeldTime";
+import { RequestNotice } from "@/domains/students/server/RequestNotice";
 import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { StudentBookingContract } from "@/domains/students/services/StudentBookingContract";
@@ -53,7 +54,8 @@ async function ownBooking(request: NextRequest, uid: string): Promise<Response |
  * POST /api/student/bookings/:uid
  *   { action: "reschedule", start } -> moves the session, same length
  *   { action: "cancel" }            -> cancels it
- * Only the student booked on it may change it; Cal.com emails both sides.
+ * Only the student booked on it may change it. A cancel goes to Cal.com (which emails both sides); a
+ * reschedule becomes a request the owner approves, like a new booking (nobody is emailed until then).
  */
 /** A request still waiting for approval: moved or cancelled on our side only, so nobody is emailed. */
 async function changeRequest(request: NextRequest, id: string): Promise<Response> {
@@ -103,11 +105,19 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/api/
       return Response.json({ uid: own.booking.uid, status: "cancelled" }, { headers: NO_STORE });
     }
     if (body.action !== "reschedule") return reject(400, "INVALID_REQUEST", "action must be reschedule or cancel");
+    // A move waits for the owner's approval like a new booking; the session stays where it is until then.
+    const requests = SessionRequestRepository.fromEnv();
+    if (!requests) return reject(503, "NOT_CONFIGURED", "Online booking is not configured.");
     const start = StudentBookingContract.parseStart(body.start);
     const minutes = Math.round((Date.parse(own.booking.end) - Date.parse(own.booking.start)) / 60_000);
-    const result = await new BookingGateway(own.cal, HeldTime.fromEnv()).reschedule(own.booking.uid, start, minutes, own.student.email);
+    const timeZone = own.booking.attendees[0]?.timeZone || "Asia/Dubai";
+    // Its own time counts as free: moving an hour later inside a 2-hour session is fine.
+    const free = await new BookingGateway(own.cal, HeldTime.fromEnv()).isFree(start, minutes, timeZone, own.booking);
+    if (!free) throw new SlotBlockedError();
+    const { uid, summary } = await requests.createMove(own.student.id, own.booking, start, timeZone);
+    await RequestNotice.toOwner(own.student.name, own.student.id, start, minutes, summary, own.booking.start);
     revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
-    return Response.json(result, { headers: NO_STORE });
+    return Response.json({ uid, start, end: new Date(Date.parse(start) + minutes * 60_000).toISOString(), status: "pending" }, { headers: NO_STORE });
   } catch (error) {
     const { status, body: payload } = BookingGateway.errorResponse(error);
     return Response.json(payload, { status, headers: NO_STORE });

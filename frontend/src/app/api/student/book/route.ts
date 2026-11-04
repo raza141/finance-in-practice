@@ -7,10 +7,8 @@ import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { BookingGateway, SlotBlockedError } from "@/domains/booking/server/BookingGateway";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
-import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { HeldTime } from "@/domains/schedule/server/HeldTime";
-import { Schedule } from "@/domains/schedule/services/Schedule";
-import { OwnerNotice } from "@/domains/students/server/OwnerNotice";
+import { RequestNotice } from "@/domains/students/server/RequestNotice";
 import { SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
       TermsRepository.fromEnv()?.acceptedCurrent(student.id) ?? true,
     ]);
     // Requests waiting for approval count towards the upcoming cap and the hours, like booked sessions.
-    const existing = [...booked, ...waiting.map(SessionRequestRepository.asBooking)];
+    const existing = SessionRequestRepository.merge(booked, waiting);
     if (!termsAccepted) return reject(409, "TERMS_NOT_ACCEPTED", "Please accept the terms and conditions at the top of your portal, then book.");
     // A self-joined account can't hold the whole calendar: group classes the instructor added don't count.
     const { maxUpcoming } = siteConfig.studentBooking;
@@ -108,20 +106,7 @@ export async function POST(request: NextRequest) {
     if (!(await new BookingGateway(cal, HeldTime.fromEnv()).isFree(booking.start, booking.minutes, booking.timeZone))) throw new SlotBlockedError();
     const uid = await requests.create(student.id, booking);
     const end = new Date(Date.parse(booking.start) + booking.minutes * 60_000).toISOString();
-    const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
-    await OwnerNotice.send(
-      `Session request: ${student.name}, ${dubai.dateOf(new Date(booking.start))} ${dubai.timeOf(new Date(booking.start))}`,
-      "A session is waiting for your approval",
-      [
-        ["Student", student.name],
-        ["When (Dubai)", `${dubai.dateOf(new Date(booking.start))} ${dubai.timeOf(new Date(booking.start))}, ${booking.minutes / 60} h`],
-        ...StudentBookingContract.summary(booking)
-          .split("\n")
-          .map((line): [string, string] => [line.slice(0, line.indexOf(":")), line.slice(line.indexOf(":") + 1).trim()]),
-      ],
-      student.id,
-      { path: `/admin/schedule?week=${Schedule.weekStart(dubai.dateOf(new Date(booking.start)))}`, label: "Approve or decline" },
-    );
+    await RequestNotice.toOwner(student.name, student.id, booking.start, booking.minutes, StudentBookingContract.summary(booking));
     const result = { uid, start: booking.start, end, status: "pending" };
     revalidateTag(AdminInbox.BOOKINGS_TAG, { expire: 0 });
     return Response.json(result, { status: 200, headers: NO_STORE });

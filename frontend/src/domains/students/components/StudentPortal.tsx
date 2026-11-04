@@ -171,7 +171,7 @@ export function StudentPortal({
         done(
           moving.status === "pending"
             ? `Moved to ${when(selection.start, moving.minutes)}. Still waiting for confirmation.`
-            : `Moved to ${when(selection.start, moving.minutes)}. Cal.com has emailed you the new time.`,
+            : `Requested ${when(selection.start, moving.minutes)}. Your session stays at its current time until it's confirmed, and you'll get an email then.`,
         );
       } else {
         const booking = await client.book({ start: selection.start, timeZone, course, topic, mode, address, notes, mapUrl, minutes: selection.minutes });

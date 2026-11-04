@@ -78,11 +78,14 @@ export class BookingGateway {
   /**
    * True when `minutes` from `start` are free on Cal.com and not blocked or held here: one free hourly
    * slot per hour, the way the portal's grid offers longer sessions. For a request, which Cal.com never sees.
+   * ponytail: a moved session's own hours count as free without re-checking blocks; the owner approves anyway.
    */
-  async isFree(start: string, minutes: number, timeZone: string): Promise<boolean> {
+  async isFree(start: string, minutes: number, timeZone: string, own: TimeRange | null = null): Promise<boolean> {
     const { slots } = await this.day(new ZonedCalendar(timeZone).dateOf(new Date(start)), timeZone);
     const free = new Set(slots.map((s) => s.start));
-    return Array.from({ length: Math.ceil(minutes / 60) }, (_, k) => new Date(Date.parse(start) + k * 3_600_000).toISOString()).every((s) => free.has(s));
+    // `own`: the session being moved, whose hours Cal.com shows as taken.
+    const mine = (hour: number) => own !== null && hour >= Date.parse(own.start) && hour < Date.parse(own.end);
+    return Array.from({ length: Math.ceil(minutes / 60) }, (_, k) => Date.parse(start) + k * 3_600_000).every((h) => free.has(new Date(h).toISOString()) || mine(h));
   }
 
   /** Moves a booking, refused when the new time overlaps time blocked in admin. */

@@ -54,7 +54,7 @@ async function portalData(student: Student) {
         CalComClient.fromEnv(process.env, siteConfig.studentBooking.eventSlug)?.bookingsFor(student.email) ?? [],
         SessionRequestRepository.fromEnv()?.waiting(student.id) ?? [],
       ]);
-      return [...booked, ...waiting.map(SessionRequestRepository.asBooking)];
+      return SessionRequestRepository.merge(booked, waiting);
     }),
     safely("study plan", async (): Promise<StudyPlanItem[]> => (await StudyPlanRepository.fromEnv()?.forClient(student.id)) ?? []),
     safely("classrooms", async () => (await classrooms?.forClient(student.id, student.courses)) ?? []),

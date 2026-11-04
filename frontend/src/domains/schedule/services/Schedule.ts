@@ -83,7 +83,7 @@ export class Schedule {
         start: b.start,
         end: b.end,
         title: b.attendees[0]?.name || b.title,
-        detail: b.metadata.course || (b.metadata.track ? b.metadata.track.toUpperCase() : "Website booking"),
+        detail: `${b.metadata.moveOf ? "Move request: " : ""}${b.metadata.course || (b.metadata.track ? b.metadata.track.toUpperCase() : "Website booking")}`,
         status: b.status,
         email: b.attendees[0]?.email,
         meetingUrl: b.meetingUrl,

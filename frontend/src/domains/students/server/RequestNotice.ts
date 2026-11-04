@@ -3,9 +3,12 @@ import "server-only";
 import { siteConfig } from "@/core/config/site";
 import { EmailHtml } from "@/core/email/EmailHtml";
 import { ResendClient } from "@/core/email/ResendClient";
+import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
+import { Schedule } from "@/domains/schedule/services/Schedule";
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
 
+import { OwnerNotice } from "./OwnerNotice";
 import type { SessionRequest } from "./SessionRequestRepository";
 
 /**
@@ -13,6 +16,23 @@ import type { SessionRequest } from "./SessionRequestRepository";
  * since an approved one is announced by Cal.com (email) and the WhatsApp scan. Never throws.
  */
 export class RequestNotice {
+  /** The owner's heads-up for a new request or a move (`from`: the confirmed time it would replace). Never throws. */
+  static async toOwner(name: string, clientId: string, start: string, minutes: number, summary: string, from: string | null = null): Promise<void> {
+    const dubai = new ZonedCalendar(Schedule.TIME_ZONE);
+    const at = (iso: string) => `${dubai.dateOf(new Date(iso))} ${dubai.timeOf(new Date(iso))}`;
+    const details = summary.split("\n").map((line): [string, string] => {
+      const colon = line.indexOf(":");
+      return colon < 0 ? ["Note", line] : [line.slice(0, colon), line.slice(colon + 1).trim()];
+    });
+    await OwnerNotice.send(
+      `${from ? "Move request" : "Session request"}: ${name}, ${at(start)}`,
+      from ? "A student wants to move a session" : "A session is waiting for your approval",
+      [["Student", name], ...(from ? [["Booked now (Dubai)", at(from)] as [string, string]] : []), [from ? "Wants (Dubai)" : "When (Dubai)", `${at(start)}, ${minutes / 60} h`], ...details.filter(([k]) => k && k !== "Length")],
+      clientId,
+      { path: `/admin/schedule?week=${Schedule.weekStart(dubai.dateOf(new Date(start)))}`, label: "Approve or decline" },
+    );
+  }
+
   static async declined(request: SessionRequest, reason: string): Promise<{ email: boolean; whatsapp: boolean }> {
     const start = new Date(request.start);
     const [email, whatsapp] = await Promise.all([

@@ -33,7 +33,9 @@ export class WhatsAppText {
   static readonly QUIET_FROM = 22;
   static readonly QUIET_UNTIL = 8;
   static readonly PORTAL = `${siteConfig.url}/student`;
-  /** The portal's "Exams & mocks" tab. */
+  /** The portal's sessions tab: where a student moves or cancels a session. */
+  static readonly PORTAL_SESSIONS = `${WhatsAppText.PORTAL}?tab=sessions`;
+    /** The portal's "Exams & mocks" tab. */
   static readonly PORTAL_MOCKS = `${WhatsAppText.PORTAL}?tab=plan`;
 
   /** Cal.com's own page for one booking: reschedule or cancel without signing in. */

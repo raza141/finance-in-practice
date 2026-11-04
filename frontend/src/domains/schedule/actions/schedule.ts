@@ -10,6 +10,7 @@ import { CalComClient } from "@/domains/booking/server/CalComClient";
 import { ZonedCalendar } from "@/domains/booking/services/ZonedCalendar";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { RequestNotice } from "@/domains/students/server/RequestNotice";
+import { WhatsAppText } from "@/domains/whatsapp/services/WhatsAppText";
 import { SessionLogRepository } from "@/domains/students/server/SessionLogRepository";
 import { RequestOverlapError, SessionRequestRepository } from "@/domains/students/server/SessionRequestRepository";
 import { SessionLogContract } from "@/domains/students/services/SessionLogContract";
@@ -215,6 +216,17 @@ async function bookingClient(uid: string): Promise<CalComClient | Exclude<Schedu
   return cal;
 }
 
+/** When the confirmed session a declined move leaves in place starts, in the student's zone; null if unreadable. */
+async function keptTime(uid: string, timeZone: string): Promise<string | null> {
+  try {
+    const booking = await CalComClient.fromEnv()?.booking(uid);
+    return booking && booking.status === "accepted" ? WhatsAppText.when(new Date(booking.start), timeZone) : null;
+  } catch (error) {
+    console.error("[schedule] kept session lookup failed", uid, error);
+    return null;
+  }
+}
+
 function requests(): SessionRequestRepository {
   const repo = SessionRequestRepository.fromEnv();
   if (!repo) throw new Error("DATABASE_URL is not configured");
@@ -234,6 +246,20 @@ async function approveRequest(id: string): Promise<ScheduleActionState> {
   if (!r) return { ok: false, message: "That request was already decided, or its time has passed." };
   const minutes = Math.round((Date.parse(r.end) - Date.parse(r.start)) / 60_000);
   let bookingUid: string;
+  if (r.rescheduleOf) {
+    // A move of a confirmed session: Cal.com moves it and emails both sides the new time (one email).
+    try {
+      const admin = await AdminAuth.require();
+      bookingUid = (await cal.rescheduleBooking(r.rescheduleOf, r.start, admin.email, "Rescheduled at the student's request", minutes)).uid;
+    } catch (error) {
+      console.error("[schedule] approving move failed", id, error);
+      const detail = error instanceof Error ? error.message : "";
+      return { ok: false, message: `Cal.com refused the move${detail ? `: ${detail}` : ""}. The session may have been cancelled, or the time clashes: decline the request.` };
+    }
+    if (!(await repo.decide(id, "approved", { bookingUid }))) console.error("[schedule] move done but not marked approved", id, bookingUid);
+    done();
+    return { ok: true, message: `Moved. Cal.com has emailed ${r.name} the new time.` };
+  }
   try {
     const booking = await new BookingGateway(cal, null).book(
       {
@@ -267,9 +293,11 @@ async function declineRequest(id: string, reason: string): Promise<ScheduleActio
   const repo = requests();
   const r = await repo.open(id);
   if (!r) return { ok: false, message: "That request was already decided, or its time has passed." };
-  const text = reason.trim().slice(0, 300) || "This time isn't available. Please pick another.";
-  if (!(await repo.decide(id, "declined", { reason: text }))) return { ok: false, message: "That request was already decided." };
-  const sent = await RequestNotice.declined(r, text);
+  const given = reason.trim().slice(0, 300) || "This time isn't available. Please pick another.";
+  if (!(await repo.decide(id, "declined", { reason: given }))) return { ok: false, message: "That request was already decided." };
+  // A declined move leaves the confirmed session where it was: say so.
+  const kept = r.rescheduleOf ? await keptTime(r.rescheduleOf, r.timeZone) : null;
+  const sent = await RequestNotice.declined(r, kept ? `${given}\n\nYour session on ${kept} stays booked.` : given);
   done();
   const told = [sent.email && "emailed", sent.whatsapp && "sent a WhatsApp to"].filter(Boolean).join(" and ");
   return { ok: true, message: told ? `Declined. We've ${told} ${r.name}.` : `Declined, but no email or WhatsApp could be sent to ${r.name}: let them know yourself.` };

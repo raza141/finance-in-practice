@@ -7,6 +7,7 @@ import type { CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import type { TimeRange } from "@/domains/schedule/types";
 
 import { StudentBookingContract } from "../services/StudentBookingContract";
+import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentBookingRequest } from "../types";
 
 interface RequestRow {
@@ -19,6 +20,7 @@ interface RequestRow {
   mode: SessionMode;
   address: string;
   summary: string;
+  reschedule_of: string | null;
   created_at: Date;
   name: string;
   email: string;
@@ -35,6 +37,8 @@ export interface SessionRequest {
   mode: SessionMode;
   address: string;
   summary: string;
+  /** A move of this confirmed Cal.com booking, which stays until the move is approved; null for a new session. */
+  rescheduleOf: string | null;
   name: string;
   email: string;
   createdAt: string;
@@ -76,12 +80,43 @@ export class SessionRequestRepository {
       status: "pending",
       title: r.course,
       meetingUrl: null,
-      metadata: { source: "financeinpractice.me/student", clientId: r.clientId, course: r.course },
+      metadata: { source: "financeinpractice.me/student", clientId: r.clientId, course: r.course, ...(r.rescheduleOf ? { moveOf: r.rescheduleOf } : {}) },
       attendees: [{ name: r.name, email: r.email, timeZone: r.timeZone }],
       createdAt: r.createdAt,
       location: r.mode === "online" ? "integrations:google:meet" : r.address,
       eventType: { slug: siteConfig.studentBooking.eventSlug },
     };
+  }
+
+  /**
+   * A student's sessions as they see them: a waiting move shows at its new time in place of the
+   * booking it would move (counted once for hours), which comes back if the move is declined.
+   */
+  static merge(booked: readonly CalBookingDetail[], waiting: readonly SessionRequest[]): CalBookingDetail[] {
+    const moving = new Set(waiting.flatMap((r) => (r.rescheduleOf ? [r.rescheduleOf] : [])));
+    return [...booked.filter((b) => !moving.has(b.uid)), ...waiting.map(SessionRequestRepository.asBooking)];
+  }
+
+  /**
+   * A confirmed session the student wants at `start` (same length, course and place). Throws
+   * RequestOverlapError when that time is held, or when a move of this booking is already waiting.
+   */
+  async createMove(clientId: string, booking: CalBookingDetail, start: string, timeZone: string): Promise<{ uid: string; summary: string }> {
+    const minutes = Math.round((Date.parse(booking.end) - Date.parse(booking.start)) / 60_000);
+    const end = new Date(Date.parse(start) + minutes * 60_000).toISOString();
+    const address = StudentSessions.address(booking.location) ?? "";
+    const course = (booking.metadata?.course || booking.title).slice(0, 500);
+    const summary = [`Course: ${course}`, `Length: ${minutes / 60} h`, `Where: ${address ? `In person: ${address}` : "Online (Google Meet)"}`, "Moved by the student"].join("\n");
+    try {
+      const [row] = (await this.sql`
+        INSERT INTO session_requests (client_id, starts_at, ends_at, time_zone, course, mode, address, summary, reschedule_of)
+        VALUES (${clientId}, ${start}, ${end}, ${timeZone}, ${course}, ${address ? "in_person" : "online"}, ${address.slice(0, 200)}, ${summary}, ${booking.uid})
+        RETURNING id
+      `) as { id: string }[];
+      return { uid: `${SessionRequestRepository.PREFIX}${row.id}`, summary };
+    } catch (error) {
+      throw SessionRequestRepository.isOverlap(error) || Database.isUniqueViolation(error) ? new RequestOverlapError() : error;
+    }
   }
 
   /** Throws RequestOverlapError when another waiting request holds any of that time. */
@@ -105,7 +140,7 @@ export class SessionRequestRepository {
   async waiting(clientId?: string): Promise<SessionRequest[]> {
     if (clientId !== undefined && !UUID.test(clientId)) return [];
     const rows = (await this.sql`
-      SELECT r.id, r.client_id, r.starts_at, r.ends_at, r.time_zone, r.course, r.mode, r.address, r.summary, r.created_at, c.name, c.email
+      SELECT r.id, r.client_id, r.starts_at, r.ends_at, r.time_zone, r.course, r.mode, r.address, r.summary, r.reschedule_of, r.created_at, c.name, c.email
       FROM session_requests r JOIN clients c ON c.id = r.client_id
       WHERE r.status = 'pending' AND r.ends_at > now() AND (${clientId ?? null}::uuid IS NULL OR r.client_id = ${clientId ?? null}::uuid)
       ORDER BY r.starts_at
@@ -117,7 +152,7 @@ export class SessionRequestRepository {
   async open(id: string, clientId?: string): Promise<SessionRequest | null> {
     if (!UUID.test(id)) return null;
     const rows = (await this.sql`
-      SELECT r.id, r.client_id, r.starts_at, r.ends_at, r.time_zone, r.course, r.mode, r.address, r.summary, r.created_at, c.name, c.email
+      SELECT r.id, r.client_id, r.starts_at, r.ends_at, r.time_zone, r.course, r.mode, r.address, r.summary, r.reschedule_of, r.created_at, c.name, c.email
       FROM session_requests r JOIN clients c ON c.id = r.client_id
       WHERE r.id = ${id} AND r.status = 'pending' AND r.starts_at > now()
     `) as RequestRow[];
@@ -173,6 +208,7 @@ export class SessionRequestRepository {
       mode: r.mode,
       address: r.address,
       summary: r.summary,
+      rescheduleOf: r.reschedule_of,
       name: r.name,
       email: r.email,
       createdAt: r.created_at.toISOString(),

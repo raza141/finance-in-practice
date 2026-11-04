@@ -109,7 +109,7 @@ export class StudentSessions {
   }
 
   /** An address, not a meeting link or an integration key such as "integrations:google:meet". */
-  private static address(location: string | null | undefined): string | null {
+  static address(location: string | null | undefined): string | null {
     const value = location?.trim() ?? "";
     if (value.length < 5 || /^(https?:|integrations?:)/i.test(value) || /meet\.google|cal\.com|cal-video/i.test(value)) return null;
     return value;
