@@ -27,7 +27,7 @@ export default async function QuestionPage({ params }: PageProps<"/cfa/questions
   const q = await QuestionPages.bySlug(topic, slug);
   if (!q) notFound();
   const repo = await QuestionPages.repo();
-  const [related, [author]] = await Promise.all([repo?.related(q) ?? [], InstructorRepository.published()]);
+  const [related, [author]] = await Promise.all([repo?.related(q, 500) ?? [], InstructorRepository.published()]);
   return (
     <>
       <JsonLd data={StructuredData.question(q, author)} />

@@ -14,6 +14,7 @@ import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
 import type { Question, QuestionSummary } from "../types";
 import { AnswerPicker } from "./AnswerPicker";
 import { DifficultyMeter } from "./DifficultyMeter";
+import { NextQuestionLink } from "./NextQuestionLink";
 import { QuestionCard } from "./QuestionCard";
 import { ShareBar } from "./ShareBar";
 import { SubscribeForm } from "./SubscribeForm";
@@ -97,6 +98,7 @@ export function QuestionView({
   preview = false,
 }: {
   q: Question;
+  /** Other live questions, same topic first; the first three are listed, all feed "Try another question". */
   related: QuestionSummary[];
   banner?: ReactNode;
   /** The instructor credited on the page; the insight carries their byline. */
@@ -229,12 +231,7 @@ export function QuestionView({
           paceSeconds={QuestionTaxonomy.examPaceSeconds(q.level)}
           next={
             related[0] && !preview ? (
-              <Link
-                href={QuestionTaxonomy.path(related[0])}
-                className="inline-flex h-12 items-center rounded-md border border-line px-6 text-[15px] font-semibold text-ink transition-colors hover:border-quant/60 hover:text-quant"
-              >
-                Try another question
-              </Link>
+              <NextQuestionLink candidates={related.map((r) => ({ code: r.code, path: QuestionTaxonomy.path(r) }))} />
             ) : (
               <Link href="/cfa/questions" className="inline-flex h-12 items-center px-2 text-[15px] text-quant hover:underline">
                 Back to the Question Bank
@@ -262,7 +259,7 @@ export function QuestionView({
         <nav aria-label="Related questions" className="mt-12">
           <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">More questions</h2>
           <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-            {related.map((r) => (
+            {related.slice(0, 3).map((r) => (
               <li key={r.slug}>
                 <QuestionCard q={r} />
               </li>

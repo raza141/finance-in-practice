@@ -80,7 +80,8 @@ export class QuestionRepository {
     return rows.map(QuestionRepository.toSummary);
   }
 
-  /** Up to `limit` other live questions, same topic first, then the newest elsewhere. */
+  /** Up to `limit` other live questions, same topic first, then the newest elsewhere.
+   * ponytail: the public pages ask for 500, enough for "Try another question" to skip answered ones; page it if the bank outgrows that. */
   async related(q: Pick<Question, "id" | "topic">, limit = 3): Promise<QuestionSummary[]> {
     const rows = (await this.sql`
       SELECT code, level, topic, slug, title, difficulty, publish_at FROM cfa_questions

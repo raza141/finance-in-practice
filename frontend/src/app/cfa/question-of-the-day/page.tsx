@@ -25,7 +25,7 @@ export default async function QuestionOfTheDayPage() {
   const q = await QuestionPages.latest();
   if (!q) notFound();
   const repo = await QuestionPages.repo();
-  const [related, [author]] = await Promise.all([repo?.related(q) ?? [], InstructorRepository.published()]);
+  const [related, [author]] = await Promise.all([repo?.related(q, 500) ?? [], InstructorRepository.published()]);
   const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Dubai" }).format(q.publishAt!);
   return (
     <QuestionView
