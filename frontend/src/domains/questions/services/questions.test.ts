@@ -103,7 +103,17 @@ describe("StructuredData.question", () => {
 });
 
 describe("exam pace", () => {
-  it("is 90s at Level I, 180s at Level II and none at Level III", () => {
-    expect([1, 2, 3].map(QuestionTaxonomy.examPaceSeconds)).toEqual([90, 180, null]);
+  it("is 90s at Level I, 180s at Level II, none at Level III and 144s at FRM Part I", () => {
+    expect([1, 2, 3, 4].map(QuestionTaxonomy.examPaceSeconds)).toEqual([90, 180, null, 144]);
+  });
+});
+
+describe("FRM Part I", () => {
+  it("has its own label, topics and code prefix", () => {
+    expect(QuestionTaxonomy.levelLabel(4)).toBe("FRM Part I");
+    expect(QuestionTaxonomy.topicsFor(4).map((t) => t.code)).toEqual(["FRM", "QA", "FMP", "VRM"]);
+    expect(QuestionTaxonomy.topicsFor(1).every((t) => t.exam === "cfa")).toBe(true);
+    expect(QuestionTaxonomy.codePrefix({ level: 4, topic: "valuation-and-risk-models" })).toBe("FIP-FRM-P1-VRM-");
+    expect(QuestionTaxonomy.codePrefix({ level: 1, topic: "fixed-income" })).toBe("FIP-CFA-L1-FI-");
   });
 });

@@ -1,4 +1,4 @@
-// Builds the free Exam Map PDFs in public/resources from the data below.
+// Builds the free Exam Map PDFs in public/resources from the data below: marks, strategy, then the portal and free bank.
 //   node scripts/resources/build-exam-maps.mjs
 // Needs a Chrome binary: CHROME=/path/to/chrome, or Playwright's headless shell in its default cache.
 // Weights mirror the course modules in the database; facts mirror ExamFacts.ts. Update both together.
@@ -30,16 +30,16 @@ const MAPS = [
     ],
     weightSource: "CFA Institute 2027 topic outline",
     weights: [
-      ["Ethical and Professional Standards", "10-15%", true],
-      ["Quantitative Methods", "11-14%", true],
-      ["Financial Statement Analysis", "11-14%", true],
-      ["Equities", "11-14%", true],
-      ["Fixed Income", "11-14%", true],
-      ["Portfolio Construction", "8-12%"],
-      ["Derivatives and Risk Management", "6-9%"],
-      ["Economics", "6-9%"],
-      ["Alternative Investments", "6-9%"],
-      ["Corporate Finance", "6-9%"],
+      ["Ethical and Professional Standards", "10-15%", true, "Code and Standards I–VII · GIPS · applying them to short cases"],
+      ["Quantitative Methods", "11-14%", true, "Time value of money · probability and portfolio maths · hypothesis testing · simple regression"],
+      ["Financial Statement Analysis", "11-14%", true, "The three statements · inventories · long-lived assets · income taxes · reporting quality"],
+      ["Equities", "11-14%", true, "Index construction and weighting · market efficiency (EMH) · industry and company analysis · equity valuation"],
+      ["Fixed Income", "11-14%", true, "Prices and yields · duration and convexity · term structure · credit risk · ABS and MBS"],
+      ["Portfolio Construction", "8-12%", false, "Risk and return · CAPM and the SML · the IPS · behavioural biases"],
+      ["Derivatives and Risk Management", "6-9%", false, "Forwards, futures, swaps and options · cost of carry · put–call parity · binomial model"],
+      ["Economics", "6-9%", false, "Market structures · business cycles · monetary and fiscal policy · exchange rates"],
+      ["Alternative Investments", "6-9%", false, "Private capital · real estate · hedge funds · fees and returns"],
+      ["Corporate Finance", "6-9%", false, "Governance and stakeholders · NPV and IRR · working capital · capital structure"],
     ],
     callout: [
       "The five gold topics are about 55–70% of the exam.",
@@ -63,6 +63,17 @@ const MAPS = [
       ["Formulas are not given.", "Know them well enough to rebuild them, not just recite them."],
       ["Mocks under exam timing", "in the last two weeks show your real pace."],
     ],
+    study: [
+      ["Practise the week you learn.", "Do questions on each reading within days, not saved for the end."],
+      ["Keep an error log.", "Write why each wrong answer was wrong; retake those questions until you get them right twice."],
+      ["Gold topics first, none skipped.", "The 6–9% topics still decide close results."],
+      ["Last month is questions and mocks.", "Reading new material late costs more than it adds."],
+    ],
+    ad: {
+      bank: ["Free daily question", "A new exam-style question on our website every day, each with the worked solution, why the wrong answers are wrong and the exam trap. Every Level I question is here:", "cfa/questions?level=1"],
+      portal: "Our students sit full timed mocks and topic exams on a screen like exam day's, compare every result with the last one, and drill their weakest topic.",
+      shown: "Sample student data.",
+    },
     trademark: CFA_TM,
   },
   {
@@ -77,16 +88,16 @@ const MAPS = [
     ],
     weightSource: "CFA Institute 2027 topic outline",
     weights: [
-      ["Ethical and Professional Standards", "10-15%", true],
-      ["Equities", "10-15%", true],
-      ["Financial Statement Analysis", "10-15%", true],
-      ["Fixed Income", "10-15%", true],
-      ["Portfolio Construction", "10-15%", true],
-      ["Quantitative Methods", "5-10%"],
-      ["Economics", "5-10%"],
-      ["Corporate Finance", "5-10%"],
-      ["Derivatives", "5-10%"],
-      ["Alternative Investments", "5-10%"],
+      ["Ethical and Professional Standards", "10-15%", true, "Code and Standards applied to full case vignettes"],
+      ["Equities", "10-15%", true, "Dividend discount · free cash flow (FCFF, FCFE) · residual income · multiples · private companies"],
+      ["Financial Statement Analysis", "10-15%", true, "Intercorporate investments · pensions and share-based pay · multinationals · earnings quality"],
+      ["Fixed Income", "10-15%", true, "Term structure · binomial trees · bonds with embedded options · credit models · CDS"],
+      ["Portfolio Construction", "10-15%", true, "Multifactor models · VaR and risk measures · backtesting and simulation"],
+      ["Quantitative Methods", "5-10%", false, "Multiple regression and its diagnostics · time series · machine learning"],
+      ["Economics", "5-10%", false, "Exchange-rate parity conditions · economic growth"],
+      ["Corporate Finance", "5-10%", false, "Dividends and buybacks · cost of capital · ESG · restructuring"],
+      ["Derivatives", "5-10%", false, "Pricing forwards, futures and swaps · binomial and Black–Scholes–Merton · Greeks"],
+      ["Alternative Investments", "5-10%", false, "Real estate and REITs · private capital · commodities"],
     ],
     callout: [
       "The five gold topics are 50–75% of the exam.",
@@ -110,6 +121,17 @@ const MAPS = [
       ["Cases include data you don't need.", "Spotting the right number is half the question."],
       ["No penalty for wrong answers.", "Never leave a question blank."],
     ],
+    study: [
+      ["Practise item sets, not single questions.", "Level II rewards reading a case fast; drill full vignettes from week one."],
+      ["Start valuation early.", "Equity, fixed income and FSA build on each other and take the longest."],
+      ["Keep an error log.", "Write why each wrong answer was wrong; retake those questions until you get them right twice."],
+      ["Last month is mocks.", "Full item-set mocks under time show your real pace."],
+    ],
+    ad: {
+      bank: ["Free Question Bank", "Original exam-style Level II questions on our website, each with the worked solution, why the wrong answers are wrong and the exam trap.", "cfa/questions?level=2"],
+      portal: "Our students sit timed mocks and topic exams on a screen like exam day's, compare every result with the last one, and drill their weakest topic.",
+      shown: "Shown: a Level I student, sample data.",
+    },
     trademark: CFA_TM,
   },
   {
@@ -124,20 +146,14 @@ const MAPS = [
     ],
     weightSource: "GARP 2026 FRM Part I study guide",
     weights: [
-      ["Valuation and Risk Models", "30%", true],
-      ["Financial Markets and Products", "30%", true],
-      ["Quantitative Analysis", "20%"],
-      ["Foundations of Risk Management", "20%"],
+      ["Valuation and Risk Models", "30%", true, "VaR and expected shortfall · bond pricing, duration, convexity · option models and Greeks · credit and operational risk · stress testing"],
+      ["Financial Markets and Products", "30%", true, "Futures and hedging · forward and swap pricing · option strategies and exotics · interest rates · MBS · banks, insurers, funds"],
+      ["Quantitative Analysis", "20%", false, "Probability and distributions · hypothesis testing · regression and diagnostics · time series · volatility · simulation"],
+      ["Foundations of Risk Management", "20%", false, "Governance and ERM · CAPM, APT and performance measures · classic failures and the GFC · GARP Code of Conduct"],
     ],
     callout: [
       "The two gold topics are 60% of the exam.",
       "Valuation and Risk Models and Financial Markets and Products decide most results. Quant is the toolkit both of them use.",
-    ],
-    covers: [
-      ["Valuation and Risk Models", "Measure market, credit and operational risk, and value the instruments behind it: VaR, bond and option pricing, stress testing."],
-      ["Financial Markets and Products", "How banks, funds and derivatives markets work, and how each product transfers risk."],
-      ["Quantitative Analysis", "Probability, regression and time-series tools used to model risk."],
-      ["Foundations of Risk Management", "How firms govern risk, CAPM and performance measures, and what went wrong in the classic failures."],
     ],
     windows: "FRM Part I runs in May, August and November. Check dates and fees at garp.org.",
     pace: "About 20 hours a week. Studying 12 hours a week? Stretch the same order over 20 weeks.",
@@ -154,6 +170,17 @@ const MAPS = [
       ["Approved calculators only.", "TI BA II Plus or HP 12C models: practise on the one you will use."],
       ["Formulas are not given.", "Know them well enough to rebuild them."],
     ],
+    study: [
+      ["Refresh the maths first.", "Quant is the toolkit for both gold topics; weak statistics slows everything after it."],
+      ["Practise on your exam calculator.", "Bond, option and VaR questions are speed tests as much as knowledge tests."],
+      ["Keep an error log.", "Write why each wrong answer was wrong; retake those questions until you get them right twice."],
+      ["Last month is questions and mocks.", "Full mocks under time show your real pace."],
+    ],
+    ad: {
+      bank: ["Free Question Bank", "Original FRM Part I questions on our website, each with the worked solution, why the wrong answers are wrong and the exam trap.", "cfa/questions?level=frm"],
+      portal: "Sessions, your study plan and progress in one place. Timed FRM Part I mocks and topic drills are coming soon; this is how they already work for our CFA students.",
+      shown: "Shown: the CFA Level I portal, sample data.",
+    },
     trademark: FRM_TM,
   },
 ];
@@ -163,12 +190,14 @@ const mid = (w) => {
   const n = w.match(/\d+(?:\.\d+)?/g).map(Number);
   return n.length === 1 ? n[0] : (n[0] + n[1]) / 2;
 };
+// Real portal screens (MockPlayer, ProgressPanel, MockLobby) rendered locally with sample data, never a student's records.
+const SHOT = (name) => `file://${join(ROOT, "scripts/resources/shots", name)}`;
 
 const CSS = `
 @page { size: A4; margin: 0 }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact }
 body { margin:0; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color:#0f172a }
-.page { width:210mm; height:297mm; padding:30mm 16mm 22mm; position:relative; page-break-after: always; overflow:hidden }
+.page { width:210mm; height:297mm; padding:28mm 16mm 22mm; position:relative; page-break-after: always; overflow:hidden }
 .page:last-child { page-break-after: auto }
 .head { position:absolute; inset:0 0 auto; height:18mm; background:#0b1120; display:flex; align-items:center; justify-content:space-between; padding:0 16mm; border-bottom:.8mm solid #d4af37 }
 .head img { height:8.5mm }
@@ -176,75 +205,114 @@ body { margin:0; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif
 .foot { position:absolute; left:16mm; right:16mm; bottom:8mm; display:flex; justify-content:space-between; border-top:1px solid #e2e8f0; padding-top:2.5mm; font-size:7.5pt; color:#64748b }
 .foot a { color:#0e7490; text-decoration:none }
 .eyebrow { font: 600 9pt/1 Menlo, monospace; letter-spacing:.2em; color:#0e7490; text-transform:uppercase }
-h1 { font: 700 28pt/1.1 Georgia, serif; margin:3mm 0 2mm }
+h1 { font: 700 26pt/1.1 Georgia, serif; margin:3mm 0 2mm }
 h1 em { color:#b8921f; font-style:italic }
 .sub { color:#475569; font-size:11pt; margin:0 }
-h2 { font: 700 15pt/1.2 Georgia, serif; margin:9mm 0 3mm }
-.facts { display:flex; gap:4mm; margin-top:7mm }
-.fact { flex:1; border:1px solid #e2e8f0; border-top:1mm solid #22d3ee; border-radius:2mm; padding:4mm }
-.fact b { display:block; font: 700 19pt/1 Menlo, monospace }
+h2 { font: 700 15pt/1.2 Georgia, serif; margin:7mm 0 2.5mm }
+.facts { display:flex; gap:4mm; margin-top:6mm }
+.fact { flex:1; border:1px solid #e2e8f0; border-top:1mm solid #22d3ee; border-radius:2mm; padding:3.5mm 4mm }
+.fact b { display:block; font: 700 18pt/1 Menlo, monospace }
 .fact span { display:block; margin-top:1.5mm; font-size:8.5pt; color:#64748b }
 table { width:100%; border-collapse:collapse }
-.weights td { padding:2.2mm 0; font-size:10pt; vertical-align:middle; border-bottom:1px solid #f1f5f9 }
-.weights .t { width:64mm }
-.weights .w { width:18mm; text-align:right; font-family:Menlo,monospace; font-size:9pt }
-.weights .bar span { display:block; height:4mm; border-radius:1mm; background:#67b7c9 }
+.weights td { padding:1.6mm 0; font-size:10pt; vertical-align:top; border-bottom:1px solid #f1f5f9 }
+.weights .t { width:112mm; padding-right:4mm }
+.weights .t small { display:block; font-size:8pt; color:#64748b; line-height:1.35; margin-top:.6mm }
+.weights .w { width:16mm; text-align:right; font-family:Menlo,monospace; font-size:9pt }
+.weights .bar { padding-top:2.4mm }
+.weights .bar span { display:block; height:3.2mm; border-radius:1mm; background:#67b7c9 }
 .weights .bar span.hi { background:#d4af37 }
 .legend { font-size:8.5pt; color:#64748b; margin-top:2mm }
 .legend i { display:inline-block; width:3mm; height:3mm; background:#d4af37; border-radius:.6mm; vertical-align:-.4mm; margin:0 1mm 0 0 }
-.callout { margin-top:6mm; border-left:1.2mm solid #d4af37; background:#fdf8e8; padding:4mm 5mm; font-size:10.5pt; line-height:1.45 }
-.note { margin-top:5mm; font-size:9pt; color:#475569 }
-.plan td { padding:2.6mm 0; border-bottom:1px solid #f1f5f9; font-size:10pt; vertical-align:top }
+.callout { margin-top:4mm; border-left:1.2mm solid #d4af37; background:#fdf8e8; padding:3mm 5mm; font-size:10pt; line-height:1.45 }
+.note { margin-top:3mm; font-size:9pt; color:#475569 }
+.plan td { padding:2.2mm 0; border-bottom:1px solid #f1f5f9; font-size:10pt; vertical-align:top }
 .plan .wk { width:22mm; font: 700 9pt Menlo, monospace; color:#0e7490 }
 .plan span { color:#64748b; font-size:9pt }
-ul { margin:0; padding-left:5mm; font-size:10pt; line-height:1.55 }
-.cta { margin-top:7mm; background:#0b1120; color:#f8fafc; border-radius:3mm; padding:6mm 7mm }
-.cta b { font: 700 15pt Georgia, serif; color:#d4af37 }
-.cta p { margin:2mm 0 0; font-size:10pt; color:#cbd5e1 }
+ul { margin:0; padding-left:5mm; font-size:10pt; line-height:1.5 }
+ul li { margin-bottom:.8mm }
+.shots { display:grid; grid-template-columns: 1fr 1fr; gap:4mm; margin-top:5mm }
+.shots figure { margin:0 }
+.shots img { width:100%; display:block; border-radius:2mm; border:1px solid #1e293b }
+.shots figcaption { font-size:8.5pt; color:#475569; margin-top:1.5mm; line-height:1.35 }
+.shots figcaption b { color:#0f172a }
+.shown { font-size:7.5pt; color:#94a3b8; margin-top:2mm }
+.bank { align-self:start; border:1px solid #e2e8f0; border-left:1.2mm solid #22d3ee; border-radius:2mm; padding:4mm 5mm }
+.bank b { font: 700 13pt Georgia, serif }
+.bank p { margin:1.5mm 0 0; font-size:9.5pt; line-height:1.45; color:#334155 }
+.bank a, .portal a { color:#0e7490; text-decoration:none; font-family:Menlo,monospace; font-size:9pt }
+.portal { font-size:10pt; line-height:1.45; color:#334155; margin:2mm 0 0 }
+.cta { margin-top:5mm; background:#0b1120; color:#f8fafc; border-radius:3mm; padding:5mm 7mm }
+.cta b { font: 700 14pt Georgia, serif; color:#d4af37 }
+.cta p { margin:1.5mm 0 0; font-size:9.5pt; color:#cbd5e1 }
 .cta a { color:#22d3ee; text-decoration:none }
-.disclaimer { position:absolute; left:16mm; right:16mm; bottom:18mm; font-size:7pt; color:#94a3b8; line-height:1.45 }
+.disclaimer { position:absolute; left:16mm; right:16mm; bottom:16mm; font-size:7pt; color:#94a3b8; line-height:1.45 }
 `;
 
-function page(map, n, total, body, last = false) {
+const TOTAL = 3;
+
+function page(map, n, body) {
   return `<section class="page">
   <div class="head"><img src="${LOGO}" alt="Finance in Practice"><span>Free guide · ${esc(map.exam)} Exam Map</span></div>
   ${body}
-  ${last ? `<p class="disclaimer">For educational purposes only. Finance in Practice does not provide financial, investment or regulated advisory services. ${esc(map.trademark)}</p>` : ""}
-  <div class="foot"><span><a href="https://${SITE}">${SITE}</a> · WhatsApp <a href="${WHATSAPP.href}">${WHATSAPP.label}</a></span><span>Page ${n} of ${total}</span></div>
+  ${n === TOTAL ? `<p class="disclaimer">For educational purposes only. Finance in Practice does not provide financial, investment or regulated advisory services. ${esc(map.trademark)}</p>` : ""}
+  <div class="foot"><span><a href="https://${SITE}">${SITE}</a> · WhatsApp <a href="${WHATSAPP.href}">${WHATSAPP.label}</a></span><span>Page ${n} of ${TOTAL}</span></div>
 </section>`;
 }
+
+const link = (path) => `<a href="https://${SITE}/${path}">${SITE}/${path}</a>`;
 
 function html(map) {
   const top = Math.max(...map.weights.map(([, w]) => mid(w)));
   const weights = map.weights
-    .map(([t, w, hi]) => `<tr><td class="t">${esc(t)}</td><td class="bar"><span class="${hi ? "hi" : ""}" style="width:${Math.round((mid(w) / top) * 100)}%"></span></td><td class="w">${w}</td></tr>`)
+    .map(
+      ([t, w, hi, master]) =>
+        `<tr><td class="t"><b>${esc(t)}</b><small>${esc(master)}</small></td><td class="bar"><span class="${hi ? "hi" : ""}" style="width:${Math.round((mid(w) / top) * 100)}%"></span></td><td class="w">${w}</td></tr>`,
+    )
     .join("");
-  const first = `
+
+  const marks = `
   <div class="eyebrow">Finance in Practice · Free guide</div>
   <h1>${esc(map.exam).replace("®", '<sup style="font-size:.45em">®</sup>')} <em>Exam Map</em></h1>
   <p class="sub">${esc(map.sub)}</p>
   <div class="facts">${map.facts.map(([v, l]) => `<div class="fact"><b>${v}</b><span>${esc(l)}</span></div>`).join("")}</div>
-  <h2>Where the marks are</h2>
+  <h2>Where the marks are, and what to master</h2>
   <table class="weights">${weights}</table>
   <p class="legend"><i></i>High priority: the heaviest topics. Weights: ${esc(map.weightSource)}.</p>
   <div class="callout"><b>${esc(map.callout[0])}</b> ${esc(map.callout[1])}</div>
-  ${map.covers ? `<h2>What each topic covers</h2><ul>${map.covers.map(([t, d]) => `<li><b>${esc(t)}.</b> ${esc(d)}</li>`).join("")}</ul>` : ""}
   <p class="note"><b>Exam windows:</b> ${esc(map.windows)}</p>`;
-  const second = `
-  <div class="eyebrow">12-week route</div>
-  <h2 style="margin-top:3mm">A plan that follows how topics build on each other</h2>
-  <p style="font-size:10pt;color:#475569;margin:0 0 3mm">${esc(map.pace)}</p>
+
+  const strategy = `
+  <div class="eyebrow">Strategy</div>
+  <h2 style="margin-top:3mm">A 12-week route that follows how topics build on each other</h2>
+  <p style="font-size:10pt;color:#475569;margin:0 0 2mm">${esc(map.pace)}</p>
   <table class="plan">${map.plan.map(([wk, t, s]) => `<tr><td class="wk">${wk}</td><td><b>${esc(t)}</b><br><span>${esc(s)}</span></td></tr>`).join("")}</table>
+  <h2>How to study it</h2>
+  <ul>${map.study.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>
   <h2>Exam-day rules worth knowing</h2>
-  <ul>${map.rules.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>
+  <ul>${map.rules.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>`;
+
+  const [bankTitle, bankText, bankPath] = map.ad.bank;
+  const practise = `
+  <div class="eyebrow">Practise with us</div>
+  <h2 style="margin-top:3mm">Your prep keeps going between sessions</h2>
+  <p class="portal">${esc(map.ad.portal)} ${link("#portal")}</p>
+  <div class="shots">
+    <figure><img src="${SHOT("mock-player.png")}" alt=""><figcaption><b>Exam-day screen.</b> Clock, question map, flags, crossing out and notes.</figcaption></figure>
+    <figure><img src="${SHOT("progress.png")}" alt=""><figcaption><b>Results compared.</b> Every mock and every topic against your last attempt.</figcaption></figure>
+    <figure><img src="${SHOT("topic-drill.png")}" alt=""><figcaption><b>Topic exams and a weakest-topic drill.</b> Missed questions wait in a notebook until you get them right twice.</figcaption></figure>
+    <div class="bank"><b>${esc(bankTitle)}</b><p>${esc(bankText)}</p><p>${link(bankPath)}</p></div>
+  </div>
+  <p class="shown">${esc(map.ad.shown)}</p>
   <div class="cta">
     <b>Want this plan built around your exam date?</b>
     <p>Book a free 30-minute diagnostic session. We find your weak topics and map your route to exam day. At your home in Abu Dhabi or live online.</p>
     <p><a href="https://${SITE}/#book">${SITE}/#book</a> &nbsp;·&nbsp; WhatsApp <a href="${WHATSAPP.href}">${WHATSAPP.label}</a></p>
   </div>`;
+
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(map.exam)} Exam Map</title><style>${CSS}</style></head><body>
-${page(map, 1, 2, first)}
-${page(map, 2, 2, second, true)}
+${page(map, 1, marks)}
+${page(map, 2, strategy)}
+${page(map, 3, practise)}
 </body></html>`;
 }
 

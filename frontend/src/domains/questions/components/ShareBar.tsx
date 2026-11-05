@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
  * "Challenge a friend": WhatsApp and LinkedIn with the question link ready to send,
  * the phone's own share sheet where the browser has one, and a copy-link fallback.
  */
-export function ShareBar({ url, title }: { url: string; title: string }) {
+export function ShareBar({ url, title, exam = "CFA" }: { url: string; title: string; exam?: string }) {
   const [copied, setCopied] = useState(false);
   const [native, setNative] = useState(false);
-  const message = `Can you solve this CFA question? ${title}`;
+  const message = `Can you solve this ${exam} question? ${title}`;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the share sheet only exists in some browsers; checked after hydration
@@ -39,7 +39,7 @@ export function ShareBar({ url, title }: { url: string; title: string }) {
         <h2 id="challenge-friend" className="font-sans text-lg font-semibold text-gold">
           Challenge a friend
         </h2>
-        <p className="mt-1 text-sm text-muted">Send this question to someone studying for the CFA exam.</p>
+        <p className="mt-1 text-sm text-muted">Send this question to someone studying for the {exam} exam.</p>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
         <a

@@ -17,7 +17,7 @@ const PATH = "/cfa/question-of-the-day";
 export async function generateMetadata(): Promise<Metadata> {
   const q = await QuestionPages.latest();
   if (!q) return { title: "CFA Question of the Day", robots: { index: false } };
-  return QuestionPages.metadata(q, { title: `CFA Question of the Day: ${q.title}`, url: `${siteConfig.url}${PATH}` });
+  return QuestionPages.metadata(q, { title: `${QuestionTaxonomy.examName(q.level)} Question of the Day: ${q.title}`, url: `${siteConfig.url}${PATH}` });
 }
 
 /** The stable link for a LinkedIn profile or bio: always the latest live question. */

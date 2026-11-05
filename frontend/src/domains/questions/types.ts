@@ -1,3 +1,5 @@
+import type { QuestionLevel } from "./services/QuestionTaxonomy";
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 /** One answer choice; `why` says why it is wrong (or, for the correct one, may stay empty). */
@@ -8,7 +10,7 @@ export interface QuestionOption {
 
 /** What the admin form edits. Text fields use the journal's inline markup: $…$ and $$…$$ for maths. */
 export interface QuestionInput {
-  level: 1 | 2 | 3;
+  level: QuestionLevel;
   topic: string;
   subtopic: string;
   difficulty: Difficulty;

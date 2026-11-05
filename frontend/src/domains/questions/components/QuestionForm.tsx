@@ -120,16 +120,30 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Level">
-            <select {...bind("level")} className={FIELD}>
-              <option value="1">CFA Level I</option>
-              <option value="2">CFA Level II</option>
-              <option value="3">CFA Level III</option>
+            <select
+              {...bind("level")}
+              onChange={(e) => {
+                const level = Number(e.target.value);
+                setD((prev) => ({
+                  ...prev,
+                  level: e.target.value,
+                  // A CFA topic can't stay on an FRM question, and the other way round.
+                  topic: QuestionTaxonomy.topicsFor(level).some((t) => t.slug === prev.topic) ? prev.topic : "",
+                }));
+              }}
+              className={FIELD}
+            >
+              {QuestionTaxonomy.LEVELS.map((l) => (
+                <option key={l} value={l}>
+                  {QuestionTaxonomy.levelLabel(l)}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Topic">
             <select {...bind("topic")} required disabled={live} className={FIELD}>
               <option value="">Choose…</option>
-              {QuestionTaxonomy.TOPICS.map((t) => (
+              {QuestionTaxonomy.topicsFor(Number(d.level)).map((t) => (
                 <option key={t.slug} value={t.slug}>
                   {t.name}
                 </option>
@@ -192,7 +206,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
                   {...bind(`option${i}`)}
                   required={i < 3}
                   maxLength={1000}
-                  placeholder={i === 3 ? "Optional (CFA exams use three options)" : `Option ${QuestionTaxonomy.letter(i)}`}
+                  placeholder={i === 3 ? (QuestionTaxonomy.examOf(Number(d.level)) === "frm" ? "Option D (FRM exams use four)" : "Optional (CFA exams use three options)") : `Option ${QuestionTaxonomy.letter(i)}`}
                   aria-label={`Option ${QuestionTaxonomy.letter(i)}`}
                   className={`${FIELD} mt-0`}
                 />

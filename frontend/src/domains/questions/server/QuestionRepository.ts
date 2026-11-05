@@ -2,7 +2,7 @@ import "server-only";
 
 import { Database, type Sql } from "@/core/db/Database";
 
-import { QuestionTaxonomy } from "../services/QuestionTaxonomy";
+import { type QuestionLevel, QuestionTaxonomy } from "../services/QuestionTaxonomy";
 import type { Difficulty, Question, QuestionInput, QuestionOption, QuestionSummary, QuestionSwitch } from "../types";
 
 interface QuestionRow {
@@ -99,7 +99,7 @@ export class QuestionRepository {
   }
 
   async create(q: QuestionInput): Promise<string> {
-    const prefix = QuestionRepository.codePrefix(q);
+    const prefix = QuestionTaxonomy.codePrefix(q);
     const [row] = (await this.sql`
       INSERT INTO cfa_questions (code, level, topic, subtopic, difficulty, slug, title, description, stem, options, correct,
                                  formula, solution, trap, insight, image_url, image_alt, source, publish_at)
@@ -117,7 +117,7 @@ export class QuestionRepository {
 
   /** The code follows level and topic while it is still a draft; the caller locks those once live. */
   async update(id: string, q: QuestionInput): Promise<void> {
-    const prefix = QuestionRepository.codePrefix(q);
+    const prefix = QuestionTaxonomy.codePrefix(q);
     await this.sql`
       UPDATE cfa_questions SET
         code = CASE WHEN code LIKE ${`${prefix}%`} THEN code ELSE
@@ -152,16 +152,11 @@ export class QuestionRepository {
     return row ? QuestionRepository.toQuestion(row) : null;
   }
 
-  /** "FIP-CFA-L1-FI-". */
-  static codePrefix(q: Pick<QuestionInput, "level" | "topic">): string {
-    return `FIP-CFA-L${q.level}-${QuestionTaxonomy.topic(q.topic)?.code ?? "GEN"}-`;
-  }
-
   private static toQuestion(r: QuestionRow): Question {
     return {
       id: r.id,
       code: r.code,
-      level: r.level as 1 | 2 | 3,
+      level: r.level as QuestionLevel,
       topic: r.topic,
       subtopic: r.subtopic,
       difficulty: r.difficulty,

@@ -256,7 +256,7 @@ export function QuestionView({
 
       {q.source && <p className="mt-8 text-sm text-muted">Covers: {q.source}</p>}
 
-      {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} title={q.title} />}
+      {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} title={q.title} exam={QuestionTaxonomy.examName(q.level)} />}
 
       {related.length > 0 && (
         <nav aria-label="Related questions" className="mt-12">
@@ -273,7 +273,7 @@ export function QuestionView({
 
       <section aria-labelledby="qotd-subscribe" className="mt-12 rounded-xl border border-gold/40 bg-gold/5 p-6">
         <h2 id="qotd-subscribe" className="text-xl font-bold">
-          Get tomorrow&rsquo;s CFA question
+          Get tomorrow&rsquo;s question
         </h2>
         <p className="mt-1 text-sm text-muted">One exam-style question a day with a full worked solution. Free, unsubscribe anytime.</p>
         <div className="mt-4">

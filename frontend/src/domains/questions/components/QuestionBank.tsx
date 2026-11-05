@@ -36,6 +36,8 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
 
   const set = (name: keyof BankFilters, value: string) => {
     const next = { ...filters, [name]: filters[name] === value ? "" : value };
+    // A CFA topic filter can't stay on under FRM (its button is hidden there), and the other way round.
+    if (name === "level" && next.level && next.topic && !QuestionTaxonomy.topicsFor(Number(next.level)).some((t) => t.slug === next.topic)) next.topic = "";
     setFilters(next);
     const params = new URLSearchParams(Object.entries(next).filter(([, v]) => v));
     window.history.replaceState(null, "", params.toString() ? `?${params}` : window.location.pathname);
@@ -91,10 +93,10 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
       </label>
 
       <Group title="Level">
-        <div className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-canvas p-1">
+        <div className="grid grid-cols-4 gap-1 rounded-lg border border-line bg-canvas p-1">
           {QuestionTaxonomy.LEVELS.map((l) => (
             <Segment key={l} on={filters.level === String(l)} onClick={() => set("level", String(l))} empty={!levelCounts[l]}>
-              <span className="font-serif text-base font-bold">{"I".repeat(l)}</span>
+              <span className="font-serif text-base font-bold">{QuestionTaxonomy.levelShort(l)}</span>
               <span className="text-[11px] text-muted tabular-nums">{levelCounts[l] ?? 0}</span>
             </Segment>
           ))}
@@ -125,7 +127,7 @@ export function QuestionBank({ questions, today, initial }: { questions: Questio
 
       <Group title="Topic">
         <ul className="-mx-2 space-y-0.5">
-          {QuestionTaxonomy.TOPICS.map((t) => {
+          {(filters.level ? QuestionTaxonomy.topicsFor(Number(filters.level)) : QuestionTaxonomy.TOPICS).map((t) => {
             const on = filters.topic === t.slug;
             const n = topicCounts[t.slug] ?? 0;
             return (

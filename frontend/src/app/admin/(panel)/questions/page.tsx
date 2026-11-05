@@ -9,7 +9,7 @@ import { QuestionContract } from "@/domains/questions/services/QuestionContract"
 import { QuestionTaxonomy } from "@/domains/questions/services/QuestionTaxonomy";
 import { PageHeader, PRIMARY_ACTION } from "@/domains/admin/components/PageHeader";
 
-export const metadata: Metadata = { title: "CFA questions" };
+export const metadata: Metadata = { title: "Questions" };
 
 function Switch({ name, on, label, detail, owner }: { name: "pages" | "emails"; on: boolean; label: string; detail: string; owner: boolean }) {
   return (
@@ -109,7 +109,7 @@ export default async function AdminQuestionsPage() {
                       <span className="block font-mono text-[11px] text-muted">{q.code}</span>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      L{q.level} · {QuestionTaxonomy.topic(q.topic)?.name ?? q.topic}
+                      {QuestionTaxonomy.levelLabel(q.level)} · {QuestionTaxonomy.topic(q.topic)?.name ?? q.topic}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
                       {q.publishAt === null ? (

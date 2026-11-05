@@ -125,7 +125,7 @@ const CARDS: { tag: string; title: string; shot: ReactNode; points: string[] }[]
 
 export function StudyPortalSection() {
   return (
-    <section aria-labelledby="portal-heading" className="border-t border-line">
+    <section id="portal" aria-labelledby="portal-heading" className="border-t border-line">
       <div className="page-container py-12 lg:py-16">
         <SectionHeading
           id="portal-heading"

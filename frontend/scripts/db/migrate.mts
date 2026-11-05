@@ -1428,6 +1428,15 @@ const MIGRATIONS: Migration[] = [
       `CREATE UNIQUE INDEX session_requests_one_move ON session_requests (reschedule_of) WHERE status = 'pending' AND reschedule_of IS NOT NULL`,
     ],
   },
+  {
+    // FRM Part I joins the free Question Bank as level 4 (1–3 stay CFA Levels I–III);
+    // its four topics are slugs like the CFA ones, so the topic check already fits.
+    id: "067_frm_questions",
+    statements: [
+      `ALTER TABLE cfa_questions DROP CONSTRAINT cfa_questions_level_check`,
+      `ALTER TABLE cfa_questions ADD CONSTRAINT cfa_questions_level_check CHECK (level IN (1, 2, 3, 4))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

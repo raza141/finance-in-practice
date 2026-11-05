@@ -1,5 +1,5 @@
 import type { Difficulty, QuestionInput, QuestionOption } from "../types";
-import { QuestionTaxonomy } from "./QuestionTaxonomy";
+import { type QuestionLevel, QuestionTaxonomy } from "./QuestionTaxonomy";
 
 export class QuestionValidationError extends Error {}
 
@@ -21,9 +21,9 @@ export class QuestionContract {
     };
 
     const level = Number(form.get("level"));
-    if (level !== 1 && level !== 2 && level !== 3) fail("Pick a CFA level.");
+    if (!QuestionTaxonomy.LEVELS.includes(level as QuestionLevel)) fail("Pick a level.");
     const topic = str("topic", 60);
-    if (!QuestionTaxonomy.topic(topic)) fail("Pick a topic.");
+    if (!QuestionTaxonomy.topicsFor(level).some((t) => t.slug === topic)) fail(`Pick a ${QuestionTaxonomy.levelLabel(level)} topic.`);
     const difficulty = str("difficulty", 10) as Difficulty;
     if (!QuestionTaxonomy.DIFFICULTIES.includes(difficulty)) fail("Pick a difficulty.");
 
@@ -52,7 +52,7 @@ export class QuestionContract {
     if (status === "publish" && !publishAt) fail("Pick the date and time it goes live.");
 
     return {
-      level: level as 1 | 2 | 3,
+      level: level as QuestionLevel,
       topic,
       subtopic: str("subtopic", 80),
       difficulty,

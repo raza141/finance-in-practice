@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: PageProps<"/cfa/questions/[to
   if (!topic) return { title: "Topic not found", robots: { index: false } };
   const count = (await (await QuestionPages.repo())?.liveSummaries(topic.slug))?.length ?? 0;
   return {
-    title: `CFA ${topic.name} Practice Questions`,
-    description: `Original CFA exam-style ${topic.name} questions with step-by-step solutions, why each wrong answer is wrong and the common exam trap.`,
+    title: `${topic.exam.toUpperCase()} ${topic.name} Practice Questions`,
+    description: `Original ${topic.exam.toUpperCase()} exam-style ${topic.name} questions with step-by-step solutions, why each wrong answer is wrong and the common exam trap.`,
     alternates: { canonical: `/cfa/questions/${topic.slug}` },
     // An empty topic is a thin page; it becomes indexable with its first question.
     ...(count === 0 && { robots: { index: false } }),
@@ -48,7 +48,7 @@ export default async function QuestionTopicPage({ params }: PageProps<"/cfa/ques
         ← Question Bank
       </Link>
       <h1 className="mt-6 text-4xl leading-tight font-black sm:text-5xl">{topic.name} questions</h1>
-      <p className="mt-4 max-w-2xl text-lg text-muted">CFA exam-style {topic.name} questions, each with a full worked solution.</p>
+      <p className="mt-4 max-w-2xl text-lg text-muted">{topic.exam.toUpperCase()} exam-style {topic.name} questions, each with a full worked solution.</p>
       {questions.length === 0 ? (
         <p className="mt-12 text-muted">No {topic.name} questions yet.</p>
       ) : (
