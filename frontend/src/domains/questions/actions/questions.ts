@@ -57,7 +57,15 @@ export async function saveQuestion(_prev: QuestionActionState, form: FormData): 
       savedId = await repo.create(input);
     }
   } catch (error) {
-    if (Database.isUniqueViolation(error)) return { ok: false, message: "That URL slug is already used by another question." };
+    if (Database.isUniqueViolation(error)) {
+      // Two UNIQUE columns: the slug (bank-wide, not per topic) and the generated code.
+      const taken = await repo.bySlug(input.slug);
+      if (taken && taken.id !== id) {
+        const where = taken.publishAt === null ? "a draft" : taken.publishAt <= new Date() ? "live" : "scheduled";
+        return { ok: false, message: `The URL slug “${input.slug}” is already used by ${taken.code} “${taken.title}” (${where}, ${QuestionTaxonomy.topic(taken.topic)?.name ?? taken.topic}). Change the slug or the title.` };
+      }
+      return { ok: false, message: "Another question took the same code at the same moment. Save again." };
+    }
     console.error("[questions] save failed", error);
     return { ok: false, message: "Saving failed. Please retry." };
   }

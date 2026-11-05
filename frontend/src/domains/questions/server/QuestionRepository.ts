@@ -57,6 +57,12 @@ export class QuestionRepository {
     return row ? QuestionRepository.toQuestion(row) : null;
   }
 
+  /** Any question (draft, scheduled or live) holding a slug; slugs are unique across the whole bank. */
+  async bySlug(slug: string): Promise<Question | null> {
+    const [row] = (await this.sql`SELECT * FROM cfa_questions WHERE slug = ${slug}`) as QuestionRow[];
+    return row ? QuestionRepository.toQuestion(row) : null;
+  }
+
   async liveBySlug(topic: string, slug: string): Promise<Question | null> {
     const [row] = (await this.sql`
       SELECT * FROM cfa_questions WHERE topic = ${topic} AND slug = ${slug} AND publish_at <= now()
