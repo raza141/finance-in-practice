@@ -513,7 +513,7 @@ export function InvoiceForm({
 
       {/* Infrequent fields: closed by default, still submitted. */}
       <details className="rounded-lg border border-line p-5" open={Boolean(errors.discountMinor || errors.taxRateBp || errors.bankAccountId || errors.paymentLink || errors.notes || errors.paymentInstructions)}>
-        <summary className="cursor-pointer text-sm text-quant">More options: discount{vatOn ? ", VAT" : ""}{isInvoice ? ", bank, payment link, recurring" : ""}, notes</summary>
+        <summary className="cursor-pointer text-sm text-quant">More options: discount{vatOn ? ", VAT" : ""}{isInvoice ? ", bank, payment link, recurring" : isQuote ? ", bank" : ""}, notes</summary>
         <fieldset disabled={pending} className="mt-5 grid gap-5 sm:grid-cols-2">
           <Field label="Discount (amount)" error={errors.discountMinor} hint="Optional, taken off before VAT">
             <input name="discount" inputMode="decimal" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} aria-invalid={errors.discountMinor ? true : undefined} className={FIELD} />
@@ -525,8 +525,7 @@ export function InvoiceForm({
           ) : (
             <input type="hidden" name="taxRate" value="" />
           )}
-          {isInvoice && (
-            <>
+          {(isInvoice || isQuote) && (
               <Field
                 label="Bank account"
                 error={errors.bankAccountId}
@@ -546,6 +545,9 @@ export function InvoiceForm({
                   ))}
                 </select>
               </Field>
+          )}
+          {isInvoice && (
+            <>
               {settings.card.show ? (
                 <Field label="Payment link (optional)" error={errors.paymentLink} hint="A card / online link from any provider. Printed as “Pay online”.">
                   <input name="paymentLink" type="url" maxLength={500} placeholder="https://" defaultValue={initial.paymentLink} className={FIELD} />

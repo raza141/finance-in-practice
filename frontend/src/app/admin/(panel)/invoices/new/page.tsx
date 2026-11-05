@@ -70,7 +70,7 @@ export default async function NewInvoicePage({ searchParams }: PageProps<"/admin
     dueDate: docType === "quote" ? ZonedCalendar.addDays(today, 14) : today,
     notes: settings.documents[docType].notes,
     paymentInstructions: "",
-    bankAccountId: docType === "invoice" ? (options.banks.find((bank) => bank.isDefault)?.id ?? null) : null,
+    bankAccountId: docType === "invoice" || docType === "quote" ? (options.banks.find((bank) => bank.isDefault)?.id ?? null) : null,
     paymentTerms: terms.terms,
     termsDays: terms.days,
     paymentLink: "",

@@ -38,7 +38,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   const money = (minor: number) => InvoiceMath.money(minor, invoice.currency);
   const today = new ZonedCalendar(InvoiceContract.DEFAULT_TIME_ZONE).today();
   const isInvoice = docType === "invoice";
-  const bankRows = isInvoice && invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
+  const bankRows = (isInvoice || docType === "quote") && invoice.bank ? InvoiceEmails.bankRows(invoice.bank) : [];
   const payOnline = InvoiceEmails.payOnline(invoice, settings);
   const hasPeriod = invoice.items.some((item) => item.period);
   const taxDoc = invoice.trn !== "" && invoice.taxRateBp > 0;
@@ -227,7 +227,8 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
       )}
 
       <div className="print:mt-auto">
-        {(bankRows.length > 0 || invoice.paymentInstructions || payOnline) && isInvoice && !paid && (
+        {/* A quote shows the bank it will be paid into; only an unpaid invoice adds instructions and the online link. */}
+        {(bankRows.length > 0 || (isInvoice && (invoice.paymentInstructions || payOnline))) && !paid && (
           <section className="mt-10 break-inside-avoid print:mt-4">
             <h2 className={LABEL}>Payment desk</h2>
             {bankRows.length > 0 && (
@@ -239,10 +240,10 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
                   </div>
                 ))}
                 <dt className={ROW_LABEL}>Reference</dt>
-                <dd className="font-mono text-slate-900">{invoice.number ?? "Invoice number"}</dd>
+                <dd className="font-mono text-slate-900">{invoice.number ?? `${DocumentFormat.label(invoice)} number`}</dd>
               </dl>
             )}
-            {payOnline && (
+            {isInvoice && payOnline && (
               <dl className="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-6 text-sm">
                 <dt className={ROW_LABEL}>Pay online</dt>
                 <dd className="break-all">
@@ -253,7 +254,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
                 </dd>
               </dl>
             )}
-            {invoice.paymentInstructions && <p className="mt-3 text-sm whitespace-pre-line text-slate-500">{invoice.paymentInstructions}</p>}
+            {isInvoice && invoice.paymentInstructions && <p className="mt-3 text-sm whitespace-pre-line text-slate-500">{invoice.paymentInstructions}</p>}
           </section>
         )}
         <TextBlock title="Notes" text={invoice.notes} />
