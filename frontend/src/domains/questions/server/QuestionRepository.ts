@@ -110,7 +110,7 @@ export class QuestionRepository {
       INSERT INTO cfa_questions (code, level, topic, subtopic, difficulty, slug, title, description, stem, options, correct,
                                  formula, solution, trap, insight, image_url, image_alt, source, publish_at)
       VALUES (
-        (SELECT ${prefix} || lpad((coalesce(max(substring(code, ${prefix.length + 1})::int), 0) + 1)::text, 3, '0')
+        (SELECT ${prefix} || lpad((coalesce(max(substring(code, ${prefix.length + 1}::int)::int), 0) + 1)::text, 3, '0')
            FROM cfa_questions WHERE code LIKE ${`${prefix}%`}),
         ${q.level}, ${q.topic}, ${q.subtopic}, ${q.difficulty}, ${q.slug}, ${q.title}, ${q.description}, ${q.stem},
         ${JSON.stringify(q.options)}::jsonb, ${q.correct}, ${q.formula}, ${q.solution}, ${q.trap}, ${q.insight}, ${q.imageUrl}, ${q.imageAlt},
@@ -127,7 +127,7 @@ export class QuestionRepository {
     await this.sql`
       UPDATE cfa_questions SET
         code = CASE WHEN code LIKE ${`${prefix}%`} THEN code ELSE
-          (SELECT ${prefix} || lpad((coalesce(max(substring(c.code, ${prefix.length + 1})::int), 0) + 1)::text, 3, '0')
+          (SELECT ${prefix} || lpad((coalesce(max(substring(c.code, ${prefix.length + 1}::int)::int), 0) + 1)::text, 3, '0')
              FROM cfa_questions c WHERE c.code LIKE ${`${prefix}%`}) END,
         level = ${q.level}, topic = ${q.topic}, subtopic = ${q.subtopic}, difficulty = ${q.difficulty}, slug = ${q.slug},
         title = ${q.title}, description = ${q.description}, stem = ${q.stem}, options = ${JSON.stringify(q.options)}::jsonb,
