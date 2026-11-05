@@ -230,18 +230,18 @@ table { width:100%; border-collapse:collapse }
 .plan span { color:#64748b; font-size:9pt }
 ul { margin:0; padding-left:5mm; font-size:10pt; line-height:1.5 }
 ul li { margin-bottom:.8mm }
-.shots { display:grid; grid-template-columns: 1fr 1fr; gap:4mm; margin-top:5mm }
+.shots { display:grid; gap:3mm; margin:3.5mm auto 0; width:93% }
 .shots figure { margin:0 }
 .shots img { width:100%; display:block; border-radius:2mm; border:1px solid #1e293b }
-.shots figcaption { font-size:8.5pt; color:#475569; margin-top:1.5mm; line-height:1.35 }
+.shots figcaption { font-size:8.5pt; color:#475569; margin-top:1.2mm; line-height:1.3 }
 .shots figcaption b { color:#0f172a }
-.shown { font-size:7.5pt; color:#94a3b8; margin-top:2mm }
-.bank { align-self:start; border:1px solid #e2e8f0; border-left:1.2mm solid #22d3ee; border-radius:2mm; padding:4mm 5mm }
-.bank b { font: 700 13pt Georgia, serif }
+.shown { font-size:7.5pt; color:#94a3b8; margin:1.5mm 0 0 }
+.bank { margin-top:6mm; border:1px solid #e2e8f0; border-left:1.2mm solid #22d3ee; border-radius:2mm; padding:4mm 5mm }
+.bank b { font: 700 12pt Georgia, serif }
 .bank p { margin:1.5mm 0 0; font-size:9.5pt; line-height:1.45; color:#334155 }
 .bank a, .portal a { color:#0e7490; text-decoration:none; font-family:Menlo,monospace; font-size:9pt }
-.portal { font-size:10pt; line-height:1.45; color:#334155; margin:2mm 0 0 }
-.cta { margin-top:5mm; background:#0b1120; color:#f8fafc; border-radius:3mm; padding:5mm 7mm }
+.portal { font-size:9.5pt; line-height:1.4; color:#334155; margin:1.5mm 0 0 }
+.cta { margin-top:3mm; background:#0b1120; color:#f8fafc; border-radius:3mm; padding:3.5mm 6mm }
 .cta b { font: 700 14pt Georgia, serif; color:#d4af37 }
 .cta p { margin:1.5mm 0 0; font-size:9.5pt; color:#cbd5e1 }
 .cta a { color:#22d3ee; text-decoration:none }
@@ -281,6 +281,7 @@ function html(map) {
   <div class="callout"><b>${esc(map.callout[0])}</b> ${esc(map.callout[1])}</div>
   <p class="note"><b>Exam windows:</b> ${esc(map.windows)}</p>`;
 
+  const [bankTitle, bankText, bankPath] = map.ad.bank;
   const strategy = `
   <div class="eyebrow">Strategy</div>
   <h2 style="margin-top:3mm">A 12-week route that follows how topics build on each other</h2>
@@ -289,24 +290,21 @@ function html(map) {
   <h2>How to study it</h2>
   <ul>${map.study.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>
   <h2>Exam-day rules worth knowing</h2>
-  <ul>${map.rules.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>`;
-
-  const [bankTitle, bankText, bankPath] = map.ad.bank;
+  <ul>${map.rules.map(([b, r]) => `<li><b>${esc(b)}</b> ${esc(r)}</li>`).join("")}</ul>
+  <div class="bank"><b>${esc(bankTitle)}</b><p>${esc(bankText)} ${link(bankPath)}</p></div>`;
   const practise = `
   <div class="eyebrow">Practise with us</div>
-  <h2 style="margin-top:3mm">Your prep keeps going between sessions</h2>
+  <h2 style="margin:2mm 0 0">Your prep keeps going between sessions</h2>
   <p class="portal">${esc(map.ad.portal)} ${link("#portal")}</p>
   <div class="shots">
-    <figure><img src="${SHOT("mock-player.png")}" alt=""><figcaption><b>Exam-day screen.</b> Clock, question map, flags, crossing out and notes.</figcaption></figure>
-    <figure><img src="${SHOT("progress.png")}" alt=""><figcaption><b>Results compared.</b> Every mock and every topic against your last attempt.</figcaption></figure>
-    <figure><img src="${SHOT("topic-drill.png")}" alt=""><figcaption><b>Topic exams and a weakest-topic drill.</b> Missed questions wait in a notebook until you get them right twice.</figcaption></figure>
-    <div class="bank"><b>${esc(bankTitle)}</b><p>${esc(bankText)}</p><p>${link(bankPath)}</p></div>
+    <figure><img src="${SHOT("mock-player.png")}" alt=""><figcaption><b>1 · Exam-day screen.</b> Clock, question map, flags, crossing out and notes.</figcaption></figure>
+    <figure><img src="${SHOT("progress.png")}" alt=""><figcaption><b>2 · Results compared.</b> Every mock against the last one, with a review of each.</figcaption></figure>
+    <figure><img src="${SHOT("topic-drill.png")}" alt=""><figcaption><b>3 · Topic exams and a weakest-topic drill.</b> Missed questions wait in a notebook until you get them right twice.</figcaption></figure>
   </div>
   <p class="shown">${esc(map.ad.shown)}</p>
   <div class="cta">
     <b>Want this plan built around your exam date?</b>
-    <p>Book a free 30-minute diagnostic session. We find your weak topics and map your route to exam day. At your home in Abu Dhabi or live online.</p>
-    <p><a href="https://${SITE}/#book">${SITE}/#book</a> &nbsp;·&nbsp; WhatsApp <a href="${WHATSAPP.href}">${WHATSAPP.label}</a></p>
+    <p>Book a free 30-minute diagnostic: we find your weak topics and map your route. At home in Abu Dhabi or online. <a href="https://${SITE}/#book">${SITE}/#book</a> · WhatsApp <a href="${WHATSAPP.href}">${WHATSAPP.label}</a></p>
   </div>`;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(map.exam)} Exam Map</title><style>${CSS}</style></head><body>
