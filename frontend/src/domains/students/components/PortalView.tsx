@@ -25,6 +25,7 @@ import { StudentRepository } from "../server/StudentRepository";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
 import { StudentAccount } from "../services/StudentAccount";
 import { StudentSessions } from "../services/StudentSessions";
+import { StudyDays } from "../services/StudyDays";
 import type { Student, StudentAccountView, StudyPlanItem } from "../types";
 import { AccountPanel, AccountSummaryCard } from "./AccountPanel";
 import { BOOK_BUTTON } from "./buttons";
@@ -116,7 +117,7 @@ async function portalData(student: Student) {
 }
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
-export async function Portal({ student, readOnly = false, tab }: { student: Student; readOnly?: boolean; tab?: string }) {
+export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
   const { courses, sessions, past, addresses, plan, exam, bankTopics, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
@@ -130,9 +131,12 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
       )
     : Promise.resolve({ status: "off" });
   const loading = (label: string) => <CardSkeleton label={label} />;
+  const today = StudyDays.today();
+  const hasMocks = mocks === null || attempts === null || mocks.length + attempts.length > 0 || (progress?.mocks.length ?? 0) > 0;
 
   return (
-    <div className="grid gap-6">
+    // Phones: room at the bottom for the tab bar.
+    <div className="grid gap-6 pb-20 md:pb-0">
       {student.ended.length > 0 && (
         <section role="status" className="rounded-3xl border border-line bg-surface p-5 text-sm text-muted">
           {student.ended.map((e) => (
@@ -164,18 +168,25 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
       {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
       <StudentPortal
         readOnly={readOnly}
-        initialTab={tab}
+        badges={{
+          sessions: (sessions ?? []).filter((s) => s.status === "pending").length,
+          plan: (plan ?? []).filter((p) => StudyDays.overdue(p, today)).length,
+        }}
         name={student.name.split(" ")[0]}
         courses={courses}
         lengths={siteConfig.studentBooking.lengths}
         sessions={sessions}
         past={past}
         addresses={addresses}
-        plan={
-          <div className="grid gap-6">
-            <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
-            <StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />
-          </div>
+        plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />}
+        // Everything mocks in one place: start one, marks by topic, the notebook. No tab until there's a mock for them.
+        mocks={
+          hasMocks ? (
+            <div className="grid gap-6">
+              <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
+              {progress && progress.mocks.length > 0 && <ProgressPanel progress={progress} />}
+            </div>
+          ) : null
         }
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
@@ -216,8 +227,6 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
             </div>
           ) : null
         }
-        // The student's own mocks; no tab until they've sat one.
-        progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
       />
       {/* Phones: no room in the bar, so the follow link sits at the bottom. */}
       <div className="md:hidden">

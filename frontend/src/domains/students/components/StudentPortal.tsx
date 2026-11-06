@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { ApiError } from "@/core/http/ApiError";
@@ -13,6 +13,7 @@ import { StudentBookingContract } from "../services/StudentBookingContract";
 import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentSession } from "../types";
 import { BUTTON, JOIN_BUTTON } from "./buttons";
+import { PortalNav } from "./PortalNav";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
 
 const DAYS = 14;
@@ -28,9 +29,13 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "overview" | "book" | "sessions" | "account" | "plan" | "classroom" | "progress";
+export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "classroom" | "account";
 
-/** Lets server-rendered panels (overview, progress) switch tabs; `notes` pre-fills the booking form. */
+/** Old ids still in sent WhatsApp links and bookmarks. */
+const ALIASES: Record<string, Tab> = { overview: "home", progress: "mocks" };
+const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "classroom", "account"];
+
+/** Lets server-rendered panels (home, mocks, calendar) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
 
 export function TabButton({ tab, notes, className, children }: { tab: Tab; notes?: string; className?: string; children: ReactNode }) {
@@ -63,9 +68,9 @@ export function StudentPortal({
   account,
   classroom,
   overview,
-  progress,
+  mocks,
+  badges = {},
   readOnly = false,
-  initialTab,
 }: {
   /** Shown on their own bookings in the week grid. */
   name: string;
@@ -82,12 +87,12 @@ export function StudentPortal({
   classroom: ReactNode | null;
   /** The first tab: next session, to-do, latest mark and what's new. */
   overview: ReactNode;
-  /** Marks from the portal's own mocks; null hides the tab. */
-  progress: ReactNode | null;
+  /** Mock lobby, marks and the notebook link; null hides the tab. */
+  mocks: ReactNode | null;
+  /** Counts on nav items, e.g. overdue topics on Study plan. */
+  badges?: Partial<Record<Tab, number>>;
   /** An admin viewing as this student: shown as they see it, but nothing is booked, changed or marked seen. */
   readOnly?: boolean;
-  /** From the URL (?tab=), e.g. a WhatsApp link; anything not allow-listed opens the overview. */
-  initialTab?: string;
 }) {
   const router = useRouter();
   const [timeZone, setTimeZone] = useState("Asia/Dubai");
@@ -105,8 +110,10 @@ export function StudentPortal({
   const [moving, setMoving] = useState<StudentSession | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // A WhatsApp link may open a tab (/student?tab=plan); only these, never anything that names a record.
-  const [tab, setTab] = useState<Tab>(initialTab === "sessions" || initialTab === "plan" || initialTab === "account" ? initialTab : "overview");
+  // The tab lives in the URL (?tab=plan): refresh, Back and WhatsApp links land on it. Only tab ids, never a record.
+  const asked = useSearchParams().get("tab") ?? "";
+  const named = ALIASES[asked] ?? (TAB_IDS as readonly string[]).find((t) => t === asked);
+  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) ? "home" : (named as Tab);
   const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.
@@ -151,11 +158,23 @@ export function StudentPortal({
   const shownDays = days.status === "ready" ? days.days.filter((d) => d.slots.length > 0 || sessionDays.has(d.date)) : [];
   const mapLinkInvalid = mapUrl !== "" && !StudentBookingContract.isMapLink(mapUrl);
 
+  function go(next: Tab, prefill?: string) {
+    // Native pushState: Next keeps useSearchParams in step without asking the server again.
+    window.history.pushState(null, "", next === "home" ? window.location.pathname : `?tab=${next}`);
+    if (prefill) setNotes(prefill);
+    // Opening the class feed once per visit: what's there now stops being "New" next time.
+    if (next === "classroom" && !seen.current && !readOnly) {
+      seen.current = true;
+      void markFeedSeen().catch(() => {});
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   const done = (text: string) => {
     setNotice({ tone: "ok", text });
     setSelection(null);
     setMoving(null);
-    setTab("sessions");
+    go("sessions");
     setVersion((v) => v + 1);
     router.refresh();
   };
@@ -207,7 +226,7 @@ export function StudentPortal({
     setMoving(session);
     setSelection(null);
     setNotice(null);
-    setTab("book");
+    go("book");
   };
 
   const courseLabel = course === OTHER ? (topic ? `Other: ${topic}` : "Other") : course;
@@ -218,49 +237,24 @@ export function StudentPortal({
     </p>
   );
   const TABS: [Tab, string][] = [
-    ["overview", "Overview"],
-    ["book", moving ? "Change a session" : "Book a session"],
-    ["sessions", `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`],
-    ["plan", "Exams & mocks"],
+    ["home", "Home"],
+    ["sessions", "Sessions"],
+    ["plan", "Study plan"],
+    ...(mocks ? ([["mocks", "Mocks"]] as [Tab, string][]) : []),
     ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
-    ...(progress ? ([["progress", "Progress"]] as [Tab, string][]) : []),
-    ["account", "Hours & payments"],
   ];
-  const go = (next: Tab, prefill?: string) => {
-    setTab(next);
-    if (prefill) setNotes(prefill);
-    // Opening the class feed once per visit: what's there now stops being "New" next time.
-    if (next === "classroom" && !seen.current && !readOnly) {
-      seen.current = true;
-      void markFeedSeen().catch(() => {});
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
+  // Booking is part of Sessions; Hours & payments sits in the header's account menu.
+  const lit = tab === "book" ? "sessions" : tab;
   return (
     <PortalTabs value={go}>
     <div className="grid gap-6">
-      <nav aria-label="Student portal" className="nav-line sticky top-16 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-canvas/90 bg-linear-to-r from-quant/5 via-transparent to-gold/5 p-1.5 backdrop-blur-md">
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            aria-current={tab === id ? "page" : undefined}
-            onClick={() => go(id)}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm whitespace-nowrap transition-colors ${
-              tab === id ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <PortalNav tabs={TABS} active={lit} badges={badges} onGo={go} />
 
-      {tab === "overview" && overview}
+      {tab === "home" && overview}
       {tab === "plan" && plan}
+      {tab === "mocks" && mocks}
       {tab === "account" && account}
       {tab === "classroom" && classroom}
-      {tab === "progress" && progress}
 
       {tab === "sessions" && (
         <div className="grid gap-6">
@@ -269,8 +263,8 @@ export function StudentPortal({
               <h2 id="sessions-heading" className="text-2xl font-normal italic">
                 Upcoming sessions
               </h2>
-              <button type="button" onClick={() => setTab("book")} className="text-sm text-quant hover:underline">
-                + Book another
+              <button type="button" onClick={() => go("book")} className="inline-flex h-10 items-center rounded-btn bg-gold px-5 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright">
+                Book a session
               </button>
             </div>
             {noticeEl && <div className="mt-3">{noticeEl}</div>}

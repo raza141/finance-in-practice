@@ -1,7 +1,7 @@
 import { RAISED_PLAIN } from "@/core/components/ui/buttonStyles";
 
 /** The way out of a mock screen (instructions, paused exam, results) to the portal: a pill with an arrow that nudges left on hover. */
-export function BackToPortal({ href = "/student", label = "Back to portal" }: { href?: string; label?: string }) {
+export function BackToPortal({ href = "/student?tab=mocks", label = "Back to portal" }: { href?: string; label?: string }) {
   return (
     <a
       href={href}

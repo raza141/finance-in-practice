@@ -54,7 +54,7 @@ describe("WhatsAppText", () => {
     expect(WhatsAppText.fill("Hi {firstName}, {odd} {constructor}", { firstName: "Sara" })).toBe("Hi Sara, {odd} {constructor}");
     const mock = WhatsAppText.mockGiven("Sara Khan", "Mock 3", null, sign);
     expect(mock).toContain("access to *Mock 3* on your study portal.");
-    expect(mock).toContain("/student?tab=plan");
+    expect(mock).toContain("/student?tab=mocks");
     expect(mock.endsWith(SIGN_OFF)).toBe(true);
   });
 

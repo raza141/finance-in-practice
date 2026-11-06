@@ -71,7 +71,7 @@ export function MockPlayer({
   session = null,
   paused: pausedAtStart = false,
   answerKey,
-  exitHref = "/student",
+  exitHref = "/student?tab=mocks",
 }: {
   attemptId: string;
   studentName: string;

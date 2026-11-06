@@ -38,8 +38,8 @@ const PERKS = [
   "See your progress against your target score",
 ];
 
-export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string; tab?: string }> }) {
-  const [student, { error, view, tab }] = await Promise.all([StudentAuth.current(), searchParams]);
+export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
+  const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
 
   return (
     // -mt-20 cancels the layout's navbar padding: the portal brings its own bar.
@@ -61,15 +61,32 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
               <span className="hidden md:block">
                 <LinkedInFollow variant="pill" />
               </span>
-              <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
-                {initialsOf(student.name)}
-              </span>
-              <span className="hidden max-w-48 truncate text-ink sm:inline">{student.name}</span>
-              <form action={signOutStudent}>
-                <button type="submit" className="rounded-btn border border-line px-3 py-1.5 text-muted hover:border-red-300/50 hover:text-red-300">
-                  Sign out
-                </button>
-              </form>
+              {/* The "Me" menu, as on LinkedIn: account things live here, out of the study tabs. Native popover: closes on Esc or a click outside. */}
+              <button type="button" popoverTarget="me-menu" className="flex items-center gap-2 rounded-btn px-1.5 py-1 hover:bg-white/5">
+                <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
+                  {initialsOf(student.name)}
+                </span>
+                <span className="hidden max-w-48 truncate text-ink sm:inline">{student.name.split(" ")[0]}</span>
+                <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="size-4 text-muted">
+                  <path d="m5 8 5 5 5-5" />
+                </svg>
+                <span className="sr-only">Account menu</span>
+              </button>
+              <div
+                id="me-menu"
+                popover="auto"
+                className="inset-auto top-[4.25rem] right-4 m-0 w-60 rounded-2xl border border-line bg-surface p-2 text-sm text-ink shadow-2xl shadow-black/50"
+              >
+                <p className="truncate px-3 pt-2 pb-3 text-muted">{student.email}</p>
+                <a href="/student?tab=account" className="block rounded-lg px-3 py-2.5 hover:bg-white/5">
+                  Hours &amp; payments
+                </a>
+                <form action={signOutStudent} className="mt-1 border-t border-line pt-1">
+                  <button type="submit" className="w-full rounded-lg px-3 py-2.5 text-left text-muted hover:bg-red-400/10 hover:text-red-300">
+                    Sign out
+                  </button>
+                </form>
+              </div>
             </div>
           ) : (
             <span className="font-mono text-[11px] tracking-[0.25em] text-quant uppercase">Student portal</span>
@@ -79,7 +96,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
 
       <div className="page-container relative py-8 lg:py-10">
         {student ? (
-          <Portal student={student} tab={tab} />
+          <Portal student={student} />
         ) : (
           // Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding).
           <div className="grid min-h-[calc(100svh-4rem-5rem)] content-center">

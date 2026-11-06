@@ -256,7 +256,7 @@ export async function MessageType({ type, settings, link, origin }: { type: Mess
       const mocks = ((await MockRepository.fromEnv()?.all()) ?? []).filter((m) => m.published && m.questionCount > 0);
       return (
         <>
-          <Card title="Mock or practice given" hint="Sent automatically when you give a student a mock (or all mocks, or practice) on the Mocks pages. The link opens Exams & mocks in their portal.">
+          <Card title="Mock or practice given" hint="Sent automatically when you give a student a mock (or all mocks, or practice) on the Mocks pages. The link opens Mocks in their portal.">
             <Wording settings={settings} keys={["mock"]} />
           </Card>
           <Card title="Send by hand" hint="Announces a published mock. It goes only to the ticked students who can open it; give access on the mock's page first.">
