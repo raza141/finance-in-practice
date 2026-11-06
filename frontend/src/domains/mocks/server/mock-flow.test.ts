@@ -94,6 +94,9 @@ class FakeRepo {
     this.saved = [...this.saved.filter((r) => !ids.has(r.questionId)), ...responses];
     return true;
   }
+  async classScores() {
+    return [] as number[];
+  }
   async claimScreen(_id: string, _client: string, screen: string) {
     if (this.attemptRow.status === "in_progress") this.attemptRow = { ...this.attemptRow, screen };
   }

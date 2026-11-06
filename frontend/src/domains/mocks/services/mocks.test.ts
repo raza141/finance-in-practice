@@ -465,3 +465,11 @@ describe("MockNotebook.build", () => {
     expect(book.map((e) => [e.question, e.timesWrong, e.timesFlagged, e.streak, e.lastWrong])).toEqual([["unsure", 0, 1, 1, null]]);
   });
 });
+
+describe("MockGrader.classAverage", () => {
+  it("hides the average until three other students have taken the mock, then rounds it", () => {
+    expect(MockGrader.classAverage([])).toBeNull();
+    expect(MockGrader.classAverage([50, 70])).toBeNull();
+    expect(MockGrader.classAverage([50, 70, 61.1])).toEqual({ percent: 60, students: 3 });
+  });
+});

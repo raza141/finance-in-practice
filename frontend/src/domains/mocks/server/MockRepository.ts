@@ -654,6 +654,24 @@ export class MockRepository {
     return rows.map(MockRepository.toExam);
   }
 
+  /**
+   * Other students' percentages on this mock: each one's first full attempt (no retakes, no drills),
+   * leaving out admin logins (test accounts). For the class average on a results page.
+   */
+  async classScores(mockId: string, clientId: string): Promise<number[]> {
+    const rows = (await this.sql`
+      SELECT DISTINCT ON (a.client_id) a.score, a.total
+      FROM mock_attempts a
+      JOIN mock_exams e ON e.id = a.mock_id AND e.owner_client IS NULL
+      JOIN clients c ON c.id = a.client_id
+      WHERE a.mock_id = ${mockId} AND a.client_id <> ${clientId} AND a.status = 'completed' AND a.question_ids IS NULL
+        AND a.score IS NOT NULL AND a.total > 0
+        AND NOT EXISTS (SELECT 1 FROM admin_users u WHERE lower(u.email) = lower(c.email))
+      ORDER BY a.client_id, a.submitted_at
+    `) as { score: number; total: number }[];
+    return rows.map((r) => (r.score / r.total) * 100);
+  }
+
   async history(clientId: string): Promise<AttemptSummary[]> {
     const rows = (await this.sql`
       SELECT a.id, a.mock_id, e.title, a.started_at, a.submitted_at, a.score, a.total, a.status, a.question_ids IS NOT NULL AS mistakes

@@ -112,6 +112,15 @@ export class MockGrader {
     return Math.max(0, endsAt.getTime() - now.getTime());
   }
 
+  /** Fewer other students than this and a class average could give a classmate's score away. */
+  static readonly MIN_CLASS = 3;
+
+  /** The class average (rounded %) of other students' percentages; null below MIN_CLASS. */
+  static classAverage(percents: readonly number[]): { percent: number; students: number } | null {
+    if (percents.length < MockGrader.MIN_CLASS) return null;
+    return { percent: Math.round(percents.reduce((n, p) => n + p, 0) / percents.length), students: percents.length };
+  }
+
   static percent(score: number, total: number): number {
     return total ? Math.round((score / total) * 100) : 0;
   }

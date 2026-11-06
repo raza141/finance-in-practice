@@ -62,6 +62,7 @@ export function MockResults({
   seconds,
   questions,
   paceSeconds = null,
+  classAverage = null,
   retake = null,
   readOnly = false,
 }: {
@@ -73,6 +74,8 @@ export function MockResults({
   questions: ReviewQuestion[];
   /** The mock's time per question, for "Slow"; null: unknown. */
   paceSeconds?: number | null;
+  /** Other students' first attempts at this mock; null: too few to show. */
+  classAverage?: { percent: number; students: number } | null;
   retake?: RetakeOptions | null;
   /** The owner reviewing a student's attempt: their notes show, nothing saves. */
   readOnly?: boolean;
@@ -134,7 +137,7 @@ export function MockResults({
         <h1 id="score-heading" className="mt-1 text-2xl font-normal italic">
           {title}
         </h1>
-        <dl className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-line bg-line [&>div]:bg-surface [&>div]:p-4">
+        <dl className={`mt-5 grid gap-px overflow-hidden rounded-xl border border-line bg-line [&>div]:bg-surface [&>div]:p-4 ${classAverage ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
           <div>
             <dt className="text-xs text-muted">Score</dt>
             <dd className="mt-1 font-mono text-2xl">
@@ -154,6 +157,13 @@ export function MockResults({
               </dd>
             )}
           </div>
+          {classAverage && (
+            <div>
+              <dt className="text-xs text-muted">Class average</dt>
+              <dd className="mt-1 font-mono text-2xl">{classAverage.percent}%</dd>
+              <dd className="mt-1 text-xs text-muted">{classAverage.students} students</dd>
+            </div>
+          )}
         </dl>
         <AnswerStrip
           questions={questions}

@@ -25,7 +25,14 @@ export const renderQuestion = (q: ActiveQuestion) => ({
  * The student also gets the two retakes (whole mock, or only the mistakes) while the mock is still open to them.
  */
 export async function AttemptResults({ repo, attempt, title, readOnly = false }: { repo: MockRepository; attempt: MockAttempt; title: string; readOnly?: boolean }) {
-  const [all, responses, seed, mock] = await Promise.all([repo.questions(attempt.mockId), repo.responses(attempt.id), repo.seed(attempt), repo.byId(attempt.mockId)]);
+  const [all, responses, seed, mock, others] = await Promise.all([
+    repo.questions(attempt.mockId),
+    repo.responses(attempt.id),
+    repo.seed(attempt),
+    repo.byId(attempt.mockId),
+    // A mistakes retake is a different test: no class to compare it with.
+    attempt.questionIds ? [] : repo.classScores(attempt.mockId, attempt.clientId),
+  ]);
   const questions = MockGrader.subset(all, attempt.questionIds);
   const mine = new Map(responses.map((r) => [r.questionId, r]));
   const seconds = ((attempt.submittedAt ?? attempt.endsAt).getTime() - attempt.startedAt.getTime()) / 1000;
@@ -36,6 +43,7 @@ export async function AttemptResults({ repo, attempt, title, readOnly = false }:
       readOnly={readOnly}
       grade={MockGrader.grade(questions, responses)}
       seconds={seconds}
+      classAverage={MockGrader.classAverage(others)}
       paceSeconds={mock ? Math.round(MockContract.pace(mock) * 60) : null}
       retake={readOnly ? null : await retakeOptions(repo, attempt, MockGrader.mistakes(questions, responses).length)}
       questions={MockGrader.arrange(questions, seed).map((q) => ({
