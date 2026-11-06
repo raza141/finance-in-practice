@@ -227,6 +227,16 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   display: none;
 }
 
+/* One gold (docs/brand.md §3): a disabled gold button turns neutral grey, never a faded, muddy gold.
+ * Unlayered, so it wins over any disabled:opacity-* utility. */
+:is(button, a)[class*="bg-gold"]:disabled,
+:is(button, a)[class*="bg-gold"][aria-disabled="true"] {
+  background: var(--color-surface-raised);
+  color: var(--color-muted);
+  box-shadow: none;
+  opacity: 1;
+}
+
 /* ---------------------------------------------------------------------------
  * Button shape (system rule): every button is an Apple-style squircle, a
  * modest radius whose curve eases in with no seam, never a soft round blob.

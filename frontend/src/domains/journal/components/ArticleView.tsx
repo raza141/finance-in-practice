@@ -19,7 +19,7 @@ import { Inline, RichText, texToHtml, type CitationIndex } from "./RichText";
 const CALLOUT_STYLE: Record<CalloutBlock["tone"], { label: string; className: string }> = {
   note: { label: "Note", className: "border-line bg-surface/70" },
   "key-insight": { label: "Key insight", className: "border-quant/40 bg-quant/5" },
-  "exam-trap": { label: "Exam trap", className: "border-gold/50 bg-gold/5" },
+  "exam-trap": { label: "Exam trap", className: "border-gold/50 bg-surface-raised" },
   warning: { label: "Caution", className: "border-red-400/40 bg-red-400/5" },
 };
 

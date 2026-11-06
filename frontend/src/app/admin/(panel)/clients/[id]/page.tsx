@@ -214,7 +214,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       {pkg && (pkg.current || pkg.requested || client.courses.length > 0) && (
         <section
           aria-label="Package"
-          className={`mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm ${pkg.requested ? "border-gold/40 bg-gold/5" : "border-line bg-surface"}`}
+          className={`mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm ${pkg.requested ? "border-gold/40 bg-surface-raised" : "border-line bg-surface"}`}
         >
           <p className="text-ink">
             <strong>{pkg.current ? `Package: ${pkg.current.name}` : "No package"}</strong>

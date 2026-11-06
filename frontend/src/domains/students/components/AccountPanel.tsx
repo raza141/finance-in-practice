@@ -165,7 +165,7 @@ export function AccountPanel({ account, offers = [], readOnly = false }: { accou
       </div>
 
       {offers.length > 0 && (
-        <section className="rounded-3xl border border-gold/40 bg-gold/10 p-6" aria-labelledby="offers-heading">
+        <section className="rounded-3xl border border-gold/40 bg-surface-raised p-6" aria-labelledby="offers-heading">
           <h2 id="offers-heading" className="text-2xl font-normal italic">
             Waiting for your answer
           </h2>
@@ -253,7 +253,7 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
         aria-label={`${hoursOf(allowance.takenMinutes)} studied and ${hoursOf(allowance.bookedMinutes)} booked of ${hoursOf(total)}`}
       >
         <div className="h-full bg-quant" style={{ width: share(allowance.takenMinutes) }} />
-        <div className="h-full bg-gold/70" style={{ width: share(allowance.bookedMinutes) }} />
+        <div className="h-full bg-gold" style={{ width: share(allowance.bookedMinutes) }} />
       </div>
       <p className="mt-2 text-sm text-muted">
         {hoursOf(allowance.takenMinutes)} studied, {hoursOf(allowance.bookedMinutes)} booked, of {hoursOf(allowance.includedMinutes)}{" "}
@@ -388,7 +388,7 @@ function MonthRecord({ months, known }: { months: AccountMonth[]; known: boolean
               <div className="flex w-full max-w-12 flex-col justify-end" style={{ height: "70%" }}>
                 {m.minutesBooked > 0 && (
                   <div
-                    className="w-full rounded-t-md border border-dashed border-gold/80 bg-gold/10"
+                    className="w-full rounded-t-md border border-dashed border-gold/80 bg-surface-raised"
                     style={{ height: `${(m.minutesBooked / peak) * 100}%` }}
                   />
                 )}

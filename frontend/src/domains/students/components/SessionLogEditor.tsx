@@ -59,7 +59,7 @@ export function SessionLogEditor({
       )}
 
       {pending.map((r) => (
-        <div key={r.id} className="mt-4 rounded-md border border-gold/40 bg-gold/5 p-3 text-sm">
+        <div key={r.id} className="mt-4 rounded-md border border-gold/40 bg-surface-raised p-3 text-sm">
           <p className="text-ink">
             Asks for <strong>{r.hours} more hours</strong> in {r.month}
             {r.note && <span className="text-muted"> · &ldquo;{r.note}&rdquo;</span>}

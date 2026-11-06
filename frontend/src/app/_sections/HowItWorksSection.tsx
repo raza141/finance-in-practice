@@ -34,7 +34,7 @@ export function HowItWorksSection() {
           {STEPS.map((step, i) => (
             <li key={step.title} className="relative rounded-2xl border border-line bg-surface p-6">
               <div className="flex items-center gap-4">
-                <span className="grid h-12 w-12 place-items-center rounded-xl border border-gold/40 bg-gold/10 text-gold">
+                <span className="grid h-12 w-12 place-items-center rounded-xl border border-gold/40 bg-surface-raised text-gold">
                   <step.icon aria-hidden strokeWidth={1.8} className="h-6 w-6" />
                 </span>
                 <span className="font-mono text-4xl font-semibold text-quant/30">0{i + 1}</span>

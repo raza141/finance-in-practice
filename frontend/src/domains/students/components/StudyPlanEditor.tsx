@@ -56,7 +56,7 @@ export function StudyPlanEditor({ clientId, items }: { clientId: string; items: 
                 />
               </form>
               {item.studentChangedAt && (
-                <p className="mt-1 text-xs text-amber-300">
+                <p className="mt-1 text-xs text-gold">
                   Changed by student {CHANGED.format(new Date(item.studentChangedAt))}. Saving the topic clears this.
                 </p>
               )}

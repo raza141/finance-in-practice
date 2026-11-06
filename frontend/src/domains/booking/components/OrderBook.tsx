@@ -62,7 +62,7 @@ export function OrderBook({ day, selected, zoneLabel, onSelect }: OrderBookProps
                 onClick={() => onSelect(slot)}
                 className={`grid w-full grid-cols-[3.5rem_1fr_4rem_5.5rem] items-center gap-2 border-l-2 px-4 py-2 text-left transition-colors ${
                   active
-                    ? "border-gold bg-gold/10 text-ink"
+                    ? "border-gold bg-surface-raised text-ink"
                     : "border-transparent text-ink/85 hover:bg-surface-raised"
                 }`}
               >

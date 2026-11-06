@@ -37,7 +37,7 @@ export default async function NotebookPage({ searchParams }: PageProps<"/student
             Every question you&rsquo;ve got wrong, left blank or flagged, from all your mocks. A question leaves once you get it right {MockNotebook.RIGHT_TO_CLEAR} times in a row without a flag.
           </p>
           {notice === "no-drill" && (
-            <p role="status" className="mt-4 rounded-lg border border-gold/40 bg-gold/5 p-3 text-sm">
+            <p role="status" className="mt-4 rounded-lg border border-gold/40 bg-surface-raised p-3 text-sm">
               There are no new practice questions in your weakest topics yet. Practise your notebook instead, or ask your tutor for more.
             </p>
           )}

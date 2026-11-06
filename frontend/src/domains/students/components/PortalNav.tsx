@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Receipt, Video } from "lucide-react";
+import { CalendarDays, ChevronDown, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Package, Receipt, Video } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -124,14 +124,14 @@ export function SubTabs({ item, active, onGo }: { item: NavItem; active: Tab; on
   }, [active, labels]);
   if (!item.subs) return null;
   const pill = (on: boolean) =>
-    `relative z-10 rounded-lg px-4 py-2 text-sm whitespace-nowrap transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-quant ${on ? "font-semibold text-gold" : "text-muted hover:text-ink"}`;
+    `relative z-10 rounded-lg px-4 py-2 text-sm whitespace-nowrap transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-quant ${on ? "font-semibold text-canvas" : "text-muted hover:text-ink"}`;
   return (
     <nav ref={box} aria-label={item.label} className="relative flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface/60 p-1">
       {mark && (
         <span
           aria-hidden
           style={{ translate: `${mark.x}px 0`, width: mark.w }}
-          className="absolute inset-y-1 left-0 rounded-lg bg-gold/15 ring-1 ring-gold/30 transition-[translate,width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          className="absolute inset-y-1 left-0 rounded-lg bg-gold shadow-bevel-gold transition-[translate,width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
         />
       )}
       {item.subs.map((sub) =>
@@ -163,7 +163,7 @@ const MENU_ITEM = "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-le
  * The portal's one bar, LinkedIn-style: logo left, the tabs (icon over label) in the middle on wide
  * screens, and a "Me" menu right with the account things. Under an admin's view-as strip it sits lower.
  */
-export function PortalBar({ me, readOnly, onAccount, ...tabs }: Tabs & { me: { name: string; email: string }; readOnly: boolean; onAccount: () => void }) {
+export function PortalBar({ me, readOnly, onAccount, onPackage, ...tabs }: Tabs & { me: { name: string; email: string }; readOnly: boolean; onAccount: () => void; onPackage: (() => void) | null }) {
   return (
     <header className={`nav-line sticky z-30 bg-canvas bg-grid-lines bg-fixed ${readOnly ? "top-16" : "top-0"}`}>
       {/* A faint cyan-to-gold wash over the grid, so the bar reads as a bar. */}
@@ -196,6 +196,12 @@ export function PortalBar({ me, readOnly, onAccount, ...tabs }: Tabs & { me: { n
               <Receipt aria-hidden className="size-4 text-muted" />
               Hours &amp; payments
             </button>
+            {onPackage && (
+              <button type="button" popoverTarget="me-menu" popoverTargetAction="hide" onClick={onPackage} className={MENU_ITEM}>
+                <Package aria-hidden className="size-4 text-muted" />
+                My package
+              </button>
+            )}
             <a href={siteConfig.contact.linkedinUrl} target="_blank" rel="noreferrer" className={MENU_ITEM}>
               <svg aria-hidden viewBox="0 0 24 24" className="size-4 fill-linkedin">
                 <path d={LINKEDIN_GLYPH} />

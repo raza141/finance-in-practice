@@ -270,7 +270,7 @@ export function QuestionView({
         </nav>
       )}
 
-      <section aria-labelledby="qotd-subscribe" className="mt-12 rounded-xl border border-gold/40 bg-gold/5 p-6">
+      <section aria-labelledby="qotd-subscribe" className="mt-12 rounded-xl border border-gold/40 bg-surface-raised p-6">
         <h2 id="qotd-subscribe" className="text-xl font-bold">
           Get tomorrow&rsquo;s question
         </h2>

@@ -22,7 +22,7 @@ export default async function ViewAsStudentPage({ params }: PageProps<"/admin/vi
     <div className="relative min-h-screen overflow-clip">
       <FinanceBackdrop glow={false} className="fixed inset-0" />
       {/* h-16: the portal's own bar sticks just below it. */}
-      <header className="sticky top-0 z-30 bg-gold/95 text-canvas">
+      <header className="sticky top-0 z-30 bg-gold text-canvas">
         <div className="page-container flex h-16 items-center justify-between gap-4 text-sm">
           <p>
             <span className="font-mono text-[11px] tracking-wider uppercase">Viewing as</span> <span className="font-semibold">{student.name}</span>

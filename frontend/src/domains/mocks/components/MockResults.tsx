@@ -405,7 +405,7 @@ function AnswerStrip({ questions, current, onPick }: { questions: ReviewQuestion
 function RetakePanel({ attemptId, retake, questions }: { attemptId: string; retake: RetakeOptions; questions: ReviewQuestion[] }) {
   if (retake.open) {
     return (
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4 text-sm">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-surface-raised p-4 text-sm">
         <p>You have {retake.open.mistakes ? "a mistakes retake" : "a retake of the whole mock"} open. Finish it before starting another.</p>
         <Link href={`/student/mocks/${retake.open.id}`} className="rounded-md bg-gold px-4 py-2 font-semibold text-canvas hover:bg-gold-bright">
           Resume
@@ -434,7 +434,7 @@ function RetakePanel({ attemptId, retake, questions }: { attemptId: string; reta
           Retake whole mock
         </Link>
       </div>
-      <form action={retakeMistakes} className="flex flex-col gap-3 rounded-xl border border-gold/40 bg-gold/5 p-4">
+      <form action={retakeMistakes} className="flex flex-col gap-3 rounded-xl border border-gold/40 bg-surface-raised p-4">
         <input type="hidden" name="attemptId" value={attemptId} />
         <div>
           <h2 className="font-semibold">Only my mistakes</h2>

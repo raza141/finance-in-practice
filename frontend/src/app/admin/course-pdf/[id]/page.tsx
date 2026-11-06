@@ -31,7 +31,7 @@ export default async function CoursePdfPage({ params }: PageProps<"/admin/course
     <div data-plain-page className="pt-20 print:pt-0">
       <style>{PRINT_CSS}</style>
       <AutoPrint />
-      <p className="sticky top-0 z-10 flex justify-center gap-4 bg-gold/90 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase print:hidden">
+      <p className="sticky top-0 z-10 flex justify-center gap-4 bg-gold py-1 font-mono text-[11px] tracking-wider text-canvas uppercase print:hidden">
         Choose “Save as PDF” in the print dialog ·
         <PrintButton className="underline" />
       </p>

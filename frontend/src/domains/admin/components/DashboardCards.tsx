@@ -89,7 +89,7 @@ export function NeedsYou({ items }: { items: readonly Attention[] }) {
             <li key={item.href + item.text}>
               <Link
                 href={item.href}
-                className="group flex h-full items-baseline gap-3 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3.5 transition-colors hover:border-gold/70 hover:bg-gold/10"
+                className="group flex h-full items-baseline gap-3 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3.5 transition-colors hover:border-gold/70 hover:bg-surface-raised"
               >
                 <span className="tabular-data text-2xl leading-none text-gold">{item.count}</span>
                 <span className="text-sm text-ink/90 group-hover:text-ink">{item.text}</span>

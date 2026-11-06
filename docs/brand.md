@@ -11,7 +11,7 @@ Tokens live in `frontend/src/app/globals.css` (`@theme`). Never hard-code a hex 
 The brand is enforced, not just written down. `frontend/src/core/brand.test.ts` runs with every test run and fails when:
 
 - a class uses a hex value (`bg-[#…]`) instead of a token;
-- a Tailwind hue is used that has no job here (only red, emerald, amber, violet, indigo, slate; the admin schedule's per-course colours are the one exception);
+- a Tailwind hue is used that has no job here (only red, emerald, violet, indigo, slate; the admin schedule's per-course colours are the one exception);
 - a font is loaded or set anywhere but the root layout (Inter, Merriweather, JetBrains Mono);
 - a core token changes value: canvas #0b1120, surface #151e32, line #24304a, gold #d4af37, quant #22d3ee, ink #f8fafc, muted #aab6c8.
 
@@ -41,9 +41,8 @@ Screens that copy another product's look on purpose (the Google review card, the
 | `line` | #24304a | Borders, dividers | |
 | `ink` | #f8fafc | Body text, headings | |
 | `muted` | #aab6c8 | Secondary text (still 4.5:1 on canvas) | Long paragraphs |
-| `gold` | #d4af37 | **Money and commitment**: Book, Enrol, Pay, Accept; the active tab; exam day; counts that need action | Decoration, links |
+| `gold` | #d4af37 | **Money and commitment**: Book, Enrol, Pay, Accept; the active tab and page switch; exam day; overdue (dashed); counts that need action | Decoration, links |
 | `quant` (cyan) | #22d3ee | **Go and do**: links, Join session, focus rings, sessions in the calendar | Prices, warnings |
-| amber (dashed) | | Overdue / behind | Errors |
 | red-300 | | Cancel, sign out, errors only | Anything reversible |
 | `quant-bright` / `quant-soft` | #67e8f9 / #cffafe | Top of the cyan button; text on cyan chips | |
 | `google-green` (+ `-dark`, `-light`) | #1e8e3e | Opens Google Classroom (their brand, so students recognise it) | Anything else |
@@ -51,7 +50,9 @@ Screens that copy another product's look on purpose (the Google review card, the
 | `whatsapp` (+ `-dark`) | #25d366 | WhatsApp chat and share | Anything else |
 | `code` | #22272e | Code blocks | Anything else |
 
-Colour never carries meaning alone: overdue is dashed **and** amber, done is ticked **and** dimmed.
+**One gold.** Gold is always #d4af37 at full strength: buttons, the selected page switch, badges, overdue topics. No second gold (no amber or yellow), and no faded gold for states: a disabled gold button turns neutral grey (`globals.css` does this for every gold button). `gold-bright` exists only as the hover state.
+
+Colour never carries meaning alone: overdue is dashed **and** gold, done is ticked **and** dimmed.
 
 ## 4. Type
 

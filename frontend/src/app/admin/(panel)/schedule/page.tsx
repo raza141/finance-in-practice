@@ -105,7 +105,7 @@ export default async function AdminSchedulePage({ searchParams }: PageProps<"/ad
         </p>
       ))}
       {waiting.length > 0 && (
-        <section aria-label="Waiting for confirmation" className="mt-5 rounded-lg border border-dashed border-gold bg-gold/5 p-4">
+        <section aria-label="Waiting for confirmation" className="mt-5 rounded-lg border border-dashed border-gold bg-surface-raised p-4">
           <h2 className="text-sm font-semibold text-gold">
             {waiting.length} {waiting.length === 1 ? "booking is" : "bookings are"} waiting for your confirmation
           </h2>

@@ -42,7 +42,7 @@ export default async function QuestionLibraryPage({ searchParams }: PageProps<"/
         }}
       />
 
-      <section aria-labelledby="library-subscribe" className="mt-16 max-w-2xl rounded-xl border border-gold/40 bg-gold/5 p-6">
+      <section aria-labelledby="library-subscribe" className="mt-16 max-w-2xl rounded-xl border border-gold/40 bg-surface-raised p-6">
         <h2 id="library-subscribe" className="text-xl font-bold">
           Get tomorrow&rsquo;s question
         </h2>

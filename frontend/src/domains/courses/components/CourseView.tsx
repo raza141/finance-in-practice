@@ -106,7 +106,7 @@ export function CourseView({
         </div>
         <div className="grid content-start gap-4 lg:col-span-5">
           {difference && (
-            <div className="rounded-r-lg border-l-4 border-gold bg-gold/5 py-5 pr-6 pl-6">
+            <div className="rounded-r-lg border-l-4 border-gold bg-surface-raised py-5 pr-6 pl-6">
               <p className="font-serif text-xl font-bold">{difference.headline}</p>
               {difference.body && <p className="mt-2 leading-relaxed whitespace-pre-line text-muted">{difference.body}</p>}
             </div>
@@ -183,7 +183,7 @@ export function CourseView({
                         </div>
                         {body && <p className="mt-5 flex-1 leading-relaxed text-muted">{body}</p>}
                         {bestFor && (
-                          <div className="mt-6 rounded-xl border border-gold/30 bg-gold/5 px-4 py-3">
+                          <div className="mt-6 rounded-xl border border-gold/30 bg-surface-raised px-4 py-3">
                             <p className="font-mono text-[11px] tracking-[0.16em] text-gold uppercase">Best for</p>
                             <p className="mt-1 text-sm leading-relaxed text-ink">{bestFor}</p>
                           </div>
@@ -254,7 +254,7 @@ export function CourseView({
                           )}
                         </div>
                         {module.practice && (
-                          <div className="rounded-xl border border-gold/30 bg-gold/5 px-4 py-3">
+                          <div className="rounded-xl border border-gold/30 bg-surface-raised px-4 py-3">
                             <p className="font-bold text-gold">{course.practiceLabel}</p>
                             <p className="mt-1 leading-relaxed">{module.practice}</p>
                           </div>
@@ -314,7 +314,7 @@ export function CourseView({
                 >
                   {/* Same build as the method stages minus the number: options are alternatives, not steps. */}
                   <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-gold to-quant opacity-50 transition-opacity group-hover:opacity-100" />
-                  <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-gold/10 text-gold ring-1 ring-gold/30">
+                  <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-surface-raised text-gold ring-1 ring-gold/30">
                     {OPTION_ICONS[index % OPTION_ICONS.length]}
                   </span>
                   <h3 className="mt-5 text-xl font-bold">{option.title}</h3>

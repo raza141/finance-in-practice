@@ -24,7 +24,7 @@ const TOOLS: [LucideIcon, string, string][] = [
 const LEGEND: [string, string, string][] = [
   ["1", "border-line bg-surface text-muted", "Not answered"],
   ["2", "border-emerald-400/70 bg-emerald-400/20 text-emerald-200", "Answered"],
-  ["3", "border-gold bg-gold/25 text-gold", "Flagged for review"],
+  ["3", "border-gold bg-surface-raised text-gold", "Flagged for review"],
 ];
 
 const CARD = "rounded-2xl border border-line bg-surface/60 p-5 sm:p-6";
@@ -130,7 +130,7 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
           </div>
         </div>
 
-        <form action={startMock} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gold/40 bg-gold/5 p-5 sm:p-6">
+        <form action={startMock} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gold/40 bg-surface-raised p-5 sm:p-6">
           <input type="hidden" name="mockId" value={mock.id} />
           <label className="flex items-center gap-3 text-sm text-ink">
             <input type="checkbox" required className="size-4 accent-gold" />

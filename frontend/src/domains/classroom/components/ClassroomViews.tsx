@@ -30,7 +30,7 @@ function Status({ item }: { item: ClassItem }) {
   if (item.grade) {
     const pct = pctOf(item.grade);
     return (
-      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pct < TARGET ? "bg-gold/15 text-gold" : "bg-quant/15 text-quant"}`}>
+      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pct < TARGET ? "bg-surface-raised text-gold" : "bg-quant/15 text-quant"}`}>
         {item.grade.points}/{item.grade.max} · {pct}%
       </span>
     );
@@ -118,7 +118,7 @@ export async function ClassTopics({ result }: { result: Promise<FeedResult> }) {
   return (
     <>
       {notJoined.length > 0 && (
-        <p className="rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm text-ink">
+        <p className="rounded-2xl border border-gold/40 bg-surface-raised p-4 text-sm text-ink">
           You haven&rsquo;t joined {notJoined.map((c) => c.title).join(", ")} yet. Press <span className="font-semibold">Join Google Classroom</span> above with{" "}
           <span className="font-semibold">{feed.email}</span>, or tell your instructor which Google account you use there. Until then you see the titles of shared
           posts, but can&rsquo;t open them.

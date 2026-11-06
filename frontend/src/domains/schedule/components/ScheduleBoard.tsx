@@ -22,7 +22,7 @@ const STYLE: Record<ScheduleEvent["kind"], string> = {
 };
 
 /** A booking waiting for the owner's confirmation. */
-const PENDING = "border-dashed border-gold bg-gold/15 text-ink";
+const PENDING = "border-dashed border-gold bg-surface-raised text-ink";
 
 // ponytail: hashed, so with more students than colours two can share one (names on the blocks still tell them apart). Store a colour per client if the owner wants to choose.
 const STUDENT_COLOURS = [
@@ -354,7 +354,7 @@ function ConfirmBar({ uid, onResult }: { uid: string; onResult: (r: ScheduleActi
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState("");
   return (
-    <div className="grid gap-2 rounded-md border border-gold/50 bg-gold/5 p-3">
+    <div className="grid gap-2 rounded-md border border-gold/50 bg-surface-raised p-3">
       <p className="text-xs text-muted">This time stays held until you decide.</p>
       {declining ? (
         <>

@@ -125,7 +125,7 @@ export function PackagePicker({
             ? "bg-quant text-canvas"
             : p.featured
               ? "bg-gold text-canvas hover:bg-gold-bright"
-              : "border border-gold/50 text-gold hover:border-gold hover:bg-gold/10"
+              : "border border-gold/50 text-gold hover:border-gold hover:bg-surface-raised"
         }`}
       >
         {selected ? (
@@ -184,7 +184,7 @@ export function PackagePicker({
                     <div>
                       <div className="flex items-start justify-between gap-3">
                         <h2 className="text-lg font-semibold text-balance text-ink">{p.name}</h2>
-                        {p.featured && <span className="shrink-0 rounded-full bg-gold/15 px-2.5 py-1 text-xs font-semibold text-gold">Recommended</span>}
+                        {p.featured && <span className="shrink-0 rounded-full bg-surface-raised px-2.5 py-1 text-xs font-semibold text-gold">Recommended</span>}
                       </div>
                       {p.tagline && <p className="mt-1.5 text-sm leading-relaxed text-pretty text-muted">{p.tagline}</p>}
                     </div>

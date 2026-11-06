@@ -381,7 +381,7 @@ export function MockPlayer({
     const a = answers[questions[i].id];
     // Marked try-out: right in green, wrong in red.
     const mark = checked && a?.selected ? (a.selected === answerKey![questions[i].id] ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-red-400/70 bg-red-400/20 text-red-200") : null;
-    const tone = mark ?? (a?.flagged ? "border-gold bg-gold/25 text-gold" : a?.selected ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted");
+    const tone = mark ?? (a?.flagged ? "border-gold bg-surface-raised text-gold" : a?.selected ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted");
     return `${tone} ${i === current ? "ring-2 ring-quant ring-offset-2 ring-offset-canvas" : ""}`;
   };
 
@@ -412,7 +412,7 @@ export function MockPlayer({
       )}
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur-md">
         {preview && (
-          <p className="flex items-center justify-between gap-3 bg-gold/90 px-4 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase sm:px-6">
+          <p className="flex items-center justify-between gap-3 bg-gold px-4 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase sm:px-6">
             <span>Try-out · nothing is saved, students don&rsquo;t see this</span>
             <a href={exitHref} className="underline">
               Exit
@@ -491,7 +491,7 @@ export function MockPlayer({
           </p>
         )}
         {paused && (
-          <p role="status" className="border-t border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold sm:px-6">
+          <p role="status" className="border-t border-gold/40 bg-surface-raised px-4 py-2 text-sm text-gold sm:px-6">
             Paused: the clock has stopped and the questions are hidden until you press Resume.{preview ? "" : " Your work is kept: you can go back to the portal and resume from there."}
           </p>
         )}
@@ -531,7 +531,7 @@ export function MockPlayer({
                 <span className="size-3 rounded-sm border border-emerald-400/70 bg-emerald-400/20" /> Answered
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-3 rounded-sm border border-gold bg-gold/25" /> Flagged for review
+                <span className="size-3 rounded-sm border border-gold bg-surface-raised" /> Flagged for review
               </li>
               <li className="flex items-center gap-2">
                 <span className="size-3 rounded-sm border border-line bg-surface" /> Unanswered
@@ -542,7 +542,7 @@ export function MockPlayer({
 
         <main className="grid min-w-0 content-start gap-4">
           {paused ? (
-            <section aria-label="Paused" className="grid place-items-center gap-3 rounded-xl border border-gold/40 bg-gold/5 px-5 py-20 text-center">
+            <section aria-label="Paused" className="grid place-items-center gap-3 rounded-xl border border-gold/40 bg-surface-raised px-5 py-20 text-center">
               <p className="font-serif text-2xl font-bold">Mock paused</p>
               <p className="max-w-md text-sm text-muted">
                 The clock is stopped at {MockGrader.clock(left)}. The questions stay hidden while you&rsquo;re on a break, so every minute you work on them is timed.
@@ -589,7 +589,7 @@ export function MockPlayer({
                   type="button"
                   aria-pressed={mine.flagged}
                   onClick={() => change(q.id, { flagged: !mine.flagged })}
-                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.flagged ? "border-gold bg-gold/20 text-gold" : "border-line text-muted hover:text-ink"}`}
+                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.flagged ? "border-gold bg-surface-raised text-gold" : "border-line text-muted hover:text-ink"}`}
                 >
                   <Flag aria-hidden className="mr-1 inline size-3.5 align-[-2px]" fill={mine.flagged ? "currentColor" : "none"} />
                   {mine.flagged ? "Flagged" : "Flag for review"}
@@ -647,7 +647,7 @@ export function MockPlayer({
                       type="button"
                       aria-pressed={mine.confidence === value}
                       onClick={() => change(q.id, { confidence: mine.confidence === value ? null : value })}
-                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.confidence === value ? (value === "sure" ? "border-emerald-400/70 bg-emerald-400/15 text-emerald-200" : "border-gold bg-gold/15 text-gold") : "border-line text-muted hover:text-ink"}`}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.confidence === value ? (value === "sure" ? "border-emerald-400/70 bg-emerald-400/15 text-emerald-200" : "border-gold bg-surface-raised text-gold") : "border-line text-muted hover:text-ink"}`}
                     >
                       {label}
                     </button>

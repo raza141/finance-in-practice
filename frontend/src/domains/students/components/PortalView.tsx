@@ -146,7 +146,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         </section>
       )}
       {!termsAccepted && (
-        <section role="status" className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-gold/10 p-5 text-sm">
+        <section role="status" className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-surface-raised p-5 text-sm">
           <p className="text-ink">
             Please review our{" "}
             <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
@@ -163,7 +163,6 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
           )}
         </section>
       )}
-      {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
     </>
   );
 
@@ -172,6 +171,8 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         readOnly={readOnly}
         me={{ name: student.name, email: student.email }}
         notices={notices}
+        // In the Me menu under Hours & payments, not above every tab.
+        pkg={pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
         badges={{
           sessions: (sessions ?? []).filter((s) => s.status === "pending").length,
           plan: (plan ?? []).filter((p) => StudyDays.overdue(p, today)).length,

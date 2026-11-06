@@ -18,8 +18,8 @@ const sources = files(SRC).map((path) => ({ path: relative(SRC, path), text: rea
 const LOOKALIKES = ["domains/testimonials/components/GoogleReviews.tsx", "domains/whatsapp/components/MessageTypes.tsx", "domains/whatsapp/components/TemplateEditor.tsx", "domains/journal/components/admin/ArticlePanels.tsx"];
 /** Categorical colours: one hue per course on the admin schedule. */
 const CATEGORICAL = ["domains/schedule/components/ScheduleBoard.tsx"];
-/** Tailwind hues with a job in the guide (§3): red errors, emerald correct, amber overdue, violet mocks, indigo topics, slate done. */
-const HUES = new Set(["red", "emerald", "amber", "violet", "indigo", "slate"]);
+/** Tailwind hues with a job in the guide (§3): red errors, emerald correct, violet mocks (overdue is gold: one gold), indigo topics, slate done. */
+const HUES = new Set(["red", "emerald", "violet", "indigo", "slate"]);
 
 const UTIL = "(?:bg|text|border|from|to|via|fill|stroke|ring|outline|decoration|shadow|accent|divide|placeholder|caret)";
 
@@ -47,6 +47,11 @@ describe("brand lock", () => {
     expect(loaders).toEqual(["app/layout.tsx"]);
     const adHoc = sources.filter((f) => /\bfont-\[|fontFamily:/.test(f.text) && f.path !== "core/seo/OgImage.tsx").map((f) => f.path);
     expect(adHoc).toEqual([]);
+  });
+
+  it("fills with one gold: solid, never faded", () => {
+    const bad = sources.flatMap((f) => [...f.text.matchAll(/\bbg-gold\/\d+/g)].map((m) => `${f.path}: ${m[0]}`));
+    expect(bad).toEqual([]);
   });
 
   it("draws icons with Lucide, not emoji", () => {

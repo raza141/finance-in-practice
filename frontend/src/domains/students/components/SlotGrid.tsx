@@ -247,7 +247,7 @@ export function SlotGrid({
                 disabled={minutes / 60 > selectedRun}
                 onClick={() => onChange({ ...value, minutes })}
                 className={`rounded-md border px-3 py-1.5 font-mono text-xs transition-colors disabled:opacity-30 ${
-                  active ? "border-gold bg-gold/15 text-gold" : "border-line text-ink/90 hover:border-quant/50"
+                  active ? "border-gold bg-surface-raised text-gold" : "border-line text-ink/90 hover:border-quant/50"
                 }`}
               >
                 {minutes / 60} h

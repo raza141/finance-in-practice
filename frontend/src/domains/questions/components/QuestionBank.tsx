@@ -319,7 +319,7 @@ function Row({ q, result }: { q: QuestionSummary; result?: Result }) {
 function TodayCard({ q, result }: { q: QuestionSummary; result?: Result }) {
   const topic = QuestionTaxonomy.topic(q.topic)?.name ?? q.topic;
   return (
-    <section aria-labelledby="today-title" className="relative mt-10 overflow-hidden rounded-2xl border border-gold/40 bg-gold/5 p-6 sm:p-8">
+    <section aria-labelledby="today-title" className="relative mt-10 overflow-hidden rounded-2xl border border-gold/40 bg-surface-raised p-6 sm:p-8">
       <p className="text-sm font-semibold text-gold">Today&rsquo;s question</p>
       <h2 id="today-title" className="mt-2 max-w-3xl font-serif text-2xl leading-snug font-bold sm:text-3xl">
         {q.title}

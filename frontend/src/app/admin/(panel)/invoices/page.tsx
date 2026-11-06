@@ -84,7 +84,7 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps<"/ad
         </p>
       )}
       {recurring.length > 0 && (
-        <form action={createRecurringDrafts} className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-gold/40 bg-gold/5 px-4 py-3 text-sm">
+        <form action={createRecurringDrafts} className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-gold/40 bg-surface-raised px-4 py-3 text-sm">
           <span className="text-gold">
             {recurring.length} recurring invoice{recurring.length === 1 ? "" : "s"} due for this month: {recurring.map((r) => r.clientName).join(", ")}.
           </span>

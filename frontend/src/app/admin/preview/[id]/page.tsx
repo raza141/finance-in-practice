@@ -22,7 +22,7 @@ export default async function PreviewArticlePage({ params }: PageProps<"/admin/p
 
   return (
     <div className="pt-20">
-      <p className="sticky top-0 z-10 bg-gold/90 py-1 text-center font-mono text-[11px] tracking-wider text-canvas uppercase">Draft preview · not public</p>
+      <p className="sticky top-0 z-10 bg-gold py-1 text-center font-mono text-[11px] tracking-wider text-canvas uppercase">Draft preview · not public</p>
       <ArticleView
         doc={doc}
         authorName={article.authorName}

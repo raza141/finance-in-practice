@@ -67,7 +67,7 @@ export function StudyPlanTimeline({
           </h2>
           <ul className="mt-3 grid gap-2">
             {programmes.map((p) => (
-              <li key={p} className="rounded-xl border border-gold/30 bg-gold/5 px-3 py-2 text-sm font-semibold text-ink">
+              <li key={p} className="rounded-xl border border-line border-l-2 border-l-gold bg-surface-raised px-3 py-2 text-sm font-semibold text-ink">
                 {p}
               </li>
             ))}

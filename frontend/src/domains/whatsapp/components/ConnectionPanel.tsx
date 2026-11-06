@@ -112,7 +112,7 @@ export async function ConnectionPanel({ link, optedOut }: { link: WhatsAppLink; 
           <button name="mode" value="test" type="submit" className={`${BUTTON} border border-line font-normal hover:border-quant/60`}>
             Use test mode
           </button>
-          <button name="mode" value="live" type="submit" className={`${BUTTON} bg-gold text-canvas hover:bg-gold/90`}>
+          <button name="mode" value="live" type="submit" className={`${BUTTON} bg-gold text-canvas hover:bg-gold`}>
             Go live
           </button>
         </form>

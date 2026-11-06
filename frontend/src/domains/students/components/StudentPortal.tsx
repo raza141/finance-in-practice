@@ -30,11 +30,11 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "classroom" | "account";
+export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "classroom" | "account" | "package";
 
 /** Old ids still in sent WhatsApp links and bookmarks. */
 const ALIASES: Record<string, Tab> = { overview: "home" };
-const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "classroom", "account"];
+const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "classroom", "account", "package"];
 
 /** Lets server-rendered panels (home, mocks, calendar) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
@@ -74,6 +74,7 @@ export function StudentPortal({
   badges = {},
   me,
   notices,
+  pkg = null,
   readOnly = false,
 }: {
   /** Shown on their own bookings in the week grid. */
@@ -97,6 +98,8 @@ export function StudentPortal({
   progress: ReactNode | null;
   /** Who's signed in, for the bar's "Me" menu. */
   me: { name: string; email: string };
+  /** Their package and changing it; in the Me menu. Null hides the item. */
+  pkg?: ReactNode | null;
   /** Banners above every tab: terms to accept, access ended, the package. */
   notices: ReactNode;
   /** Counts on nav items, e.g. overdue topics on Study plan. */
@@ -123,7 +126,7 @@ export function StudentPortal({
   // The tab lives in the URL (?tab=plan): refresh, Back and WhatsApp links land on it. Only tab ids, never a record.
   const asked = useSearchParams().get("tab") ?? "";
   const named = ALIASES[asked] ?? (TAB_IDS as readonly string[]).find((t) => t === asked);
-  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) || (named === "progress" && !progress) ? "home" : (named as Tab);
+  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) || (named === "progress" && !progress) || (named === "package" && !pkg) ? "home" : (named as Tab);
   const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.
@@ -270,7 +273,7 @@ export function StudentPortal({
   const section = TABS.find((t) => t.id === lit);
   return (
     <PortalTabs value={go}>
-    <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} />
+    <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} onPackage={pkg ? () => go("package") : null} />
     {/* Phones and tablets: room at the bottom for the tab bar. */}
     <main className="page-container relative grid gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
       {notices}
@@ -280,6 +283,7 @@ export function StudentPortal({
       {tab === "mocks" && mocks}
       {tab === "progress" && progress}
       {tab === "account" && account}
+      {tab === "package" && pkg}
       {tab === "classroom" && classroom}
 
       {tab === "sessions" && (
@@ -306,7 +310,7 @@ export function StudentPortal({
                       <p className="font-semibold text-ink">{when(s.start, s.minutes)}</p>
                       <p className="text-muted">
                         {s.group && (
-                          <span className="mr-2 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold">Group session</span>
+                          <span className="mr-2 rounded-full border border-gold/40 bg-surface-raised px-2 py-0.5 text-[11px] font-semibold text-gold">Group session</span>
                         )}
                         {s.course} · {hours(s.minutes)} · {s.address ?? "Online"}
                         {s.status === "pending" && <span className="text-gold"> · awaiting confirmation</span>}

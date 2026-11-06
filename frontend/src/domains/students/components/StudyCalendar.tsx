@@ -32,7 +32,7 @@ const LEGEND: [string, string][] = [
 function chipClass(item: StudyDayItem): string {
   const base = "border-0 border-l-[3px]";
   if (item.kind !== "topic") return `${base} ${CHIP[item.kind]}`;
-  if (item.carried) return "border border-dashed border-amber-400/60 border-l-[3px] border-l-amber-400 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20";
+  if (item.carried) return "border border-dashed border-gold/70 border-l-[3px] border-l-gold bg-canvas text-ink hover:bg-surface-raised";
   if (item.status === "done") return `${base} border-l-slate-500 bg-white/[0.03] text-muted line-through hover:bg-white/[0.06]`;
   if (item.status === "skipped") return `${base} border-l-slate-600 bg-transparent text-muted/60 line-through`;
   return `${base} ${CHIP.topic}`;
@@ -54,7 +54,7 @@ function label(item: StudyDayItem): string {
 /**
  * The study plan as a calendar (Notion-like): topics, sessions, finished mocks and exam day on their days.
  * A month on wide screens, a day-by-day agenda on phones. Drag a topic to another day, or tap anything for its details.
- * Overdue topics sit on today, in amber, until they're moved or done. `readOnly`: admin view-as, nothing changes.
+ * Overdue topics sit on today, in gold (dashed), until they're moved or done. `readOnly`: admin view-as, nothing changes.
  */
 export function StudyCalendar({
   days: initialDays,
@@ -332,7 +332,7 @@ function Details({
         <div className="grid gap-3">
           <div>
             <h3 className="font-semibold">{item.topic}</h3>
-            <p className={`text-sm ${item.carried ? "text-amber-300" : "text-muted"}`}>
+            <p className={`text-sm ${item.carried ? "text-gold" : "text-muted"}`}>
               {item.dueOn ? (item.carried ? `Was due ${longDay(item.dueOn)}` : longDay(item.dueOn)) : "Not scheduled yet"}
             </p>
             {item.note && <p className="mt-2 text-sm text-ink/80">{item.note}</p>}

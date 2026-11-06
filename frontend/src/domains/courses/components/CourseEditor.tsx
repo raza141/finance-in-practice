@@ -142,7 +142,7 @@ export function CourseEditor({
         </nav>
 
         {locked && (
-          <p role="status" className="mt-5 rounded-md border border-gold/40 bg-gold/5 px-4 py-3 text-sm text-gold">
+          <p role="status" className="mt-5 rounded-md border border-gold/40 bg-surface-raised px-4 py-3 text-sm text-gold">
             This course is live. Only an owner can edit or unpublish it.
           </p>
         )}

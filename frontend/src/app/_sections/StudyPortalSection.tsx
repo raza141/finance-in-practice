@@ -31,7 +31,7 @@ function MockShot() {
           <span
             key={n}
             className={`grid aspect-square place-items-center rounded border font-mono text-[9px] ${
-              n === 14 ? "border-quant text-ink" : FLAGGED.has(n) ? "border-gold bg-gold/25 text-gold" : n < 14 ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted"
+              n === 14 ? "border-quant text-ink" : FLAGGED.has(n) ? "border-gold bg-surface-raised text-gold" : n < 14 ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-line bg-surface text-muted"
             }`}
           >
             {n}

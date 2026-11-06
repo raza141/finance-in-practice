@@ -91,7 +91,7 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
       )}
 
       {!readOnly && history.some((h) => h.status === "completed") && (
-        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-4">
+        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-gold/30 bg-surface-raised p-4">
           <p className="min-w-0 flex-1 text-sm">
             <span className="font-semibold">Revise</span>
             <span className="block text-muted">Questions you missed wait in your notebook until you get them right twice. Or take {MockContract.DRILL_SIZE} new ones from your weakest topic.</span>

@@ -145,7 +145,7 @@ export default async function AdminClassroomPage({
           </p>
         )}
         {unplaced.length > 0 && (
-          <div className="mt-4 rounded-md border border-gold/40 bg-gold/5 p-3 text-sm">
+          <div className="mt-4 rounded-md border border-gold/40 bg-surface-raised p-3 text-sm">
             <p className="font-semibold text-gold">Needs a batch ({unplaced.length})</p>
             <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
               {unplaced.map((u) => (

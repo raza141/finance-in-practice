@@ -337,13 +337,13 @@ export function ArticleEditor({ article, viewer, aiEnabled, revisions, published
             {TABS.map((t) => (
               <button key={t.id} type="button" onClick={() => openTab(t.id)} className={`${BUTTON} h-8 border border-line text-muted hover:text-ink`}>
                 {t.label}
-                {t.id === "publish" && errors.length > 0 && <span className="ml-1.5 rounded-full bg-gold/20 px-1.5 text-[10px] text-gold">{errors.length}</span>}
+                {t.id === "publish" && errors.length > 0 && <span className="ml-1.5 rounded-full bg-surface-raised px-1.5 text-[10px] text-gold">{errors.length}</span>}
               </button>
             ))}
           </nav>
         </div>
         {saveState === "conflict" && (
-          <p role="alert" className="w-full rounded-md border border-gold/50 bg-gold/10 px-3 py-2 text-sm text-gold">
+          <p role="alert" className="w-full rounded-md border border-gold/50 bg-surface-raised px-3 py-2 text-sm text-gold">
             This article was saved from another tab or device since you opened it, so autosave stopped to avoid overwriting it.{" "}
             <button type="button" onClick={() => window.location.reload()} className="underline">
               Reload the latest version
@@ -646,7 +646,7 @@ export function ArticleEditor({ article, viewer, aiEnabled, revisions, published
                         type="button"
                         disabled={busy !== null || errors.length > 0 || !publishAt || new Date(publishAt) <= new Date()}
                         onClick={() => void act("schedule", () => publishArticle(article.id, versionRef.current, new Date(publishAt).toISOString()))}
-                        className={`${BUTTON} h-10 border border-gold/60 text-gold hover:bg-gold/10`}
+                        className={`${BUTTON} h-10 border border-gold/60 text-gold hover:bg-surface-raised`}
                       >
                         Schedule
                       </button>

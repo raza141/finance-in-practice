@@ -35,7 +35,7 @@ export function StatusBadge({ status }: { status: Badge }) {
 /** Shown wherever sending is offered while Resend isn't set up. */
 export function EmailNotConfigured() {
   return (
-    <p role="alert" className="rounded-md border border-gold/40 bg-gold/5 px-4 py-3 text-sm text-gold">
+    <p role="alert" className="rounded-md border border-gold/40 bg-surface-raised px-4 py-3 text-sm text-gold">
       Email not configured: sending is disabled. Set <code>RESEND_API_KEY</code> and <code>EMAIL_FROM</code> (and verify the
       domain in Resend). Drafts and the printable invoice link still work.
     </p>

@@ -148,7 +148,7 @@ export function OrderTicketForm() {
                   side === option
                     ? option === "BUY"
                       ? "border-quant bg-quant/15 text-quant"
-                      : "border-gold bg-gold/15 text-gold"
+                      : "border-gold bg-surface-raised text-gold"
                     : "border-line text-muted hover:text-ink"
                 }`}
               >

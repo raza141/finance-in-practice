@@ -571,7 +571,7 @@ export function InvoiceForm({
       </details>
 
       {warnings && (warnings.duplicates.length > 0 || warnings.deviations.length > 0) && (
-        <fieldset disabled={pending} className="grid gap-4 rounded-lg border border-gold/50 bg-gold/5 p-5 text-sm">
+        <fieldset disabled={pending} className="grid gap-4 rounded-lg border border-gold/50 bg-surface-raised p-5 text-sm">
           <legend className="px-1 text-gold">Check before issuing</legend>
           {warnings.duplicates.length > 0 && (
             <div>
