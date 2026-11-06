@@ -174,7 +174,7 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
         plan={
           <div className="grid gap-6">
             <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
-            <StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} bankTopics={bankTopics} readOnly={readOnly} />
+            <StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />
           </div>
         }
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}

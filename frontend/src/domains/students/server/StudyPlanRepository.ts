@@ -11,6 +11,7 @@ interface ItemRow {
   status: StudyStatus;
   note: string;
   material_url: string | null;
+  student_changed_at: string | null;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,11 +29,11 @@ export class StudyPlanRepository {
   async forClient(clientId: string): Promise<StudyPlanItem[]> {
     if (!UUID.test(clientId)) return [];
     const rows = (await this.sql`
-      SELECT id, due_on::text AS due_on, topic, status, note, material_url FROM study_plan_items
+      SELECT id, due_on::text AS due_on, topic, status, note, material_url, student_changed_at::text AS student_changed_at FROM study_plan_items
       WHERE client_id = ${clientId}
       ORDER BY due_on NULLS LAST, created_at
     `) as ItemRow[];
-    return rows.map((r) => ({ id: r.id, dueOn: r.due_on, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url }));
+    return rows.map((r) => ({ id: r.id, dueOn: r.due_on, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url, studentChangedAt: r.student_changed_at }));
   }
 
   /** The nearest upcoming exam among the student's batches with portal access left (yyyy-mm-dd); null: none (e.g. a private student). */
@@ -48,14 +49,26 @@ export class StudyPlanRepository {
     return row ?? null;
   }
 
-  /** The student's own re-plan: new dates for their still-planned topics only (StudyLine.replan). */
-  async replan(clientId: string, dates: readonly { id: string; dueOn: string }[]): Promise<void> {
-    if (!UUID.test(clientId) || dates.length === 0) return;
-    await this.sql`
-      UPDATE study_plan_items p SET due_on = x.due_on
-      FROM unnest(${dates.map((d) => d.id)}::uuid[], ${dates.map((d) => d.dueOn)}::date[]) AS x(id, due_on)
-      WHERE p.id = x.id AND p.client_id = ${clientId} AND p.status = 'planned'
+  /** The student moves one of their own topics (070); skipped ones stay where the owner left them. */
+  async moveByStudent(clientId: string, id: string, dueOn: string): Promise<boolean> {
+    if (!UUID.test(clientId) || !UUID.test(id)) return false;
+    const rows = await this.sql`
+      UPDATE study_plan_items SET due_on = ${dueOn}, updated_at = now(), student_changed_at = now()
+      WHERE id = ${id} AND client_id = ${clientId} AND status <> 'skipped'
+      RETURNING 1
     `;
+    return rows.length > 0;
+  }
+
+  /** The student ticks (or unticks) one of their own topics: planned ↔ done only, never skipped. */
+  async setDoneByStudent(clientId: string, id: string, done: boolean): Promise<boolean> {
+    if (!UUID.test(clientId) || !UUID.test(id)) return false;
+    const rows = await this.sql`
+      UPDATE study_plan_items SET status = ${done ? "done" : "planned"}, updated_at = now(), student_changed_at = now()
+      WHERE id = ${id} AND client_id = ${clientId} AND status = ${done ? "planned" : "done"}
+      RETURNING 1
+    `;
+    return rows.length > 0;
   }
 
   async add(clientId: string, items: readonly StudyPlanInput[]): Promise<void> {
@@ -74,7 +87,7 @@ export class StudyPlanRepository {
     if (!UUID.test(clientId) || !UUID.test(id)) return;
     await this.sql`
       UPDATE study_plan_items SET due_on = ${input.dueOn}, topic = ${input.topic}, status = ${input.status},
-        note = ${input.note}, material_url = ${input.materialUrl}, updated_at = now()
+        note = ${input.note}, material_url = ${input.materialUrl}, updated_at = now(), student_changed_at = NULL
       WHERE id = ${id} AND client_id = ${clientId}
     `;
   }

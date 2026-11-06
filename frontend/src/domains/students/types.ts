@@ -42,9 +42,11 @@ export interface StudyPlanItem {
   note: string;
   /** https link to the material, e.g. a Google Drive file shared with the student. */
   materialUrl: string | null;
+  /** When the student last moved or ticked it (070); cleared when the owner saves it. */
+  studentChangedAt: string | null;
 }
 
-export type StudyPlanInput = Omit<StudyPlanItem, "id">;
+export type StudyPlanInput = Omit<StudyPlanItem, "id" | "studentChangedAt">;
 
 /** A booked session as the student portal shows it (from Cal.com). */
 export interface StudentSession {

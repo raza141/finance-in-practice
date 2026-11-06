@@ -1508,6 +1508,12 @@ const MIGRATIONS: Migration[] = [
       $fn$`,
     ],
   },
+  {
+    // The study calendar: a student may move their own topics and tick them done. When they last did,
+    // so admin shows "Moved by student"; the owner saving the topic clears it.
+    id: "070_study_plan_student",
+    statements: [`ALTER TABLE study_plan_items ADD COLUMN student_changed_at timestamptz`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

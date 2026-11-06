@@ -5,6 +5,8 @@ import { addStudyTopics, removeStudyTopic, updateStudyTopic } from "../actions/s
 import { StudyPlanContract } from "../services/StudyPlanContract";
 import type { StudyPlanItem } from "../types";
 
+const CHANGED = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
 /** The admin side of a student's study plan: what they see under "Your study plan" on /student. */
 export function StudyPlanEditor({ clientId, items }: { clientId: string; items: StudyPlanItem[] }) {
   return (
@@ -53,6 +55,11 @@ export function StudyPlanEditor({ clientId, items }: { clientId: string; items: 
                   className={`${FIELD} sm:col-span-2`}
                 />
               </form>
+              {item.studentChangedAt && (
+                <p className="mt-1 text-xs text-amber-300">
+                  Changed by student {CHANGED.format(new Date(item.studentChangedAt))}. Saving the topic clears this.
+                </p>
+              )}
               <form action={removeStudyTopic} className="mt-1 text-right">
                 <input type="hidden" name="clientId" value={clientId} />
                 <input type="hidden" name="itemId" value={item.id} />

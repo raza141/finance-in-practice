@@ -1,136 +1,62 @@
-import { practisePlanTopic } from "@/domains/mocks/actions/mocks";
+import type { AttemptSummary } from "@/domains/mocks/types";
 
-import { replanToExam } from "../actions/myPlan";
-import { StudyLine, type StudyLineNode } from "../services/StudyLine";
-import type { StudyPlanItem } from "../types";
-import { BOOK_BUTTON, BUTTON } from "./buttons";
-import { TabButton } from "./StudentPortal";
-
-const PLAN_DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
-
-const LINE_DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" });
-const lineDay = (date: string) => LINE_DAY.format(new Date(`${date}T00:00:00Z`));
-
-const MARK: Record<StudyPlanItem["status"], { icon: string; className: string }> = {
-  done: { icon: "✓", className: "border-quant bg-quant text-canvas" },
-  skipped: { icon: "–", className: "border-line bg-canvas text-muted" },
-  planned: { icon: "", className: "border-line bg-canvas" },
-};
+import { StudyDays } from "../services/StudyDays";
+import type { StudentSession, StudyPlanItem } from "../types";
+import { StudyCalendar } from "./StudyCalendar";
 
 /**
- * The portal's "Study plan & materials" tab: the plan the instructor keeps in
- * admin Clients, plus every attached material in one list. null items = couldn't load.
+ * The portal's study plan: a calendar of the plan the instructor keeps in admin Clients, the student's sessions,
+ * finished mocks and exam day; beside it the programmes and every attached material. null items = couldn't load.
  */
 export function StudyPlanTimeline({
   items,
   programmes,
   exam,
+  sessions = [],
+  attempts = [],
   bankTopics = [],
   readOnly = false,
 }: {
   items: StudyPlanItem[] | null;
   programmes: string[];
   exam: { course: string; date: string } | null;
+  sessions?: StudentSession[];
+  attempts?: AttemptSummary[];
   /** Question-bank topics: a plan topic that matches one gets a topic test. */
   bankTopics?: string[];
-  /** The owner viewing as the student: nothing to press. */
+  /** The owner viewing as the student: nothing changes. */
   readOnly?: boolean;
 }) {
-  const next = items?.find((i) => i.status === "planned");
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dubai" }).format(new Date());
-  const line = StudyLine.build(items ?? [], exam, today);
-  const behind = (items ?? []).filter((i) => StudyLine.overdue(i, today));
-  const replan = exam && behind.length > 0 ? StudyLine.replan(items ?? [], today, exam.date) : [];
+  const today = StudyDays.today();
+  const { days, unscheduled } = StudyDays.build({ items: items ?? [], sessions, attempts, exam, bankTopics, today });
   const materials = (items ?? []).filter((i) => i.materialUrl);
+  const done = (items ?? []).filter((i) => i.status === "done").length;
+  const counted = (items ?? []).filter((i) => i.status !== "skipped").length;
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
-      <section aria-labelledby="plan-heading" className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <section aria-labelledby="plan-heading" className="min-w-0 rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="plan-heading" className="text-2xl font-normal italic">
             Your study plan
           </h2>
-          {items && items.length > 0 && (
-            <p className="text-sm text-muted">
-              {items.filter((i) => i.status === "done").length} of {items.length} topics done
-            </p>
-          )}
-        </div>
-        {line.length > 1 && <Line nodes={line} />}
-        {behind.length > 0 && !readOnly && (
-          <div className="mt-4 flex flex-wrap items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/5 p-3">
-            <p className="flex h-9 items-center text-sm font-semibold text-amber-300">{behind.length} behind</p>
-            <TabButton tab="book" notes={`Catch-up: ${behind.map((i) => i.topic).join(", ")}`} className={BUTTON}>
-              Book a catch-up session
-            </TabButton>
-            {replan.length > 0 && (
-              <details className="group">
-                <summary className={`${BUTTON} cursor-pointer list-none`}>Re-plan to exam day</summary>
-                <form action={replanToExam} className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted">
-                  {replan.length} topics, {lineDay(replan[0].dueOn)} to {lineDay(replan.at(-1)!.dueOn)}
-                  <button type="submit" className={BOOK_BUTTON}>
-                    Move them
-                  </button>
-                </form>
-              </details>
-            )}
-          </div>
-        )}
-        {items === null ? (
-          <p className="mt-3 text-sm text-muted">Couldn&rsquo;t load your study plan right now. Please refresh in a minute.</p>
-        ) : items.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            Your instructor hasn&rsquo;t shared a plan yet. Topics, dates and study materials will appear here once they do.
+          <p className="text-sm text-muted">
+            {[exam && (StudyDays.days(today, exam.date) === 0 ? "Exam today" : `Exam in ${StudyDays.days(today, exam.date)} days`), counted > 0 && `${done} of ${counted} topics done`]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
+        </div>
+        {items === null ? (
+          <p className="text-sm text-muted">Couldn&rsquo;t load your study plan right now. Please refresh in a minute.</p>
         ) : (
-          <ol className="mt-5 grid gap-0">
-            {items.map((item, index) => (
-              <li key={item.id} className="relative flex gap-4 pb-5 last:pb-0">
-                {index < items.length - 1 && <span aria-hidden className="absolute top-6 bottom-0 left-[11px] w-px bg-line" />}
-                <span
-                  aria-hidden
-                  className={`relative grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs ${
-                    StudyLine.overdue(item, today) ? "border-amber-400 bg-amber-400/20" : item === next ? "border-gold bg-gold/20" : MARK[item.status].className
-                  }`}
-                >
-                  {MARK[item.status].icon}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className={`text-xs ${StudyLine.overdue(item, today) ? "text-amber-300" : "text-muted"}`}>
-                    {item.dueOn ? PLAN_DAY.format(new Date(`${item.dueOn}T00:00:00Z`)) : "To be scheduled"}
-                    {StudyLine.overdue(item, today) && <span className="ml-2 font-semibold">Overdue</span>}
-                    {item === next && <span className="ml-2 font-semibold text-gold">Up next</span>}
-                    <span className="sr-only"> · {item.status}</span>
-                  </p>
-                  <p className={`mt-0.5 font-semibold ${item.status === "skipped" ? "text-muted line-through" : "text-ink"}`}>{item.topic}</p>
-                  {item.note && <p className="mt-1 text-sm text-ink/80">{item.note}</p>}
-                  {(item.materialUrl || (!readOnly && (item === next || StudyLine.overdue(item, today)))) && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {item.materialUrl && (
-                        <a href={item.materialUrl} target="_blank" rel="noreferrer" className={BUTTON}>
-                          Open material
-                        </a>
-                      )}
-                      {!readOnly && (item === next || StudyLine.overdue(item, today)) && (
-                        <>
-                          {StudyLine.match(item.topic, bankTopics) && (
-                            <form action={practisePlanTopic}>
-                              <input type="hidden" name="topic" value={item.topic} />
-                              <button type="submit" className={BUTTON}>
-                                Topic test
-                              </button>
-                            </form>
-                          )}
-                          <TabButton tab="book" notes={`Session on: ${item.topic}`} className={BUTTON}>
-                            Book a session
-                          </TabButton>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
+          <StudyCalendar
+            // A fresh calendar after every save, so it shows what the server now holds.
+            key={(items ?? []).map((i) => `${i.id}${i.dueOn}${i.status}`).join()}
+            days={days}
+            unscheduled={unscheduled}
+            today={today}
+            last={exam?.date ?? StudyDays.addDays(today, 366)}
+            readOnly={readOnly}
+          />
         )}
       </section>
 
@@ -171,47 +97,6 @@ export function StudyPlanTimeline({
           )}
         </section>
       </aside>
-    </div>
-  );
-}
-
-/** The plan on one line: topics in date order, today, then exam day. Scrolls sideways when it's longer than the card. */
-function Line({ nodes }: { nodes: StudyLineNode[] }) {
-  const now = nodes.findIndex((n) => n.kind === "today");
-  return (
-    <div className="mt-5 overflow-x-auto pb-2">
-      <ol className="flex w-full">
-        {nodes.map((n, i) => (
-          <li key={n.kind === "topic" ? n.id : n.kind} title={n.kind === "topic" ? n.topic : undefined} className="relative flex min-w-28 flex-1 flex-col items-center px-1 text-center">
-            <span
-              aria-hidden
-              className={`absolute top-[1.625rem] h-0.5 ${i < now ? "bg-quant/70" : "bg-line"} ${i === 0 ? "left-1/2" : "left-0"} ${i === nodes.length - 1 ? "right-1/2" : "right-0"}`}
-            />
-            <span className={`h-4 text-[11px] ${n.kind === "topic" && n.overdue ? "text-amber-300" : "text-muted"}`}>{n.kind === "today" ? "" : lineDay(n.date)}</span>
-            {n.kind === "topic" ? (
-              <span
-                aria-hidden
-                className={`relative mt-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] ${n.overdue ? "border-amber-400 bg-amber-400/20" : n.next ? "border-gold bg-gold/20" : MARK[n.status].className}`}
-              >
-                {MARK[n.status].icon}
-              </span>
-            ) : n.kind === "today" ? (
-              <span aria-hidden className="relative mt-1 h-5 w-0.5 rounded-full bg-quant" />
-            ) : (
-              <span aria-hidden className="relative mt-1 h-5 w-5 rotate-45 rounded-sm border border-gold bg-gold" />
-            )}
-            <span
-              className={`mt-2 line-clamp-2 text-xs ${
-                n.kind === "today" ? "font-semibold text-quant" : n.kind === "exam" ? "font-semibold text-gold" : n.status === "skipped" ? "text-muted line-through" : n.next ? "font-semibold text-ink" : "text-ink/80"
-              }`}
-            >
-              {n.kind === "topic" ? n.topic : n.kind === "today" ? "Today" : "Exam day"}
-              <span className="sr-only">{n.kind === "topic" ? ` · ${n.status}` : ""}</span>
-            </span>
-            {n.kind === "exam" && <span className="text-[11px] text-muted">{n.days === 0 ? "today" : `in ${n.days} days`}</span>}
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }

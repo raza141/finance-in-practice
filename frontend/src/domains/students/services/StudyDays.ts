@@ -1,0 +1,124 @@
+import type { AttemptSummary } from "@/domains/mocks/types";
+
+import type { StudentSession, StudyPlanItem } from "../types";
+
+/** One thing on the study calendar. Plain strings only: it crosses into a client component. */
+export type StudyDayItem =
+  | {
+      kind: "topic";
+      id: string;
+      date: string;
+      dueOn: string;
+      topic: string;
+      status: StudyPlanItem["status"];
+      note: string;
+      materialUrl: string | null;
+      /** Still planned and its date has passed: shown on today until it's moved or done. */
+      carried: boolean;
+      /** The bank topic a topic test draws from; null: none matches. */
+      test: string | null;
+    }
+  | { kind: "session"; id: string; date: string; time: string; course: string; place: string; meetingUrl: string | null; pending: boolean }
+  | { kind: "mock"; id: string; date: string; title: string; percent: number }
+  | { kind: "exam"; id: string; date: string; course: string; days: number };
+
+export type StudyTopic = Extract<StudyDayItem, { kind: "topic" }>;
+
+const ZONE = "Asia/Dubai";
+const DAY = new Intl.DateTimeFormat("en-CA", { timeZone: ZONE });
+const TIME = new Intl.DateTimeFormat("en-GB", { timeZone: ZONE, hour: "numeric", minute: "2-digit", hour12: true });
+const ORDER: Record<StudyDayItem["kind"], number> = { exam: 0, session: 1, topic: 2, mock: 3 };
+
+/** The study calendar: plan topics, sessions, finished mocks and exam day, by day in UAE time. */
+export class StudyDays {
+  static today(now: Date = new Date()): string {
+    return DAY.format(now);
+  }
+
+  static build(input: {
+    items: readonly StudyPlanItem[];
+    sessions: readonly StudentSession[];
+    attempts: readonly AttemptSummary[];
+    exam: { course: string; date: string } | null;
+    bankTopics: readonly string[];
+    today: string;
+  }): { days: Record<string, StudyDayItem[]>; unscheduled: StudyTopic[] } {
+    const { today } = input;
+    const all: StudyDayItem[] = [];
+    const unscheduled: StudyTopic[] = [];
+    for (const i of input.items) {
+      const carried = StudyDays.overdue(i, today);
+      const topic: StudyTopic = {
+        kind: "topic",
+        id: i.id,
+        date: carried ? today : (i.dueOn ?? ""),
+        dueOn: i.dueOn ?? "",
+        topic: i.topic,
+        status: i.status,
+        note: i.note,
+        materialUrl: i.materialUrl,
+        carried,
+        test: StudyDays.match(i.topic, input.bankTopics),
+      };
+      if (i.dueOn) all.push(topic);
+      else if (i.status === "planned") unscheduled.push(topic);
+    }
+    for (const s of input.sessions) {
+      const start = new Date(s.start);
+      all.push({ kind: "session", id: s.uid, date: DAY.format(start), time: TIME.format(start), course: s.course, place: s.address ?? "Online", meetingUrl: s.meetingUrl, pending: s.status === "pending" });
+    }
+    for (const a of input.attempts) {
+      if (a.status !== "completed" || !a.submittedAt || a.score === null || !a.total) continue;
+      all.push({ kind: "mock", id: a.id, date: DAY.format(a.submittedAt), title: a.mistakes ? `${a.mockTitle}: mistakes` : a.mockTitle, percent: Math.round((a.score / a.total) * 100) });
+    }
+    if (input.exam) all.push({ kind: "exam", id: "exam", date: input.exam.date, course: input.exam.course, days: StudyDays.days(today, input.exam.date) });
+
+    const days: Record<string, StudyDayItem[]> = {};
+    for (const item of all) (days[item.date] ??= []).push(item);
+    for (const list of Object.values(days)) list.sort((a, b) => ORDER[a.kind] - ORDER[b.kind] || Number(b.kind === "topic" && b.carried) - Number(a.kind === "topic" && a.carried));
+    return { days, unscheduled };
+  }
+
+  /** Still planned, and its date has passed. */
+  static overdue(item: Pick<StudyPlanItem, "status" | "dueOn">, today: string): boolean {
+    return item.status === "planned" && item.dueOn !== null && item.dueOn < today;
+  }
+
+  /** `month` (yyyy-mm) as weeks of seven yyyy-mm-dd, Monday first, padded with the days around it. */
+  static monthGrid(month: string): string[][] {
+    const first = `${month}-01`;
+    const weekday = (new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7;
+    let day = StudyDays.addDays(first, -weekday);
+    const weeks: string[][] = [];
+    do {
+      weeks.push(Array.from({ length: 7 }, (_, i) => StudyDays.addDays(day, i)));
+      day = StudyDays.addDays(day, 7);
+    } while (day.slice(0, 7) === month);
+    return weeks;
+  }
+
+  static shiftMonth(month: string, by: number): string {
+    const [y, m] = month.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + by, 1));
+    return d.toISOString().slice(0, 7);
+  }
+
+  /** The bank topic a plan topic is about ("Ethics & Professional Standards" → "Ethics"): the longest name either contains. */
+  static match(topic: string, bankTopics: readonly string[]): string | null {
+    const t = topic.trim().toLowerCase();
+    if (!t) return null;
+    const hits = bankTopics.filter((b) => {
+      const name = b.trim().toLowerCase();
+      return name.length > 0 && (t.includes(name) || name.includes(t));
+    });
+    return hits.toSorted((a, b) => b.length - a.length)[0] ?? null;
+  }
+
+  static addDays(date: string, days: number): string {
+    return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+  }
+
+  static days(from: string, to: string): number {
+    return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+  }
+}

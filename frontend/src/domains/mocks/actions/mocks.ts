@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
-import { StudyLine } from "@/domains/students/services/StudyLine";
+import { StudyDays } from "@/domains/students/services/StudyDays";
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 
 import { MockSession } from "../server/MockSession";
@@ -68,7 +68,7 @@ export async function practisePlanTopic(form: FormData): Promise<void> {
   const me = await student();
   const repo = MockSession.repo();
   const levels = await repo.topicLevels();
-  const topic = StudyLine.match(String(form.get("topic") ?? "").slice(0, 200), [...new Set(levels.map((l) => l.topic))]);
+  const topic = StudyDays.match(String(form.get("topic") ?? "").slice(0, 200), [...new Set(levels.map((l) => l.topic))]);
   if (!topic) redirect("/student?tab=plan");
   // Level II only for a Level II student whose bank has that topic at Level II.
   const level = me.courses.some((c) => /level ii\b/i.test(c)) && levels.some((l) => l.topic === topic && l.level === 2) ? 2 : 1;
