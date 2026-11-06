@@ -1,4 +1,7 @@
+import { ChartLine, GraduationCap } from "lucide-react";
+
 import { siteConfig } from "@/core/config/site";
+import { HomeRow } from "@/domains/students/components/HomeRow";
 import { BUTTON, CLASSROOM_BUTTON } from "@/domains/students/components/buttons";
 import { TabButton } from "@/domains/students/components/StudentPortal";
 
@@ -315,52 +318,59 @@ export function ProgressPanel({ progress: p }: { progress: Progress }) {
   );
 }
 
-/** The overview's mock card (MockProgress): the latest mark against the target, and the trend since the first. */
-export function LatestMockCard({ progress: p }: { progress: Progress }) {
+/** Home's mock row (MockProgress): the latest mark against the target, and the trend since the first. */
+export function LatestMockRow({ progress: p }: { progress: Progress }) {
+  const low = p.latest !== null && p.latest < TARGET;
   return (
-    <section className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md">
-      <h2 className={LABEL}>Latest mock</h2>
-      <p className={`mt-2 text-3xl font-semibold ${p.latest !== null && p.latest < TARGET ? "text-gold" : "text-ink"}`}>{p.latest === null ? "—" : `${p.latest}%`}</p>
-      <p className="truncate text-sm text-muted">
-        {p.mocks.length > 0 ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%` : "No mocks taken yet"}
-        {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
-      </p>
-      <TabButton tab={p.mocks.length > 0 ? "progress" : "mocks"} className={`${BUTTON} mt-4`}>
-        {p.mocks.length > 0 ? "See progress" : "Open mock exams"}
-      </TabButton>
-    </section>
+    <HomeRow
+      tab={p.mocks.length > 0 ? "progress" : "mocks"}
+      icon={ChartLine}
+      title={p.mocks.length > 0 ? `Latest mock · target ${TARGET}%` : "Mock exams"}
+      detail={p.mocks.length > 0 ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""}${p.change !== null ? ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first` : ""}` : "No mocks taken yet"}
+      value={p.latest === null ? undefined : <span className={low ? "text-gold" : "text-quant"}>{p.latest}%</span>}
+    />
   );
 }
 
-/** Overview cards fed by Classroom: due soon and what's new. */
-export async function OverviewClassCards({ result }: { result: Promise<FeedResult> }) {
+const DUE = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Dubai" });
+
+/** Home's to-do rows from Classroom: missing work first, then what's due in the next 7 days (three at most). */
+export async function ClassTodoRows({ result }: { result: Promise<FeedResult> }) {
   const r = await result;
-  if (r.status === "off") return null;
-  if (r.status === "error") return null;
-  const { feed } = r;
-  const missing = ClassFeed.todo(feed.items).filter((i) => i.status === "missing");
-  const soon = ClassFeed.dueWithin(feed.items, 7);
-  const fresh = feed.items.filter((i) => ClassFeed.isNew(i, feed.seenAt));
-  const card = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
+  if (r.status !== "ok") return null;
+  const items = r.feed.items;
+  const missing = ClassFeed.todo(items).filter((i) => i.status === "missing");
+  const soon = ClassFeed.dueWithin(items, 7).sort((a, b) => Date.parse(a.dueAt!) - Date.parse(b.dueAt!));
+  const rows = [...missing, ...soon].slice(0, 3);
+  const rest = missing.length + soon.length - rows.length;
   return (
     <>
-      <section className={card}>
-        <h2 className={LABEL}>Google Classroom · to-do</h2>
-        <p className="mt-2 text-3xl font-semibold text-ink">{soon.length}</p>
-        <p className="text-sm text-muted">due in the next 7 days{missing.length > 0 && <span className="text-red-300"> · {missing.length} missing</span>}</p>
-        {soon[0] && <p className="mt-2 truncate text-sm text-ink/90">Next: {soon[0].title}</p>}
-        <TabButton tab="classroom" className={`${BUTTON} mt-4`}>
-          Open Classroom
-        </TabButton>
-      </section>
-      <section className={card}>
-        <h2 className={LABEL}>New in your class</h2>
-        <p className="mt-2 text-3xl font-semibold text-ink">{fresh.length}</p>
-        <p className="truncate text-sm text-muted">{fresh[0] ? `Latest: ${fresh[0].title}` : "Nothing new since your last visit"}</p>
-        <TabButton tab="classroom" className={`${BUTTON} mt-4`}>
-          See what&rsquo;s new
-        </TabButton>
-      </section>
+      {rows.map((i) => (
+        <HomeRow
+          key={i.id}
+          tab="classroom"
+          icon={GraduationCap}
+          urgent={i.status === "missing"}
+          title={i.title}
+          detail={`${i.status === "missing" ? "Missing" : `Due ${DUE.format(new Date(i.dueAt!))}`} · ${i.classTitle}`}
+        />
+      ))}
+      {rest > 0 && <HomeRow tab="classroom" icon={GraduationCap} title={`${rest} more in Classroom`} />}
     </>
+  );
+}
+
+/** Home's "what's new" row from Classroom; nothing when Classroom is off or failed. */
+export async function ClassNewRow({ result }: { result: Promise<FeedResult> }) {
+  const r = await result;
+  if (r.status !== "ok") return null;
+  const fresh = r.feed.items.filter((i) => ClassFeed.isNew(i, r.feed.seenAt));
+  return (
+    <HomeRow
+      tab="classroom"
+      icon={GraduationCap}
+      title={fresh.length ? `${fresh.length} new in your class` : "Your class"}
+      detail={fresh[0] ? fresh[0].title : "Nothing new since your last visit"}
+    />
   );
 }

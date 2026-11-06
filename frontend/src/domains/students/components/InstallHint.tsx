@@ -42,7 +42,7 @@ export function InstallHint() {
   };
 
   return (
-    <section className="flex flex-wrap items-center gap-4 rounded-3xl border border-quant/30 bg-quant/5 p-5 backdrop-blur-md sm:col-span-2 lg:col-span-3">
+    <section className="flex flex-wrap items-center gap-4 rounded-3xl border border-quant/30 bg-quant/5 p-5 backdrop-blur-md">
       <div className="min-w-56 flex-1 text-sm">
         <p className="font-semibold text-ink">Add the portal to your home screen</p>
         <p className="mt-1 text-ink/80">

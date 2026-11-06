@@ -1,9 +1,12 @@
+import { Receipt } from "lucide-react";
+
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { ClientDocument, Currency } from "@/domains/invoices/types";
 
 import type { AccountAgreement, AccountMoney, AccountMonth, MonthAllowance, StudentAccountView, StudentPlan } from "../types";
 import { AcceptAgreementForm, RequestHoursForm } from "./AccountForms";
-import { BOOK_BUTTON, BUTTON } from "./buttons";
+import { BOOK_BUTTON } from "./buttons";
+import { HomeRow } from "./HomeRow";
 import { TabButton } from "./StudentPortal";
 
 const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
@@ -37,41 +40,26 @@ function balanceText(money: AccountMoney): { text: string; tone: string } {
   return { text: "All paid", tone: "text-quant" };
 }
 
-/** The Overview card: hours this month and what is owed. */
-export function AccountSummaryCard({ account }: { account: StudentAccountView | null }) {
+/** Home's account row: hours left (or studied this month) and what is owed. */
+export function AccountSummaryRow({ account }: { account: StudentAccountView | null }) {
   const now = account?.months.at(-2);
+  if (!account || !now) return <HomeRow tab="account" icon={Receipt} title="Hours & payments" detail="Couldn’t load your account just now" />;
+  const hours = !account.taken
+    ? "Hours unavailable just now"
+    : account.allowance
+      ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left ${account.allowance.package ? "in your package" : `until ${SHORT.format(dayDate(account.allowance.periodEnd))}`}`
+      : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`;
+  const owed = account.money.filter((m) => m.balanceMinor > 0);
+  const money = account.money.length === 0 ? "No invoices yet" : account.money.map((m) => balanceText(m).text).join(" · ");
   return (
-    <section className={CARD}>
-      <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Hours &amp; payments</h2>
-      {account && now ? (
-        <>
-          <p className="mt-2 text-xl font-semibold text-ink">
-            {!account.taken
-              ? "Hours unavailable just now"
-              : account.allowance
-                ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left ${account.allowance.package ? "in your package" : `until ${SHORT.format(dayDate(account.allowance.periodEnd))}`}`
-                : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`}
-          </p>
-          <p className="text-sm text-muted">
-            {account.money.length === 0
-              ? "No invoices yet"
-              : account.money.map((m) => {
-                  const { text, tone } = balanceText(m);
-                  return (
-                    <span key={m.currency} className={`mr-3 ${tone}`}>
-                      {text}
-                    </span>
-                  );
-                })}
-          </p>
-        </>
-      ) : (
-        <p className="mt-2 text-sm text-muted">Couldn&rsquo;t load your account just now.</p>
-      )}
-      <TabButton tab="account" className={`${BUTTON} mt-4`}>
-        Open account
-      </TabButton>
-    </section>
+    <HomeRow
+      tab="account"
+      icon={Receipt}
+      urgent={owed.length > 0}
+      title={hours}
+      detail={money}
+      value={owed.length > 0 ? <span className="text-gold">Pay</span> : undefined}
+    />
   );
 }
 

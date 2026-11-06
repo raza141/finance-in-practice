@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
-import { ClassFeedSidebar, ClassTopics, LatestMockCard, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
+import { ClassFeedSidebar, ClassTopics, ClassNewRow, ClassTodoRows, LatestMockRow, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
 import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
 import { AgreementRepository } from "@/domains/invoices/server/AgreementRepository";
 import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
@@ -26,7 +26,7 @@ import { StudentAccount } from "../services/StudentAccount";
 import { StudentSessions } from "../services/StudentSessions";
 import { StudyDays } from "../services/StudyDays";
 import type { Student, StudentAccountView, StudyPlanItem } from "../types";
-import { AccountPanel, AccountSummaryCard } from "./AccountPanel";
+import { AccountPanel, AccountSummaryRow } from "./AccountPanel";
 import { BOOK_BUTTON } from "./buttons";
 import { ClassroomPanel } from "./ClassroomPanel";
 import { PortalOverview } from "./PortalOverview";
@@ -190,14 +190,22 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
           <PortalOverview
+            name={student.name.split(" ")[0]}
             sessions={sessions}
             plan={plan}
-            accountCard={<AccountSummaryCard account={account} />}
-            mockCard={progress && (progress.mocks.length > 0 || (mocks?.length ?? 0) > 0) ? <LatestMockCard progress={progress} /> : null}
-            classCards={
+            accountRow={<AccountSummaryRow account={account} />}
+            mockRow={progress && (progress.mocks.length > 0 || (mocks?.length ?? 0) > 0) ? <LatestMockRow progress={progress} /> : null}
+            classTodo={
               synced && (
-                <Suspense fallback={loading("your class")}>
-                  <OverviewClassCards result={feed} />
+                <Suspense fallback={null}>
+                  <ClassTodoRows result={feed} />
+                </Suspense>
+              )
+            }
+            classNew={
+              synced && (
+                <Suspense fallback={null}>
+                  <ClassNewRow result={feed} />
                 </Suspense>
               )
             }

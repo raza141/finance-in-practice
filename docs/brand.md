@@ -106,6 +106,7 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 - **Phones and tablets (< 1024px)**: main navigation becomes a bottom tab bar, at most 5 items, icon over label, the active one gold. Content leaves room for it.
 - **A tab with several pages** (Sessions: Book a session, My sessions; Mocks: Mock exams, Progress, Mistakes notebook, Topic drill) opens a small menu in the bar on wide screens and shows a pill switch at the top of the page on every screen.
 - **Two-column pages**: the main working area left, the narrow side panel (live preview, latest posts) right, about 22–24rem (Study plan, Book a session, Classroom). On phones they stack.
+- **Home is rows, not tiles**: a greeting, one big card for the next session, a To do list and an At a glance panel. Each row is icon, title, one detail, chevron, and opens its tab; no grid of equal boxes with a button each.
 - **Badges**: a small gold count on a tab only when something needs the student (overdue topics, sessions awaiting confirmation).
 - **Every tab has a URL** (`?tab=…`), so refresh, Back and shared links land in the same place.
 - **Width and rhythm**: `page-container` for everything, so the bar, cards and logo share one left edge. Spacing on a 4/8px scale; cards 24px padding (32px on desktop), 24px between cards.
