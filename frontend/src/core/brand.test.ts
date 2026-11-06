@@ -49,6 +49,11 @@ describe("brand lock", () => {
     expect(adHoc).toEqual([]);
   });
 
+  it("draws icons with Lucide, not emoji", () => {
+    const bad = sources.filter((f) => f.path.endsWith(".tsx") && /\p{Emoji_Presentation}|[⚑⚐☰⏸⏱▶✎]/u.test(f.text)).map((f) => f.path);
+    expect(bad).toEqual([]);
+  });
+
   it("keeps the brand tokens at their values", () => {
     const css = readFileSync(join(SRC, "app/globals.css"), "utf8");
     for (const [token, value] of Object.entries({ canvas: "#0b1120", surface: "#151e32", line: "#24304a", gold: "#d4af37", quant: "#22d3ee", ink: "#f8fafc", muted: "#aab6c8" })) {

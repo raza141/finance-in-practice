@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type { FreeResource } from "../services/ResourceCatalog";
 import { LeadForm } from "./LeadForm";
 
@@ -39,8 +40,8 @@ export function FreeResourceBlock({ resource, source, eyebrow = "Free download" 
         <ul className="mt-5 grid gap-2 text-ink/90">
           {resource.points.map((line) => (
             <li key={line} className="flex items-center gap-3">
-              <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold text-[11px] text-canvas">
-                ✓
+              <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold text-canvas">
+                <Check strokeWidth={3} className="size-3" />
               </span>
               {line}
             </li>

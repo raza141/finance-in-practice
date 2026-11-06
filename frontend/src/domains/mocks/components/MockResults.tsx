@@ -1,5 +1,6 @@
 "use client";
 
+import { Flag } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 
@@ -289,7 +290,12 @@ export function MockResults({
                   <span className={paceSeconds !== null && q.seconds > SLOW * paceSeconds ? "text-gold" : "font-normal text-muted"}>{MockGrader.clock(q.seconds)}</span>
                 )}
                 {q.confidence && <span className="font-normal text-muted">{q.confidence === "sure" ? (readOnly ? "They were sure" : "You were sure") : readOnly ? "Their guess" : "Your guess"}</span>}
-                {q.flagged && <span className="text-gold">⚑ Flagged</span>}
+                {q.flagged && (
+                  <span className="inline-flex items-center gap-1 text-gold">
+                    <Flag aria-hidden fill="currentColor" className="size-3" />
+                    Flagged
+                  </span>
+                )}
                 <span className={right ? "text-emerald-300" : "text-red-300"}>{right ? "Correct" : q.selected ? "Incorrect" : "Not answered"}</span>
               </span>
             </header>

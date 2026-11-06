@@ -1,4 +1,5 @@
-import { LineIcon } from "@/core/components/ui/LineIcon";
+import { Lightbulb, Target, TrendingUp } from "lucide-react";
+
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { MarketPulseCard } from "@/domains/market/components/MarketPulseCard";
 import { MarketPulseSource } from "@/domains/market/server/MarketPulseSource";
@@ -8,17 +9,17 @@ const POINTS = [
   {
     title: "Concept first",
     body: "The logic behind every formula, so you can rebuild it under exam pressure.",
-    icon: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z",
+    icon: Lightbulb,
   },
   {
     title: "A plan built around you",
     body: "Your exam date, weak topics and schedule set the pace. Nothing generic.",
-    icon: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z",
+    icon: Target,
   },
   {
     title: "Taught on real markets",
     body: "Every topic tied to live prices, rates and volatility, like this board.",
-    icon: "M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4",
+    icon: TrendingUp,
   },
 ];
 
@@ -37,7 +38,7 @@ export async function WhyUsSection() {
             {POINTS.map((point) => (
               <li key={point.title} className="flex flex-1 items-center gap-5 p-6 sm:gap-6 sm:p-8">
                 <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-quant/30 bg-quant/10 text-quant">
-                  <LineIcon d={point.icon} />
+                  <point.icon aria-hidden strokeWidth={1.8} className="h-6 w-6" />
                 </span>
                 <div>
                   <h3 className="text-xl font-bold">{point.title}</h3>

@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import Link from "next/link";
 
 import { BookButton } from "@/core/components/ui/BookButton";
@@ -66,8 +67,8 @@ export async function FeaturedCoursesSection() {
                   <ul className="mt-3 grid gap-2 text-sm text-ink/90">
                     {savers.map((line) => (
                       <li key={line} className="flex gap-2.5">
-                        <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-[10px] text-canvas">
-                          ✓
+                        <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-canvas">
+                          <Check strokeWidth={3} className="size-2.5" />
                         </span>
                         {line}
                       </li>

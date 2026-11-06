@@ -1,5 +1,6 @@
 "use client";
 
+import { Flag, PanelLeft, Pause, Play, Timer } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { RAISED_GOLD, RAISED_PLAIN, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
@@ -44,10 +45,7 @@ const AUTO_SUBMIT_RETRY_MS = 10_000;
 /** The side-panel icon (as in a chat app's sidebar toggle): a window with its left column marked. */
 function PanelIcon() {
   return (
-    <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-5">
-      <rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" />
-      <path d="M7.75 3.75v12.5" />
-    </svg>
+    <PanelLeft aria-hidden strokeWidth={1.5} className="size-5" />
   );
 }
 
@@ -451,7 +449,8 @@ export function MockPlayer({
             aria-label="Time left"
             className={`rounded-md border px-3 py-1 font-mono text-lg tabular-nums ${left <= 300 ? "border-red-400/60 text-red-300" : "border-line text-ink"}`}
           >
-            ⏱ {MockGrader.clock(left)}
+            <Timer aria-hidden className="mr-1 inline size-4 align-[-3px]" />
+            {MockGrader.clock(left)}
           </p>
           {paused && (
             <BackToPortal href={exitHref} label={preview ? "Exit" : "Back to portal"} />
@@ -463,7 +462,12 @@ export function MockPlayer({
               disabled={state === "resuming"}
               className={`rounded-btn px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
             >
-              {state === "resuming" ? "Resuming…" : "▶ Resume"}
+              {state === "resuming" ? "Resuming…" : (
+                <>
+                  <Play aria-hidden fill="currentColor" className="mr-1 inline size-3.5 align-[-2px]" />
+                  Resume
+                </>
+              )}
             </button>
           ) : (
             <button
@@ -472,7 +476,12 @@ export function MockPlayer({
               disabled={state === "pausing" || state === "submitting"}
               className={`rounded-btn px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${RAISED_PLAIN}`}
             >
-              {state === "pausing" ? "Pausing…" : "⏸ Pause"}
+              {state === "pausing" ? "Pausing…" : (
+                <>
+                  <Pause aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />
+                  Pause
+                </>
+              )}
             </button>
           )}
         </div>
@@ -544,7 +553,12 @@ export function MockPlayer({
                 disabled={state === "resuming"}
                 className={`mt-2 h-11 rounded-btn px-6 text-sm font-semibold disabled:opacity-60 ${RAISED_GOLD}`}
               >
-                {state === "resuming" ? "Resuming…" : "▶ Resume"}
+                {state === "resuming" ? "Resuming…" : (
+                <>
+                  <Play aria-hidden fill="currentColor" className="mr-1 inline size-3.5 align-[-2px]" />
+                  Resume
+                </>
+              )}
               </button>
             </section>
           ) : (
@@ -577,7 +591,8 @@ export function MockPlayer({
                   onClick={() => change(q.id, { flagged: !mine.flagged })}
                   className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${mine.flagged ? "border-gold bg-gold/20 text-gold" : "border-line text-muted hover:text-ink"}`}
                 >
-                  {mine.flagged ? "⚑ Flagged" : "⚐ Flag for review"}
+                  <Flag aria-hidden className="mr-1 inline size-3.5 align-[-2px]" fill={mine.flagged ? "currentColor" : "none"} />
+                  {mine.flagged ? "Flagged" : "Flag for review"}
                 </button>
               </div>
               <div className="mt-4 text-[1.05rem] leading-relaxed">{q.question}</div>

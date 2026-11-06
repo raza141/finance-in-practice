@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -95,8 +96,8 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
           <ul className="mt-6 grid gap-3 text-sm text-ink/90">
             {PERKS.map((perk) => (
               <li key={perk} className="flex gap-2.5">
-                <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-[10px] text-canvas">
-                  ✓
+                <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-canvas">
+                  <Check strokeWidth={3} className="size-2.5" />
                 </span>
                 {perk}
               </li>

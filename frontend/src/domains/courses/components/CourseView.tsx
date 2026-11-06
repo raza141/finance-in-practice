@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { LineIcon } from "@/core/components/ui/LineIcon";
+import { BookOpen, BookText, CalendarDays, Clock, type LucideIcon, Merge, Presentation, RotateCw, Target, TrendingUp, Zap } from "lucide-react";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
 import { siteConfig } from "@/core/config/site";
 import { OrderBookCard } from "@/domains/testimonials/components/OrderBookCard";
@@ -24,29 +24,16 @@ const PRIORITY_STYLE: Record<ModulePriority, string> = {
 const ROW: Record<number, string> = { 1: "md:grid-cols-1", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" };
 const row = (count: number) => ROW[count] ?? "md:grid-cols-3";
 
-const icon = (path: string) => <LineIcon d={path} />;
+const icon = (Icon: LucideIcon) => <Icon aria-hidden strokeWidth={1.8} className="h-6 w-6" />;
 
-/** One per method stage, by position: book (learn), target (solve), tool (apply), loop (revise). */
-const STAGE_ICONS = [
-  icon("M4 19.5V5a2 2 0 0 1 2-2h14v15H6a2 2 0 0 0-2 2Zm0 0A2 2 0 0 0 6 22h14M9 7h7M9 11h5"),
-  icon("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"),
-  icon("M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4"),
-  icon("M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"),
-];
+/** One per method stage, by position: book (learn), target (solve), chart (apply), loop (revise). */
+const STAGE_ICONS = [icon(BookText), icon(Target), icon(TrendingUp), icon(RotateCw)];
 
 /** One per payment option, by position: clock (by the hour), calendar (monthly), lightning (revision crash course). */
-const OPTION_ICONS = [
-  icon("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2"),
-  icon("M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"),
-  icon("M13 2 4 14h7l-1 8 9-12h-7l1-8Z"),
-];
+const OPTION_ICONS = [icon(Clock), icon(CalendarDays), icon(Zap)];
 
-/** One per way to learn, by position: open book (self-study), presenter at a board (tutor-led), two paths merging (hybrid). */
-const MODE_ICONS = [
-  icon("M12 6.5C10.2 5.2 7.8 4.5 4 4.5v13c3.8 0 6.2.7 8 2 1.8-1.3 4.2-2 8-2v-13c-3.8 0-6.2.7-8 2Zm0 0v13"),
-  icon("M3 4h18v11H3zM8 20l4-5 4 5M7 9h6M7 12h4"),
-  icon("M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 1 6 6M18 3v6a6 6 0 0 1-6 6M3 6l3-3 3 3M15 6l3-3 3 3"),
-];
+/** One per way to learn, by position: open book (self-study), presenter (tutor-led), paths merging (hybrid). */
+const MODE_ICONS = [icon(BookOpen), icon(Presentation), icon(Merge)];
 
 /**
  * The public course page body. Shared by /courses/[slug] and the admin live

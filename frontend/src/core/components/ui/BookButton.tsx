@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useId, type ComponentProps, type CSSProperties, type MouseEvent } from "react";
 
 import { siteConfig } from "@/core/config/site";
@@ -53,9 +54,7 @@ export function BookSplitButton() {
         aria-label="Choose a course to book"
         className={`split-toggle grid size-11 shrink-0 place-items-center rounded-btn ${RAISED_GOLD}`}
       >
-        <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="size-5 transition-[rotate] duration-200 motion-reduce:transition-none">
-          <path d="M5 8l5 5 5-5" />
-        </svg>
+        <ChevronDown aria-hidden strokeWidth={2.5} className="size-5 transition-[rotate] duration-200 motion-reduce:transition-none" />
       </button>
       <div
         id={menu}

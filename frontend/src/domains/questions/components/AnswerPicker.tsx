@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { animate, stagger } from "animejs";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
@@ -166,7 +167,7 @@ export function AnswerPicker({
                     aria-hidden
                     className={`grid size-10 shrink-0 place-items-center rounded-lg border font-mono text-base font-semibold transition-colors ${isCorrect ? "border-emerald-400 text-emerald-300" : isWrongPick ? "border-red-400 text-red-300" : answered ? "border-line text-muted" : "border-line text-muted group-hover:border-gold group-hover:bg-gold group-hover:text-canvas group-focus-visible:border-gold group-focus-visible:text-gold"}`}
                   >
-                    {isCorrect ? <Check draw={celebrate} /> : isWrongPick ? "✕" : o.letter}
+                    {isCorrect ? <Check draw={celebrate} /> : isWrongPick ? <X aria-hidden strokeWidth={2.5} className="size-4" /> : o.letter}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="sr-only">{o.letter}. </span>

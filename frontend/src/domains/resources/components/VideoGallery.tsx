@@ -1,5 +1,6 @@
 "use client";
 
+import { Play } from "lucide-react";
 import { useState } from "react";
 
 import { YouTubeLink } from "../services/YouTubeLink";
@@ -29,9 +30,7 @@ export function VideoGallery({ videos }: { videos: { youtubeId: string; title: s
                 <img src={YouTubeLink.thumbnail(v.youtubeId)} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />
                 <span aria-hidden className="absolute inset-0 grid place-items-center">
                   <span className="grid h-14 w-14 place-items-center rounded-full bg-gold text-canvas shadow-lg transition-transform group-hover:scale-110">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M6 4.5v11l9-5.5z" />
-                    </svg>
+                    <Play aria-hidden fill="currentColor" className="ml-0.5 size-5" />
                   </span>
                 </span>
               </button>

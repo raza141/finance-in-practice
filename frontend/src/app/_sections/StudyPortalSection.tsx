@@ -1,3 +1,4 @@
+import { Pause } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
@@ -21,7 +22,9 @@ function MockShot() {
       <div className="flex items-center justify-between text-muted">
         <span>Question 14 of 90</span>
         <span className="font-mono text-sm font-semibold text-ink">1:23:45</span>
-        <span className="rounded-md border border-line px-2 py-0.5">⏸ Pause</span>
+        <span className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-0.5">
+          <Pause aria-hidden className="size-3" /> Pause
+        </span>
       </div>
       <div className="mt-3 grid grid-cols-10 gap-1">
         {PALETTE.map((n) => (

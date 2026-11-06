@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -535,7 +536,7 @@ export function ArticleEditor({ article, viewer, aiEnabled, revisions, published
               ))}
             </div>
             <button type="button" onClick={() => setInspectorOpen(false)} className="px-2 text-muted hover:text-ink 2xl:hidden" aria-label="Close inspector">
-              ✕
+              <X aria-hidden className="size-4" />
             </button>
           </div>
 
@@ -606,7 +607,11 @@ export function ArticleEditor({ article, viewer, aiEnabled, revisions, published
                       </button>
                     </li>
                   ))}
-                  {issues.length === 0 && <li className="text-xs text-quant">✓ Everything checks out.</li>}
+                  {issues.length === 0 && (
+                    <li className="flex items-center gap-1.5 text-xs text-quant">
+                      <Check aria-hidden className="size-3.5" /> Everything checks out.
+                    </li>
+                  )}
                 </ul>
               </section>
 

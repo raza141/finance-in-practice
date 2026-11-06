@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import "katex/dist/katex.min.css";
 
 import Image from "next/image";
@@ -112,7 +113,8 @@ export function QuestionView({
   const solution = (
     <div className="mt-6 space-y-6 rounded-xl border border-line bg-surface/70 p-5 sm:p-6">
       <p className="text-lg font-semibold text-emerald-300">
-        <span aria-hidden>✓ </span>Correct answer: {letter(q.correct)}. <Inline text={answer.text} />
+        <Check aria-hidden strokeWidth={2.5} className="mr-1.5 inline size-5 align-[-3px]" />
+        Correct answer: {letter(q.correct)}. <Inline text={answer.text} />
       </p>
       {q.formula && (
         <Section title="Formula" tone="border-quant/60">

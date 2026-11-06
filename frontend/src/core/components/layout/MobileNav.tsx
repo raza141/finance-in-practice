@@ -1,5 +1,6 @@
 "use client";
 
+import { Menu, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -25,13 +26,7 @@ export function MobileNav() {
         onClick={() => setOpen((value) => !value)}
         className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-surface/80 text-ink shadow-lg backdrop-blur-md"
       >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-          {open ? (
-            <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.6" />
-          ) : (
-            <path d="M2 5H16M2 9H16M2 13H16" stroke="currentColor" strokeWidth="1.6" />
-          )}
-        </svg>
+        {open ? <X aria-hidden className="size-[18px]" /> : <Menu aria-hidden className="size-[18px]" />}
       </button>
 
       {open &&
@@ -74,10 +69,7 @@ export function MobileNav() {
             onClick={() => setOpen(false)}
             className="mt-2 flex items-center justify-center gap-2 rounded-md border border-line px-2 py-3 text-base text-ink hover:bg-surface"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="text-gold">
-              <circle cx="8" cy="5.5" r="3" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M2.5 14c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
+            <UserRound aria-hidden strokeWidth={1.75} className="size-4 text-gold" />
             Student login
           </Link>
           <BookButton onClick={() => setOpen(false)} className="mt-2 w-full" />

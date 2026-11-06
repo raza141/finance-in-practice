@@ -112,7 +112,7 @@ export function InstructorProfile({ instructor, index, total }: InstructorProfil
                   className="group inline-flex items-center gap-3 rounded-xl bg-linkedin py-2.5 pr-5 pl-2.5 text-white shadow-[0_10px_34px_-12px_rgb(10_102_194/0.9)] transition hover:-translate-y-0.5 hover:bg-linkedin-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-quant"
                 >
                   <span className="grid h-9 w-9 place-items-center rounded-lg bg-white">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#0A66C2" aria-hidden>
+                    <svg viewBox="0 0 24 24" width="20" height="20" className="fill-linkedin" aria-hidden>
                       <path d={LINKEDIN_GLYPH} />
                     </svg>
                   </span>

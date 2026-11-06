@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState, useTransition, type MouseEvent } from "react";
 
@@ -524,7 +525,7 @@ function EventDetail({ event, owner, onClose }: { event: ScheduleEvent; owner: b
           <p className={`text-xs ${awaiting(event) ? "font-semibold text-gold" : "text-muted"}`}>{statusLabel(event)}</p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">
-          ✕
+          <X aria-hidden className="size-4" />
         </button>
       </div>
 

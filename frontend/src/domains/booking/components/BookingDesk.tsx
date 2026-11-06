@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { TiltSurface } from "@/core/components/ui/TiltSurface";
@@ -30,16 +31,18 @@ export function BookingDesk({ heading }: { heading: ReactNode }) {
           <div className="mt-8 rounded-2xl border border-line bg-surface p-5">
             <div className="flex items-center justify-between">
               <p className="font-mono text-xs tracking-[0.16em] text-muted uppercase">Your session</p>
-              {selection.booked && <p className="text-xs font-semibold text-gold">Booked ✓</p>}
+              {selection.booked && <p className="flex items-center gap-1 text-xs font-semibold text-gold">
+                  Booked <Check aria-hidden className="size-3.5" />
+                </p>}
             </div>
             <ul className="mt-4 divide-y divide-line">
               {rows.map((row) => (
                 <li key={row.label} className="flex items-center gap-3 py-3">
                   <span
                     aria-hidden
-                    className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[11px] transition-colors ${row.value ? "border-gold bg-gold text-canvas" : "border-line text-transparent"}`}
+                    className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${row.value ? "border-gold bg-gold text-canvas" : "border-line text-transparent"}`}
                   >
-                    ✓
+                    <Check strokeWidth={3} className="size-3" />
                   </span>
                   <span className="w-16 shrink-0 text-sm text-muted">{row.label}</span>
                   <span aria-live="polite" className={`min-w-0 truncate text-sm ${row.value ? "font-semibold text-ink" : "text-muted/70"}`}>

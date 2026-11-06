@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 
@@ -91,7 +92,7 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
           <div className="grid gap-1.5">
             <span className={LABEL}>Google account</span>
             <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
-              <span aria-hidden className="text-quant">✓</span>
+              <Check aria-hidden className="size-4 text-quant" />
               {email}
             </p>
           </div>

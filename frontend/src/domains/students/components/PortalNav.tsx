@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays, ChevronDown, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Receipt, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -10,14 +11,8 @@ import { siteConfig } from "@/core/config/site";
 import { signOutStudent } from "../actions/session";
 import type { Tab } from "./StudentPortal";
 
-// Familiar glyphs (Lucide-style, 24px, round stroke): house, video call, calendar, test sheet, graduation cap.
-const ICONS: Partial<Record<Tab, string>> = {
-  home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
-  sessions: "M15 10l5-3v10l-5-3zM5 6h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z",
-  plan: "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4",
-  mocks: "M7 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 13l2 2 4-4M9 4V3h6v1",
-  classroom: "M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5",
-};
+// Lucide (docs/brand.md §6): the same shapes students know from LinkedIn, Google Classroom and Notion.
+const ICONS: Partial<Record<Tab, LucideIcon>> = { home: House, sessions: Video, plan: CalendarDays, mocks: ClipboardCheck, classroom: GraduationCap };
 const HINTS: Partial<Record<Tab, string>> = { plan: "overdue", sessions: "awaiting confirmation" };
 
 /** One page under a tab: another tab, or a page of its own (the notebook). */
@@ -29,11 +24,10 @@ type Tabs = { tabs: NavItem[]; active: Tab; badges: Partial<Record<Tab, number>>
 const landing = (item: NavItem): Tab => item.subs?.find((s) => s.tab)?.tab ?? item.id;
 
 function Glyph({ id, active, count }: { id: Tab; active: boolean; count: number }) {
+  const Icon = ICONS[id] ?? House;
   return (
     <span className="relative">
-      <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round" className="size-6">
-        <path d={ICONS[id]} />
-      </svg>
+      <Icon aria-hidden strokeWidth={active ? 2 : 1.6} className="size-6" />
       {count > 0 && (
         <span className="absolute -top-1.5 -right-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[10px] leading-none font-bold text-canvas">
           {count}
@@ -72,9 +66,7 @@ function DesktopNav({ tabs, active, badges, onGo }: Tabs) {
             <span className="flex items-center gap-0.5">
               {item.label}
               {item.subs && (
-                <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className={`size-3 transition-transform ${open === item.id ? "rotate-180" : ""}`}>
-                  <path d="m5 8 5 5 5-5" />
-                </svg>
+                <ChevronDown aria-hidden strokeWidth={2.5} className={`size-3 transition-transform ${open === item.id ? "rotate-180" : ""}`} />
               )}
             </span>
             {count > 0 && <span className="sr-only">, {count} {HINTS[item.id]}</span>}
@@ -171,9 +163,7 @@ export function PortalBar({ me, readOnly, onAccount, ...tabs }: Tabs & { me: { n
             {initialsOf(me.name)}
           </span>
           <span className="hidden max-w-32 truncate text-ink sm:inline">{me.name.split(" ")[0]}</span>
-          <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="size-4 text-muted">
-            <path d="m5 8 5 5 5-5" />
-          </svg>
+          <ChevronDown aria-hidden className="size-4 text-muted" />
           <span className="sr-only">Account menu</span>
         </button>
         {/* Native popover: closes on Esc or a click outside, no script. */}
@@ -188,6 +178,7 @@ export function PortalBar({ me, readOnly, onAccount, ...tabs }: Tabs & { me: { n
           </div>
           <div className="grid border-t border-line pt-1">
             <button type="button" popoverTarget="me-menu" popoverTargetAction="hide" onClick={onAccount} className={MENU_ITEM}>
+              <Receipt aria-hidden className="size-4 text-muted" />
               Hours &amp; payments
             </button>
             <a href={siteConfig.contact.linkedinUrl} target="_blank" rel="noreferrer" className={MENU_ITEM}>
@@ -200,6 +191,7 @@ export function PortalBar({ me, readOnly, onAccount, ...tabs }: Tabs & { me: { n
           {!readOnly && (
             <form action={signOutStudent} className="mt-1 border-t border-line pt-1">
               <button type="submit" className={`${MENU_ITEM} text-muted hover:bg-red-400/10 hover:text-red-300`}>
+                <LogOut aria-hidden className="size-4" />
                 Sign out
               </button>
             </form>

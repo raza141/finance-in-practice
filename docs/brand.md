@@ -80,7 +80,7 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 ## 6. Icons
 
 - **One set: Lucide** (24px, 1.5–2px round stroke, outline). It's what Notion, Linear, Vercel and shadcn use, so the shapes are already familiar.
-- No emoji as icons in UI (📍, ✓ in text are being replaced).
+- No emoji as icons in UI (the brand test checks).
 - An icon always sits next to a label, except the avatar and close buttons, which carry an `aria-label`.
 - Same meaning, same icon, everywhere:
 
@@ -126,7 +126,7 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 ## 10. Rolling it out
 
 1. Portal: one bar, bottom tab bar, dropdowns, Me menu. **Done (Nov 2026).**
-2. Add `lucide-react` and swap the hand-drawn icons and emoji across the portal, then the website and admin.
+2. `lucide-react` across the portal, website and admin; the brand test fails on emoji used as icons. **Done (Nov 2026).** Kept on purpose: brand logos (Google, LinkedIn, WhatsApp), charts, and the animated answer tick.
 3. Website header and footer: same placement rules (logo left, nav centre, one gold action right).
 4. Admin: same tokens, buttons and icons; its sidebar stays (admins aren't students).
 5. Emails and WhatsApp templates: logo, gold for the one action, the same words as the buttons on the site.

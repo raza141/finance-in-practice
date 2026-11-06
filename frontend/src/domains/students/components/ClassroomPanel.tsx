@@ -1,3 +1,4 @@
+import { Presentation } from "lucide-react";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
 import { requestClassroom } from "../actions/classroom";
@@ -10,11 +11,7 @@ const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-
 /** Inline chalkboard mark (no image request). */
 function BoardIcon({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
-      <rect x="2.5" y="4" width="19" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="12" cy="9" r="2" fill="currentColor" />
-      <path d="M8.5 14c.6-1.5 1.9-2.3 3.5-2.3s2.9.8 3.5 2.3M7 20h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
+    <Presentation aria-hidden strokeWidth={1.6} className={className} />
   );
 }
 

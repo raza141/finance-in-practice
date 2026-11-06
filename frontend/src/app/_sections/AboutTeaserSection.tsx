@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import Image from "next/image";
 
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
@@ -34,8 +35,8 @@ export async function AboutTeaserSection() {
             >
               {founder.education.map((item) => (
                 <li key={item} className="flex items-center gap-2.5 px-4 py-3 text-sm leading-snug font-semibold text-ink">
-                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-gold/15 text-[11px] text-gold">
-                    ✓
+                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-gold/15 text-gold">
+                    <Check strokeWidth={3} className="size-3" />
                   </span>
                   {item}
                 </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check as CheckIcon } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
@@ -40,8 +41,8 @@ function Term({ label, value, strong = false }: { label: string; value: string; 
 function Check({ children }: { children: ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-quant/15 text-[11px] text-quant">
-        ✓
+      <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-quant/15 text-quant">
+        <CheckIcon strokeWidth={2.5} className="size-3" />
       </span>
       <span className="text-pretty">{children}</span>
     </li>
@@ -129,7 +130,7 @@ export function PackagePicker({
       >
         {selected ? (
           <>
-            <span aria-hidden>✓</span> Selected package
+            <CheckIcon aria-hidden className="size-4" /> Selected package
           </>
         ) : (
           label

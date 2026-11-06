@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, MapPin } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
@@ -400,7 +401,9 @@ export function StudentPortal({
                   <div>
                     <dt className="text-xs text-muted">Location</dt>
                     <dd className="text-ink">{where}</dd>
-                    {mode === "in_person" && mapUrl && !mapLinkInvalid && <dd className="text-xs text-quant">Map pin added ✓</dd>}
+                    {mode === "in_person" && mapUrl && !mapLinkInvalid && <dd className="flex items-center gap-1 text-xs text-quant">
+                        Map pin added <Check aria-hidden className="size-3.5" />
+                      </dd>}
                   </div>
                 )}
                 {!moving && notes && (
@@ -493,7 +496,14 @@ export function StudentPortal({
                           <p className="text-xs text-muted">Map pin (optional): helps me find the exact building.</p>
                           <div className="flex flex-wrap items-center gap-2">
                             <button type="button" onClick={dropPin} disabled={locating === "busy"} className={chip(false)}>
-                              {locating === "busy" ? "Finding you…" : "📍 Use my current location"}
+                              {locating === "busy" ? (
+                                "Finding you…"
+                              ) : (
+                                <>
+                                  <MapPin aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />
+                                  Use my current location
+                                </>
+                              )}
                             </button>
                             <span className="text-xs text-muted">or</span>
                             <input

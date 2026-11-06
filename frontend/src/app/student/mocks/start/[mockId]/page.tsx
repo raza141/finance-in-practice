@@ -1,3 +1,4 @@
+import { Flag, Hash, type LucideIcon, NotebookPen, Pause, Strikethrough } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
@@ -10,13 +11,13 @@ import { StudentAuth } from "@/domains/students/server/StudentAuth";
 
 export const metadata: Metadata = { title: "Mock exam instructions", robots: { index: false, follow: false } };
 
-// [symbol, tool, what it does]: the player's own controls, in the order a student meets them.
-const TOOLS: [string, string, string][] = [
-  ["⏸", "Pause", "The clock stops. You can leave and resume later from the portal."],
-  ["✎", "Notes", "Write your understanding of the concept under each question."],
-  ["⚐", "Flag", "Mark a question to come back to before you submit."],
-  ["S̶", "Strike through", "Eliminate an option you've ruled out."],
-  ["#", "Jump", "Click any question number to go straight to it."],
+// [icon, tool, what it does]: the player's own controls, in the order a student meets them.
+const TOOLS: [LucideIcon, string, string][] = [
+  [Pause, "Pause", "The clock stops. You can leave and resume later from the portal."],
+  [NotebookPen, "Notes", "Write your understanding of the concept under each question."],
+  [Flag, "Flag", "Mark a question to come back to before you submit."],
+  [Strikethrough, "Strike through", "Eliminate an option you've ruled out."],
+  [Hash, "Jump", "Click any question number to go straight to it."],
 ];
 
 // The player's palette tiles, exactly as they look in the exam.
@@ -82,10 +83,10 @@ export default async function MockInstructionsPage({ params }: PageProps<"/stude
               During the exam
             </h2>
             <ul className="mt-4 grid gap-4">
-              {TOOLS.map(([icon, name, what]) => (
+              {TOOLS.map(([Icon, name, what]) => (
                 <li key={name} className="flex gap-3">
                   <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-canvas font-mono text-sm text-quant">
-                    {icon}
+                    <Icon className="size-4" />
                   </span>
                   <span className="text-sm">
                     <span className="block font-semibold text-ink">{name}</span>
