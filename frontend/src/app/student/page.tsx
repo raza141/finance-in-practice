@@ -7,7 +7,6 @@ import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
 import { siteConfig } from "@/core/config/site";
-import { signOutStudent } from "@/domains/students/actions/session";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { Portal, safely } from "@/domains/students/components/PortalView";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
@@ -47,74 +46,30 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       {/* Grid pinned to the screen, like the bar's, so the frozen bar blends into the page. */}
       <FinanceBackdrop glow={false} className="fixed inset-0" />
 
-      {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here). */}
-      {/* Frozen at the top while scrolling (the portal tabs stick just below it), in the page's own colour and grid. */}
-      <header className="nav-line sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
-        {/* A faint cyan-to-gold wash over the grid, so the bar reads as a bar. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-r from-quant/5 via-transparent to-gold/5" />
-        <div className="page-container relative flex h-16 items-center justify-between gap-4">
-          <Link href="/" aria-label="Finance in Practice website">
-            <Logo height={30} priority />
-          </Link>
-          {student ? (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="hidden md:block">
-                <LinkedInFollow variant="pill" />
-              </span>
-              {/* The "Me" menu, as on LinkedIn: account things live here, out of the study tabs. Native popover: closes on Esc or a click outside. */}
-              <button type="button" popoverTarget="me-menu" className="flex items-center gap-2 rounded-btn px-1.5 py-1 hover:bg-white/5">
-                <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
-                  {initialsOf(student.name)}
-                </span>
-                <span className="hidden max-w-48 truncate text-ink sm:inline">{student.name.split(" ")[0]}</span>
-                <svg aria-hidden viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="size-4 text-muted">
-                  <path d="m5 8 5 5 5-5" />
-                </svg>
-                <span className="sr-only">Account menu</span>
-              </button>
-              <div
-                id="me-menu"
-                popover="auto"
-                className="inset-auto top-[4.25rem] right-4 m-0 w-60 rounded-2xl border border-line bg-surface p-2 text-sm text-ink shadow-2xl shadow-black/50"
-              >
-                <p className="truncate px-3 pt-2 pb-3 text-muted">{student.email}</p>
-                <a href="/student?tab=account" className="block rounded-lg px-3 py-2.5 hover:bg-white/5">
-                  Hours &amp; payments
-                </a>
-                <form action={signOutStudent} className="mt-1 border-t border-line pt-1">
-                  <button type="submit" className="w-full rounded-lg px-3 py-2.5 text-left text-muted hover:bg-red-400/10 hover:text-red-300">
-                    Sign out
-                  </button>
-                </form>
-              </div>
+      {/* The portal has its own bar instead of the marketing navbar (SiteChrome hides it here); signed in, the portal brings it with its tabs. */}
+      {student ? (
+        <Portal student={student} />
+      ) : (
+        <>
+          <header className="nav-line sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-r from-quant/5 via-transparent to-gold/5" />
+            <div className="page-container relative flex h-16 items-center justify-between gap-4">
+              <Link href="/" aria-label="Finance in Practice website">
+                <Logo height={30} priority />
+              </Link>
+              <span className="font-mono text-[11px] tracking-[0.25em] text-quant uppercase">Student portal</span>
             </div>
-          ) : (
-            <span className="font-mono text-[11px] tracking-[0.25em] text-quant uppercase">Student portal</span>
-          )}
-        </div>
-      </header>
-
-      <div className="page-container relative py-8 lg:py-10">
-        {student ? (
-          <Portal student={student} />
-        ) : (
-          // Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding).
-          <div className="grid min-h-[calc(100svh-4rem-5rem)] content-center">
+          </header>
+          {/* Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding). */}
+          <div className="page-container relative grid min-h-[calc(100svh-4rem-5rem)] content-center py-8 lg:py-10">
             <SignIn error={error} view={view} />
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
-const initialsOf = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
 /** Published courses only (the public form never lists drafts or internal programmes), with exam sittings, and the live packages. */
 async function publicOptions(): Promise<{ courses: PricingCourse[]; packages: Package[] }> {

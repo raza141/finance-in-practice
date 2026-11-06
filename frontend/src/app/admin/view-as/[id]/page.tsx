@@ -21,7 +21,7 @@ export default async function ViewAsStudentPage({ params }: PageProps<"/admin/vi
   return (
     <div className="relative min-h-screen overflow-clip">
       <FinanceBackdrop glow={false} className="fixed inset-0" />
-      {/* h-16, like the portal's own bar: its tabs stick just below it. */}
+      {/* h-16: the portal's own bar sticks just below it. */}
       <header className="sticky top-0 z-30 bg-gold/95 text-canvas">
         <div className="page-container flex h-16 items-center justify-between gap-4 text-sm">
           <p>
@@ -33,9 +33,7 @@ export default async function ViewAsStudentPage({ params }: PageProps<"/admin/vi
           </Link>
         </div>
       </header>
-      <div className="page-container relative py-8 lg:py-10">
-        <Portal student={student} readOnly />
-      </div>
+      <Portal student={student} readOnly />
     </div>
   );
 }

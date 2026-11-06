@@ -13,7 +13,7 @@ import { StudentBookingContract } from "../services/StudentBookingContract";
 import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentSession } from "../types";
 import { BUTTON, JOIN_BUTTON } from "./buttons";
-import { PortalNav } from "./PortalNav";
+import { PortalBar, PortalTabBar } from "./PortalNav";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
 
 const DAYS = 14;
@@ -70,6 +70,8 @@ export function StudentPortal({
   overview,
   mocks,
   badges = {},
+  me,
+  notices,
   readOnly = false,
 }: {
   /** Shown on their own bookings in the week grid. */
@@ -89,6 +91,10 @@ export function StudentPortal({
   overview: ReactNode;
   /** Mock lobby, marks and the notebook link; null hides the tab. */
   mocks: ReactNode | null;
+  /** Who's signed in, for the bar's "Me" menu. */
+  me: { name: string; email: string };
+  /** Banners above every tab: terms to accept, access ended, the package. */
+  notices: ReactNode;
   /** Counts on nav items, e.g. overdue topics on Study plan. */
   badges?: Partial<Record<Tab, number>>;
   /** An admin viewing as this student: shown as they see it, but nothing is booked, changed or marked seen. */
@@ -247,9 +253,10 @@ export function StudentPortal({
   const lit = tab === "book" ? "sessions" : tab;
   return (
     <PortalTabs value={go}>
-    <div className="grid gap-6">
-      <PortalNav tabs={TABS} active={lit} badges={badges} onGo={go} />
-
+    <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} />
+    {/* Phones and tablets: room at the bottom for the tab bar. */}
+    <main className="page-container relative grid gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
+      {notices}
       {tab === "home" && overview}
       {tab === "plan" && plan}
       {tab === "mocks" && mocks}
@@ -349,7 +356,7 @@ export function StudentPortal({
 
       {tab === "book" && (
         <div className="grid items-start gap-6 lg:grid-cols-[22rem_1fr]">
-          <aside className="grid gap-6 lg:sticky lg:top-40">
+          <aside className="grid gap-6 lg:sticky lg:top-24">
             <section aria-labelledby="preview-heading" className={CARD}>
               <h2 id="preview-heading" className={LABEL}>
                 {moving ? "Moving this session" : "Your session"}
@@ -561,7 +568,8 @@ export function StudentPortal({
           </form>
         </div>
       )}
-    </div>
+    </main>
+    <PortalTabBar tabs={TABS} active={lit} badges={badges} onGo={go} />
     </PortalTabs>
   );
 }

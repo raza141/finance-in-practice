@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ClassFeedSidebar, ClassTopics, LatestMockCard, OverviewClassCards, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
@@ -134,9 +133,8 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
   const today = StudyDays.today();
   const hasMocks = mocks === null || attempts === null || mocks.length + attempts.length > 0 || (progress?.mocks.length ?? 0) > 0;
 
-  return (
-    // Phones: room at the bottom for the tab bar.
-    <div className="grid gap-6 pb-20 md:pb-0">
+  const notices = (
+    <>
       {student.ended.length > 0 && (
         <section role="status" className="rounded-3xl border border-line bg-surface p-5 text-sm text-muted">
           {student.ended.map((e) => (
@@ -166,8 +164,14 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         </section>
       )}
       {pkg && <PackageCard current={pkg.current} requested={pkg.requested} requestedAt={pkg.requestedAt} packages={pkg.packages} readOnly={readOnly} />}
+    </>
+  );
+
+  return (
       <StudentPortal
         readOnly={readOnly}
+        me={{ name: student.name, email: student.email }}
+        notices={notices}
         badges={{
           sessions: (sessions ?? []).filter((s) => s.status === "pending").length,
           plan: (plan ?? []).filter((p) => StudyDays.overdue(p, today)).length,
@@ -228,10 +232,5 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
           ) : null
         }
       />
-      {/* Phones: no room in the bar, so the follow link sits at the bottom. */}
-      <div className="md:hidden">
-        <LinkedInFollow variant="pill" />
-      </div>
-    </div>
   );
 }
