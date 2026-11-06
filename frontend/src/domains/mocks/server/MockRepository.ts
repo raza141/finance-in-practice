@@ -772,6 +772,9 @@ export class MockRepository {
         JOIN mock_items i ON i.question_id = r.question_id AND i.mock_id = live.mock_id
         ON CONFLICT (attempt_id, question_id) DO UPDATE
           SET selected = EXCLUDED.selected, flagged = EXCLUDED.flagged, notes = EXCLUDED.notes, seconds = EXCLUDED.seconds, confidence = EXCLUDED.confidence
+          -- Rows that didn't change aren't rewritten: an autosave sends every question, most of them as they were.
+          WHERE (mock_responses.selected, mock_responses.flagged, mock_responses.notes, mock_responses.seconds, mock_responses.confidence)
+            IS DISTINCT FROM (EXCLUDED.selected, EXCLUDED.flagged, EXCLUDED.notes, EXCLUDED.seconds, EXCLUDED.confidence)
         RETURNING 1
       )
       SELECT count(*)::int AS n FROM live

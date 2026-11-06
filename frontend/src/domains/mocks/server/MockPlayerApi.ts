@@ -45,6 +45,8 @@ export class MockPlayerApi {
     if (attempt?.status !== "in_progress") return { open: false };
     if (MockPlayerApi.taken(attempt, screen)) return { open: true, taken: true };
     if (attempt.pausedAt) return { open: true };
+    // Nothing sent (the player checking it still holds the attempt): no questions loaded, nothing written.
+    if (sent.length === 0) return { open: MockGrader.open(attempt.endsAt) };
     // Only the session the attempt is in: a full mock's first half is locked once its break starts.
     const { current } = await MockSession.questions(repo, attempt);
     return { open: await repo.autosave(attemptId, clientId, MockSession.only(sent, current), attempt.session) };

@@ -316,10 +316,16 @@ export function MockPlayer({
     const timer = window.setInterval(() => void save(), AUTOSAVE_MS);
     const hidden = () => document.visibilityState === "hidden" && void save();
     // Back on this screen: check at once that it still holds the attempt, before the student works on it.
+    // Unsaved changes go with a normal save; otherwise an empty save (one light request), at most every 15 seconds.
+    let lastCheck = 0;
     const back = () => {
-      if (document.visibilityState !== "visible") return;
-      dirty.current = true;
-      void save();
+      if (document.visibilityState !== "visible" || preview || submitted.current || pausedRef.current || takenRef.current) return;
+      if (dirty.current) return void save();
+      if (Date.now() - lastCheck < 15_000) return;
+      lastCheck = Date.now();
+      void playerCall<{ taken?: boolean }>(attemptId, { op: "save", screen, responses: [] })
+        .then((r) => r.taken && lose())
+        .catch(() => {});
     };
     document.addEventListener("visibilitychange", hidden);
     document.addEventListener("visibilitychange", back);
@@ -330,7 +336,7 @@ export function MockPlayer({
       document.removeEventListener("visibilitychange", back);
       window.removeEventListener("focus", back);
     };
-  }, [save]);
+  }, [attemptId, lose, preview, save, screen]);
 
   const change = (id: string, patch: Partial<Answer> | ((before: Answer) => Partial<Answer>)) => {
     setAnswers((a) => {
