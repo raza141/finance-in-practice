@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { StudentAuth } from "@/domains/students/server/StudentAuth";
+import { StudyLine } from "@/domains/students/services/StudyLine";
 import { WhatsAppOutbox } from "@/domains/whatsapp/server/WhatsAppOutbox";
 
 import { MockSession } from "../server/MockSession";
@@ -60,6 +61,20 @@ export async function drillWeakestTopic(): Promise<void> {
     if (id) redirect(`/student/mocks/${await repo.start(clientId, id)}`);
   }
   redirect("/student/mocks/notebook?notice=no-drill");
+}
+
+/** A topic test for a study-plan topic: new questions on the bank topic it's about, at the student's level. */
+export async function practisePlanTopic(form: FormData): Promise<void> {
+  const me = await student();
+  const repo = MockSession.repo();
+  const levels = await repo.topicLevels();
+  const topic = StudyLine.match(String(form.get("topic") ?? "").slice(0, 200), [...new Set(levels.map((l) => l.topic))]);
+  if (!topic) redirect("/student?tab=plan");
+  // Level II only for a Level II student whose bank has that topic at Level II.
+  const level = me.courses.some((c) => /level ii\b/i.test(c)) && levels.some((l) => l.topic === topic && l.level === 2) ? 2 : 1;
+  const exam = { title: `Topic test: ${topic}`, mockType: "topic" as const, source: "Study plan", level, durationMinutes: MockContract.minutes(MockContract.DRILL_SIZE, "topic", level) } as const;
+  const id = await repo.drill(me.id, exam, { quotas: [{ topic, count: MockContract.DRILL_SIZE }], ids: [], chapter: "", avoid: [me.id] });
+  redirect(id ? `/student/mocks/${await repo.start(me.id, id)}` : "/student/mocks/notebook?notice=no-drill");
 }
 
 /** A practice run of the notebook's newest questions (`MockNotebook.practice`), timed at the CFA pace. */

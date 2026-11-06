@@ -316,6 +316,13 @@ export class MockRepository {
     return rows.map((r) => r.topic);
   }
 
+  /** Topics with active questions, per level: what a topic test can draw from. */
+  async topicLevels(): Promise<{ topic: string; level: CfaLevel }[]> {
+    return (await this.sql`
+      SELECT DISTINCT ON (lower(trim(topic)), level) trim(topic) AS topic, level FROM mock_questions WHERE NOT retired ORDER BY lower(trim(topic)), level
+    `) as { topic: string; level: CfaLevel }[];
+  }
+
   async chapterNames(): Promise<string[]> {
     const rows = (await this.sql`
       SELECT DISTINCT ON (lower(trim(chapter))) trim(chapter) AS chapter FROM mock_questions WHERE chapter <> '' ORDER BY lower(trim(chapter))

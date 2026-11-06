@@ -48,6 +48,16 @@ export class StudyPlanRepository {
     return row ?? null;
   }
 
+  /** The student's own re-plan: new dates for their still-planned topics only (StudyLine.replan). */
+  async replan(clientId: string, dates: readonly { id: string; dueOn: string }[]): Promise<void> {
+    if (!UUID.test(clientId) || dates.length === 0) return;
+    await this.sql`
+      UPDATE study_plan_items p SET due_on = x.due_on
+      FROM unnest(${dates.map((d) => d.id)}::uuid[], ${dates.map((d) => d.dueOn)}::date[]) AS x(id, due_on)
+      WHERE p.id = x.id AND p.client_id = ${clientId} AND p.status = 'planned'
+    `;
+  }
+
   async add(clientId: string, items: readonly StudyPlanInput[]): Promise<void> {
     if (!UUID.test(clientId) || items.length === 0) return;
     await this.sql.transaction(
