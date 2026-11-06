@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
+import { webglAvailable } from "./webgl";
+
 /** Client-only loader for the WebGL grid (see HeroScene for why this wrapper exists). */
 const DriftingGrid = dynamic(() => import("./DriftingGrid"), { ssr: false });
 
@@ -16,7 +18,8 @@ export function GridBackdrop({ className = "" }: { className?: string }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!root.current) return;
+    // No WebGL: leave the grid out rather than let three.js crash the page.
+    if (!root.current || !webglAvailable()) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         setVisible(entry.isIntersecting);
