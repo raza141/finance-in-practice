@@ -1,4 +1,4 @@
-import { Pause } from "lucide-react";
+import { CalendarDays, ChartLine, Check, ChevronRight, GraduationCap, type LucideIcon, Pause } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
@@ -71,24 +71,39 @@ function TopicShot() {
 }
 
 function PortalShot() {
+  const rows: [LucideIcon, string, string, boolean][] = [
+    [CalendarDays, "Fixed Income: yield measures", "Study plan · by Thu 12 Nov", false],
+    [GraduationCap, "Ethics problem set 2", "Missing · CFA Level I", true],
+    [ChartLine, "Latest mock · 68%", "+13 pts since your first", false],
+  ];
   return (
     <div aria-hidden className={SHOT}>
-      <div className="flex gap-1 overflow-hidden rounded-xl border border-line p-1 whitespace-nowrap">
-        <span className="rounded-lg bg-quant/15 px-2 py-1 font-semibold text-quant">Overview</span>
-        <span className="px-2 py-1 text-muted">Book a session</span>
-        <span className="px-2 py-1 text-muted">Progress</span>
-        <span className="px-2 py-1 text-muted">Study plan</span>
+      <p className="font-serif text-base italic">Good evening, Sara</p>
+      <div className="mt-2 flex items-center gap-3 rounded-xl border border-line bg-surface p-2.5">
+        <span className="grid w-9 shrink-0 overflow-hidden rounded-lg border border-line text-center">
+          <span className="bg-surface-raised font-mono text-[8px] font-semibold tracking-widest text-quant">NOV</span>
+          <span className="text-sm font-semibold">12</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Thursday, 19:00–20:00</span>
+          <span className="block text-muted">CFA® Level I · Online · Zoom</span>
+        </span>
+        <span className="rounded-md bg-quant px-2 py-1 font-mono text-[10px] font-semibold text-canvas">Join</span>
       </div>
-      {[
-        ["Next session", "Thu 7:00 pm · Online · Fixed Income"],
-        ["Study plan", "Week 6 of 14 · Derivatives next"],
-        ["Latest mock", "68% · up from 55% on your first"],
-      ].map(([label, value]) => (
-        <div key={label} className="mt-2 rounded-xl border border-line bg-surface px-3 py-1.5">
-          <p className="font-mono text-[10px] tracking-[0.2em] text-muted uppercase">{label}</p>
-          <p>{value}</p>
-        </div>
-      ))}
+      <div className="mt-2 grid">
+        {rows.map(([Icon, title, detail, urgent]) => (
+          <div key={title} className="flex items-center gap-2.5 px-1 py-1.5">
+            <span className={`grid size-6 shrink-0 place-items-center rounded-md ${urgent ? "border border-dashed border-gold text-gold" : "bg-surface-raised text-quant"}`}>
+              <Icon className="size-3.5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{title}</span>
+              <span className="block truncate text-[10px] text-muted">{detail}</span>
+            </span>
+            <ChevronRight className="size-3 text-muted" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -134,16 +149,18 @@ export function StudyPortalSection() {
           id="portal-heading"
           title="Your prep keeps going between sessions"
         />
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {CARDS.map((card) => (
-            <article key={card.tag} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-              {card.shot}
-              <div className="p-6">
-                <h3 className="text-lg font-bold">{card.title}</h3>
-                <ul className="mt-3 grid gap-2 text-sm text-muted">
+        {/* Alternating rows: each screen large beside what it does, not three equal cards. */}
+        <div className="mt-10 grid gap-14 lg:gap-20">
+          {CARDS.map((card, i) => (
+            <article key={card.tag} className="grid items-center gap-8 md:grid-cols-2 lg:gap-16">
+              <div className={`overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_30px_80px_-40px_rgb(0_0_0/0.9)] *:border-b-0 ${i % 2 ? "md:order-2" : ""}`}>{card.shot}</div>
+              <div>
+                <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">{card.tag}</p>
+                <h3 className="mt-2 text-2xl font-normal italic sm:text-3xl">{card.title}</h3>
+                <ul className="mt-5 grid gap-3 text-muted">
                   {card.points.map((p) => (
-                    <li key={p} className="flex gap-2.5">
-                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-quant" />
+                    <li key={p} className="flex gap-3">
+                      <Check aria-hidden className="mt-1 size-4 shrink-0 text-quant" />
                       {p}
                     </li>
                   ))}

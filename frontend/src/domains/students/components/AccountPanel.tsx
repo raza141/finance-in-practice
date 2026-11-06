@@ -84,7 +84,8 @@ export function AccountPanel({ account, offers = [], readOnly = false }: { accou
   const third = allowance ? <AllowanceCard allowance={allowance} readOnly={readOnly} /> : prepaid.length > 0 ? <Prepaid account={account} /> : null;
   return (
     <div className="grid gap-6">
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* One summary panel split by hairlines (balance, studied, this month), like a bank app's account header; not three loose boxes. */}
+      <div className="grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-line/70 lg:grid-cols-3 *:rounded-none *:border-0 *:bg-canvas sm:*:p-8">
         <section className={CARD} aria-labelledby="balance-heading">
           <h2 id="balance-heading" className={LABEL}>
             Balance

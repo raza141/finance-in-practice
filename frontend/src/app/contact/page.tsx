@@ -1,3 +1,4 @@
+import { CalendarDays, ChevronRight, type LucideIcon, Mail, MapPin, MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -21,16 +22,17 @@ const STEPS = [
 export default function ContactPage() {
   const { email, calUrl, whatsapp } = siteConfig.contact;
 
-  const channels: { label: string; value: string; note?: string; href: string; external: boolean }[] = [
+  const channels: { label: string; icon: LucideIcon; value: string; note?: string; href: string; external: boolean }[] = [
     {
       label: "WhatsApp",
+      icon: MessageCircle,
       value: whatsapp.display,
       note: whatsapp.owner,
       href: `https://wa.me/${whatsapp.number}?text=${encodeURIComponent(whatsapp.greeting)}`,
       external: true,
     },
-    { label: "Calendar", value: "cal.com/raza141", href: calUrl, external: true },
-    ...(email ? [{ label: "Email", value: email, href: `mailto:${email}`, external: true }] : []),
+    { label: "Calendar", icon: CalendarDays, value: "cal.com/raza141", href: calUrl, external: true },
+    ...(email ? [{ label: "Email", icon: Mail, value: email, href: `mailto:${email}`, external: true }] : []),
   ];
 
   return (
@@ -46,24 +48,36 @@ export default function ContactPage() {
             Let&rsquo;s talk about where you want to be
           </h1>
 
-          <ul className="mt-8 grid gap-3 sm:grid-cols-3">
+          {/* One contact list, like a phone's contact card: icon, how, and what it opens. Not four loose tiles. */}
+          <ul className="mt-8 max-w-xl divide-y divide-line overflow-hidden rounded-2xl border border-white/10 bg-canvas/60 backdrop-blur-md">
             {channels.map((channel) => (
               <li key={channel.label}>
                 <Link
                   href={channel.href}
                   {...(channel.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                  className="block h-full rounded-2xl border border-white/10 bg-canvas/50 p-5 backdrop-blur-md transition-colors hover:border-quant/50"
+                  className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant"
                 >
-                  <span className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">{channel.label}</span>
-                  <span className="mt-2 block text-base text-ink">{channel.value} ↗</span>
-                  {channel.note && <span className="mt-1 block text-sm text-muted">{channel.note}</span>}
+                  <span aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-xl ${channel.label === "WhatsApp" ? "bg-whatsapp/15 text-whatsapp" : "bg-surface-raised text-quant"}`}>
+                    <channel.icon strokeWidth={1.75} className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-muted">{channel.label}</span>
+                    <span className="block truncate text-ink">{channel.value}</span>
+                    {channel.note && <span className="block text-xs text-muted">{channel.note}</span>}
+                  </span>
+                  <ChevronRight aria-hidden className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </li>
             ))}
-            <li className="rounded-2xl border border-white/10 bg-canvas/50 p-5 backdrop-blur-md">
-              <span className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Where</span>
-              <span className="mt-2 block text-base text-ink">{siteConfig.delivery.onsiteCity} · {siteConfig.delivery.onsiteArea}</span>
-              <span className="mt-1 block text-sm text-muted">At your home, or live online across the UAE</span>
+            <li className="flex items-center gap-4 px-5 py-4">
+              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-raised text-quant">
+                <MapPin strokeWidth={1.75} className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-muted">Where</span>
+                <span className="block text-ink">{siteConfig.delivery.onsiteCity} · {siteConfig.delivery.onsiteArea}</span>
+                <span className="block text-xs text-muted">At your home, or live online across the UAE</span>
+              </span>
             </li>
           </ul>
           <LinkedInFollow className="mt-6" />

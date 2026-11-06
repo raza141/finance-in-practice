@@ -212,26 +212,40 @@ export function ProgressPanel({ progress: p }: { progress: Progress }) {
     );
   }
   const stats: [string, string][] = [
-    ["Latest mock", `${last.pct}%`],
     ["Average", average === null ? "—" : `${average}%`],
     ["Best", best === null ? "—" : `${best}%`],
     ["Mocks taken", String(count)],
   ];
+  const low = last.pct < TARGET;
   return (
     <div className="grid gap-6">
       <section aria-labelledby="progress-heading" className={CARD}>
         <h2 id="progress-heading" className="text-2xl font-normal italic">
           Your progress
         </h2>
-        <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {stats.map(([k, v]) => (
-            <div key={k} className="rounded-2xl border border-line p-4">
-              <dt className={LABEL}>{k}</dt>
-              <dd className="mt-1 text-2xl font-semibold text-ink">{v}</dd>
-            </div>
-          ))}
-        </dl>
-        <h3 className={`${LABEL} mt-6`}>Your mocks</h3>
+        {/* One headline number against the target, the rest as a quiet line beside it: not four equal boxes. */}
+        <div className="mt-5 flex flex-wrap items-end gap-x-10 gap-y-5">
+          <div>
+            <p className="text-sm text-muted">Latest mock</p>
+            <p className={`text-5xl font-semibold tabular-nums ${low ? "text-gold" : "text-ink"}`}>{last.pct}%</p>
+          </div>
+          <dl className="flex divide-x divide-line pb-1.5">
+            {stats.map(([k, v]) => (
+              <div key={k} className="px-5 first:pl-0">
+                <dt className="text-xs text-muted">{k}</dt>
+                <dd className="text-xl font-semibold tabular-nums text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <div className="relative mt-5 h-2 rounded-full bg-line/60" role="img" aria-label={`Latest ${last.pct}% against a target of ${TARGET}%`}>
+          <div className={`h-full rounded-full ${low ? "bg-gold" : "bg-quant"}`} style={{ width: `${Math.min(last.pct, 100)}%` }} />
+          <span aria-hidden className="absolute -top-1 h-4 w-0.5 rounded bg-ink" style={{ left: `${TARGET}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Target {TARGET}%{low ? ` · ${TARGET - last.pct} pts to go` : " · above target"}
+        </p>
+        <h3 className={`${LABEL} mt-8`}>Your mocks</h3>
         {/* Newest first; each opens into its topics (native <details>, no JS), with one way to book a review. */}
         <div className="mt-2 divide-y divide-line/60">
           {[...p.mocks].reverse().map((m) => (

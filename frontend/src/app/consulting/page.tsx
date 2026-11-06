@@ -20,13 +20,16 @@ export default function ConsultingPage() {
           Personal tuition, built around your exam date or deadline
         </h1>
 
-        <ul className="mt-10 grid gap-4 md:grid-cols-3">
+        {/* A short price list, not a row of identical cards. */}
+        <ul className="mt-10 max-w-4xl divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
           {tracks.map((track) => (
-            <li key={track.id} className="rounded-xl border border-line bg-surface p-5">
-              <span className="font-mono text-xs text-quant">{track.index}</span>
-              <h2 className="mt-2 text-lg font-bold">{track.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{track.audience}</p>
-              {track.fee && <p className="tabular-data mt-3 text-sm font-semibold text-gold">{track.fee}</p>}
+            <li key={track.id} className="grid gap-x-6 gap-y-1 p-5 sm:grid-cols-[3rem_1fr_auto] sm:items-baseline sm:p-6">
+              <span className="font-mono text-sm text-quant">{track.index}</span>
+              <div>
+                <h2 className="text-lg font-bold">{track.title}</h2>
+                <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">{track.audience}</p>
+              </div>
+              {track.fee && <p className="tabular-data text-sm font-semibold text-gold sm:max-w-64 sm:text-right">{track.fee}</p>}
             </li>
           ))}
         </ul>

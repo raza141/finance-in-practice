@@ -1,3 +1,4 @@
+import { ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 
 import { BUTTON, BOOK_BUTTON } from "@/domains/students/components/buttons";
@@ -23,39 +24,41 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
   const practice = (["topic", "chapter"] as const).map((type) => [type, mocks.filter((m) => m.mockType === type)] as const).filter(([, sets]) => sets.length > 0);
 
   const cards = (items: MockExam[]) => (
-    <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+    <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line">
       {items.map((m) => {
         const label = MockContract.isPractice(m.mockType) ? "Start set" : "Start mock";
         return (
-          <li key={m.id} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/60 p-5">
-            <div>
+          <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4 transition-colors hover:bg-white/[0.03] sm:px-5">
+            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-raised text-quant">
+              <ClipboardCheck strokeWidth={1.75} className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
               <p className="font-mono text-[11px] tracking-[0.18em] text-quant uppercase">
                 {m.level === 2 ? `${MockContract.LEVELS[2]} · ` : ""}
                 {MockContract.TYPES[m.mockType]}
               </p>
-              <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
-              {m.source && <p className="text-sm text-muted">{m.source}</p>}
-            </div>
-            <p className="font-mono text-xs text-muted">
-              {m.questionCount} questions ·{" "}
-              {MockContract.sessions(m) === 2 ? `2 sessions × ${m.durationMinutes} min, optional ${MockContract.BREAK_MINUTES}-min break` : `${m.durationMinutes} min`}
-            </p>
-            {done(m.id).length > 0 && (
+              <h3 className="mt-0.5 font-semibold break-words">{m.title}</h3>
               <p className="text-xs text-muted">
-                Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}%. A retake shuffles the questions and keeps every mark; to redo only your
-                mistakes, open the attempt&rsquo;s results.
+                {m.source && `${m.source} · `}
+                {m.questionCount} questions ·{" "}
+                {MockContract.sessions(m) === 2 ? `2 sessions × ${m.durationMinutes} min, optional ${MockContract.BREAK_MINUTES}-min break` : `${m.durationMinutes} min`}
+              </p>
+            {done(m.id).length > 0 && (
+              <p className="mt-1 text-xs text-muted">
+                Taken {done(m.id).length}× · latest {MockGrader.percent(done(m.id)[0].score!, done(m.id)[0].total)}% · a retake shuffles the questions
               </p>
             )}
+            </div>
             {/* A new attempt opens on the instructions first; an open one goes straight back in. */}
             {open.has(m.id) || readOnly ? (
-              <form action={startMock} className="mt-auto">
+              <form action={startMock} className="shrink-0">
                 <input type="hidden" name="mockId" value={m.id} />
                 <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
                   {open.has(m.id) ? (open.get(m.id)!.mistakes ? "Resume mistakes retake" : "Resume") : done(m.id).length ? "Retake" : label}
                 </button>
               </form>
             ) : (
-              <Link href={`/student/mocks/start/${m.id}`} className={`${BOOK_BUTTON} mt-auto self-start`}>
+              <Link href={`/student/mocks/start/${m.id}`} className={`${BOOK_BUTTON} shrink-0`}>
                 {done(m.id).length ? "Retake" : label}
               </Link>
             )}
