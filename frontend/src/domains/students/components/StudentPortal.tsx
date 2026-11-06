@@ -30,11 +30,11 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "classroom" | "account" | "package";
+export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "drill" | "classroom" | "account" | "package";
 
 /** Old ids still in sent WhatsApp links and bookmarks. */
 const ALIASES: Record<string, Tab> = { overview: "home" };
-const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "classroom", "account", "package"];
+const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "drill", "classroom", "account", "package"];
 
 /** Lets server-rendered panels (home, mocks, calendar) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
@@ -54,9 +54,8 @@ const dayLabel = (iso: string) =>
 const hours = (minutes: number) => `${minutes / 60} h`;
 
 /**
- * The signed-in student's portal. Left: who they are, a live preview of the
- * session they're building, and their upcoming sessions (change or cancel).
- * Right: course, place, a drag-to-select week grid and notes.
+ * The signed-in student's portal. Booking, like every tab: the work (course, place, a drag-to-select
+ * week grid, notes) on the left, the live preview of the session on the right.
  */
 export function StudentPortal({
   name,
@@ -71,6 +70,7 @@ export function StudentPortal({
   overview,
   mocks,
   progress,
+  drill = null,
   badges = {},
   me,
   notices,
@@ -96,6 +96,8 @@ export function StudentPortal({
   mocks: ReactNode | null;
   /** Marks from the portal's own mocks; null until they've sat one. */
   progress: ReactNode | null;
+  /** The weakest-topic drill page of Mocks; null once they've no completed mock to draw it from. */
+  drill?: ReactNode | null;
   /** Who's signed in, for the bar's "Me" menu. */
   me: { name: string; email: string };
   /** Their package and changing it; in the Me menu. Null hides the item. */
@@ -253,6 +255,7 @@ export function StudentPortal({
     ...(mocks ? [{ label: "Mock exams", tab: "mocks" as Tab }] : []),
     ...(progress ? [{ label: "Progress", tab: "progress" as Tab }] : []),
     { label: "Mistakes notebook", href: "/student/mocks/notebook" },
+    ...(drill ? [{ label: "Topic drill", tab: "drill" as Tab }] : []),
   ];
   const TABS: NavItem[] = [
     { id: "home", label: "Home" },
@@ -269,7 +272,7 @@ export function StudentPortal({
     ...(classroom ? [{ id: "classroom" as Tab, label: "Classroom" }] : []),
   ];
   // Booking is a page of Sessions, Progress a page of Mocks; Hours & payments sits in the bar's Me menu.
-  const lit: Tab = tab === "book" ? "sessions" : tab === "progress" ? "mocks" : tab;
+  const lit: Tab = tab === "book" ? "sessions" : tab === "progress" || tab === "drill" ? "mocks" : tab;
   const section = TABS.find((t) => t.id === lit);
   return (
     <PortalTabs value={go}>
@@ -282,6 +285,7 @@ export function StudentPortal({
       {tab === "plan" && plan}
       {tab === "mocks" && mocks}
       {tab === "progress" && progress}
+      {tab === "drill" && drill}
       {tab === "account" && account}
       {tab === "package" && pkg}
       {tab === "classroom" && classroom}
@@ -378,8 +382,9 @@ export function StudentPortal({
       )}
 
       {tab === "book" && (
-        <div className="grid items-start gap-6 lg:grid-cols-[22rem_1fr]">
-          <aside className="grid gap-6 lg:sticky lg:top-24">
+        // Wide: the form left, the live preview right (as Study plan and Classroom). Phones: preview first.
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
+          <aside className="grid gap-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
             <section aria-labelledby="preview-heading" className={CARD}>
               <h2 id="preview-heading" className={LABEL}>
                 {moving ? "Moving this session" : "Your session"}
@@ -421,7 +426,7 @@ export function StudentPortal({
 
           </aside>
 
-          <form id="booking-panel" onSubmit={submit} className={`${CARD} grid gap-6 sm:p-8`}>
+          <form id="booking-panel" onSubmit={submit} className={`${CARD} grid gap-6 sm:p-8 lg:col-start-1 lg:row-start-1`}>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="text-2xl font-normal italic">{moving ? "Pick a new time" : "Book a session"}</h2>
               {moving && (

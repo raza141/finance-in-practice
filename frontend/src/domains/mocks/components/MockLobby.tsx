@@ -90,23 +90,6 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
         </div>
       )}
 
-      {!readOnly && history.some((h) => h.status === "completed") && (
-        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-gold/30 bg-surface-raised p-4">
-          <p className="min-w-0 flex-1 text-sm">
-            <span className="font-semibold">Revise</span>
-            <span className="block text-muted">Questions you missed wait in your notebook until you get them right twice. Or take {MockContract.DRILL_SIZE} new ones from your weakest topic.</span>
-          </p>
-          <Link href="/student/mocks/notebook" className={BUTTON}>
-            Mistakes notebook
-          </Link>
-          <form action={drillWeakestTopic}>
-            <button type="submit" className={BOOK_BUTTON}>
-              Weakest-topic drill
-            </button>
-          </form>
-        </div>
-      )}
-
       {history.length > 0 && (
         <div className="mt-8">
           <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Past attempts</h3>
@@ -137,6 +120,25 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
           </ul>
         </div>
       )}
+    </section>
+  );
+}
+
+/** Mocks → Topic drill: new questions from the student's weakest topic, started at once. */
+export function TopicDrill({ readOnly }: { readOnly: boolean }) {
+  return (
+    <section aria-labelledby="drill-heading" className={CARD}>
+      <h2 id="drill-heading" className="text-2xl font-normal italic">
+        Topic drill
+      </h2>
+      <p className="mt-1 max-w-2xl text-sm text-muted">
+        {MockContract.DRILL_SIZE} questions you haven&rsquo;t seen, from the topic your mocks show is weakest. Graded the moment you submit, with every explanation.
+      </p>
+      <form action={drillWeakestTopic} className="mt-5">
+        <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
+          Start a drill
+        </button>
+      </form>
     </section>
   );
 }

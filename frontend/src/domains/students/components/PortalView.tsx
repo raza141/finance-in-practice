@@ -9,7 +9,7 @@ import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { PackageCard } from "@/domains/packages/components/PackageCard";
 import { PackageRepository } from "@/domains/packages/server/PackageRepository";
-import { MockLobby } from "@/domains/mocks/components/MockLobby";
+import { MockLobby, TopicDrill } from "@/domains/mocks/components/MockLobby";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockProgress } from "@/domains/mocks/services/MockProgress";
 
@@ -186,6 +186,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />}
         mocks={hasMocks ? <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} /> : null}
         progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
+        drill={attempts?.some((a) => a.status === "completed") ? <TopicDrill readOnly={readOnly} /> : null}
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
           <PortalOverview
