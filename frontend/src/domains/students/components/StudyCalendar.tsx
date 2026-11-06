@@ -15,25 +15,33 @@ const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const fmt = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...options }).format(new Date(`${date}T00:00:00Z`));
 const longDay = (date: string) => fmt(date, { weekday: "long", day: "numeric", month: "long" });
 
+/** One colour per kind, Google-Calendar style: a solid bar on the left, a soft tint behind. */
 const CHIP: Record<StudyDayItem["kind"], string> = {
-  topic: "border-line bg-surface text-ink",
-  session: "border-quant/40 bg-quant/10 text-quant",
-  mock: "border-line bg-canvas text-muted",
-  exam: "border-gold bg-gold text-canvas font-semibold",
+  topic: "border-l-indigo-400 bg-indigo-400/10 text-indigo-100 hover:bg-indigo-400/20",
+  session: "border-l-quant bg-quant/10 text-cyan-100 hover:bg-quant/20",
+  mock: "border-l-violet-400 bg-violet-400/10 text-violet-100 hover:bg-violet-400/20",
+  exam: "border-l-gold-bright bg-gradient-to-r from-gold to-gold-bright font-semibold text-canvas shadow-[0_0_14px_rgb(212_175_55/0.45)]",
 };
+const LEGEND: [string, string][] = [
+  ["bg-indigo-400", "Topic"],
+  ["bg-quant", "Session"],
+  ["bg-violet-400", "Mock"],
+  ["bg-gold", "Exam"],
+];
 
 function chipClass(item: StudyDayItem): string {
-  if (item.kind !== "topic") return CHIP[item.kind];
-  if (item.carried) return "border-dashed border-amber-400/70 bg-amber-400/10 text-amber-200";
-  if (item.status === "done") return "border-line bg-surface text-muted line-through";
-  if (item.status === "skipped") return "border-line bg-surface text-muted/60 line-through";
-  return CHIP.topic;
+  const base = "border-0 border-l-[3px]";
+  if (item.kind !== "topic") return `${base} ${CHIP[item.kind]}`;
+  if (item.carried) return "border border-dashed border-amber-400/60 border-l-[3px] border-l-amber-400 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20";
+  if (item.status === "done") return `${base} border-l-slate-500 bg-white/[0.03] text-muted line-through hover:bg-white/[0.06]`;
+  if (item.status === "skipped") return `${base} border-l-slate-600 bg-transparent text-muted/60 line-through`;
+  return `${base} ${CHIP.topic}`;
 }
 
 function label(item: StudyDayItem): string {
   switch (item.kind) {
     case "topic":
-      return item.topic;
+      return item.status === "done" ? `✓ ${item.topic}` : item.topic;
     case "session":
       return `${item.time} · Session`;
     case "mock":
@@ -131,7 +139,17 @@ export function StudyCalendar({
       {/* Wide screens: the month. */}
       <div className="hidden md:block">
         <div className="mb-2 flex items-center justify-between">
-          <p className="font-semibold">{fmt(`${month}-01`, { month: "long", year: "numeric" })}</p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <p className="text-lg font-semibold">{fmt(`${month}-01`, { month: "long", year: "numeric" })}</p>
+            <ul className="flex gap-3 text-[11px] text-muted">
+              {LEGEND.map(([dot, name]) => (
+                <li key={name} className="flex items-center gap-1.5">
+                  <span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} />
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="flex gap-1">
             <button type="button" aria-label="Previous month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, -1))} className={`h-8 w-8 rounded-md border border-line text-muted hover:text-ink ${FOCUS}`}>
               ‹
@@ -144,9 +162,9 @@ export function StudyCalendar({
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-line bg-line gap-px">
+        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-line bg-line/70 shadow-[0_20px_60px_-30px_rgb(0_0_0/0.8)]">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="bg-canvas px-2 py-1.5 text-[11px] text-muted">
+            <div key={w} className="bg-surface px-2.5 py-2 text-[11px] font-medium tracking-wide text-muted uppercase">
               {w}
             </div>
           ))}
@@ -165,9 +183,9 @@ export function StudyCalendar({
                     const topic = days[from]?.find((x): x is StudyTopic => x.kind === "topic" && x.id === id);
                     if (topic) move(topic, day);
                   }}
-                  className={`grid min-h-24 content-start gap-1 p-1.5 ${inMonth && day >= today ? "bg-canvas" : "bg-canvas/50"}`}
+                  className={`grid min-h-28 content-start gap-1 p-1.5 ${day === today ? "bg-quant/[0.07] shadow-[inset_0_0_0_1px_rgb(34_211_238/0.45)]" : inMonth && day >= today ? "bg-canvas" : "bg-canvas/60"}`}
                 >
-                  <span className={`justify-self-start text-[11px] ${day === today ? "rounded-full bg-quant px-1.5 font-semibold text-canvas" : inMonth ? "text-muted" : "text-muted/40"}`}>
+                  <span className={`grid h-6 min-w-6 place-items-center justify-self-start rounded-full px-1 text-xs tabular-nums ${day === today ? "bg-quant font-semibold text-canvas shadow-[0_0_12px_rgb(34_211_238/0.6)]" : inMonth && day >= today ? "text-ink/80" : "text-muted/40"}`}>
                     {Number(day.slice(8))}
                   </span>
                   {list.slice(0, SHOWN).map((item) => (
@@ -192,7 +210,7 @@ export function StudyCalendar({
             <p className={`text-xs ${day === today ? "font-semibold text-quant" : "text-muted"}`}>{day === today ? "Today" : longDay(day)}</p>
             <div className="mt-1.5 grid gap-1.5">
               {days[day].map((item) => (
-                <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg border px-3 py-2.5 text-left text-sm ${chipClass(item)} ${FOCUS}`}>
+                <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${chipClass(item)} ${FOCUS}`}>
                   {label(item)}
                   {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
                 </button>
@@ -215,7 +233,7 @@ export function StudyCalendar({
                 <h3 className="font-semibold">{longDay(open.day)}</h3>
                 <div className="grid gap-1.5">
                   {(days[open.day] ?? []).map((item) => (
-                    <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg border px-3 py-2 text-left text-sm ${chipClass(item)}`}>
+                    <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${chipClass(item)}`}>
                       {label(item)}
                     </button>
                   ))}
@@ -247,7 +265,7 @@ function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: bool
       onDragStart={(e) => e.dataTransfer.setData("text/plain", `${item.date}|${item.id}`)}
       onClick={onOpen}
       title={label(item)}
-      className={`block min-h-6 w-full truncate rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight ${chipClass(item)} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
+      className={`block min-h-6 w-full truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
     >
       {label(item)}
       {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
