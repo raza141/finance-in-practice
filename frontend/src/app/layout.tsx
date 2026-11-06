@@ -7,7 +7,6 @@ import { SiteAnalytics } from "@/core/components/layout/SiteAnalytics";
 import { Navbar } from "@/core/components/layout/Navbar";
 import { SiteChrome } from "@/core/components/layout/SiteChrome";
 import { StickyBookBar } from "@/core/components/layout/StickyBookBar";
-import { CustomCursor } from "@/core/components/ui/CustomCursor";
 import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
 import { JsonLd } from "@/core/components/seo/JsonLd";
 import { siteConfig } from "@/core/config/site";
@@ -104,7 +103,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <WhatsAppButton />
           <StickyBookBar />
         </SiteChrome>
-        <CustomCursor />
         <SiteAnalytics />
       </body>
     </html>

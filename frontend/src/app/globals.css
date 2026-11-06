@@ -154,17 +154,6 @@
     background-image: none;
   }
 
-  /* CustomCursor replaces the native pointer for mouse users, only while it is
-   * rendered; links, buttons and inputs would otherwise re-assert their own. */
-  @media (pointer: fine) {
-    body:has([data-custom-cursor]),
-    body:has([data-custom-cursor]) *,
-    body:has([data-custom-cursor]) *::before,
-    body:has([data-custom-cursor]) *::after {
-      cursor: none !important;
-    }
-  }
-
   /* Type system: serif display headings (h1, h2), Inter for everything else,
    * terminal mono only for figures (tabular-data) and small data labels. */
   h1,
