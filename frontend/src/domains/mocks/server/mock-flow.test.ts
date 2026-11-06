@@ -165,10 +165,15 @@ describe("one screen at a time", () => {
     expect(await call({ op: "save", screen: LAPTOP, responses: answer })).toEqual({ open: true });
   });
 
-  it("a page from before screens (no screen sent) saves until a screen claims the attempt", async () => {
+  it("a page from before screens (no screen sent) saves until a screen claims it, then gets an error (its 'Not saved'), and its submit reloads it", async () => {
     expect(await call({ op: "save", responses: answer })).toEqual({ open: true });
     await call({ op: "claim", screen: LAPTOP });
-    expect(await call({ op: "save", responses: answer })).toEqual({ open: true, taken: true });
+    const before = repo.autosaves;
+    expect(await call({ op: "save", responses: answer })).toEqual({ status: 409 });
+    expect(await call({ op: "pause", responses: answer })).toEqual({ status: 409 });
+    expect(await call({ op: "submit", responses: answer })).toEqual({ ok: true, stale: true, taken: true });
+    expect(repo.autosaves).toBe(before);
+    expect(repo.completed).toBeNull();
   });
 
   it("a claim needs a screen id", async () => {

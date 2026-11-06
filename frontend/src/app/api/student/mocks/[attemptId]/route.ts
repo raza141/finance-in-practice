@@ -26,13 +26,15 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/api/
   const call = MockPlayerApi.parse(await request.json().catch(() => null));
   if (!call) return reply({ message: "Invalid request." }, 400);
 
+  // A page from before screens existed reads any 200 as saved: refused, it gets an error, so it shows "Not saved".
+  const answer = (result: { taken?: boolean }) => (result.taken && !call.screen ? reply({ message: "This mock is open on another screen." }, 409) : reply(result));
   switch (call.op) {
     case "save":
-      return reply(await MockPlayerApi.save(student.id, attemptId, call.responses, call.screen));
+      return answer(await MockPlayerApi.save(student.id, attemptId, call.responses, call.screen));
     case "pause":
-      return reply(await MockPlayerApi.pause(student.id, attemptId, call.responses, call.screen));
+      return answer(await MockPlayerApi.pause(student.id, attemptId, call.responses, call.screen));
     case "resume":
-      return reply(await MockPlayerApi.resume(student.id, attemptId, call.screen));
+      return answer(await MockPlayerApi.resume(student.id, attemptId, call.screen));
     case "claim":
       return call.screen ? reply(await MockPlayerApi.claim(student.id, attemptId, call.screen)) : reply({ message: "Invalid request." }, 400);
     case "next":

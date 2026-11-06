@@ -25,6 +25,19 @@ type Answer = Omit<MockResponse, "questionId">;
 const LETTERS: OptionLetter[] = ["A", "B", "C"];
 const BLANK: Answer = { selected: null, flagged: false, notes: "", seconds: 0, confidence: null };
 const AUTOSAVE_MS = 20_000;
+
+/** What the student chose on a question (its time aside): to tell which changes on a screen never reached the server. */
+const choice = (a: Partial<Answer> | undefined) => JSON.stringify([a?.selected ?? null, a?.flagged ?? false, a?.notes ?? "", a?.confidence ?? null]);
+
+/** A random v4 UUID; crypto.randomUUID is missing in some older in-app browsers. */
+function screenId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
 // At zero the player submits; if that fails it tries again this often, not on every tick.
 const AUTO_SUBMIT_RETRY_MS = 10_000;
 
@@ -103,9 +116,12 @@ export function MockPlayer({
   const submitted = useRef(false);
   // This tab's id. Opening the attempt claims it for this screen: any other open screen stops saving
   // (it would overwrite these answers with its own) and says so.
-  const [screen] = useState(() => crypto.randomUUID());
+  const [screen] = useState(screenId);
   const claimed = useRef(false);
-  const [taken, setTaken] = useState(false);
+  // Taken over: null while this screen holds the attempt, else the questions changed here that the server never got.
+  const [taken, setTaken] = useState<number[] | null>(null);
+  // Each question's choice as the server last confirmed it from this screen.
+  const confirmed = useRef<Record<string, string>>(Object.fromEntries(initial.map(({ questionId, ...a }) => [questionId, choice(a)])));
   const takenRef = useRef(false);
   const lastAutoSubmit = useRef(0);
   // The question on screen and since when: its time so far is added to every save, and to its answer on leaving.
@@ -152,12 +168,12 @@ export function MockPlayer({
   // Another screen took the attempt: this one stops writing, and drops its copy so it can't come back later.
   const lose = useCallback(() => {
     takenRef.current = true;
-    setTaken(true);
+    setTaken(questions.filter((q) => choice(answersRef.current[q.id]) !== (confirmed.current[q.id] ?? choice(undefined))).map((q) => q.number));
     setState("working");
     try {
       localStorage.removeItem(storageKey);
     } catch {}
-  }, [storageKey]);
+  }, [questions, storageKey]);
 
   const claim = useCallback(async () => {
     if (claimed.current || preview) return true;
@@ -206,9 +222,11 @@ export function MockPlayer({
     if (!(await claim())) return setUnsaved(true);
     dirty.current = false;
     const sent = edits.current;
+    const sentAnswers = answersRef.current;
     try {
-      const { open, taken } = await playerCall<{ open: boolean; taken?: boolean }>(attemptId, { op: "save", screen, responses: list(answersRef.current) });
+      const { open, taken } = await playerCall<{ open: boolean; taken?: boolean }>(attemptId, { op: "save", screen, responses: list(sentAnswers) });
       if (taken) return lose();
+      for (const q of questions) confirmed.current[q.id] = choice(sentAnswers[q.id]);
       setUnsaved(false);
       // All saved: drop the browser's copy, so it can't later override answers made on another device.
       if (edits.current === sent) {
@@ -221,7 +239,7 @@ export function MockPlayer({
       dirty.current = true;
       setUnsaved(true);
     }
-  }, [attemptId, claim, list, lose, preview, screen, storageKey, submit]);
+  }, [attemptId, claim, list, lose, preview, questions, screen, storageKey, submit]);
 
   // Saves and stops the server's clock; the student stays here and the clock waits for Resume.
   const pause = async () => {
@@ -231,9 +249,11 @@ export function MockPlayer({
       return setPaused(true);
     }
     setState("pausing");
-    const res = await playerCall<{ ok: boolean; taken?: boolean }>(attemptId, { op: "pause", screen, responses: list(answersRef.current) }).catch(() => null);
+    const sentAnswers = answersRef.current;
+    const res = await playerCall<{ ok: boolean; taken?: boolean }>(attemptId, { op: "pause", screen, responses: list(sentAnswers) }).catch(() => null);
     if (res?.taken) return lose();
     if (res?.ok) {
+      for (const q of questions) confirmed.current[q.id] = choice(sentAnswers[q.id]);
       pausedRef.current = true;
       dirty.current = false;
       setPaused(true);
@@ -295,10 +315,20 @@ export function MockPlayer({
   useEffect(() => {
     const timer = window.setInterval(() => void save(), AUTOSAVE_MS);
     const hidden = () => document.visibilityState === "hidden" && void save();
+    // Back on this screen: check at once that it still holds the attempt, before the student works on it.
+    const back = () => {
+      if (document.visibilityState !== "visible") return;
+      dirty.current = true;
+      void save();
+    };
     document.addEventListener("visibilitychange", hidden);
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", hidden);
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("focus", back);
     };
   }, [save]);
 
@@ -353,15 +383,20 @@ export function MockPlayer({
 
   return (
     <div className="flex min-h-screen flex-col">
-      {taken && (
+      {taken !== null && (
         <div role="alertdialog" aria-modal aria-labelledby="mock-taken" className="fixed inset-0 z-50 grid place-items-center bg-canvas/95 p-6 backdrop-blur-sm">
           <div className="grid max-w-md gap-4 rounded-xl border border-gold/40 bg-surface p-6 text-center">
             <p id="mock-taken" className="font-serif text-2xl font-bold">
               Open on another screen
             </p>
             <p className="text-sm text-muted">
-              This mock was opened in another tab or on another device. Only one screen can save at a time, so your answers there and here can&rsquo;t overwrite each other. Answers saved from either screen are kept.
+              This mock was opened in another tab or on another device. Only one screen can save at a time, so the two can&rsquo;t overwrite each other&rsquo;s answers.
             </p>
+            {taken.length > 0 && (
+              <p className="text-sm text-red-300">
+                Your last change{taken.length > 1 ? "s" : ""} here to question{taken.length > 1 ? "s" : ""} {taken.join(", ")} {taken.length > 1 ? "were" : "was"} not saved. Check {taken.length > 1 ? "them" : "it"} on the other screen.
+              </p>
+            )}
             <div className="btn-group justify-center">
               <BackToPortal href={exitHref} label="Back to portal" />
               <button type="button" onClick={() => window.location.reload()} className={`h-10 px-4 text-sm font-semibold ${RAISED_GOLD}`}>
