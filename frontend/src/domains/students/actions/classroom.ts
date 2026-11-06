@@ -150,6 +150,14 @@ export async function saveBatchLink(formData: FormData): Promise<void> {
   redirect(`${BATCHES}?batch=saved#batches`);
 }
 
+export async function saveBatchAccess(formData: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const ends = String(formData.get("ends") ?? "").trim();
+  if (ends && !/^\d{4}-\d{2}-\d{2}$/.test(ends)) redirect(`${BATCHES}?batch=refused#batches`);
+  await classrooms().saveBatchAccess(String(formData.get("id")), ends || null);
+  redirect(`${BATCHES}?batch=saved#batches`);
+}
+
 export async function deleteBatch(formData: FormData): Promise<void> {
   await AdminAuth.requireOwner();
   const removed = await classrooms().deleteBatch(String(formData.get("id")));

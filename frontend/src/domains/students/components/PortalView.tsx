@@ -129,6 +129,16 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
 
   return (
     <div className="grid gap-6">
+      {student.ended.length > 0 && (
+        <section role="status" className="rounded-3xl border border-line bg-surface p-5 text-sm text-muted">
+          {student.ended.map((e) => (
+            <p key={e.course}>
+              Your portal access for <span className="text-ink">{e.course}</span> ({e.label}) ended on {e.ends}. Your past mock results stay here to look back on.
+            </p>
+          ))}
+          <p className="mt-2">Sitting the exam again or moving to the next level? Contact us and we&rsquo;ll open your new batch.</p>
+        </section>
+      )}
       {!termsAccepted && (
         <section role="status" className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-gold/40 bg-gold/10 p-5 text-sm">
           <p className="text-ink">

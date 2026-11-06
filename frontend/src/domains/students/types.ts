@@ -5,8 +5,10 @@ export interface Student {
   id: string;
   name: string;
   email: string;
-  /** Course titles from the client's plan; the booking form's course list. */
+  /** Course titles from the client's plan whose batch access hasn't ended (069); the booking form's course list. */
   courses: string[];
+  /** Batches whose portal access has ended (yyyy-mm-dd): those courses are left out of `courses`. */
+  ended: { course: string; label: string; ends: string }[];
 }
 
 export type SessionMode = "online" | "in_person";
@@ -94,6 +96,8 @@ export interface Batch {
   course: string;
   label: string;
   examDate: string;
+  /** Last day of portal access for its students (yyyy-mm-dd): set, or a week after the exam date. */
+  accessEnds: string;
   classroomUrl: string | null;
   students: number;
 }

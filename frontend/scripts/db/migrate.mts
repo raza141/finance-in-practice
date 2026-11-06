@@ -1478,6 +1478,36 @@ const MIGRATIONS: Migration[] = [
       `CREATE TRIGGER mock_responses_log_update AFTER UPDATE ON mock_responses FOR EACH ROW WHEN (OLD.selected IS DISTINCT FROM NEW.selected) EXECUTE FUNCTION mock_responses_log()`,
     ],
   },
+  {
+    // A batch's portal access ends right after its exam: access_ends, or a week after exam_date (the sitting's
+    // window) when unset. Past it, that course no longer counts for the student (client_live_courses): no mocks,
+    // no class material; past results stay readable. Moving the student to a later batch brings it back.
+    id: "069_batch_access",
+    statements: [
+      `ALTER TABLE batches ADD COLUMN access_ends date`,
+      `CREATE FUNCTION batch_access_ends(b batches) RETURNS date LANGUAGE sql IMMUTABLE AS $fn$
+        SELECT COALESCE(b.access_ends, b.exam_date + 7)
+      $fn$`,
+      `CREATE FUNCTION client_live_courses(client uuid) RETURNS text[] LANGUAGE sql STABLE AS $fn$
+        SELECT COALESCE(array_agg(x), '{}') FROM clients c CROSS JOIN LATERAL unnest(c.courses) AS x
+        WHERE c.id = client AND NOT EXISTS (
+          SELECT 1 FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
+          WHERE cb.client_id = client AND cb.course = x AND batch_access_ends(b) < current_date
+        )
+      $fn$`,
+      `CREATE OR REPLACE FUNCTION mock_open_to(m mock_exams, client uuid) RETURNS boolean LANGUAGE sql STABLE AS $fn$
+        SELECT (m.owner_client = client AND cardinality(client_live_courses(client)) > 0) OR (m.owner_client IS NULL AND (
+          (m.audience = 'all' AND cardinality(client_live_courses(client)) > 0)
+          OR (m.audience = 'course' AND m.courses && client_live_courses(client))
+          OR EXISTS (
+            SELECT 1 FROM access_grants g
+            WHERE g.client_id = client AND g.starts_at <= now() AND (g.ends_at IS NULL OR g.ends_at > now())
+              AND (g.mock_id = m.id OR g.product = CASE WHEN m.mock_type IN ('topic', 'chapter') THEN 'practice' ELSE 'mocks' END)
+          )
+        ))
+      $fn$`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

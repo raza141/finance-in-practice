@@ -9,7 +9,7 @@ import { ClassroomAuthError } from "@/domains/classroom/server/ClassroomApi";
 import { ClassroomConnection } from "@/domains/classroom/server/ClassroomConnection";
 import { ClassroomSync, type ClassOverview } from "@/domains/classroom/server/ClassroomSync";
 import { siteConfig } from "@/core/config/site";
-import { deleteBatch, openBatch, saveBatchLink } from "@/domains/students/actions/classroom";
+import { deleteBatch, openBatch, saveBatchAccess, saveBatchLink } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { PageHeader } from "@/domains/admin/components/PageHeader";
 
@@ -186,6 +186,16 @@ export default async function AdminClassroomPage({
                           aria-label={`${course.title} ${b.label} class link`}
                           className={`${FIELD} ${b.classroomUrl ? "" : "border-gold/60"}`}
                         />
+                        <PendingButton pendingLabel="Saving…" className="h-9 shrink-0 rounded-md border border-line px-3 text-xs hover:bg-white/5">
+                          Save
+                        </PendingButton>
+                      </form>
+                      <form action={saveBatchAccess} className="flex items-center gap-2 text-xs text-muted">
+                        <input type="hidden" name="id" value={b.id} />
+                        <label className="flex items-center gap-2">
+                          Portal access {b.accessEnds < today ? "ended" : "until"}
+                          <input name="ends" type="date" defaultValue={b.accessEnds} aria-label={`${course.title} ${b.label} portal access until`} className={`${FIELD} w-40`} />
+                        </label>
                         <PendingButton pendingLabel="Saving…" className="h-9 shrink-0 rounded-md border border-line px-3 text-xs hover:bg-white/5">
                           Save
                         </PendingButton>

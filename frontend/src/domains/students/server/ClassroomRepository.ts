@@ -118,7 +118,7 @@ export class ClassroomRepository {
   /** Every opened batch, soonest exam first within a course, with how many students picked it. */
   async batches(): Promise<Batch[]> {
     return (await this.sql`
-      SELECT b.id, b.course, b.label, to_char(b.exam_date, 'YYYY-MM-DD') AS "examDate", b.classroom_url AS "classroomUrl",
+      SELECT b.id, b.course, b.label, to_char(b.exam_date, 'YYYY-MM-DD') AS "examDate", to_char(batch_access_ends(b), 'YYYY-MM-DD') AS "accessEnds", b.classroom_url AS "classroomUrl",
         (SELECT count(*) FROM client_batches cb WHERE cb.course = b.course AND cb.label = b.label)::int AS students
       FROM batches b ORDER BY b.course, b.exam_date
     `) as Batch[];
@@ -136,6 +136,11 @@ export class ClassroomRepository {
   async saveBatchLink(id: string, url: string | null): Promise<void> {
     if (!UUID.test(id)) return;
     await this.sql`UPDATE batches SET classroom_url = ${url} WHERE id = ${id}`;
+  }
+
+  /** The last day of portal access for the batch's students; null: a week after its exam date. */
+  async saveBatchAccess(id: string, accessEnds: string | null): Promise<void> {
+    await this.sql`UPDATE batches SET access_ends = ${accessEnds}::date WHERE id = ${id}`;
   }
 
   /** Only an empty batch: students who picked it would lose their place. */
