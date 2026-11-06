@@ -47,7 +47,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks, exam] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> => {
       const [booked, waiting] = await Promise.all([
@@ -73,6 +73,7 @@ async function portalData(student: Student) {
     safely("mock exams", async () => (await MockRepository.fromEnv()?.published(student.id)) ?? []),
     safely("mock attempts", async () => (await MockRepository.fromEnv()?.history(student.id)) ?? []),
     safely("mock marks", async () => (await MockRepository.fromEnv()?.topicMarks(student.id)) ?? []),
+    safely("next exam", async () => (await StudyPlanRepository.fromEnv()?.nextExam(student.id)) ?? null),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -96,6 +97,7 @@ async function portalData(student: Student) {
     past: bookings ? StudentSessions.past(bookings) : [],
     addresses: bookings ? StudentSessions.addresses(bookings) : [],
     plan,
+    exam: exam ?? null,
     classes: classes ?? [],
     own: own ?? [],
     account,
@@ -113,7 +115,7 @@ async function portalData(student: Student) {
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false, tab }: { student: Student; readOnly?: boolean; tab?: string }) {
-  const { courses, sessions, past, addresses, plan, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, exam, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -170,7 +172,7 @@ export async function Portal({ student, readOnly = false, tab }: { student: Stud
         plan={
           <div className="grid gap-6">
             <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
-            <StudyPlanTimeline items={plan} programmes={student.courses} />
+            <StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} />
           </div>
         }
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}

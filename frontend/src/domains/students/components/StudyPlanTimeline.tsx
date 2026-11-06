@@ -1,7 +1,11 @@
+import { StudyLine, type StudyLineNode } from "../services/StudyLine";
 import type { StudyPlanItem } from "../types";
 import { BUTTON } from "./buttons";
 
 const PLAN_DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+const LINE_DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" });
+const lineDay = (date: string) => LINE_DAY.format(new Date(`${date}T00:00:00Z`));
 
 const MARK: Record<StudyPlanItem["status"], { icon: string; className: string }> = {
   done: { icon: "✓", className: "border-quant bg-quant text-canvas" },
@@ -13,8 +17,10 @@ const MARK: Record<StudyPlanItem["status"], { icon: string; className: string }>
  * The portal's "Study plan & materials" tab: the plan the instructor keeps in
  * admin Clients, plus every attached material in one list. null items = couldn't load.
  */
-export function StudyPlanTimeline({ items, programmes }: { items: StudyPlanItem[] | null; programmes: string[] }) {
+export function StudyPlanTimeline({ items, programmes, exam }: { items: StudyPlanItem[] | null; programmes: string[]; exam: { course: string; date: string } | null }) {
   const next = items?.find((i) => i.status === "planned");
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dubai" }).format(new Date());
+  const line = StudyLine.build(items ?? [], exam, today);
   const materials = (items ?? []).filter((i) => i.materialUrl);
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
@@ -29,6 +35,7 @@ export function StudyPlanTimeline({ items, programmes }: { items: StudyPlanItem[
             </p>
           )}
         </div>
+        {line.length > 1 && <Line nodes={line} />}
         {items === null ? (
           <p className="mt-3 text-sm text-muted">Couldn&rsquo;t load your study plan right now. Please refresh in a minute.</p>
         ) : items.length === 0 ? (
@@ -105,6 +112,47 @@ export function StudyPlanTimeline({ items, programmes }: { items: StudyPlanItem[
           )}
         </section>
       </aside>
+    </div>
+  );
+}
+
+/** The plan on one line: topics in date order, today, then exam day. Scrolls sideways when it's longer than the card. */
+function Line({ nodes }: { nodes: StudyLineNode[] }) {
+  const now = nodes.findIndex((n) => n.kind === "today");
+  return (
+    <div className="mt-5 overflow-x-auto pb-2">
+      <ol className="flex w-full">
+        {nodes.map((n, i) => (
+          <li key={n.kind === "topic" ? n.id : n.kind} title={n.kind === "topic" ? n.topic : undefined} className="relative flex min-w-28 flex-1 flex-col items-center px-1 text-center">
+            <span
+              aria-hidden
+              className={`absolute top-[1.625rem] h-0.5 ${i < now ? "bg-quant/70" : "bg-line"} ${i === 0 ? "left-1/2" : "left-0"} ${i === nodes.length - 1 ? "right-1/2" : "right-0"}`}
+            />
+            <span className="h-4 text-[11px] text-muted">{n.kind === "today" ? "" : lineDay(n.date)}</span>
+            {n.kind === "topic" ? (
+              <span
+                aria-hidden
+                className={`relative mt-1 grid h-5 w-5 place-items-center rounded-full border text-[10px] ${n.next ? "border-gold bg-gold/20" : MARK[n.status].className}`}
+              >
+                {MARK[n.status].icon}
+              </span>
+            ) : n.kind === "today" ? (
+              <span aria-hidden className="relative mt-1 h-5 w-0.5 rounded-full bg-quant" />
+            ) : (
+              <span aria-hidden className="relative mt-1 h-5 w-5 rotate-45 rounded-sm border border-gold bg-gold" />
+            )}
+            <span
+              className={`mt-2 line-clamp-2 text-xs ${
+                n.kind === "today" ? "font-semibold text-quant" : n.kind === "exam" ? "font-semibold text-gold" : n.status === "skipped" ? "text-muted line-through" : n.next ? "font-semibold text-ink" : "text-ink/80"
+              }`}
+            >
+              {n.kind === "topic" ? n.topic : n.kind === "today" ? "Today" : "Exam day"}
+              <span className="sr-only">{n.kind === "topic" ? ` · ${n.status}` : ""}</span>
+            </span>
+            {n.kind === "exam" && <span className="text-[11px] text-muted">{n.days === 0 ? "today" : `in ${n.days} days`}</span>}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

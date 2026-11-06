@@ -35,6 +35,19 @@ export class StudyPlanRepository {
     return rows.map((r) => ({ id: r.id, dueOn: r.due_on, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url }));
   }
 
+  /** The nearest upcoming exam among the student's batches with portal access left (yyyy-mm-dd); null: none (e.g. a private student). */
+  async nextExam(clientId: string): Promise<{ course: string; date: string } | null> {
+    if (!UUID.test(clientId)) return null;
+    const [row] = (await this.sql`
+      SELECT b.course, to_char(b.exam_date, 'YYYY-MM-DD') AS date
+      FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
+      WHERE cb.client_id = ${clientId} AND b.exam_date >= current_date AND batch_access_ends(b) >= current_date
+      ORDER BY b.exam_date
+      LIMIT 1
+    `) as { course: string; date: string }[];
+    return row ?? null;
+  }
+
   async add(clientId: string, items: readonly StudyPlanInput[]): Promise<void> {
     if (!UUID.test(clientId) || items.length === 0) return;
     await this.sql.transaction(
