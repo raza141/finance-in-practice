@@ -62,7 +62,7 @@ export function Navbar() {
           maxTilt={3}
           className="pointer-events-auto hidden lg:block"
         >
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#151E32]/80 px-3 py-2 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] backdrop-blur-md">
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-surface/80 px-3 py-2 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] backdrop-blur-md">
             <nav aria-label="Primary">
               <ul className="flex items-center">
                 {siteConfig.nav.map((item) => {
@@ -81,7 +81,7 @@ export function Navbar() {
                         aria-haspopup={item.children ? "true" : undefined}
                         className="relative flex items-center gap-1 px-2 py-1.5 text-[13px] xl:px-3 font-medium whitespace-nowrap outline-offset-4"
                       >
-                        <span data-nav-label className={active ? "text-ink" : "text-[#94A3B8]"}>
+                        <span data-nav-label className={active ? "text-ink" : "text-muted"}>
                           {item.label}
                         </span>
                         {item.children && (
@@ -113,7 +113,7 @@ export function Navbar() {
                       {item.children && (
                         // pt-3 bridges the gap so the pointer can travel into the panel.
                         <div className="invisible absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 transition-[opacity,visibility] duration-200 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                          <ul className="min-w-52 rounded-2xl border border-white/10 bg-[#151E32]/95 p-2 shadow-xl backdrop-blur-md">
+                          <ul className="min-w-52 rounded-2xl border border-white/10 bg-surface/95 p-2 shadow-xl backdrop-blur-md">
                             {item.children.map((child) => (
                               <li key={child.label}>
                                 <Link
@@ -142,7 +142,7 @@ export function Navbar() {
           <Link
             href={siteConfig.studentBooking.href}
             aria-current={isActive(siteConfig.studentBooking.href) ? "page" : undefined}
-            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-[#151E32]/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
+            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-surface/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
           >
             <span className="grid h-9 w-9 place-items-center rounded-md [corner-shape:squircle] bg-gold/15 text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>

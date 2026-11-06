@@ -12,8 +12,8 @@ import { StudentApiClient } from "../services/StudentApiClient";
 import { StudentBookingContract } from "../services/StudentBookingContract";
 import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentSession } from "../types";
-import { BUTTON, JOIN_BUTTON } from "./buttons";
-import { PortalBar, PortalTabBar } from "./PortalNav";
+import { BOOK_BUTTON, BUTTON, JOIN_BUTTON } from "./buttons";
+import { PortalBar, PortalTabBar, SubTabs, type NavItem } from "./PortalNav";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
 
 const DAYS = 14;
@@ -29,11 +29,11 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "classroom" | "account";
+export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "classroom" | "account";
 
 /** Old ids still in sent WhatsApp links and bookmarks. */
-const ALIASES: Record<string, Tab> = { overview: "home", progress: "mocks" };
-const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "classroom", "account"];
+const ALIASES: Record<string, Tab> = { overview: "home" };
+const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "classroom", "account"];
 
 /** Lets server-rendered panels (home, mocks, calendar) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
@@ -69,6 +69,7 @@ export function StudentPortal({
   classroom,
   overview,
   mocks,
+  progress,
   badges = {},
   me,
   notices,
@@ -89,8 +90,10 @@ export function StudentPortal({
   classroom: ReactNode | null;
   /** The first tab: next session, to-do, latest mark and what's new. */
   overview: ReactNode;
-  /** Mock lobby, marks and the notebook link; null hides the tab. */
+  /** The mock lobby; null when there's no mock for them. */
   mocks: ReactNode | null;
+  /** Marks from the portal's own mocks; null until they've sat one. */
+  progress: ReactNode | null;
   /** Who's signed in, for the bar's "Me" menu. */
   me: { name: string; email: string };
   /** Banners above every tab: terms to accept, access ended, the package. */
@@ -119,7 +122,7 @@ export function StudentPortal({
   // The tab lives in the URL (?tab=plan): refresh, Back and WhatsApp links land on it. Only tab ids, never a record.
   const asked = useSearchParams().get("tab") ?? "";
   const named = ALIASES[asked] ?? (TAB_IDS as readonly string[]).find((t) => t === asked);
-  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) ? "home" : (named as Tab);
+  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) || (named === "progress" && !progress) ? "home" : (named as Tab);
   const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.
@@ -242,24 +245,39 @@ export function StudentPortal({
       {notice.text}
     </p>
   );
-  const TABS: [Tab, string][] = [
-    ["home", "Home"],
-    ["sessions", "Sessions"],
-    ["plan", "Study plan"],
-    ...(mocks ? ([["mocks", "Mocks"]] as [Tab, string][]) : []),
-    ...(classroom ? ([["classroom", "Classroom"]] as [Tab, string][]) : []),
+  const mockPages = [
+    ...(mocks ? [{ label: "Mock exams", tab: "mocks" as Tab }] : []),
+    ...(progress ? [{ label: "Progress", tab: "progress" as Tab }] : []),
+    { label: "Mistakes notebook", href: "/student/mocks/notebook" },
   ];
-  // Booking is part of Sessions; Hours & payments sits in the header's account menu.
-  const lit = tab === "book" ? "sessions" : tab;
+  const TABS: NavItem[] = [
+    { id: "home", label: "Home" },
+    {
+      id: "sessions",
+      label: "Sessions",
+      subs: [
+        { label: moving ? "Change a session" : "Book a session", tab: "book" },
+        { label: `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`, tab: "sessions" },
+      ],
+    },
+    { id: "plan", label: "Study plan" },
+    ...(mocks || progress ? [{ id: "mocks" as Tab, label: "Mocks", subs: mockPages }] : []),
+    ...(classroom ? [{ id: "classroom" as Tab, label: "Classroom" }] : []),
+  ];
+  // Booking is a page of Sessions, Progress a page of Mocks; Hours & payments sits in the bar's Me menu.
+  const lit: Tab = tab === "book" ? "sessions" : tab === "progress" ? "mocks" : tab;
+  const section = TABS.find((t) => t.id === lit);
   return (
     <PortalTabs value={go}>
     <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} />
     {/* Phones and tablets: room at the bottom for the tab bar. */}
     <main className="page-container relative grid gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
       {notices}
+      {section && <SubTabs item={section} active={tab} onGo={go} />}
       {tab === "home" && overview}
       {tab === "plan" && plan}
       {tab === "mocks" && mocks}
+      {tab === "progress" && progress}
       {tab === "account" && account}
       {tab === "classroom" && classroom}
 
@@ -270,7 +288,7 @@ export function StudentPortal({
               <h2 id="sessions-heading" className="text-2xl font-normal italic">
                 Upcoming sessions
               </h2>
-              <button type="button" onClick={() => go("book")} className="inline-flex h-10 items-center rounded-btn bg-gold px-5 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright">
+              <button type="button" onClick={() => go("book")} className={BOOK_BUTTON}>
                 Book a session
               </button>
             </div>

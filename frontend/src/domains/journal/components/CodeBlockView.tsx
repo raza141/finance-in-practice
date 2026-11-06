@@ -42,7 +42,7 @@ export function CodeBlockView({
   return (
     <figure className="my-8">
       {children}
-      <div className="overflow-hidden rounded-lg border border-line bg-[#22272e]">
+      <div className="overflow-hidden rounded-lg border border-line bg-code">
         <div className="flex items-center justify-between gap-3 border-b border-line/80 bg-surface px-4 py-2">
           <span className="truncate font-mono text-xs text-muted">
             {title || filename} <span className="text-muted/60">· {language}</span>

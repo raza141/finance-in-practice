@@ -18,11 +18,11 @@ export function WhatsAppButton() {
       // click-through strip over page content.
       className="group pointer-events-none fixed right-5 bottom-5 z-40 flex items-center gap-3 transition-[bottom] duration-300 sm:right-6 sm:bottom-6 max-lg:[html[data-bookbar]_&]:bottom-24"
     >
-      <span className="pointer-events-none hidden translate-x-2 rounded-full border border-white/10 bg-[#151E32]/90 px-3 py-1.5 text-[13px] font-medium whitespace-nowrap text-ink opacity-0 shadow-lg backdrop-blur-md transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 sm:block">
+      <span className="pointer-events-none hidden translate-x-2 rounded-full border border-white/10 bg-surface/90 px-3 py-1.5 text-[13px] font-medium whitespace-nowrap text-ink opacity-0 shadow-lg backdrop-blur-md transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 sm:block">
         Chat on WhatsApp
       </span>
-      <span className="pointer-events-auto relative grid h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_8px_30px_-6px_rgb(37_211_102/0.6)] transition-transform duration-200 group-hover:scale-105">
-        <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-[#25D366]/40 [animation-duration:2.5s] motion-reduce:hidden" />
+      <span className="pointer-events-auto relative grid h-14 w-14 place-items-center rounded-full bg-whatsapp text-white shadow-[0_8px_30px_-6px_rgb(37_211_102/0.6)] transition-transform duration-200 group-hover:scale-105">
+        <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-whatsapp/40 [animation-duration:2.5s] motion-reduce:hidden" />
         <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden className="relative">
           <path d={WHATSAPP_GLYPH} />
         </svg>

@@ -83,7 +83,7 @@ export function LeadForm({ resource, source }: { resource: FreeResource; source:
       {/* Honeypot: hidden from people, filled by bots. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       <label className="flex items-start gap-2 text-xs text-muted">
-        <input type="checkbox" name="optIn" className="mt-0.5 accent-[#22d3ee]" />
+        <input type="checkbox" name="optIn" className="mt-0.5 accent-quant" />
         Also send me occasional CFA/FRM exam tips. Unsubscribe anytime.
       </label>
       <p className="text-xs text-muted">

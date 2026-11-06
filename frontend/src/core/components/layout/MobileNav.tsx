@@ -23,7 +23,7 @@ export function MobileNav() {
         aria-controls="mobile-nav"
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#151E32]/80 text-ink shadow-lg backdrop-blur-md"
+        className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-surface/80 text-ink shadow-lg backdrop-blur-md"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           {open ? (
@@ -39,7 +39,7 @@ export function MobileNav() {
         <nav
           id="mobile-nav"
           aria-label="Mobile"
-          className="fixed inset-x-4 top-20 z-50 rounded-2xl border border-white/10 bg-[#151E32]/95 px-3 py-3 shadow-lg backdrop-blur-md"
+          className="fixed inset-x-4 top-20 z-50 rounded-2xl border border-white/10 bg-surface/95 px-3 py-3 shadow-lg backdrop-blur-md"
         >
           <ul className="flex flex-col">
             {siteConfig.nav.map((item) => (

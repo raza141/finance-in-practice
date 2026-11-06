@@ -131,7 +131,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
     : Promise.resolve({ status: "off" });
   const loading = (label: string) => <CardSkeleton label={label} />;
   const today = StudyDays.today();
-  const hasMocks = mocks === null || attempts === null || mocks.length + attempts.length > 0 || (progress?.mocks.length ?? 0) > 0;
+  const hasMocks = mocks === null || attempts === null || mocks.length + attempts.length > 0;
 
   const notices = (
     <>
@@ -183,15 +183,8 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         past={past}
         addresses={addresses}
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />}
-        // Everything mocks in one place: start one, marks by topic, the notebook. No tab until there's a mock for them.
-        mocks={
-          hasMocks ? (
-            <div className="grid gap-6">
-              <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} />
-              {progress && progress.mocks.length > 0 && <ProgressPanel progress={progress} />}
-            </div>
-          ) : null
-        }
+        mocks={hasMocks ? <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} /> : null}
+        progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
           <PortalOverview

@@ -294,7 +294,7 @@ const CodeEditor: Editor<CodeBlock> = ({ block, onChange, ctx }) => {
             set("code", `${block.code.slice(0, at)}    ${block.code.slice(el.selectionEnd)}`);
             requestAnimationFrame(() => el.setSelectionRange(at + 4, at + 4));
           }}
-          className={`${MONO_AREA} bg-[#22272e]`}
+          className={`${MONO_AREA} bg-code`}
         />
       </Field>
       <Field label="Output (optional)">

@@ -10,6 +10,6 @@ export const BUTTON = `${BASE} h-9 px-3.5 text-xs ${RAISED_PLAIN}`;
 /** Gold: booking. */
 export const BOOK_BUTTON = `${BASE} h-10 px-4 text-sm ${RAISED_GOLD}`;
 /** Google green: opens Google Classroom. */
-export const CLASSROOM_BUTTON = `${BASE} h-9 bg-[#1e8e3e] px-3.5 text-xs text-white hover:bg-[#188038]`;
+export const CLASSROOM_BUTTON = `${BASE} h-9 bg-google-green px-3.5 text-xs text-white hover:bg-google-green-dark`;
 /** Solid cyan: join a live session. */
 export const JOIN_BUTTON = `${BASE} h-9 px-3.5 text-xs ${RAISED_QUANT}`;

@@ -25,7 +25,7 @@ export function FreeResourceBlock({ resource, source, eyebrow = "Free download" 
           </div>
           <div className="mt-3 grid gap-1.5 px-4">
             {cover.bars.map((w, i) => (
-              <span key={i} className={`h-1.5 rounded-sm ${i < cover.gold ? "bg-gold" : "bg-[#67b7c9]"}`} style={{ width: `${w}%` }} />
+              <span key={i} className={`h-1.5 rounded-sm ${i < cover.gold ? "bg-gold" : "bg-quant/60"}`} style={{ width: `${w}%` }} />
             ))}
           </div>
         </div>

@@ -18,7 +18,7 @@ const longDay = (date: string) => fmt(date, { weekday: "long", day: "numeric", m
 /** One colour per kind, Google-Calendar style: a solid bar on the left, a soft tint behind. */
 const CHIP: Record<StudyDayItem["kind"], string> = {
   topic: "border-l-indigo-400 bg-indigo-400/10 text-indigo-100 hover:bg-indigo-400/20",
-  session: "border-l-quant bg-quant/10 text-cyan-100 hover:bg-quant/20",
+  session: "border-l-quant bg-quant/10 text-quant-soft hover:bg-quant/20",
   mock: "border-l-violet-400 bg-violet-400/10 text-violet-100 hover:bg-violet-400/20",
   exam: "border-l-gold-bright bg-gradient-to-r from-gold to-gold-bright font-semibold text-canvas shadow-[0_0_14px_rgb(212_175_55/0.45)]",
 };

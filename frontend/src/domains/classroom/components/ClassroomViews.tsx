@@ -16,7 +16,7 @@ const KIND_TONE: Record<ClassItem["kind"], string> = {
   quiz: "border-gold/50 text-gold",
   assignment: "border-quant/50 text-quant",
   question: "border-quant/50 text-quant",
-  material: "border-[#34a853]/50 text-[#5bb974]",
+  material: "border-google-green-light/50 text-google-green-light",
   announcement: "border-line text-ink/80",
 };
 
@@ -325,7 +325,7 @@ export function LatestMockCard({ progress: p }: { progress: Progress }) {
         {p.mocks.length > 0 ? `${p.mocks.length} mock${p.mocks.length > 1 ? "s" : ""} · target ${TARGET}%` : "No mocks taken yet"}
         {p.change !== null && ` · ${p.change > 0 ? "+" : ""}${p.change} pts since the first`}
       </p>
-      <TabButton tab="mocks" className={`${BUTTON} mt-4`}>
+      <TabButton tab={p.mocks.length > 0 ? "progress" : "mocks"} className={`${BUTTON} mt-4`}>
         {p.mocks.length > 0 ? "See progress" : "Open mock exams"}
       </TabButton>
     </section>

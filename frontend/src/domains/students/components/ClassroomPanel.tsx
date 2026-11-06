@@ -23,10 +23,10 @@ const JOIN = `${CLASSROOM_BUTTON} mt-4`;
 /** A class just for this student: the invite is there from the start. */
 function OwnClassCard({ c }: { c: PrivateClassroom }) {
   return (
-    <li className="relative overflow-hidden rounded-2xl border border-[#34a853]/40 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.25),transparent_60%)] p-5">
+    <li className="relative overflow-hidden rounded-2xl border border-google-green-light/40 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.25),transparent_60%)] p-5">
       <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#1e8e3e]/20">
-          <BoardIcon className="h-7 w-7 text-[#34a853]" />
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-google-green/20">
+          <BoardIcon className="h-7 w-7 text-google-green-light" />
         </span>
         <div className="min-w-0">
           <p className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom · just for you</p>
@@ -61,13 +61,13 @@ export function ClassroomPanel({ classes, own, email, readOnly = false }: { clas
               <li
                 key={c.title}
                 className={`relative overflow-hidden rounded-2xl border p-5 ${
-                  c.url ? "border-[#34a853]/30 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.22),transparent_60%)]" : "border-line"
+                  c.url ? "border-google-green-light/30 bg-[radial-gradient(circle_at_85%_0%,rgb(52_168_83/0.22),transparent_60%)]" : "border-line"
                 }`}
               >
                 {/* Same header as a private class, so cards side by side line up. */}
                 <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#1e8e3e]/20">
-                    <BoardIcon className={`h-7 w-7 ${c.url ? "text-[#34a853]" : "text-muted"}`} />
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-google-green/20">
+                    <BoardIcon className={`h-7 w-7 ${c.url ? "text-google-green-light" : "text-muted"}`} />
                   </span>
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">Google Classroom · course</p>
@@ -90,7 +90,7 @@ export function ClassroomPanel({ classes, own, email, readOnly = false }: { clas
                     <fieldset disabled={readOnly}>
                     <PendingButton
                       pendingLabel="Sending…"
-                      className="inline-flex h-10 items-center rounded-md border border-[#34a853]/50 px-4 text-sm font-semibold text-ink transition-colors hover:bg-[#34a853]/15"
+                      className="inline-flex h-10 items-center rounded-md border border-google-green-light/50 px-4 text-sm font-semibold text-ink transition-colors hover:bg-google-green-light/15"
                     >
                       Request access
                     </PendingButton>

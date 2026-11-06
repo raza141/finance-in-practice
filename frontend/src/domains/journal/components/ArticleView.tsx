@@ -311,7 +311,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
       </div>
 
       {/* Readers who aren't ready to book can still follow for the next article. */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/10 p-5">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-linkedin/40 bg-linkedin/10 p-5">
         <p className="text-sm text-ink/90">New articles and exam tips, on LinkedIn.</p>
         <LinkedInFollow note="Get the next article in your feed" />
       </div>

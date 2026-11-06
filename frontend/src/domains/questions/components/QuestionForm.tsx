@@ -199,7 +199,7 @@ export function QuestionForm({ question, nextSlot }: { question: Question | null
             <div key={i} className="grid gap-2">
               <div className="flex items-center gap-3">
                 <label className="flex shrink-0 items-center gap-2 font-mono text-sm">
-                  <input type="radio" name="correct" value={i} checked={d.correct === String(i)} onChange={() => set("correct", String(i))} className="accent-[#34d399]" />
+                  <input type="radio" name="correct" value={i} checked={d.correct === String(i)} onChange={() => set("correct", String(i))} className="accent-emerald-400" />
                   {QuestionTaxonomy.letter(i)}
                 </label>
                 <input

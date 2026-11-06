@@ -46,7 +46,7 @@ export function ShareBar({ url, title, exam = "CFA" }: { url: string; title: str
           href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${button} bg-[#25d366] text-[#06301a] hover:bg-[#3ee07a]`}
+          className={`${button} bg-whatsapp text-canvas hover:bg-whatsapp-dark`}
         >
           <WhatsAppIcon />
           WhatsApp
@@ -55,7 +55,7 @@ export function ShareBar({ url, title, exam = "CFA" }: { url: string; title: str
           href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${button} bg-[#0a66c2] text-white hover:bg-[#1877d6]`}
+          className={`${button} bg-linkedin text-white hover:bg-linkedin-dark`}
         >
           <LinkedInIcon />
           LinkedIn

@@ -3,6 +3,7 @@
 /* ---------------------------------------------------------------------------
  * Design tokens (Tailwind v4: utilities are generated from @theme)
  *   bg-canvas / bg-surface / text-ink / text-muted / text-gold / border-quant
+ * Locked: docs/brand.md is the rule book, and brand.test.ts fails on colours or fonts outside it.
  * Gold is reserved for revenue actions (book, enrol). Cyan marks quant/technical.
  * ------------------------------------------------------------------------- */
 @theme {
@@ -13,8 +14,20 @@
   --color-gold: #d4af37;
   --color-gold-bright: #e6c65a;
   --color-quant: #22d3ee;
+  --color-quant-bright: #67e8f9;
+  --color-quant-soft: #cffafe;
   --color-ink: #f8fafc;
   --color-muted: #aab6c8;
+  /* Other brands, only on their own buttons and marks (docs/brand.md §3). */
+  --color-linkedin: #0a66c2;
+  --color-linkedin-dark: #004182;
+  --color-whatsapp: #25d366;
+  --color-whatsapp-dark: #1fb855;
+  --color-google-green: #1e8e3e;
+  --color-google-green-dark: #188038;
+  --color-google-green-light: #34a853;
+  /* Code blocks (GitHub dark dimmed). */
+  --color-code: #22272e;
   /* Raised buttons: top light, bottom edge, contact shadow, a glow in the button's own colour. */
   --shadow-bevel-gold: inset 0 1px 0 #ffffff2e, inset 0 -2px 0 #0000001f, 0 1px 2px #0006, 0 8px 30px -8px #d4af3780;
   --shadow-bevel-quant: inset 0 1px 0 #ffffff59, inset 0 -2px 0 #0003, 0 1px 2px #0006, 0 8px 24px -6px #22d3ee80;

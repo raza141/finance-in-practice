@@ -341,7 +341,7 @@ export function CourseView({
                         href={`https://wa.me/${siteConfig.contact.whatsapp.number}?text=${encodeURIComponent(`Hi! I'd like to know about the ${course.title} ${option.title.toLowerCase()}.`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex h-10 items-center justify-center rounded-md bg-[#25D366] px-4 text-sm font-semibold text-canvas transition-colors hover:bg-[#1fb855]"
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-whatsapp px-4 text-sm font-semibold text-canvas transition-colors hover:bg-whatsapp-dark"
                       >
                         Ask on WhatsApp
                       </a>

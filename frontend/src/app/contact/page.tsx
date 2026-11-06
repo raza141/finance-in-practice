@@ -71,7 +71,7 @@ export default function ContactPage() {
 
         <aside
           aria-labelledby="next-steps-heading"
-          className="rounded-3xl border border-white/10 bg-[#151E32]/80 p-6 backdrop-blur-md sm:p-8"
+          className="rounded-3xl border border-white/10 bg-surface/80 p-6 backdrop-blur-md sm:p-8"
         >
           <h2 id="next-steps-heading" className="font-mono text-xs tracking-[0.22em] text-quant uppercase">
             How it works
