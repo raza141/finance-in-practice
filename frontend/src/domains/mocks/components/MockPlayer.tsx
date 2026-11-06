@@ -98,15 +98,20 @@ export function MockPlayer({
   // The browser has no connection: the student is told at once, not only when the next autosave fails.
   const [offline, setOffline] = useState(false);
   const dirty = useRef(false);
+  // Counts changes, so a save can tell whether the browser's copy still holds anything the server hasn't got.
+  const edits = useRef(0);
   const submitted = useRef(false);
   const lastAutoSubmit = useRef(0);
   // The question on screen and since when: its time so far is added to every save, and to its answer on leaving.
   const onScreen = useRef<{ id: string; since: number } | null>(null);
 
   // This device's unsaved changes (e.g. notes typed just before a refresh) win over the last autosave.
+  // Not when it opens paused: the pause saved everything and nothing changes while paused, so a copy
+  // here is an older one from this device (another device may have answered since) and would blank those answers.
   useEffect(() => {
     if (preview) return;
     try {
+      if (pausedAtStart) return localStorage.removeItem(storageKey);
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as Record<string, Answer> | null;
       if (saved) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring this browser's copy after hydration
@@ -114,6 +119,7 @@ export function MockPlayer({
         dirty.current = true;
       }
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only how the page opened counts
   }, [preview, storageKey]);
 
   const wide = () => window.matchMedia("(min-width: 1024px)").matches;
@@ -167,15 +173,22 @@ export function MockPlayer({
   const save = useCallback(async () => {
     if (!dirty.current || submitted.current || pausedRef.current || preview) return;
     dirty.current = false;
+    const sent = edits.current;
     try {
       const { open } = await playerCall<{ open: boolean }>(attemptId, { op: "save", responses: list(answersRef.current) });
       setUnsaved(false);
+      // All saved: drop the browser's copy, so it can't later override answers made on another device.
+      if (edits.current === sent) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {}
+      }
       if (!open) void submit(true);
     } catch {
       dirty.current = true;
       setUnsaved(true);
     }
-  }, [attemptId, list, preview, submit]);
+  }, [attemptId, list, preview, storageKey, submit]);
 
   // Saves and stops the server's clock; the student stays here and the clock waits for Resume.
   const pause = async () => {
@@ -263,6 +276,7 @@ export function MockPlayer({
       } catch {}
       return next;
     });
+    edits.current += 1;
     dirty.current = true;
   };
 
