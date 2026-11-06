@@ -432,7 +432,7 @@ describe("Mistakes retake", () => {
 
 describe("MockNotebook.build", () => {
   let day = 0;
-  const row = (key: string, selected: "A" | "B" | "C" | null): NotebookRow => ({
+  const row = (key: string, selected: "A" | "B" | "C" | null, flagged = false): NotebookRow => ({
     key,
     id: `${key}-copy-${day + 1}`,
     topic: "Ethics",
@@ -444,6 +444,7 @@ describe("MockNotebook.build", () => {
     explanation: "",
     why: ["", "", ""],
     selected,
+    flagged,
     at: new Date(Date.UTC(2026, 9, ++day)),
   });
 
@@ -457,5 +458,10 @@ describe("MockNotebook.build", () => {
     ]);
     // The newest copy met, so a drill uses a question still in the bank.
     expect(book[0].id).toBe(`slipped-copy-${day}`);
+  });
+
+  it("keeps a right but flagged answer until it's right twice without a flag", () => {
+    const book = MockNotebook.build([row("unsure", "A", true), row("unsure", "A"), row("sure", "A", true), row("sure", "A"), row("sure", "A")]);
+    expect(book.map((e) => [e.question, e.timesWrong, e.timesFlagged, e.streak, e.lastWrong])).toEqual([["unsure", 0, 1, 1, null]]);
   });
 });

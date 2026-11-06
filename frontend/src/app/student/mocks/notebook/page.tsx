@@ -34,7 +34,7 @@ export default async function NotebookPage({ searchParams }: PageProps<"/student
         <section className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
           <h1 className="text-3xl font-normal italic">Mistakes notebook</h1>
           <p className="mt-2 text-muted">
-            Every question you&rsquo;ve got wrong or left blank, from all your mocks. A question leaves once you get it right {MockNotebook.RIGHT_TO_CLEAR} times in a row.
+            Every question you&rsquo;ve got wrong, left blank or flagged, from all your mocks. A question leaves once you get it right {MockNotebook.RIGHT_TO_CLEAR} times in a row without a flag.
           </p>
           {notice === "no-drill" && (
             <p role="status" className="mt-4 rounded-lg border border-gold/40 bg-gold/5 p-3 text-sm">
@@ -89,7 +89,7 @@ function Entry({ e }: { e: NotebookEntry }) {
           <Inline text={e.question} />
         </span>
         <span className="shrink-0 text-right text-xs text-muted">
-          Wrong {e.timesWrong}×
+          {[e.timesWrong && `Wrong ${e.timesWrong}×`, e.timesFlagged && `Flagged ${e.timesFlagged}×`].filter(Boolean).join(" · ")}
           <span className="block">{toClear === 1 ? "1 more right to clear" : `${toClear} right to clear`}</span>
           <span className="block">{DAY.format(new Date(e.at))}</span>
         </span>
@@ -124,7 +124,7 @@ function Entry({ e }: { e: NotebookEntry }) {
             );
           })}
         </ul>
-        {!e.lastWrong && <p className="text-sm text-muted">You left it blank last time.</p>}
+        {!e.lastWrong && e.timesWrong > 0 && <p className="text-sm text-muted">You left it blank last time.</p>}
         {e.explanation && (
           <section className="border-l-2 border-emerald-400/60 pl-4">
             <h3 className="text-sm font-semibold">Explanation</h3>

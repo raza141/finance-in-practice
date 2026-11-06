@@ -590,14 +590,14 @@ export class MockRepository {
   async notebookRows(clientId: string): Promise<NotebookRow[]> {
     const rows = (await this.sql`
       SELECT q.content_key AS key, q.id, q.topic, q.level, q.vignette, q.question, q.option_a, q.option_b, q.option_c, q.correct, q.explanation,
-        q.why_a, q.why_b, q.why_c, r.selected, a.submitted_at AS at
+        q.why_a, q.why_b, q.why_c, r.selected, COALESCE(r.flagged, false) AS flagged, a.submitted_at AS at
       FROM mock_attempts a
       JOIN mock_items i ON i.mock_id = a.mock_id AND (a.question_ids IS NULL OR i.question_id = ANY(a.question_ids))
       JOIN mock_questions q ON q.id = i.question_id
       LEFT JOIN mock_responses r ON r.attempt_id = a.id AND r.question_id = q.id
       WHERE a.client_id = ${clientId} AND a.status = 'completed'
       ORDER BY a.submitted_at, i.number
-    `) as (QuestionRow & { key: string; level: CfaLevel; selected: OptionLetter | null; at: Date })[];
+    `) as (QuestionRow & { key: string; level: CfaLevel; selected: OptionLetter | null; flagged: boolean; at: Date })[];
     return rows.map((r) => ({
       key: r.key,
       id: r.id,
@@ -610,6 +610,7 @@ export class MockRepository {
       explanation: r.explanation,
       why: [r.why_a, r.why_b, r.why_c],
       selected: r.selected,
+      flagged: r.flagged,
       at: r.at,
     }));
   }

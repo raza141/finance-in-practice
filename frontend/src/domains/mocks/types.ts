@@ -191,6 +191,8 @@ export interface NotebookEntry {
   /** Their pick the last time they got it wrong (null: left blank). */
   lastWrong: OptionLetter | null;
   timesWrong: number;
+  /** Right but flagged as unsure. */
+  timesFlagged: number;
   /** Right answers since the last wrong one: two takes it out. */
   streak: number;
   /** When they last met it (ISO). */
