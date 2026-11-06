@@ -35,8 +35,7 @@ export default async function CoursesPage() {
   return (
     <>
       <header className="page-container pt-10 lg:pt-12">
-        <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Courses</p>
-        <h1 className="mt-3 max-w-3xl text-4xl leading-tight font-bold sm:text-5xl">
+        <h1 className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl">
           CFA<sup className="text-[0.4em]">®</sup> &amp; FRM<sup className="text-[0.4em]">®</sup> courses, 1-on-1
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
@@ -73,9 +72,7 @@ export default async function CoursesPage() {
         <div className="page-container py-12 lg:py-16">
           <SectionHeading
             id="curriculum-heading"
-            eyebrow="Applied finance tracks"
             title="Beyond the exams"
-            lede="1-on-1 tracks for coursework, modeling, risk and Python. Pick one, or we'll suggest it after your diagnostic."
           />
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-12">
             {new ServiceCatalog().all().map((service) => (

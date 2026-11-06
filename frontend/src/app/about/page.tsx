@@ -27,33 +27,15 @@ export default async function AboutPage() {
         <section
           data-cosmic-section
           aria-labelledby="about-heading"
-          className="page-container flex min-h-[55svh] flex-col items-center justify-center py-12 text-center lg:min-h-[60svh] lg:py-16"
+          className="page-container flex flex-col items-center pt-28 pb-12 text-center lg:pt-32 lg:pb-16"
         >
-          <p
-            data-reveal
-            className="font-mono text-xs tracking-[0.3em] text-quant uppercase"
-          >
-            {instructors.length > 1 ? "The instructors" : "Your instructor"}
-          </p>
           <h1
             data-reveal
             id="about-heading"
-            className="mt-6 max-w-4xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-7xl"
+            className="max-w-4xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-7xl"
           >
             Learn finance from someone who builds the models
           </h1>
-          <p
-            data-reveal
-            className="mt-6 max-w-xl text-lg leading-relaxed text-muted"
-          >
-            Theory first, then the model that proves it.
-          </p>
-          <p
-            data-reveal
-            className="mt-10 font-mono text-[11px] tracking-[0.35em] text-muted uppercase"
-          >
-            Scroll ↓
-          </p>
         </section>
 
         {instructors.map((instructor, i) => (

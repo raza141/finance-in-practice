@@ -129,17 +129,14 @@ export function StudyPortalSection() {
       <div className="page-container py-12 lg:py-16">
         <SectionHeading
           id="portal-heading"
-          eyebrow="Your private study portal"
           title="Your prep keeps going between sessions"
-          lede="Mocks that work like exam day, a score for every topic, and your sessions, plan and materials in one place. You always know what to study next."
         />
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {CARDS.map((card) => (
             <article key={card.tag} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
               {card.shot}
               <div className="p-6">
-                <p className="font-mono text-[11px] tracking-[0.2em] text-gold uppercase">{card.tag}</p>
-                <h3 className="mt-1.5 text-lg font-bold">{card.title}</h3>
+                <h3 className="text-lg font-bold">{card.title}</h3>
                 <ul className="mt-3 grid gap-2 text-sm text-muted">
                   {card.points.map((p) => (
                     <li key={p} className="flex gap-2.5">

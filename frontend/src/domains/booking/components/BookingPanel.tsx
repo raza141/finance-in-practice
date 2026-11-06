@@ -10,13 +10,11 @@ interface BookingPanelProps {
   lede?: string;
 }
 
-const DEFAULT_LEDE = "Find your starting point and leave with a plan to exam day.";
-
 export function BookingPanel({
   headingId = "book-heading",
-  eyebrow = "Free diagnostic session",
+  eyebrow,
   title = "Book your free diagnostic session",
-  lede = DEFAULT_LEDE,
+  lede,
 }: BookingPanelProps) {
   return <BookingDesk heading={<SectionHeading id={headingId} eyebrow={eyebrow} title={title} lede={lede} />} />;
 }

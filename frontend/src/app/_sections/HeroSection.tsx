@@ -12,17 +12,10 @@ export function HeroSection() {
     <section aria-labelledby="hero-heading" className="relative overflow-hidden">
       <div className="page-container grid items-center gap-8 pt-8 pb-8 sm:pt-10 lg:grid-cols-2 xl:gap-16 lg:pt-6 lg:pb-8">
         <div className="@container relative z-10">
-          <p
-            data-anim="hero-subtitle"
-            className="font-mono text-xs tracking-[0.22em] text-quant uppercase"
-          >
-            CFA® Level I · FRM® · University Finance
-          </p>
-
           <h1
             id="hero-heading"
             // Two lines at every width: each line is ~10.7em wide, so 9% of the column (cqw) always fits; capped at the old size.
-            className="mt-5 text-[min(9cqw,4.1rem)] leading-[1.08] font-black tracking-tight"
+            className="text-[min(9cqw,4.1rem)] leading-[1.08] font-black tracking-tight"
           >
             {HEADLINE.map((line, i) => (
               <span key={i} className="block whitespace-nowrap">
@@ -51,8 +44,7 @@ export function HeroSection() {
             data-anim="hero-subtitle"
             className="mt-6 max-w-xl text-lg leading-relaxed text-ink/85 sm:text-xl"
           >
-            <strong className="font-semibold text-gold">1-on-1 exam prep</strong> that starts with a free diagnostic:
-            every formula from first principles, tied to real markets, on a plan built around your exam date.
+            <strong className="font-semibold text-gold">1-on-1 exam prep</strong> that starts with a free diagnostic.
           </p>
 
           <ul data-anim="hero-subtitle" className="mt-5 flex flex-wrap gap-2 text-sm font-medium">

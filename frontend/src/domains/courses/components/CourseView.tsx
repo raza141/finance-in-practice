@@ -85,12 +85,10 @@ export function CourseView({
   const weightAxis = Math.max(25, ...course.modules.map((m) => CourseFormat.weightMidpoint(m.weight) ?? 0));
   return (
     <>
-      <section className="page-container grid gap-10 pt-6 pb-12 lg:grid-cols-12 lg:pt-8">
+      <section className="page-container grid gap-10 pt-10 pb-12 lg:grid-cols-12 lg:pt-12">
         <div className="lg:col-span-7">
-          <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">{course.eyebrow || course.category}</p>
-          <h1 className="mt-4 text-4xl leading-tight font-black sm:text-5xl">
+          <h1 className="text-4xl leading-tight font-black sm:text-5xl">
             <span data-course-anim="scramble">{course.title}</span>
-            {course.tagline && <span className="mt-2 block font-serif text-3xl font-normal text-gold italic sm:text-4xl">{course.tagline}</span>}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
           {/* Smaller on phones so all three fit one row. */}
@@ -145,7 +143,6 @@ export function CourseView({
           <div className="page-container py-12 lg:py-14">
             <SectionHeading
               id="method-heading"
-              eyebrow="The Finance in Practice method"
               title={`Every topic goes through ${CourseFormat.count(course.method.length)} ${course.method.length === 1 ? "stage" : "stages"}.`}
             />
             <ol className={`relative mt-10 grid gap-4 md:pt-8 ${row(course.method.length)}`}>
@@ -181,11 +178,7 @@ export function CourseView({
             </ol>
             {course.modes.length > 0 && (
               <div className="mt-16">
-                <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
-                  {CourseFormat.count(course.modes.length)} {course.modes.length === 1 ? "way" : "ways"} to learn
-                </p>
-                <h3 className="mt-3 font-serif text-2xl font-bold sm:text-3xl">Choose how each topic is taught.</h3>
-                <p className="mt-2 max-w-2xl text-muted">Pick a mode per topic and switch whenever it suits you.</p>
+                <h3 className="font-serif text-2xl font-bold sm:text-3xl">Choose how each topic is taught.</h3>
                 <ul className={`mt-8 grid gap-5 ${row(course.modes.length)}`}>
                   {course.modes.map((mode, index) => {
                     const { body, bestFor } = CourseFormat.splitBestFor(mode.description);
@@ -224,10 +217,7 @@ export function CourseView({
             <SectionHeading id="curriculum-heading" title="Your curriculum, made practical." />
             {/* Weight map: one tap-to-open row per module, the bar showing its share of the exam.
                 Closed rows keep their details in the HTML, so search engines still read every module. */}
-            <div className="mt-10 flex flex-wrap items-baseline justify-between gap-3">
-              <p className="font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{weights ? course.weightLabel : "Modules"}</p>
-              <p className="text-xs text-muted">Tap a topic to see how we work through it.</p>
-            </div>
+            <p className="mt-10 font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{weights ? course.weightLabel : "Modules"}</p>
             <ol className="mt-3 divide-y divide-line border-y border-line">
               {course.modules.map((module, index) => {
                 const share = weights ? CourseFormat.weightMidpoint(module.weight) : null;
@@ -295,7 +285,7 @@ export function CourseView({
       {offered.length > 0 && (
         <section id="pricing" aria-labelledby="packages-heading" className="scroll-mt-28 border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            <SectionHeading id="packages-heading" title="Choose your package." lede="Pick one and register in one step. We confirm on WhatsApp, then send your agreement." />
+            <SectionHeading id="packages-heading" title="Choose your package." />
             <ul className={`mt-10 grid gap-4 ${row(offered.length)}`}>
               {offered.map((p) => (
                 <li key={p.id} className={`flex flex-col rounded-2xl border bg-surface p-6 ${p.featured ? "border-gold/60" : "border-line"}`}>
@@ -382,7 +372,7 @@ export function CourseView({
       {freeResource && (
         <section aria-labelledby="free-guide-heading" className="border-t border-line">
           <div className="page-container py-12 lg:py-14">
-            <SectionHeading id="free-guide-heading" eyebrow="Not ready to book yet?" title="Start with the free exam map" />
+            <SectionHeading id="free-guide-heading" title="Start with the free exam map" />
             <div className="mt-10">{freeResource}</div>
           </div>
         </section>

@@ -28,7 +28,7 @@ export async function WhyUsSection() {
   return (
     <section id="methodology" aria-labelledby="why-heading" className="border-t border-line">
       <div className="page-container py-12 lg:py-16">
-        <SectionHeading id="why-heading" eyebrow="Why learn with us" title="Theory that holds up in real markets" />
+        <SectionHeading id="why-heading" title="Theory that holds up in real markets" />
 
         {/* Wide screens: the reasons panel shares the Market Pulse card's height, so both columns end on one line. */}
         <div className="mt-8 grid items-start gap-10 lg:grid-cols-2 lg:items-stretch xl:gap-16">

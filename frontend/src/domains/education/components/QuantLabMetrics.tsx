@@ -18,7 +18,6 @@ export function QuantLabMetrics() {
     >
       <SectionHeading
         id="quant-lab-heading"
-        eyebrow="The Quant Lab"
         title="Taught on an engine verified against the textbooks"
         lede="Every pricing, risk and portfolio model used in sessions runs on our own Python engine, tested against published values from Hull and Bodie, Kane & Marcus."
       />

@@ -83,7 +83,6 @@ export default async function CoursePage({ params }: PageProps<"/courses/[slug]"
             <BookingPanel
               headingId="course-book-heading"
               title={course.ctaLabel}
-              lede={`A free 30-minute 1-on-1 call to check fit, your starting point and the plan for ${course.title}.`}
             />
           }
         />

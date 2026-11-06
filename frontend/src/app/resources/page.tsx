@@ -35,9 +35,7 @@ export default async function ResourcesPage() {
   return (
     <>
       <section className="page-container pt-10 pb-8 lg:pt-12">
-        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">Resources</p>
-        <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">Study smarter for CFA® and FRM®</h1>
-        <p className="mt-5 max-w-2xl text-lg text-ink/80">Free guides to get you started. Templates and cheat sheets to keep you on track.</p>
+        <h1 className="max-w-3xl text-4xl leading-tight font-black sm:text-5xl">Study smarter for CFA® and FRM®</h1>
       </section>
 
       <section aria-label="Free downloads" className="page-container grid gap-6 pb-12">
@@ -49,7 +47,7 @@ export default async function ResourcesPage() {
       {videos.length > 0 && (
         <section aria-labelledby="videos-heading" className="border-t border-line">
           <div className="page-container py-12 lg:py-16">
-            <SectionHeading id="videos-heading" eyebrow="Videos" title="Watch and learn" />
+            <SectionHeading id="videos-heading" title="Watch and learn" />
             <VideoGallery videos={videos} />
           </div>
         </section>
@@ -60,7 +58,7 @@ export default async function ResourcesPage() {
           {/* Lemon Squeezy opens checkout in an overlay for links with this class; it handles tax, receipts and delivery. */}
           <Script src="https://app.lemonsqueezy.com/js/lemon.js" strategy="lazyOnload" />
           <div className="page-container py-12 lg:py-16">
-            <SectionHeading id="templates-heading" eyebrow="Templates & cheat sheets" title="Templates built for real exam prep" />
+            <SectionHeading id="templates-heading" title="Templates built for real exam prep" />
             <ul className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paid.map((product) => (
                 <li key={product.id} className="flex flex-col rounded-2xl border border-line bg-surface p-6">

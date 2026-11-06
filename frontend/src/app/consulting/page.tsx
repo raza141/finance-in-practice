@@ -16,14 +16,9 @@ export default function ConsultingPage() {
   return (
     <>
       <section className="page-container pt-10 pb-8 lg:pt-12">
-        <p className="font-mono text-xs tracking-[0.22em] text-quant uppercase">1-on-1 Sessions</p>
-        <h1 className="mt-4 max-w-3xl text-4xl leading-tight font-black sm:text-5xl">
+        <h1 className="max-w-3xl text-4xl leading-tight font-black sm:text-5xl">
           Personal tuition, built around your exam date or deadline
         </h1>
-        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-          Every engagement starts with a free diagnostic session. We diagnose where you are, agree a plan,
-          and you decide whether to continue.
-        </p>
 
         <ul className="mt-10 grid gap-4 md:grid-cols-3">
           {tracks.map((track) => (

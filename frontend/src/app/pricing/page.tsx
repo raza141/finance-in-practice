@@ -22,9 +22,6 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
     <div className="page-container pt-10 pb-16 lg:pt-12 lg:pb-24">
       <header className="max-w-3xl">
         <h1 className="text-4xl leading-tight font-bold text-balance sm:text-5xl">Packages and pricing</h1>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-pretty text-muted">
-          Choose your course and how many hours you want. Clear prices upfront, 1-on-1 with a practitioner, and no quote to wait for.
-        </p>
       </header>
       <div className="mt-10">
         {packages.length === 0 ? (

@@ -46,10 +46,7 @@ export async function FeaturedCoursesSection() {
               className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 sm:p-8"
             >
               <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full bg-quant/10 blur-3xl" />
-              <p className="relative font-mono text-xs tracking-[0.2em] text-gold uppercase">{course.category}® · 1-on-1</p>
-              <h3 className="relative mt-2 text-3xl font-black sm:text-4xl">{course.title}</h3>
-              {/* Two lines held side by side, so a tagline that wraps doesn't push its card's boxes below the others. */}
-              {course.tagline && <p className="relative mt-2 font-serif text-lg text-ink/85 italic md:min-h-[2lh]">{course.tagline}</p>}
+              <h3 className="relative text-3xl font-black sm:text-4xl">{course.title}</h3>
               {next && (
                 <p className="relative mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
                   <span aria-hidden className="relative flex h-2 w-2">
@@ -64,7 +61,7 @@ export async function FeaturedCoursesSection() {
               {study && (
                 <div className="relative mt-6 rounded-2xl border border-line bg-canvas/60 p-5">
                   <p className="text-sm text-muted">
-                    <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study. Make them count:
+                    <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study
                   </p>
                   <ul className="mt-3 grid gap-2 text-sm text-ink/90">
                     {savers.map((line) => (
@@ -82,7 +79,7 @@ export async function FeaturedCoursesSection() {
               <div className="relative mt-auto pt-6">
                 {course.priceMinor ? (
                   <p className="text-sm text-muted">
-                    <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour · 30-min diagnostic free
+                    <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour
                   </p>
                 ) : null}
                 <div className="btn-group mt-4">

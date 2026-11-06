@@ -39,17 +39,12 @@ export default function ContactPage() {
 
       <div className="page-container relative grid gap-10 pt-28 pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-14 lg:pt-32 lg:pb-16">
         <div>
-          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Contact</p>
           <h1
             id="contact-heading"
-            className="mt-5 max-w-2xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
+            className="max-w-2xl text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
           >
             Let&rsquo;s talk about where you want to be
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            Questions about a course or 1-on-1 sessions? Message on WhatsApp, or skip ahead and book the free
-            diagnostic.
-          </p>
 
           <ul className="mt-8 grid gap-3 sm:grid-cols-3">
             {channels.map((channel) => (
@@ -97,7 +92,6 @@ export default function ContactPage() {
           <ButtonLink href={siteConfig.navCta.href} size="lg" className="mt-8 w-full">
             {siteConfig.navCta.label}
           </ButtonLink>
-          <p className="mt-3 text-center font-mono text-xs text-muted">Free · 30 min · no card needed</p>
         </aside>
       </div>
     </section>

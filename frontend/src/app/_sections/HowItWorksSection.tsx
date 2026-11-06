@@ -15,7 +15,7 @@ const STEPS = [
   },
   {
     title: "Start learning",
-    body: "Live 1-on-1 sessions, worked problems and exam-style practice. Between sessions, your student portal keeps your bookings, Classroom work and progress in one place.",
+    body: "Live 1-on-1 sessions and exam-style practice, with your student portal in between.",
     icon: "M5 3l14 9-14 9V3Z",
   },
 ];
@@ -48,9 +48,8 @@ export function HowItWorksSection() {
             </li>
           ))}
         </ol>
-        <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
+        <div className="mt-10">
           <BookSplitButton />
-          <p className="font-mono text-xs tracking-wide text-muted">Free · 30 min · no card needed</p>
         </div>
       </div>
     </section>

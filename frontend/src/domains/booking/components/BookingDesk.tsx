@@ -48,7 +48,6 @@ export function BookingDesk({ heading }: { heading: ReactNode }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-muted">You leave with a clear study plan.</p>
           </div>
         </div>
       </div>
