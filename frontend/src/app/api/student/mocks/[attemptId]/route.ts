@@ -13,7 +13,7 @@ function reply(body: object, status = 200) {
 }
 
 /**
- * POST /api/student/mocks/[attemptId]  body: { op: "save" | "pause" | "resume" | "submit" | "next", responses?, auto? }
+ * POST /api/student/mocks/[attemptId]  body: { op: "save" | "pause" | "resume" | "submit" | "next" | "claim", responses?, auto?, screen? }
  *   The open player's calls (see `MockPlayerApi` for why this isn't a Server Action). The student comes
  *   from their session cookie, never the body; every read checks the attempt is theirs.
  */
@@ -28,15 +28,17 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/api/
 
   switch (call.op) {
     case "save":
-      return reply(await MockPlayerApi.save(student.id, attemptId, call.responses));
+      return reply(await MockPlayerApi.save(student.id, attemptId, call.responses, call.screen));
     case "pause":
-      return reply(await MockPlayerApi.pause(student.id, attemptId, call.responses));
+      return reply(await MockPlayerApi.pause(student.id, attemptId, call.responses, call.screen));
     case "resume":
-      return reply(await MockPlayerApi.resume(student.id, attemptId));
+      return reply(await MockPlayerApi.resume(student.id, attemptId, call.screen));
+    case "claim":
+      return call.screen ? reply(await MockPlayerApi.claim(student.id, attemptId, call.screen)) : reply({ message: "Invalid request." }, 400);
     case "next":
       return reply(await MockPlayerApi.next(student.id, attemptId));
     case "submit": {
-      const result = await MockPlayerApi.submit(student.id, attemptId, call.responses, call.auto);
+      const result = await MockPlayerApi.submit(student.id, attemptId, call.responses, call.auto, call.screen);
       revalidatePath("/student");
       return reply(result);
     }

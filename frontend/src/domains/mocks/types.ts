@@ -135,6 +135,8 @@ export interface MockAttempt {
   pausedAt: Date | null;
   /** A retake of one attempt's mistakes: just these questions, in one sitting. Null: the whole mock. */
   questionIds: string[] | null;
+  /** The one screen (a browser tab's random id) allowed to save; null until a screen opens it. */
+  screen: string | null;
 }
 
 /** Lobby history row. */

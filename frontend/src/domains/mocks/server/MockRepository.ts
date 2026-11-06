@@ -77,6 +77,7 @@ interface AttemptRow {
   break_until: Date | null;
   paused_at: Date | null;
   question_ids: string[] | null;
+  screen: string | null;
 }
 
 /**
@@ -842,6 +843,11 @@ export class MockRepository {
     return rows.length > 0;
   }
 
+  /** This screen takes the open attempt over: from now on only it may save (`MockPlayerApi.taken`). */
+  async claimScreen(attemptId: string, clientId: string, screen: string): Promise<void> {
+    await this.sql`UPDATE mock_attempts SET screen = ${screen} WHERE id = ${attemptId} AND client_id = ${clientId} AND status = 'in_progress'`;
+  }
+
   /** Restarts the clock with the time that was left at the pause. */
   async resume(attemptId: string, clientId: string): Promise<boolean> {
     const rows = await this.sql`
@@ -922,6 +928,7 @@ export class MockRepository {
       breakUntil: r.break_until,
       pausedAt: r.paused_at,
       questionIds: r.question_ids,
+      screen: r.screen ?? null,
     };
   }
 }

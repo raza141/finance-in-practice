@@ -23,6 +23,12 @@ vi.mock("@/domains/students/server/StudentAuth", () => ({
 const CLIENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ATTEMPT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const MOCK = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+/** Any player call, through its Route Handler as the browser sends it. */
+async function call(body: object) {
+  const request = new NextRequest(`https://financeinpractice.me/api/student/mocks/${ATTEMPT}`, { method: "POST", headers: { origin: "https://financeinpractice.me", "content-type": "application/json" }, body: JSON.stringify(body) });
+  const res = await POST(request, { params: Promise.resolve({ attemptId: ATTEMPT }) });
+  return res.status === 200 ? await res.json() : { status: res.status };
+}
 /** The player's submit, through its Route Handler as the browser sends it. */
 async function submitMock(attemptId: string, responses: unknown, { auto = false, origin = "https://financeinpractice.me" } = {}) {
   const request = new NextRequest(`https://financeinpractice.me/api/student/mocks/${attemptId}`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ op: "submit", responses, auto }) });
@@ -45,7 +51,7 @@ class FakeRepo {
   mockType = "book";
 
   constructor(endsAt: Date) {
-    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null, pausedAt: null, questionIds: null };
+    this.attemptRow = { id: ATTEMPT, clientId: CLIENT, mockId: MOCK, startedAt: new Date(Date.now() - 600_000), endsAt, submittedAt: null, score: null, total: 3, status: "in_progress", session: 1, breakUntil: null, pausedAt: null, questionIds: null, screen: null };
   }
   async attempt(id: string, clientId: string) {
     return id === ATTEMPT && clientId === CLIENT ? { ...this.attemptRow } : null;
@@ -80,6 +86,16 @@ class FakeRepo {
     const from = Math.min(Date.now(), this.attemptRow.endsAt.getTime());
     this.attemptRow = { ...this.attemptRow, session: 2, breakUntil: new Date(from + 30 * 60_000), endsAt: new Date(from + (30 + 135) * 60_000) };
     return true;
+  }
+  autosaves = 0;
+  async autosave(_id: string, _client: string, responses: MockResponse[]) {
+    this.autosaves += 1;
+    const ids = new Set(responses.map((r) => r.questionId));
+    this.saved = [...this.saved.filter((r) => !ids.has(r.questionId)), ...responses];
+    return true;
+  }
+  async claimScreen(_id: string, _client: string, screen: string) {
+    if (this.attemptRow.status === "in_progress") this.attemptRow = { ...this.attemptRow, screen };
   }
   async startSession() {
     this.attemptRow = { ...this.attemptRow, breakUntil: new Date(), endsAt: new Date(Date.now() + 135 * 60_000) };
@@ -126,6 +142,38 @@ describe("a paused attempt", () => {
     expect(player?.props.remainingMs).toBe(25 * 60_000);
     expect(JSON.stringify(player?.props)).not.toMatch(/"correct"|"explanation"|SECRET/);
     expect(repo.completed).toBeNull();
+  });
+});
+
+describe("one screen at a time", () => {
+  const PHONE = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const LAPTOP = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const answer = [{ questionId: qid(1), selected: "A", flagged: false, notes: "", seconds: 30, confidence: null }];
+
+  it("the screen opened last saves; the other one is refused for save, pause, resume and submit, and writes nothing", async () => {
+    expect(await call({ op: "claim", screen: PHONE })).toEqual({ ok: true });
+    expect(await call({ op: "save", screen: PHONE, responses: answer })).toEqual({ open: true });
+    expect(await call({ op: "claim", screen: LAPTOP })).toEqual({ ok: true });
+    const before = repo.autosaves;
+    expect(await call({ op: "save", screen: PHONE, responses: [] })).toEqual({ open: true, taken: true });
+    expect(await call({ op: "pause", screen: PHONE, responses: [] })).toEqual({ ok: false, taken: true });
+    expect(await call({ op: "resume", screen: PHONE })).toEqual({ remainingMs: null, taken: true });
+    expect(await call({ op: "submit", screen: PHONE, responses: [] })).toEqual({ ok: true, stale: true, taken: true });
+    expect(repo.autosaves).toBe(before);
+    expect(repo.attemptRow.pausedAt).toBeNull();
+    expect(repo.completed).toBeNull();
+    expect(await call({ op: "save", screen: LAPTOP, responses: answer })).toEqual({ open: true });
+  });
+
+  it("a page from before screens (no screen sent) saves until a screen claims the attempt", async () => {
+    expect(await call({ op: "save", responses: answer })).toEqual({ open: true });
+    await call({ op: "claim", screen: LAPTOP });
+    expect(await call({ op: "save", responses: answer })).toEqual({ open: true, taken: true });
+  });
+
+  it("a claim needs a screen id", async () => {
+    expect(await call({ op: "claim" })).toEqual({ status: 400 });
+    expect(repo.attemptRow.screen).toBeNull();
   });
 });
 

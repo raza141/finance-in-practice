@@ -101,6 +101,12 @@ export function MockPlayer({
   // Counts changes, so a save can tell whether the browser's copy still holds anything the server hasn't got.
   const edits = useRef(0);
   const submitted = useRef(false);
+  // This tab's id. Opening the attempt claims it for this screen: any other open screen stops saving
+  // (it would overwrite these answers with its own) and says so.
+  const [screen] = useState(() => crypto.randomUUID());
+  const claimed = useRef(false);
+  const [taken, setTaken] = useState(false);
+  const takenRef = useRef(false);
   const lastAutoSubmit = useRef(0);
   // The question on screen and since when: its time so far is added to every save, and to its answer on leaving.
   const onScreen = useRef<{ id: string; since: number } | null>(null);
@@ -143,17 +149,41 @@ export function MockPlayer({
     answersRef.current = answers;
   }, [answers]);
 
+  // Another screen took the attempt: this one stops writing, and drops its copy so it can't come back later.
+  const lose = useCallback(() => {
+    takenRef.current = true;
+    setTaken(true);
+    setState("working");
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+  }, [storageKey]);
+
+  const claim = useCallback(async () => {
+    if (claimed.current || preview) return true;
+    claimed.current = (await playerCall<{ ok: boolean }>(attemptId, { op: "claim", screen }).catch(() => null)) !== null;
+    return claimed.current;
+  }, [attemptId, preview, screen]);
+
+  useEffect(() => {
+    void claim();
+  }, [claim]);
+
   const submit = useCallback(async (auto = false) => {
     if (preview) {
       setConfirming(false);
       return setChecked(true);
     }
-    if (submitted.current) return;
+    if (submitted.current || takenRef.current) return;
     submitted.current = true;
     setState("submitting");
     try {
-      const { ok, stale } = await playerCall<{ ok: boolean; stale?: boolean }>(attemptId, { op: "submit", responses: list(answersRef.current), auto });
+      const { ok, stale, taken } = await playerCall<{ ok: boolean; stale?: boolean; taken?: boolean }>(attemptId, { op: "submit", screen, responses: list(answersRef.current), auto });
       if (!ok) throw new Error("submit refused");
+      if (taken) {
+        submitted.current = false;
+        return lose();
+      }
       // A full reload, not router.refresh(): it also picks up a deploy made during the exam.
       // Stale (paused or resumed elsewhere): the page reopens on the server's real clock, answers kept.
       if (!stale) {
@@ -168,14 +198,17 @@ export function MockPlayer({
       submitted.current = false;
       setState("error");
     }
-  }, [attemptId, last, list, preview, storageKey]);
+  }, [attemptId, last, list, lose, preview, screen, storageKey]);
 
   const save = useCallback(async () => {
-    if (!dirty.current || submitted.current || pausedRef.current || preview) return;
+    if (!dirty.current || submitted.current || pausedRef.current || preview || takenRef.current) return;
+    // Nothing is saved before this screen holds the attempt: it would overwrite a screen that has newer answers.
+    if (!(await claim())) return setUnsaved(true);
     dirty.current = false;
     const sent = edits.current;
     try {
-      const { open } = await playerCall<{ open: boolean }>(attemptId, { op: "save", responses: list(answersRef.current) });
+      const { open, taken } = await playerCall<{ open: boolean; taken?: boolean }>(attemptId, { op: "save", screen, responses: list(answersRef.current) });
+      if (taken) return lose();
       setUnsaved(false);
       // All saved: drop the browser's copy, so it can't later override answers made on another device.
       if (edits.current === sent) {
@@ -188,17 +221,18 @@ export function MockPlayer({
       dirty.current = true;
       setUnsaved(true);
     }
-  }, [attemptId, list, preview, storageKey, submit]);
+  }, [attemptId, claim, list, lose, preview, screen, storageKey, submit]);
 
   // Saves and stops the server's clock; the student stays here and the clock waits for Resume.
   const pause = async () => {
-    if (submitted.current || pausedRef.current) return;
+    if (submitted.current || pausedRef.current || takenRef.current) return;
     if (preview) {
       pausedRef.current = true;
       return setPaused(true);
     }
     setState("pausing");
-    const res = await playerCall<{ ok: boolean }>(attemptId, { op: "pause", responses: list(answersRef.current) }).catch(() => null);
+    const res = await playerCall<{ ok: boolean; taken?: boolean }>(attemptId, { op: "pause", screen, responses: list(answersRef.current) }).catch(() => null);
+    if (res?.taken) return lose();
     if (res?.ok) {
       pausedRef.current = true;
       dirty.current = false;
@@ -215,8 +249,9 @@ export function MockPlayer({
       return setPaused(false);
     }
     setState("resuming");
-    const res = await playerCall<{ remainingMs: number | null }>(attemptId, { op: "resume" }).catch(() => null);
+    const res = await playerCall<{ remainingMs: number | null; taken?: boolean }>(attemptId, { op: "resume", screen }).catch(() => null);
     if (!res) return setState("working");
+    if (res.taken) return lose();
     if (res.remainingMs === null) return window.location.reload();
     pausedRef.current = false;
     setDeadline(Date.now() + res.remainingMs);
@@ -272,7 +307,7 @@ export function MockPlayer({
       const before = { ...BLANK, ...a[id] };
       const next = { ...a, [id]: { ...before, ...(typeof patch === "function" ? patch(before) : patch) } };
       try {
-        if (!preview) localStorage.setItem(storageKey, JSON.stringify(next));
+        if (!preview && !takenRef.current) localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -318,6 +353,24 @@ export function MockPlayer({
 
   return (
     <div className="flex min-h-screen flex-col">
+      {taken && (
+        <div role="alertdialog" aria-modal aria-labelledby="mock-taken" className="fixed inset-0 z-50 grid place-items-center bg-canvas/95 p-6 backdrop-blur-sm">
+          <div className="grid max-w-md gap-4 rounded-xl border border-gold/40 bg-surface p-6 text-center">
+            <p id="mock-taken" className="font-serif text-2xl font-bold">
+              Open on another screen
+            </p>
+            <p className="text-sm text-muted">
+              This mock was opened in another tab or on another device. Only one screen can save at a time, so your answers there and here can&rsquo;t overwrite each other. Answers saved from either screen are kept.
+            </p>
+            <div className="btn-group justify-center">
+              <BackToPortal href={exitHref} label="Back to portal" />
+              <button type="button" onClick={() => window.location.reload()} className={`h-10 px-4 text-sm font-semibold ${RAISED_GOLD}`}>
+                Use this screen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur-md">
         {preview && (
           <p className="flex items-center justify-between gap-3 bg-gold/90 px-4 py-1 font-mono text-[11px] tracking-wider text-canvas uppercase sm:px-6">

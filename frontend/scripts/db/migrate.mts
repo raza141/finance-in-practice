@@ -1437,6 +1437,47 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE cfa_questions ADD CONSTRAINT cfa_questions_level_check CHECK (level IN (1, 2, 3, 4))`,
     ],
   },
+  {
+    // No student answer is lost. Every change of a mock answer is kept in mock_response_history (whatever wrote
+    // it), so any answer can be put back. Time per question never goes down: an old screen can't wipe it.
+    // mock_attempts.screen: the one screen allowed to save an open attempt; opening it elsewhere takes it over.
+    id: "068_answer_safety",
+    statements: [
+      `ALTER TABLE mock_attempts ADD COLUMN screen uuid`,
+      `CREATE TABLE mock_response_history (
+        id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        attempt_id   uuid NOT NULL REFERENCES mock_attempts (id) ON DELETE CASCADE,
+        question_id  uuid NOT NULL,
+        old_selected char(1),
+        new_selected char(1),
+        old_seconds  integer,
+        new_seconds  integer,
+        changed_at   timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX mock_response_history_attempt_idx ON mock_response_history (attempt_id, question_id, changed_at)`,
+      `CREATE FUNCTION mock_responses_keep_seconds() RETURNS trigger LANGUAGE plpgsql AS $fn$
+      BEGIN
+        NEW.seconds := GREATEST(OLD.seconds, NEW.seconds);
+        RETURN NEW;
+      END
+      $fn$`,
+      `CREATE TRIGGER mock_responses_keep_seconds BEFORE UPDATE ON mock_responses FOR EACH ROW EXECUTE FUNCTION mock_responses_keep_seconds()`,
+      `CREATE FUNCTION mock_responses_log() RETURNS trigger LANGUAGE plpgsql AS $fn$
+      BEGIN
+        IF TG_OP = 'UPDATE' THEN
+          INSERT INTO mock_response_history (attempt_id, question_id, old_selected, new_selected, old_seconds, new_seconds)
+          VALUES (NEW.attempt_id, NEW.question_id, OLD.selected, NEW.selected, OLD.seconds, NEW.seconds);
+        ELSE
+          INSERT INTO mock_response_history (attempt_id, question_id, new_selected, new_seconds)
+          VALUES (NEW.attempt_id, NEW.question_id, NEW.selected, NEW.seconds);
+        END IF;
+        RETURN NULL;
+      END
+      $fn$`,
+      `CREATE TRIGGER mock_responses_log_insert AFTER INSERT ON mock_responses FOR EACH ROW WHEN (NEW.selected IS NOT NULL) EXECUTE FUNCTION mock_responses_log()`,
+      `CREATE TRIGGER mock_responses_log_update AFTER UPDATE ON mock_responses FOR EACH ROW WHEN (OLD.selected IS DISTINCT FROM NEW.selected) EXECUTE FUNCTION mock_responses_log()`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
