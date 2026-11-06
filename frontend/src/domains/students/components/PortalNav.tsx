@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, ChevronDown, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Receipt, Video } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
@@ -114,11 +114,26 @@ function DesktopNav({ tabs, active, badges, onGo }: Tabs) {
 
 /** Inside a tab with pages, on every screen: a switch between them (phones have no menu to open). */
 export function SubTabs({ item, active, onGo }: { item: NavItem; active: Tab; onGo: (tab: Tab) => void }) {
+  const box = useRef<HTMLElement>(null);
+  // The gold highlight slides from the old page to the new one, like an iOS segmented control.
+  const [mark, setMark] = useState<{ x: number; w: number } | null>(null);
+  const labels = item.subs?.map((s) => s.label).join("|");
+  useLayoutEffect(() => {
+    const on = box.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    setMark(on ? { x: on.offsetLeft, w: on.offsetWidth } : null);
+  }, [active, labels]);
   if (!item.subs) return null;
   const pill = (on: boolean) =>
-    `rounded-lg px-4 py-2 text-sm whitespace-nowrap transition-colors ${on ? "bg-gold/15 font-semibold text-gold" : "text-muted hover:text-ink"}`;
+    `relative z-10 rounded-lg px-4 py-2 text-sm whitespace-nowrap transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-quant ${on ? "font-semibold text-gold" : "text-muted hover:text-ink"}`;
   return (
-    <nav aria-label={item.label} className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface/60 p-1">
+    <nav ref={box} aria-label={item.label} className="relative flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface/60 p-1">
+      {mark && (
+        <span
+          aria-hidden
+          style={{ translate: `${mark.x}px 0`, width: mark.w }}
+          className="absolute inset-y-1 left-0 rounded-lg bg-gold/15 ring-1 ring-gold/30 transition-[translate,width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        />
+      )}
       {item.subs.map((sub) =>
         sub.href ? (
           <a key={sub.label} href={sub.href} className={pill(false)}>
