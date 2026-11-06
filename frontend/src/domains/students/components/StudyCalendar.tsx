@@ -11,6 +11,7 @@ import { TabButton } from "./StudentPortal";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SHOWN = 3;
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-quant";
 const fmt = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...options }).format(new Date(`${date}T00:00:00Z`));
 const longDay = (date: string) => fmt(date, { weekday: "long", day: "numeric", month: "long" });
 
@@ -23,7 +24,7 @@ const CHIP: Record<StudyDayItem["kind"], string> = {
 
 function chipClass(item: StudyDayItem): string {
   if (item.kind !== "topic") return CHIP[item.kind];
-  if (item.carried) return "border-amber-400/60 bg-amber-400/10 text-amber-200";
+  if (item.carried) return "border-dashed border-amber-400/70 bg-amber-400/10 text-amber-200";
   if (item.status === "done") return "border-line bg-surface text-muted line-through";
   if (item.status === "skipped") return "border-line bg-surface text-muted/60 line-through";
   return CHIP.topic;
@@ -132,13 +133,13 @@ export function StudyCalendar({
         <div className="mb-2 flex items-center justify-between">
           <p className="font-semibold">{fmt(`${month}-01`, { month: "long", year: "numeric" })}</p>
           <div className="flex gap-1">
-            <button type="button" aria-label="Previous month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, -1))} className="h-8 w-8 rounded-md border border-line text-muted hover:text-ink">
+            <button type="button" aria-label="Previous month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, -1))} className={`h-8 w-8 rounded-md border border-line text-muted hover:text-ink ${FOCUS}`}>
               ‹
             </button>
-            <button type="button" onClick={() => setMonth(today.slice(0, 7))} className="h-8 rounded-md border border-line px-2.5 text-xs text-muted hover:text-ink">
+            <button type="button" onClick={() => setMonth(today.slice(0, 7))} className={`h-8 rounded-md border border-line px-2.5 text-xs text-muted hover:text-ink ${FOCUS}`}>
               Today
             </button>
-            <button type="button" aria-label="Next month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, 1))} className="h-8 w-8 rounded-md border border-line text-muted hover:text-ink">
+            <button type="button" aria-label="Next month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, 1))} className={`h-8 w-8 rounded-md border border-line text-muted hover:text-ink ${FOCUS}`}>
               ›
             </button>
           </div>
@@ -164,7 +165,7 @@ export function StudyCalendar({
                     const topic = days[from]?.find((x): x is StudyTopic => x.kind === "topic" && x.id === id);
                     if (topic) move(topic, day);
                   }}
-                  className={`grid min-h-24 content-start gap-1 p-1.5 ${inMonth ? "bg-canvas" : "bg-canvas/50"}`}
+                  className={`grid min-h-24 content-start gap-1 p-1.5 ${inMonth && day >= today ? "bg-canvas" : "bg-canvas/50"}`}
                 >
                   <span className={`justify-self-start text-[11px] ${day === today ? "rounded-full bg-quant px-1.5 font-semibold text-canvas" : inMonth ? "text-muted" : "text-muted/40"}`}>
                     {Number(day.slice(8))}
@@ -191,8 +192,9 @@ export function StudyCalendar({
             <p className={`text-xs ${day === today ? "font-semibold text-quant" : "text-muted"}`}>{day === today ? "Today" : longDay(day)}</p>
             <div className="mt-1.5 grid gap-1.5">
               {days[day].map((item) => (
-                <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg border px-3 py-2 text-left text-sm ${chipClass(item)}`}>
+                <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg border px-3 py-2.5 text-left text-sm ${chipClass(item)} ${FOCUS}`}>
                   {label(item)}
+                  {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
                 </button>
               ))}
             </div>
@@ -244,9 +246,11 @@ function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: bool
       draggable={draggable}
       onDragStart={(e) => e.dataTransfer.setData("text/plain", `${item.date}|${item.id}`)}
       onClick={onOpen}
-      className={`block w-full truncate rounded-md border px-1.5 py-0.5 text-left text-[11px] leading-tight ${chipClass(item)} ${draggable ? "cursor-grab" : ""}`}
+      title={label(item)}
+      className={`block min-h-6 w-full truncate rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight ${chipClass(item)} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
     >
       {label(item)}
+      {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
     </button>
   );
 }
@@ -322,12 +326,20 @@ function Details({
                 Done
               </label>
               {item.status === "planned" && (
-                <div className="flex items-center gap-2">
-                  <input type="date" value={to} min={today} max={last} onChange={(e) => setTo(e.target.value)} aria-label="Move to" className="h-9 rounded-md border border-line bg-surface px-2 text-sm" />
-                  <button type="button" onClick={() => onMove(item, to)} disabled={!to || to === item.dueOn} className={BUTTON}>
-                    Move
-                  </button>
-                </div>
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  Date
+                  <input
+                    type="date"
+                    value={to}
+                    min={today}
+                    max={last}
+                    onChange={(e) => {
+                      setTo(e.target.value);
+                      if (e.target.value && e.target.value !== item.date) onMove(item, e.target.value);
+                    }}
+                    className={`h-10 rounded-md border border-line bg-surface px-2 text-ink ${FOCUS}`}
+                  />
+                </label>
               )}
             </>
           )}
