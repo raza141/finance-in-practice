@@ -54,7 +54,7 @@ Screens that copy another product's look on purpose (the Google review card, the
 
 **One gold.** Gold is always #d4af37 at full strength: buttons, the selected page switch, badges, overdue topics. No second gold (no amber or yellow), and no faded gold for states: a disabled gold button turns neutral grey (`globals.css` does this for every gold button). `gold-bright` exists only as the hover state.
 
-**Light theme values** (portal only, same jobs): canvas #f5f7fb, surface #ffffff, surface-raised #eef2f7, line #d6dce6, ink #0b1120, muted #4b5567, gold #8a6a00 (hover #a07c00), quant teal #0e7490 (top #0891b2, chip text #155e75). Gold and cyan go darker so they read on white; it's still one gold per theme.
+**Light theme values** (portal only, same jobs): canvas #e8ecf2, surface #f4f6f9, surface-raised #dde3ec, line #c3ccd9, ink #0b1120, muted #475569, gold #7a5d00 (hover #8f6d00), quant teal #0e7490 (top #0891b2, chip text #155e75). A soft grey-blue, not pure white, so cards and borders still separate. Gold and cyan go darker so they read on it; it's still one gold per theme. The state hues swap to their dark shades in light (emerald-200/300/400 → 800/700/600, red 200/300/400 → 800/700/600, violet and indigo 100/400 → 900/600), set once in `globals.css`, so a picked answer, "Sure", right/wrong and calendar dots stay readable on light; components keep writing the dark-theme shade.
 
 Colour never carries meaning alone: overdue is dashed **and** gold, done is ticked **and** dimmed.
 
@@ -67,6 +67,13 @@ Colour never carries meaning alone: overdue is dashed **and** gold, done is tick
 | Labels and data | JetBrains Mono, uppercase, wide tracking, 11px | Card labels ("NEXT SESSION"), figures, buttons in the portal; portal tab labels at 10px |
 
 Scale: 12 / 14 / 16 / 20 / 24 / 30. Numbers that change (timers, money, scores) use tabular figures.
+
+**Three families, never a fourth.** Large product teams settle on one workhorse sans for reading plus at most one display face and one monospace (Apple: SF Pro, New York, SF Mono; GitHub: Mona Sans and a mono; Stripe: one sans and a mono). Two is the norm, three the ceiling. Ours are fixed: Merriweather, Inter, JetBrains Mono, loaded once in the root layout (`brand.test.ts` fails on any other).
+
+- **Reading text is Inter, always**: mock questions, answer options, explanations, body copy. Monospace is never used for sentences a student has to read and parse; fixed-width letters slow reading of long text.
+- **Mono is for short, scannable things**: question numbers, the timer, labels ("SCRATCHPAD"), figures, the scratchpad itself (formulas line up), portal buttons.
+- **Serif only for titles**: one per card or page, never inside a question.
+- Weight carries hierarchy, not new fonts: 400 body, 600 labels/buttons, 700 only for numbers that matter (score, timer).
 
 ## 5. Buttons: one primary action per screen
 

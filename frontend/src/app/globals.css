@@ -45,17 +45,28 @@
 
 html[data-theme="light"] {
   color-scheme: light;
-  --color-canvas: #f5f7fb;
-  --color-surface: #ffffff;
-  --color-surface-raised: #eef2f7;
-  --color-line: #d6dce6;
-  --color-gold: #8a6a00;
-  --color-gold-bright: #a07c00;
+  --color-canvas: #e8ecf2;
+  --color-surface: #f4f6f9;
+  --color-surface-raised: #dde3ec;
+  --color-line: #c3ccd9;
+  --color-gold: #7a5d00;
+  --color-gold-bright: #8f6d00;
   --color-quant: #0e7490;
   --color-quant-bright: #0891b2;
   --color-quant-soft: #155e75;
   --color-ink: #0b1120;
-  --color-muted: #4b5567;
+  --color-muted: #475569;
+  /* State hues: components write the dark theme's light shade; on light it becomes the dark shade (docs/brand.md §3). */
+  --color-emerald-200: #065f46;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-red-200: #991b1b;
+  --color-red-300: #b91c1c;
+  --color-red-400: #dc2626;
+  --color-violet-100: #4c1d95;
+  --color-violet-400: #7c3aed;
+  --color-indigo-100: #312e81;
+  --color-indigo-400: #4f46e5;
   --grid-lines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 .5H40M.5 0V40' fill='none' stroke='%23475569' stroke-opacity='.08'/%3E%3Cpath d='M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40' fill='none' stroke='%23475569' stroke-opacity='.03'/%3E%3C/svg%3E");
 }
 

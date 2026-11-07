@@ -72,7 +72,7 @@ describe("brand lock", () => {
       expect(css).toContain(`--color-${token}: ${value};`);
     }
     // The portal's light theme (§0): its own values, and nowhere but the portal.
-    for (const [token, value] of Object.entries({ canvas: "#f5f7fb", ink: "#0b1120", gold: "#8a6a00", quant: "#0e7490" })) {
+    for (const [token, value] of Object.entries({ canvas: "#e8ecf2", ink: "#0b1120", gold: "#7a5d00", quant: "#0e7490" })) {
       expect(css).toMatch(new RegExp(`html\\[data-theme="light"\\] \\{[^}]*--color-${token}: ${value};`));
     }
     for (const font of ["--font-inter", "--font-merriweather", "--font-jetbrains-mono"]) expect(css).toContain(font);

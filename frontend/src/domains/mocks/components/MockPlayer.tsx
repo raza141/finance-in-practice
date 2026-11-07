@@ -665,7 +665,6 @@ export function MockPlayer({
                       {label}
                     </button>
                   ))}
-                  <span className="text-xs text-muted">Guesses come back in your mistakes retake.</span>
                 </div>
               )}
             </section>
