@@ -3,7 +3,7 @@
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { removeStudyTopic, updateStudyTopic } from "../actions/studyPlan";
+import { addStudyItem, removeStudyTopic, updateStudyTopic } from "../actions/studyPlan";
 import type { StudyTopic } from "../services/StudyDays";
 import { StudyPlanContract } from "../services/StudyPlanContract";
 
@@ -69,5 +69,22 @@ export function PlanItemForm({ item, clientId, mocks }: { item: StudyTopic; clie
         </PendingButton>
       </form>
     </div>
+  );
+}
+
+/** Admin: a free item on the day clicked, for work outside the site (a CFA Institute mock, a bought Qbank set). */
+export function PlanDayForm({ clientId, day }: { clientId: string; day: string }) {
+  return (
+    <form action={addStudyItem} className="grid gap-3 border-t border-line pt-4 text-sm">
+      <h4 className="font-semibold">Add to this day</h4>
+      <input type="hidden" name="clientId" value={clientId} />
+      <input type="hidden" name="dueOn" value={day} />
+      <input name="topic" aria-label="Title" required placeholder="CFA Institute mock A" maxLength={StudyPlanContract.LIMITS.topic[1]} className={FIELD} />
+      <input name="materialUrl" type="url" aria-label="Link" placeholder="https://…" className={FIELD} />
+      <input name="note" aria-label="Note for the student" placeholder="Note for the student" maxLength={StudyPlanContract.LIMITS.note} className={FIELD} />
+      <PendingButton pendingLabel="Adding…" className="h-9 justify-self-start rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+        Add to plan
+      </PendingButton>
+    </form>
   );
 }

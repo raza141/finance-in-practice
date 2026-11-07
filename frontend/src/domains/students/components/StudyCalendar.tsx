@@ -8,7 +8,7 @@ import { moveStudyTopic, setStudyTopicDone } from "../actions/myPlan";
 import { StudyDays, type StudyDayItem, type StudyTopic } from "../services/StudyDays";
 import { BUTTON } from "./buttons";
 import { PlanBookForm } from "./PlanBookForm";
-import { PlanItemForm } from "./PlanItemForm";
+import { PlanDayForm, PlanItemForm } from "./PlanItemForm";
 import { TabButton } from "./StudentPortal";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -264,6 +264,7 @@ export function StudyCalendar({
                     </button>
                   ))}
                 </div>
+                {planner && <PlanDayForm key={`free-${open.day}`} clientId={planner.clientId} day={open.day} />}
                 {planner && <PlanBookForm key={open.day} clientId={planner.clientId} from={open.day} mocks={planner.mocks} />}
               </>
             ) : planner && open.item.kind === "topic" ? (

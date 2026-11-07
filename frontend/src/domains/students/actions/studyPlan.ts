@@ -65,6 +65,15 @@ export async function addStudyBook(formData: FormData): Promise<void> {
   redirect(`${path}?notice=plan-saved#study-plan`);
 }
 
+/** Anything else on one day, e.g. a CFA Institute mock or a bought Qbank set, with an optional link and note. */
+export async function addStudyItem(formData: FormData): Promise<void> {
+  const { repo, clientId, path } = await plan(formData);
+  const parsed = StudyPlanContract.parseItem({ ...Object.fromEntries(formData), status: "planned" });
+  if (!parsed.ok) refused(path, parsed.error);
+  else await repo.add(clientId, [parsed.value]);
+  redirect(`${path}?notice=plan-saved#study-plan`);
+}
+
 /** A mock on a day of the plan: the student's calendar starts it from there. Named after the mock. */
 export async function addStudyMock(formData: FormData): Promise<void> {
   const { repo, clientId, path } = await plan(formData);
