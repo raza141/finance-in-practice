@@ -431,11 +431,12 @@ export function MockPlayer({
             <span className="text-muted">Candidate: </span>
             <span className="font-semibold">{studentName}</span>
           </p>
-          <p className="min-w-0 flex-1 truncate text-sm">
-            <span className="font-semibold">{title}</span>
-            <span className="ml-2 rounded border border-quant/40 px-1.5 py-0.5 font-mono text-[11px] text-quant">{tag}</span>
+          {/* Flex, not an inline truncate: an inline chip's border gets clipped by the line box. Only the title truncates. */}
+          <p className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+            <span className="truncate font-semibold">{title}</span>
+            <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-quant/40 px-2 font-mono text-[11px] leading-none text-quant">{tag}</span>
             {session && (
-              <span className="ml-2 rounded border border-gold/50 px-1.5 py-0.5 font-mono text-[11px] text-gold">
+              <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-gold/50 px-2 font-mono text-[11px] leading-none text-gold">
                 Session {session.index} of {session.of}
               </span>
             )}
