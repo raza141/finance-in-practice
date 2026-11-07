@@ -79,9 +79,9 @@ export async function FeaturedCoursesSection() {
 
               {savers.length > 0 && (
                 <div className="relative mt-5 rounded-2xl border border-line bg-canvas/60 p-4">
-                  {study && (
+                  {(study || university) && (
                     <p className="mb-2.5 text-sm text-muted">
-                      <span className="tabular-data text-xl font-bold text-ink">{study}</span> typical self-study
+                      <span className="tabular-data text-xl font-bold text-ink">{study ?? "BSc · MSc · MBA"}</span> {study ? "typical self-study" : "modules"}
                     </p>
                   )}
                   <ul className="grid gap-2 text-sm text-ink/90">
