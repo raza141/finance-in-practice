@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Package, Receipt, Video } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GraduationCap, House, LogOut, type LucideIcon, Package, Receipt, Video } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -16,7 +16,7 @@ const ICONS: Partial<Record<Tab, LucideIcon>> = { home: House, sessions: Video, 
 const HINTS: Partial<Record<Tab, string>> = { plan: "overdue", sessions: "awaiting confirmation" };
 
 /** One page under a tab: another tab, or a page of its own (the notebook). */
-export type SubItem = { label: string; tab?: Tab; href?: string };
+export type SubItem = { label: string; tab?: Tab; href?: string; icon?: LucideIcon; hint?: string };
 export type NavItem = { id: Tab; label: string; subs?: SubItem[] };
 type Tabs = { tabs: NavItem[]; active: Tab; badges: Partial<Record<Tab, number>>; onGo: (tab: Tab) => void };
 
@@ -112,7 +112,7 @@ function DesktopNav({ tabs, active, badges, onGo }: Tabs) {
   );
 }
 
-/** Inside a tab with pages, on every screen: a switch between them (phones have no menu to open). */
+/** Inside a tab with pages, from tablets up: a switch between them. Phones get SubRows and SubBack instead (no sideways scroll). */
 export function SubTabs({ item, active, onGo }: { item: NavItem; active: Tab; onGo: (tab: Tab) => void }) {
   const box = useRef<HTMLElement>(null);
   // The gold highlight slides from the old page to the new one, like an iOS segmented control.
@@ -126,7 +126,7 @@ export function SubTabs({ item, active, onGo }: { item: NavItem; active: Tab; on
   const pill = (on: boolean) =>
     `relative z-10 rounded-lg px-4 py-2 text-sm whitespace-nowrap transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-quant ${on ? "font-semibold text-canvas" : "text-muted hover:text-ink"}`;
   return (
-    <nav ref={box} aria-label={item.label} className="relative flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface/60 p-1">
+    <nav ref={box} aria-label={item.label} className="relative hidden w-fit max-w-full gap-1 overflow-x-auto rounded-xl md:flex border border-line bg-surface/60 p-1">
       {mark && (
         <span
           aria-hidden
@@ -146,6 +146,60 @@ export function SubTabs({ item, active, onGo }: { item: NavItem; active: Tab; on
         ),
       )}
     </nav>
+  );
+}
+
+/** Phones, on a tab's first page: its other pages as rows near the thumb, under the content. */
+export function SubRows({ item, active, onGo }: { item: NavItem; active: Tab; onGo: (tab: Tab) => void }) {
+  if (!item.subs || active !== landing(item)) return null;
+  const rest = item.subs.filter((s) => s.tab !== active);
+  if (rest.length === 0) return null;
+  const ROW = "flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
+  const body = (sub: SubItem) => {
+    const Icon = sub.icon ?? ClipboardCheck;
+    return (
+      <>
+        <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-raised text-quant">
+          <Icon strokeWidth={1.75} className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{sub.label}</span>
+          {sub.hint && <span className="block text-xs text-muted">{sub.hint}</span>}
+        </span>
+        <ChevronRight aria-hidden strokeWidth={1.75} className="size-5 shrink-0 text-muted" />
+      </>
+    );
+  };
+  return (
+    <nav aria-label={`More in ${item.label}`} className="md:hidden">
+      <h2 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">More in {item.label}</h2>
+      <ul className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-canvas/70 backdrop-blur-md">
+        {rest.map((sub) => (
+          <li key={sub.label}>
+            {sub.href ? (
+              <a href={sub.href} className={ROW}>
+                {body(sub)}
+              </a>
+            ) : (
+              <button type="button" onClick={() => onGo(sub.tab!)} className={ROW}>
+                {body(sub)}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** Phones, on any other page of a tab: one link back to the tab's first page. */
+export function SubBack({ item, active, onGo }: { item: NavItem; active: Tab; onGo: (tab: Tab) => void }) {
+  if (!item.subs || active === landing(item)) return null;
+  return (
+    <button type="button" onClick={() => onGo(landing(item))} className="-my-2 flex w-fit items-center gap-1 py-2 text-sm text-quant md:hidden">
+      <ChevronLeft aria-hidden strokeWidth={2} className="size-4" />
+      {item.label}
+    </button>
   );
 }
 

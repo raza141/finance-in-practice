@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, MapPin } from "lucide-react";
+import { CalendarClock, Check, MapPin, NotebookPen, Target, TrendingUp } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
@@ -14,7 +14,7 @@ import { StudentBookingContract } from "../services/StudentBookingContract";
 import { StudentSessions } from "../services/StudentSessions";
 import type { SessionMode, StudentSession } from "../types";
 import { BOOK_BUTTON, BUTTON, JOIN_BUTTON } from "./buttons";
-import { PortalBar, PortalTabBar, SubTabs, type NavItem } from "./PortalNav";
+import { PortalBar, PortalTabBar, SubBack, SubRows, SubTabs, type NavItem } from "./PortalNav";
 import { SlotGrid, type SlotSelection } from "./SlotGrid";
 
 const DAYS = 14;
@@ -253,9 +253,9 @@ export function StudentPortal({
   );
   const mockPages = [
     ...(mocks ? [{ label: "Mock exams", tab: "mocks" as Tab }] : []),
-    ...(progress ? [{ label: "Progress", tab: "progress" as Tab }] : []),
-    { label: "Mistakes notebook", href: "/student/mocks/notebook" },
-    ...(drill ? [{ label: "Topic drill", tab: "drill" as Tab }] : []),
+    ...(progress ? [{ label: "Progress", tab: "progress" as Tab, icon: TrendingUp, hint: "Your marks against your target" }] : []),
+    { label: "Mistakes notebook", href: "/student/mocks/notebook", icon: NotebookPen, hint: "Questions you missed or flagged, to practise again" },
+    ...(drill ? [{ label: "Topic drill", tab: "drill" as Tab, icon: Target, hint: "New questions from your weakest topic" }] : []),
   ];
   const TABS: NavItem[] = [
     { id: "home", label: "Home" },
@@ -264,7 +264,7 @@ export function StudentPortal({
       label: "Sessions",
       subs: [
         { label: moving ? "Change a session" : "Book a session", tab: "book" },
-        { label: `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`, tab: "sessions" },
+        { label: `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`, tab: "sessions", icon: CalendarClock, hint: "Upcoming and past sessions" },
       ],
     },
     { id: "plan", label: "Study plan" },
@@ -278,9 +278,10 @@ export function StudentPortal({
     <PortalTabs value={go}>
     <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} onPackage={pkg ? () => go("package") : null} />
     {/* Phones and tablets: room at the bottom for the tab bar. */}
-    <main className="page-container relative grid gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
+    <main className="page-container relative grid grid-cols-[minmax(0,1fr)] gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
       {notices}
       {section && <SubTabs item={section} active={tab} onGo={go} />}
+      {section && <SubBack item={section} active={tab} onGo={go} />}
       {tab === "home" && overview}
       {tab === "plan" && plan}
       {tab === "mocks" && mocks}
@@ -605,6 +606,7 @@ export function StudentPortal({
           </form>
         </div>
       )}
+      {section && <SubRows item={section} active={tab} onGo={go} />}
     </main>
     <PortalTabBar tabs={TABS} active={lit} badges={badges} onGo={go} />
     </PortalTabs>

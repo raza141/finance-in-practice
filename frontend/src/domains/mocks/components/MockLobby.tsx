@@ -54,7 +54,7 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
               <form action={startMock} className="shrink-0">
                 <input type="hidden" name="mockId" value={m.id} />
                 <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
-                  {open.has(m.id) ? (open.get(m.id)!.mistakes ? "Resume mistakes retake" : "Resume") : done(m.id).length ? "Retake" : label}
+                  {open.has(m.id) ? (open.get(m.id)!.mistakes ? "Resume retake" : "Resume") : done(m.id).length ? "Retake" : label}
                 </button>
               </form>
             ) : (
