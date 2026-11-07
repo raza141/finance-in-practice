@@ -8,6 +8,7 @@ import { moveStudyTopic, setStudyTopicDone } from "../actions/myPlan";
 import { StudyDays, type StudyDayItem, type StudyTopic } from "../services/StudyDays";
 import { BUTTON } from "./buttons";
 import { PlanBookForm } from "./PlanBookForm";
+import { PlanItemForm } from "./PlanItemForm";
 import { TabButton } from "./StudentPortal";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -213,7 +214,7 @@ export function StudyCalendar({
                     {Number(day.slice(8))}
                   </span>
                   {list.slice(0, SHOWN).map((item) => (
-                    <Chip key={`${item.kind}-${item.id}`} item={item} draggable={movable(item)} onOpen={() => show({ item })} />
+                    <Chip key={`${item.kind}-${item.id}`} item={item} draggable={movable(item)} changed={!!planner && item.kind === "topic" && !!item.studentChangedAt} onOpen={() => show({ item })} />
                   ))}
                   {list.length > SHOWN && (
                     <button type="button" onClick={(e) => (e.stopPropagation(), show({ day }))} className="text-left text-[11px] text-muted hover:text-ink">
@@ -265,6 +266,8 @@ export function StudyCalendar({
                 </div>
                 {planner && <PlanBookForm key={open.day} clientId={planner.clientId} from={open.day} mocks={planner.mocks} />}
               </>
+            ) : planner && open.item.kind === "topic" ? (
+              <PlanItemForm key={open.item.id} item={open.item} clientId={planner.clientId} mocks={planner.mocks} />
             ) : (
               <Details key={`${open.item.kind}-${open.item.id}`} item={open.item} today={today} last={last} readOnly={readOnly} onMove={move} onTick={tick} />
             )}
@@ -283,7 +286,8 @@ export function StudyCalendar({
   );
 }
 
-function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: boolean; onOpen: () => void }) {
+/** `changed`: admin only, the student moved or ticked it since the owner last saved it. */
+function Chip({ item, draggable, changed, onOpen }: { item: StudyDayItem; draggable: boolean; changed: boolean; onOpen: () => void }) {
   const span = item.kind === "topic" ? item.span : "one";
   // A band names itself on its first day and at the start of each week row; the days between stay plain.
   const named = span === "one" || span === "start" || monday(item.date);
@@ -295,7 +299,7 @@ function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: bool
       onClick={(e) => (e.stopPropagation(), onOpen())}
       title={label(item)}
       aria-label={named ? undefined : label(item)}
-      className={`block min-h-6 w-auto truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${SPAN[span]} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
+      className={`block min-h-6 w-auto truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${SPAN[span]} ${changed ? "ring-1 ring-gold" : ""} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
     >
       {named ? label(item) : "\u00a0"}
       {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}

@@ -1,15 +1,12 @@
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { addStudyMock, addStudyTopics, removeStudyTopic, updateStudyTopic } from "../actions/studyPlan";
+import { addStudyMock, addStudyTopics } from "../actions/studyPlan";
 import type { AttemptSummary } from "@/domains/mocks/types";
 
 import { StudyDays } from "../services/StudyDays";
-import { StudyPlanContract } from "../services/StudyPlanContract";
 import type { StudyPlanItem } from "../types";
 import { StudyCalendar } from "./StudyCalendar";
-
-const CHANGED = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 /** The admin side of a student's study plan: what they see under "Your study plan" on /student. */
 export function StudyPlanEditor({
@@ -26,7 +23,7 @@ export function StudyPlanEditor({
   exam: { course: string; date: string } | null;
 }) {
   const today = StudyDays.today();
-  const { days, unscheduled } = StudyDays.build({ items, sessions: [], attempts, exam, bankTopics: [], today });
+  const { days, unscheduled } = StudyDays.build({ items, sessions: [], attempts, exam, bankTopics: [], allUndated: true, today });
   return (
     <section id="study-plan" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
       <h2 className="text-lg">Study plan</h2>
@@ -36,73 +33,9 @@ export function StudyPlanEditor({
       </p>
 
       <div className="mt-4">
-        {/* What the student's calendar shows; click a day to plan a book from it. */}
+        {/* What the student's calendar shows: click a day to plan a book from it, or anything on it to edit it. */}
         <StudyCalendar key={JSON.stringify([days, unscheduled])} days={days} unscheduled={unscheduled} today={today} last={exam?.date ?? StudyDays.addDays(today, 366)} readOnly planner={{ clientId, mocks }} />
       </div>
-
-      {items.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">No topics yet.</p>
-      ) : (
-        <ul className="mt-4 divide-y divide-line/60">
-          {items.map((item) => (
-            <li key={item.id} className="py-3">
-              <form action={updateStudyTopic} className="grid items-end gap-2 sm:grid-cols-[9rem_9rem_1fr_7rem_auto]">
-                <input type="hidden" name="clientId" value={clientId} />
-                <input type="hidden" name="itemId" value={item.id} />
-                <input name="startOn" type="date" aria-label="From (a range)" title="From (a range)" defaultValue={item.startOn ?? ""} className={FIELD} />
-                <input name="dueOn" type="date" aria-label="Date, or the range's last day" title="Date, or the range's last day" defaultValue={item.dueOn ?? ""} className={FIELD} />
-                <input name="topic" aria-label="Topic" required maxLength={StudyPlanContract.LIMITS.topic[1]} defaultValue={item.topic} className={FIELD} />
-                <select name="status" aria-label="Status" defaultValue={item.status} className={FIELD}>
-                  {Object.entries(StudyPlanContract.STATUSES).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <PendingButton pendingLabel="Saving…" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
-                  Save
-                </PendingButton>
-                <input
-                  name="materialUrl"
-                  type="url"
-                  aria-label="Material link"
-                  placeholder="Material link (https://drive.google.com/…)"
-                  defaultValue={item.materialUrl ?? ""}
-                  className={`${FIELD} sm:col-span-2`}
-                />
-                <select name="mockId" aria-label="Mock" defaultValue={item.mockId ?? ""} className={FIELD}>
-                  <option value="">No mock</option>
-                  {mocks.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="note"
-                  aria-label="Note"
-                  placeholder="Note for the student (optional)"
-                  maxLength={StudyPlanContract.LIMITS.note}
-                  defaultValue={item.note}
-                  className={`${FIELD} sm:col-span-2`}
-                />
-              </form>
-              {item.studentChangedAt && (
-                <p className="mt-1 text-xs text-gold">
-                  Changed by student {CHANGED.format(new Date(item.studentChangedAt))}. Saving the topic clears this.
-                </p>
-              )}
-              <form action={removeStudyTopic} className="mt-1 text-right">
-                <input type="hidden" name="clientId" value={clientId} />
-                <input type="hidden" name="itemId" value={item.id} />
-                <PendingButton pendingLabel="Removing…" className="text-xs text-red-300/90 hover:underline">
-                  Remove
-                </PendingButton>
-              </form>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <details className="mt-4" open={items.length === 0}>
         <summary className="cursor-pointer text-sm text-quant">+ Add topics</summary>

@@ -23,6 +23,8 @@ export type StudyDayItem =
       span: "one" | "start" | "mid" | "end";
       /** A scheduled mock; open: the student can start it now (else the start page would 404). */
       mock: { id: string; open: boolean } | null;
+      /** When the student last moved or ticked it: admin shows it. */
+      studentChangedAt: string | null;
     }
   | { kind: "session"; id: string; date: string; time: string; course: string; place: string; meetingUrl: string | null; pending: boolean }
   | { kind: "mock"; id: string; date: string; title: string; percent: number }
@@ -49,6 +51,8 @@ export class StudyDays {
     bankTopics: readonly string[];
     /** Mocks open to this student: a scheduled one shows Start only if it's here. */
     openMocks?: readonly string[];
+    /** Admin: every undated item in Unscheduled (done and skipped too), so each one can still be opened. */
+    allUndated?: boolean;
     today: string;
   }): { days: Record<string, StudyDayItem[]>; unscheduled: StudyTopic[] } {
     const { today } = input;
@@ -73,13 +77,14 @@ export class StudyDays {
         startOn: i.startOn ?? "",
         span: "one",
         mock: i.mockId ? { id: i.mockId, open: (input.openMocks ?? []).includes(i.mockId) } : null,
+        studentChangedAt: i.studentChangedAt,
       };
       if (i.dueOn && i.startOn && !carried) {
         // ponytail: a copy per day of the range; fine for the month-or-two ranges a plan uses.
         const length = Math.min(StudyDays.days(i.startOn, i.dueOn), 400);
         for (let n = 0; n <= length; n++) all.push({ ...topic, date: StudyDays.addDays(i.startOn, n), span: n === 0 ? "start" : n === length ? "end" : "mid" });
       } else if (i.dueOn) all.push(topic);
-      else if (i.status === "planned") unscheduled.push(topic);
+      else if (i.status === "planned" || input.allUndated) unscheduled.push(topic);
     }
     for (const s of input.sessions) {
       const start = new Date(s.start);
