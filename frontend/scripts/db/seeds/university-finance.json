@@ -16,7 +16,7 @@
   "weightLabel": "",
   "startDate": null,
   "duration": "1-on-1 · Abu Dhabi in person or online",
-  "priceMinor": 10000,
+  "priceMinor": 12500,
   "currency": "AED",
   "isActive": true,
   "method": [
@@ -116,7 +116,7 @@
   "options": [
     {
       "title": "Pay by the hour",
-      "fee": "AED 100 / hour",
+      "fee": "AED 125 / hour",
       "description": "One live hour on the topic, problem set or script you choose, at your home in Abu Dhabi or online."
     },
     {
@@ -141,7 +141,7 @@
     },
     {
       "question": "What are the fees?",
-      "answer": "AED 100 an hour, AED 950 for a 10-hour exam or assignment sprint, or AED 2,000 a month for 20 hours. Every option starts with a free 30-minute diagnostic."
+      "answer": "AED 125 an hour, AED 950 for a 10-hour exam or assignment sprint, or AED 2,000 a month for 20 hours. Every option starts with a free 30-minute diagnostic."
     },
     {
       "question": "Are sessions in person or online?",
@@ -154,6 +154,6 @@
   ],
   "brochureUrl": null,
   "seoTitle": "University Finance Tutor & Dissertation Help in Abu Dhabi",
-  "seoDescription": "1-on-1 university finance tutoring in Abu Dhabi or online across the UAE: corporate finance, valuation, econometrics in Python, R or Stata, and dissertations. AED 100/hr.",
+  "seoDescription": "1-on-1 university finance tutoring in Abu Dhabi or online across the UAE: corporate finance, valuation, econometrics in Python, R or Stata, and dissertations. AED 125/hr.",
   "testimonialTicker": null
 }
