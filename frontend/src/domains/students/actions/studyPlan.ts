@@ -6,6 +6,8 @@ import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
+import { Batches } from "../services/Batches";
+import { StudyDays } from "../services/StudyDays";
 import { StudyPlanContract } from "../services/StudyPlanContract";
 
 /** Admin edits to a student's study plan (shown on /student). Each action re-checks the owner session. */
@@ -20,6 +22,18 @@ async function plan(formData: FormData): Promise<{ repo: StudyPlanRepository; cl
 
 const refused = (path: string, error: string): never =>
   redirect(`${path}?notice=plan-refused&reason=${encodeURIComponent(error)}#study-plan`);
+
+/** The student's exam day, set for them when they haven't picked it: the same window they get (their batch's month, from today). */
+export async function setStudentExamDate(formData: FormData): Promise<void> {
+  const { repo, clientId, path } = await plan(formData);
+  const date = String(formData.get("date") ?? "");
+  const exam = await repo.nextExam(clientId);
+  if (!exam || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) refused(path, "Pick a valid exam day.");
+  const { min, max } = Batches.examPick(exam!.batchDate, StudyDays.today());
+  if (date < min || date > max) refused(path, `The exam day must fall between ${min} and ${max}.`);
+  await repo.setExamDate(clientId, exam!.course, date);
+  redirect(`${path}?notice=plan-saved#study-plan`);
+}
 
 export async function addStudyTopics(formData: FormData): Promise<void> {
   const { repo, clientId, path } = await plan(formData);

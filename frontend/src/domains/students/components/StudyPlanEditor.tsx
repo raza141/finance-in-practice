@@ -1,9 +1,10 @@
 import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
-import { addStudyMock, addStudyTopics } from "../actions/studyPlan";
+import { addStudyMock, addStudyTopics, setStudentExamDate } from "../actions/studyPlan";
 import type { AttemptSummary } from "@/domains/mocks/types";
 
+import { Batches } from "../services/Batches";
 import { StudyDays } from "../services/StudyDays";
 import type { StudyPlanItem } from "../types";
 import { StudyCalendar } from "./StudyCalendar";
@@ -20,7 +21,7 @@ export function StudyPlanEditor({
   items: StudyPlanItem[];
   mocks: { id: string; title: string }[];
   attempts: AttemptSummary[];
-  exam: { course: string; date: string } | null;
+  exam: { course: string; date: string; batchDate: string; picked: boolean } | null;
 }) {
   const today = StudyDays.today();
   const { days, unscheduled } = StudyDays.build({ items, sessions: [], attempts, exam, bankTopics: [], allUndated: true, today });
@@ -31,6 +32,19 @@ export function StudyPlanEditor({
         The student sees this timeline after signing in at /student. For materials, link a Google Drive file shared with their email, and only
         your own notes: re-sharing paid prep books breaks their copyright.
       </p>
+
+      {exam && (
+        <form action={setStudentExamDate} className="mt-4 flex flex-wrap items-end gap-2 text-sm">
+          <input type="hidden" name="clientId" value={clientId} />
+          <label className="text-xs text-muted">
+            Exam day
+            <input name="date" type="date" required defaultValue={exam.date} {...Batches.examPick(exam.batchDate, today)} className={`${FIELD} w-40`} />
+          </label>
+          <PendingButton pendingLabel="Saving…" className="h-9 rounded-md border border-line px-3 text-sm text-muted hover:text-ink">
+            Save
+          </PendingButton>
+        </form>
+      )}
 
       <div className="mt-4">
         {/* What the student's calendar shows: click a day to plan a book from it, or anything on it to edit it. */}
