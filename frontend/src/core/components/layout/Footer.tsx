@@ -18,7 +18,7 @@ export function Footer() {
             </p>
             <LinkedInFollow variant="pill" className="mt-5" />
           </div>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
             {siteConfig.footerNav.map((item) => (
               <Link
                 key={item.href}

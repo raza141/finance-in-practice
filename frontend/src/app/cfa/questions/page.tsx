@@ -24,7 +24,7 @@ export default async function QuestionLibraryPage({ searchParams }: PageProps<"/
   const today = latest && all.find((q) => q.code === latest.code);
 
   return (
-    <div className="page-container max-w-7xl pt-10 pb-16 lg:pt-12">
+    <div className="page-container pt-10 pb-16 lg:pt-12">
       <JsonLd data={StructuredData.graph([StructuredData.breadcrumbs([{ name: "Question Bank", path: "/cfa/questions" }])])} />
       <h1 className="text-4xl leading-tight font-black sm:text-5xl">CFA &amp; FRM Question Bank</h1>
       <p className="mt-4 max-w-2xl text-lg text-muted">

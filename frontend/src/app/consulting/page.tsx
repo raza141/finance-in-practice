@@ -29,7 +29,15 @@ export default function ConsultingPage() {
                 <h2 className="text-lg font-bold">{track.title}</h2>
                 <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">{track.audience}</p>
               </div>
-              {track.fee && <p className="tabular-data text-sm font-semibold text-gold sm:max-w-64 sm:text-right">{track.fee}</p>}
+              {track.fee && (
+                <p className="tabular-data text-sm font-semibold whitespace-nowrap text-gold sm:text-right">
+                  {track.fee.split(" · ").map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
+                </p>
+              )}
             </li>
           ))}
         </ul>
