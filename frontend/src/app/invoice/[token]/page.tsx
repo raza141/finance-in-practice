@@ -46,7 +46,7 @@ export default async function PublicDocumentPage({ params }: PageProps<"/invoice
     // -mt-20 cancels the root <main> padding reserved for the (hidden) site navbar.
     <div className="-mt-20 min-h-screen bg-slate-200 px-4 py-10 print:m-0 print:bg-white print:p-0">
       <OnePagePrint />
-      <div className="mx-auto mb-4 flex max-w-3xl justify-end">
+      <div className="mx-auto mb-4 flex max-w-3xl justify-end print:hidden">
         <PrintButton className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-700" />
       </div>
       <DocumentView doc={doc} settings={settings} />

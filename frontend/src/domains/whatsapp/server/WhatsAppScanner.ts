@@ -61,6 +61,7 @@ export class WhatsAppScanner {
       ["documents", () => this.documents()],
       ["overdue", () => this.overdue(now)],
       ["classroom", () => this.classroom(now)],
+      ["pruned", () => this.outbox.prune()],
     ];
     const result: Record<string, string> = {};
     for (const [name, part] of parts) {
@@ -106,7 +107,8 @@ export class WhatsAppScanner {
       for (const attendee of b.attendees) {
         const client = await this.clientByEmail(attendee.email);
         if (!client) continue;
-        if (createdAt > this.link.enabledAt! && (await this.outbox.enqueue(this.bookingMessage(b, client, attendee.timeZone, "confirmed"), this.sender))) queued++;
+        // Within SCAN_DAYS: an older confirmation's row may have been pruned, and it must not go again.
+        if (createdAt > this.link.enabledAt! && now.getTime() - createdAt.getTime() < WhatsAppOutbox.SCAN_DAYS * DAY && (await this.outbox.enqueue(this.bookingMessage(b, client, attendee.timeZone, "confirmed"), this.sender))) queued++;
         for (const plan of WhatsAppText.reminders(start, createdAt)) {
           // Queued only once due soon, so a booking cancelled in between never had one waiting.
           if (plan.notBefore.getTime() - now.getTime() > 30 * 60_000) continue;
@@ -183,8 +185,9 @@ export class WhatsAppScanner {
     const rows = (await this.sql`
       SELECT d.id FROM invoices d
       WHERE d.doc_type IN ('invoice', 'receipt') AND d.status NOT IN ('draft', 'void') AND d.client_id IS NOT NULL
-        AND d.sent_at > ${this.link.enabledAt}
-        AND NOT EXISTS (SELECT 1 FROM whatsapp_messages m WHERE m.dedupe_key = 'doc:' || d.id)
+        AND d.sent_at > ${this.link.enabledAt} AND d.sent_at > now() - make_interval(days => ${WhatsAppOutbox.SCAN_DAYS})
+        -- A manual send (doc:<id>:manual:<ts>) counts too, or the scan would send it a second time.
+        AND NOT EXISTS (SELECT 1 FROM whatsapp_messages m WHERE m.dedupe_key = 'doc:' || d.id OR m.dedupe_key LIKE 'doc:' || d.id || ':%')
       ORDER BY d.sent_at LIMIT 20
     `) as { id: string }[];
     let queued = 0;
@@ -229,6 +232,7 @@ export class WhatsAppScanner {
       WHERE d.doc_type = 'invoice' AND d.status = 'sent' AND d.client_id IS NOT NULL
         AND d.sent_at > ${this.link.enabledAt} AND d.sent_at < now() - interval '1 day'
         AND d.due_date <= ${ZonedCalendar.addDays(today, -WhatsAppText.OVERDUE_DAYS)}::date
+        AND d.due_date > ${ZonedCalendar.addDays(today, -WhatsAppText.OVERDUE_DAYS - WhatsAppOutbox.SCAN_DAYS)}::date
         AND NOT EXISTS (SELECT 1 FROM whatsapp_messages m WHERE m.dedupe_key = 'overdue:' || d.id || ':auto')
       LIMIT 20
     `) as { id: string }[];

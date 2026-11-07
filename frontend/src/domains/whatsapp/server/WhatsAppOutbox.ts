@@ -108,6 +108,24 @@ export class WhatsAppOutbox {
     return rows.length > 0;
   }
 
+  /**
+   * Retention: sent messages go after 14 days, failed / unknown / cancelled / expired after 30 (room to debug).
+   * Queued and sending are never touched. The chat itself stays on the phone. The scans only look back
+   * {@link WhatsAppOutbox.SCAN_DAYS} days, so a deleted row can never be re-sent as "new".
+   */
+  async prune(): Promise<number> {
+    const rows = await this.sql`
+      DELETE FROM whatsapp_messages
+      WHERE (status = 'sent' AND created_at < now() - interval '14 days')
+         OR (status IN ('failed', 'unknown', 'cancelled', 'expired') AND created_at < now() - interval '30 days')
+      RETURNING 1
+    `;
+    return rows.length;
+  }
+
+  /** How far back the automatic scans look; must stay below the 14-day retention above. */
+  static readonly SCAN_DAYS = 7;
+
   /** Is this event's message already queued (or sent)? */
   async has(dedupeKey: string): Promise<boolean> {
     return ((await this.sql`SELECT 1 FROM whatsapp_messages WHERE dedupe_key = ${dedupeKey}`) as unknown[]).length > 0;
