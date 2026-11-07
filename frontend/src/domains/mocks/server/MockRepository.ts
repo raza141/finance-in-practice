@@ -176,6 +176,14 @@ export class MockRepository {
     }
     await this.sql.transaction([
       update,
+      // Newly granted: the mock lands on their study calendar today (before the grant below, which this checks for).
+      this.sql`
+        INSERT INTO study_plan_items (client_id, due_on, topic, mock_id)
+        SELECT c.id, (now() AT TIME ZONE 'Asia/Dubai')::date, e.title, e.id FROM clients c CROSS JOIN mock_exams e
+        WHERE e.id = ${mockId} AND c.id = ANY(${access.clients}::uuid[])
+          AND NOT EXISTS (SELECT 1 FROM access_grants g WHERE g.mock_id = e.id AND g.client_id = c.id AND (g.ends_at IS NULL OR g.ends_at > now()))
+          AND NOT EXISTS (SELECT 1 FROM study_plan_items p WHERE p.client_id = c.id AND p.mock_id = e.id AND p.status = 'planned')
+      `,
       this.sql`DELETE FROM access_grants WHERE mock_id = ${mockId} AND source = 'admin' AND client_id <> ALL(${access.clients}::uuid[]) AND starts_at >= now()`,
       this.sql`
         UPDATE access_grants SET ends_at = now()
@@ -210,11 +218,19 @@ export class MockRepository {
     );
   }
 
+  /** A grant for one mock also puts it on the student's study calendar on the day access starts, unless it's already planned. */
   async addGrant(clientId: string, g: AccessGrantInput): Promise<void> {
-    await this.sql`
-      INSERT INTO access_grants (client_id, product, mock_id, starts_at, ends_at)
-      VALUES (${clientId}, ${g.product}, ${g.mockId}, ${g.startsAt}, ${g.endsAt})
-    `;
+    await this.sql.transaction([
+      this.sql`
+        INSERT INTO access_grants (client_id, product, mock_id, starts_at, ends_at)
+        VALUES (${clientId}, ${g.product}, ${g.mockId}, ${g.startsAt}, ${g.endsAt})
+      `,
+      this.sql`
+        INSERT INTO study_plan_items (client_id, due_on, topic, mock_id)
+        SELECT ${clientId}, (${g.startsAt}::timestamptz AT TIME ZONE 'Asia/Dubai')::date, e.title, e.id FROM mock_exams e
+        WHERE e.id = ${g.mockId} AND NOT EXISTS (SELECT 1 FROM study_plan_items p WHERE p.client_id = ${clientId} AND p.mock_id = e.id AND p.status = 'planned')
+      `,
+    ]);
   }
 
   /** Ends access now; the row stays as the record. A grant that hasn't started yet goes, as ends_at must follow starts_at. */
