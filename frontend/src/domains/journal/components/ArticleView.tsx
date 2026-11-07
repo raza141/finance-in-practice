@@ -10,16 +10,30 @@ import { CodeHighlighter } from "../server/CodeHighlighter";
 import { ArticleExport } from "../services/ArticleExport";
 import { CsvText } from "../services/ChartData";
 import { JournalDates } from "../services/JournalDates";
-import type { ArticleDocument, ArticleSummary, Block, CalloutBlock } from "../types";
+import type {
+  ArticleDocument,
+  ArticleSummary,
+  Block,
+  CalloutBlock,
+} from "../types";
 import { ChartView } from "./ChartView";
 import { CodeBlockView } from "./CodeBlockView";
 import { DownloadButton } from "./DownloadButton";
 import { Inline, RichText, texToHtml, type CitationIndex } from "./RichText";
 
-const CALLOUT_STYLE: Record<CalloutBlock["tone"], { label: string; className: string }> = {
+const CALLOUT_STYLE: Record<
+  CalloutBlock["tone"],
+  { label: string; className: string }
+> = {
   note: { label: "Note", className: "border-line bg-surface/70" },
-  "key-insight": { label: "Key insight", className: "border-quant/40 bg-quant/5" },
-  "exam-trap": { label: "Exam trap", className: "border-gold/50 bg-surface-raised" },
+  "key-insight": {
+    label: "Key insight",
+    className: "border-quant/40 bg-quant/5",
+  },
+  "exam-trap": {
+    label: "Exam trap",
+    className: "border-gold/50 bg-surface-raised",
+  },
   warning: { label: "Caution", className: "border-red-400/40 bg-red-400/5" },
 };
 
@@ -35,38 +49,92 @@ export interface ArticleViewProps {
 }
 
 /** A research article, as readers see it. The admin preview renders the same component. */
-export async function ArticleView({ doc, authorName, datePublished, dateModified, related, url }: ArticleViewProps) {
-  const cites: CitationIndex = new Map(doc.sources.map((s, i) => [s.id, i + 1]));
+export async function ArticleView({
+  doc,
+  authorName,
+  datePublished,
+  dateModified,
+  related,
+  url,
+}: ArticleViewProps) {
+  const cites: CitationIndex = new Map(
+    doc.sources.map((s, i) => [s.id, i + 1]),
+  );
   const minutes = ArticleExport.readingMinutes(doc);
   const codeHtml = new Map(
     await Promise.all(
-      doc.blocks.filter((b) => b.type === "code").map(async (b) => [b.id, await CodeHighlighter.html(b.code, b.language)] as const),
+      doc.blocks
+        .filter((b) => b.type === "code")
+        .map(
+          async (b) =>
+            [b.id, await CodeHighlighter.html(b.code, b.language)] as const,
+        ),
     ),
   );
-  const cta = doc.cta ?? { label: siteConfig.navCta.label, href: siteConfig.navCta.href, text: "Free 30-minute call to check fit, schedule and prerequisites." };
-  const updated = datePublished && dateModified && JournalDates.day(dateModified) !== JournalDates.day(datePublished);
+  const cta = doc.cta ?? {
+    label: siteConfig.navCta.label,
+    href: siteConfig.navCta.href,
+    text: "Free 30-minute call to check fit, schedule and prerequisites.",
+  };
+  const updated =
+    datePublished &&
+    dateModified &&
+    JournalDates.day(dateModified) !== JournalDates.day(datePublished);
   let codeIndex = 0;
+  const contents = [
+    ...doc.blocks.flatMap((b) =>
+      b.type === "heading" && b.level === 2 && b.text.trim()
+        ? [{ id: b.id, text: b.text }]
+        : [],
+    ),
+    ...(doc.blocks.some((b) => b.type === "faq")
+      ? [{ id: "faq", text: "Frequently asked questions" }]
+      : []),
+  ];
 
   function render(block: Block) {
     switch (block.type) {
       case "heading": {
         const Tag = block.level === 2 ? "h2" : "h3";
         return (
-          <Tag key={block.id} id={block.id} className={block.level === 2 ? "mt-12 scroll-mt-28 text-2xl font-bold sm:text-3xl" : "mt-8 scroll-mt-28 text-lg font-semibold"}>
+          <Tag
+            key={block.id}
+            id={block.id}
+            className={
+              block.level === 2
+                ? "mt-12 scroll-mt-28 text-2xl font-bold sm:text-3xl"
+                : "mt-8 scroll-mt-28 text-lg font-semibold"
+            }
+          >
             {block.text}
           </Tag>
         );
       }
       case "text":
-        return <RichText key={block.id} text={block.text} cites={cites} className="mt-5 text-[1.05rem] text-ink/90" />;
+        return (
+          <RichText
+            key={block.id}
+            text={block.text}
+            cites={cites}
+            className="mt-5 text-[1.05rem] text-ink/90"
+          />
+        );
       case "takeaway":
         return (
-          <aside key={block.id} aria-label="Executive takeaway" className="mt-8 rounded-xl border border-quant/40 bg-quant/5 p-6">
-            <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">Executive takeaway</p>
+          <aside
+            key={block.id}
+            aria-label="Executive takeaway"
+            className="mt-8 rounded-xl border border-quant/40 bg-quant/5 p-6"
+          >
+            <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">
+              Executive takeaway
+            </p>
             <ul className="mt-3 space-y-2">
               {block.points.filter(Boolean).map((p, i) => (
                 <li key={i} className="flex gap-3 leading-relaxed text-ink">
-                  <span aria-hidden className="text-quant">→</span>
+                  <span aria-hidden className="text-quant">
+                    →
+                  </span>
                   <span>
                     <Inline text={p} cites={cites} />
                   </span>
@@ -78,16 +146,30 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
       case "callout": {
         const style = CALLOUT_STYLE[block.tone];
         return (
-          <aside key={block.id} className={`mt-8 rounded-xl border p-5 ${style.className}`}>
-            <p className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">{style.label}</p>
-            {block.title && <p className="mt-1 font-semibold text-ink">{block.title}</p>}
-            <RichText text={block.text} cites={cites} className="mt-2 text-ink/90" />
+          <aside
+            key={block.id}
+            className={`mt-8 rounded-xl border p-5 ${style.className}`}
+          >
+            <p className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+              {style.label}
+            </p>
+            {block.title && (
+              <p className="mt-1 font-semibold text-ink">{block.title}</p>
+            )}
+            <RichText
+              text={block.text}
+              cites={cites}
+              className="mt-2 text-ink/90"
+            />
           </aside>
         );
       }
       case "aside":
         return block.variant === "pullquote" ? (
-          <blockquote key={block.id} className="my-10 border-l-2 border-gold pl-6 font-serif text-2xl leading-snug text-ink italic">
+          <blockquote
+            key={block.id}
+            className="my-10 border-l-2 border-gold pl-6 font-serif text-2xl leading-snug text-ink italic"
+          >
             <Inline text={block.text} cites={cites} />
           </blockquote>
         ) : (
@@ -101,11 +183,21 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
         );
       case "formula":
         return (
-          <figure key={block.id} className="my-8 rounded-xl border border-line bg-surface/50 px-5 py-4">
-            <div className="overflow-x-auto py-2 text-lg" dangerouslySetInnerHTML={{ __html: texToHtml(block.tex, true) }} />
+          <figure
+            key={block.id}
+            className="my-8 rounded-xl border border-line bg-surface/50 px-5 py-4"
+          >
+            <div
+              className="overflow-x-auto py-2 text-lg"
+              dangerouslySetInnerHTML={{ __html: texToHtml(block.tex, true) }}
+            />
             {block.explanation && (
               <figcaption>
-                <RichText text={block.explanation} cites={cites} className="mt-2 border-t border-line pt-3 text-sm text-muted" />
+                <RichText
+                  text={block.explanation}
+                  cites={cites}
+                  className="mt-2 border-t border-line pt-3 text-sm text-muted"
+                />
               </figcaption>
             )}
           </figure>
@@ -114,13 +206,19 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
         return (
           <figure key={block.id} className="my-8">
             {/* eslint-disable-next-line @next/next/no-img-element -- author images from Blob, dimensions unknown */}
-            <img src={block.url} alt={block.alt} loading="lazy" className="w-full rounded-lg border border-line" />
+            <img
+              src={block.url}
+              alt={block.alt}
+              loading="lazy"
+              className="w-full rounded-lg border border-line"
+            />
             {(block.caption || block.chart) && (
               <figcaption className="mt-2 text-xs text-muted">
                 {block.caption}
                 {block.chart && (
                   <span className="block font-mono">
-                    Source: {block.chart.source} · Data as of <time dateTime={block.chart.asOf}>{block.chart.asOf}</time>
+                    Source: {block.chart.source} · Data as of{" "}
+                    <time dateTime={block.chart.asOf}>{block.chart.asOf}</time>
                   </span>
                 )}
               </figcaption>
@@ -143,7 +241,13 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
             output={block.output}
             dependencies={block.dependencies}
           >
-            {block.explanation && <RichText text={block.explanation} cites={cites} className="mb-3 text-ink/90" />}
+            {block.explanation && (
+              <RichText
+                text={block.explanation}
+                cites={cites}
+                className="mb-3 text-ink/90"
+              />
+            )}
             {(block.dataSource || block.limitations) && (
               <p className="mb-3 text-xs text-muted">
                 {block.dataSource && <>Data: {block.dataSource}. </>}
@@ -159,11 +263,17 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
           <figure key={block.id} className="my-8">
             <div className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full text-left text-sm">
-                <caption className="border-b border-line bg-surface px-4 py-2 text-left font-mono text-xs text-muted">{block.caption}</caption>
+                <caption className="border-b border-line bg-surface px-4 py-2 text-left font-mono text-xs text-muted">
+                  {block.caption}
+                </caption>
                 <thead>
                   <tr className="border-b border-line">
                     {header.map((h, i) => (
-                      <th key={i} scope="col" className="px-4 py-2 font-mono text-xs font-semibold text-muted">
+                      <th
+                        key={i}
+                        scope="col"
+                        className="px-4 py-2 font-mono text-xs font-semibold text-muted"
+                      >
                         {h}
                       </th>
                     ))}
@@ -182,21 +292,37 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
                 </tbody>
               </table>
             </div>
-            {block.source && <figcaption className="mt-2 font-mono text-xs text-muted">Source: {block.source}</figcaption>}
+            {block.source && (
+              <figcaption className="mt-2 font-mono text-xs text-muted">
+                Source: {block.source}
+              </figcaption>
+            )}
           </figure>
         );
       }
       case "faq":
         return (
-          <section key={block.id} aria-label="Frequently asked questions" className="mt-10">
-            <h2 className="text-2xl font-bold">Frequently asked questions</h2>
+          <section
+            key={block.id}
+            aria-label="Frequently asked questions"
+            className="mt-10"
+          >
+            <h2 id="faq" className="scroll-mt-28 text-2xl font-bold">
+              Frequently asked questions
+            </h2>
             <div className="mt-4 divide-y divide-line border-y border-line">
               {block.items
                 .filter((i) => i.q && i.a)
                 .map((item, i) => (
                   <details key={i} className="group py-4">
-                    <summary className="cursor-pointer font-semibold text-ink marker:text-quant">{item.q}</summary>
-                    <RichText text={item.a} cites={cites} className="mt-3 text-ink/85" />
+                    <summary className="cursor-pointer font-semibold text-ink marker:text-quant">
+                      {item.q}
+                    </summary>
+                    <RichText
+                      text={item.a}
+                      cites={cites}
+                      className="mt-3 text-ink/85"
+                    />
                   </details>
                 ))}
             </div>
@@ -207,13 +333,22 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
         if (cards.length === 0) return null;
         return (
           <nav key={block.id} aria-label="Related articles" className="mt-10">
-            <p className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Related</p>
+            <p className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+              Related
+            </p>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">
               {cards.map((r) => (
                 <li key={r.slug}>
-                  <Link href={`/journal/${r.slug}`} className="block h-full rounded-xl border border-line bg-surface p-4 transition-colors hover:border-quant/50">
-                    <span className="font-mono text-[11px] text-quant">{r.format}</span>
-                    <span className="mt-1 block font-semibold text-ink">{r.title}</span>
+                  <Link
+                    href={`/journal/${r.slug}`}
+                    className="block h-full rounded-xl border border-line bg-surface p-4 transition-colors hover:border-quant/50"
+                  >
+                    <span className="font-mono text-[11px] text-quant">
+                      {r.format}
+                    </span>
+                    <span className="mt-1 block font-semibold text-ink">
+                      {r.title}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -225,95 +360,191 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
   }
 
   return (
-    <article className="page-container max-w-3xl pt-10 pb-16 lg:pt-12">
-      <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
-        ← Blog
-      </Link>
-      <p className="mt-6 font-mono text-xs tracking-[0.16em] text-muted uppercase">
-        {[doc.category, doc.format, doc.difficulty].filter(Boolean).join(" · ")}
-      </p>
-      <h1 className="mt-3 text-4xl leading-tight font-black sm:text-5xl">{doc.title || "Untitled draft"}</h1>
-      {doc.subtitle && <p className="mt-4 text-xl leading-relaxed text-muted">{doc.subtitle}</p>}
-      <p className="mt-5 font-mono text-xs text-muted">
-        {authorName}
-        {datePublished && (
-          <>
-            {" · "}
-            <time dateTime={datePublished}>{JournalDates.long(datePublished)}</time>
-          </>
+    <article className="page-container pt-10 pb-16 lg:pt-12">
+      <header className="max-w-4xl">
+        <Link
+          href="/journal"
+          className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink"
+        >
+          ← Blog
+        </Link>
+        <p className="mt-6 font-mono text-xs tracking-[0.16em] text-muted uppercase">
+          {[doc.category, doc.format, doc.difficulty]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        <h1 className="mt-3 text-4xl leading-tight font-black sm:text-5xl">
+          {doc.title || "Untitled draft"}
+        </h1>
+        {doc.subtitle && (
+          <p className="mt-4 text-xl leading-relaxed text-muted">
+            {doc.subtitle}
+          </p>
         )}
-        {updated && (
-          <>
-            {" · Updated "}
-            <time dateTime={dateModified!}>{JournalDates.long(dateModified!)}</time>
-          </>
-        )}
-        {` · ${minutes} min read`}
-        {doc.audience.length > 0 && ` · For ${doc.audience.join(", ")}`}
-      </p>
+        <p className="mt-5 font-mono text-xs text-muted">
+          {authorName}
+          {datePublished && (
+            <>
+              {" · "}
+              <time dateTime={datePublished}>
+                {JournalDates.long(datePublished)}
+              </time>
+            </>
+          )}
+          {updated && (
+            <>
+              {" · Updated "}
+              <time dateTime={dateModified!}>
+                {JournalDates.long(dateModified!)}
+              </time>
+            </>
+          )}
+          {` · ${minutes} min read`}
+          {doc.audience.length > 0 && ` · For ${doc.audience.join(", ")}`}
+        </p>
+      </header>
 
-      {doc.featuredImage?.url && (
-        <figure className="mt-8">
-          {/* eslint-disable-next-line @next/next/no-img-element -- author images from Blob, dimensions unknown */}
-          <img src={doc.featuredImage.url} alt={doc.featuredImage.alt} className="w-full rounded-xl border border-line" />
-          {doc.featuredImage.caption && <figcaption className="mt-2 text-xs text-muted">{doc.featuredImage.caption}</figcaption>}
-        </figure>
-      )}
+      {/* Reading column on the site's left edge (~70 characters a line); contents and booking ride in a sticky rail on wide screens. */}
+      <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,48rem)_18rem] lg:justify-between">
+        <div className="min-w-0">
+          {doc.featuredImage?.url && (
+            <figure>
+              {/* eslint-disable-next-line @next/next/no-img-element -- author images from Blob, dimensions unknown */}
+              <img
+                src={doc.featuredImage.url}
+                alt={doc.featuredImage.alt}
+                className="w-full rounded-xl border border-line"
+              />
+              {doc.featuredImage.caption && (
+                <figcaption className="mt-2 text-xs text-muted">
+                  {doc.featuredImage.caption}
+                </figcaption>
+              )}
+            </figure>
+          )}
 
-      <div className="mt-6 border-t border-line pt-2">{doc.blocks.map(render)}</div>
-      <div className="clear-both" />
+          <div className="mt-6 border-t border-line pt-2">
+            {doc.blocks.map(render)}
+          </div>
+          <div className="clear-both" />
 
-      {ArticleExport.hasPython(doc) && (
-        <div className="mt-12 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface/60 p-5">
-          <p className="flex-1 text-sm text-muted">Run the code yourself: every Python block, with the explanations, as a Jupyter notebook.</p>
-          <DownloadButton content={ArticleExport.notebook(doc, url)} filename={`${doc.slug}.ipynb`} type="application/x-ipynb+json" label="Notebook (.ipynb)" />
-        </div>
-      )}
+          {ArticleExport.hasPython(doc) && (
+            <div className="mt-12 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface/60 p-5">
+              <p className="flex-1 text-sm text-muted">
+                Run the code yourself: every Python block, with the
+                explanations, as a Jupyter notebook.
+              </p>
+              <DownloadButton
+                content={ArticleExport.notebook(doc, url)}
+                filename={`${doc.slug}.ipynb`}
+                type="application/x-ipynb+json"
+                label="Notebook (.ipynb)"
+              />
+            </div>
+          )}
 
-      {doc.sources.length > 0 && (
-        <section aria-labelledby="sources" className="mt-14 border-t border-line pt-8">
-          <h2 id="sources" className="font-mono text-xs tracking-[0.22em] text-muted uppercase">
-            Sources
-          </h2>
-          <ol className="mt-4 space-y-3 text-sm text-ink/85">
-            {doc.sources.map((s, i) => (
-              <li key={s.id || i} id={`source-${s.id}`} className="flex scroll-mt-28 gap-3">
-                <span className="font-mono text-quant">[{i + 1}]</span>
-                <span>
-                  {s.citation || (
-                    <>
-                      {s.url ? (
-                        <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-ink underline decoration-line underline-offset-2 hover:decoration-quant">
-                          {s.title}
-                        </a>
-                      ) : (
-                        s.title
+          {doc.sources.length > 0 && (
+            <section
+              aria-labelledby="sources"
+              className="mt-14 border-t border-line pt-8"
+            >
+              <h2
+                id="sources"
+                className="font-mono text-xs tracking-[0.22em] text-muted uppercase"
+              >
+                Sources
+              </h2>
+              <ol className="mt-4 space-y-3 text-sm text-ink/85">
+                {doc.sources.map((s, i) => (
+                  <li
+                    key={s.id || i}
+                    id={`source-${s.id}`}
+                    className="flex scroll-mt-28 gap-3"
+                  >
+                    <span className="font-mono text-quant">[{i + 1}]</span>
+                    <span>
+                      {s.citation || (
+                        <>
+                          {s.url ? (
+                            <a
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-ink underline decoration-line underline-offset-2 hover:decoration-quant"
+                            >
+                              {s.title}
+                            </a>
+                          ) : (
+                            s.title
+                          )}
+                          {s.publisher && `. ${s.publisher}`}
+                          {s.accessedAt && (
+                            <span className="text-muted">
+                              . Accessed {s.accessedAt}
+                            </span>
+                          )}
+                          .
+                        </>
                       )}
-                      {s.publisher && `. ${s.publisher}`}
-                      {s.accessedAt && <span className="text-muted">. Accessed {s.accessedAt}</span>}.
-                    </>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
 
-      {doc.disclaimer && <p className="mt-10 border-l-2 border-line pl-4 text-xs leading-relaxed text-muted">{doc.disclaimer}</p>}
+          {doc.disclaimer && (
+            <p className="mt-10 border-l-2 border-line pl-4 text-xs leading-relaxed text-muted">
+              {doc.disclaimer}
+            </p>
+          )}
+        </div>
 
-      <div className="mt-12 rounded-xl border border-line bg-surface p-6">
-        <p className="font-semibold">{doc.cta ? doc.cta.label : "Want this explained 1-on-1?"}</p>
-        {cta.text && <p className="mt-2 text-sm text-muted">{cta.text}</p>}
-        <ButtonLink href={cta.href} className="mt-4">
-          {doc.cta ? doc.cta.label : siteConfig.navCta.label}
-        </ButtonLink>
-      </div>
+        <aside
+          aria-label="On this page"
+          className="lg:sticky lg:top-28 lg:self-start"
+        >
+          {contents.length > 1 && (
+            <nav aria-labelledby="contents-heading" className="hidden lg:block">
+              <p
+                id="contents-heading"
+                className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase"
+              >
+                On this page
+              </p>
+              <ol className="mt-3 space-y-2 border-l border-line text-sm">
+                {contents.map((c) => (
+                  <li key={c.id}>
+                    <a
+                      href={`#${c.id}`}
+                      className="-ml-px block border-l border-transparent pl-4 text-muted transition-colors hover:border-quant hover:text-ink"
+                    >
+                      {c.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
 
-      {/* Readers who aren't ready to book can still follow for the next article. */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-linkedin/40 bg-linkedin/10 p-5">
-        <p className="text-sm text-ink/90">New articles and exam tips, on LinkedIn.</p>
-        <LinkedInFollow note="Get the next article in your feed" />
+          <div className="rounded-xl border border-line bg-surface p-6 lg:mt-8">
+            <p className="font-semibold">
+              {doc.cta ? doc.cta.label : "Want this explained 1-on-1?"}
+            </p>
+            {cta.text && <p className="mt-2 text-sm text-muted">{cta.text}</p>}
+            <ButtonLink href={cta.href} className="mt-4">
+              {doc.cta ? doc.cta.label : siteConfig.navCta.label}
+            </ButtonLink>
+          </div>
+
+          {/* Readers who aren't ready to book can still follow for the next article. */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-linkedin/40 bg-linkedin/10 p-5">
+            <p className="text-sm text-ink/90">
+              New articles and exam tips, on LinkedIn.
+            </p>
+            <LinkedInFollow note="Get the next article in your feed" />
+          </div>
+        </aside>
       </div>
     </article>
   );
