@@ -42,16 +42,17 @@ export class StudyPlanRepository {
    * The nearest upcoming exam among the student's batches with portal access left: their own day if they picked
    * one (071), else the batch's. `batchDate` and `picked` let them choose their day inside the batch's window.
    */
-  async nextExam(clientId: string): Promise<{ course: string; date: string; batchDate: string; picked: boolean } | null> {
+  async nextExam(clientId: string): Promise<{ course: string; date: string; batchDate: string; picked: boolean; hideCountdown: boolean } | null> {
     if (!UUID.test(clientId)) return null;
     const [row] = (await this.sql`
       SELECT b.course, to_char(COALESCE(cb.exam_date, b.exam_date), 'YYYY-MM-DD') AS date,
-        to_char(b.exam_date, 'YYYY-MM-DD') AS "batchDate", cb.exam_date IS NOT NULL AS picked
-      FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
+        to_char(b.exam_date, 'YYYY-MM-DD') AS "batchDate", cb.exam_date IS NOT NULL AS picked,
+        c.hide_exam_countdown AS "hideCountdown"
+      FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label JOIN clients c ON c.id = cb.client_id
       WHERE cb.client_id = ${clientId} AND COALESCE(cb.exam_date, b.exam_date) >= current_date AND batch_access_ends(cb, b) >= current_date
       ORDER BY COALESCE(cb.exam_date, b.exam_date)
       LIMIT 1
-    `) as { course: string; date: string; batchDate: string; picked: boolean }[];
+    `) as { course: string; date: string; batchDate: string; picked: boolean; hideCountdown: boolean }[];
     return row ?? null;
   }
 
@@ -59,6 +60,13 @@ export class StudyPlanRepository {
   async setExamDate(clientId: string, course: string, date: string): Promise<boolean> {
     if (!UUID.test(clientId)) return false;
     const rows = await this.sql`UPDATE client_batches SET exam_date = ${date}::date WHERE client_id = ${clientId} AND course = ${course} RETURNING 1`;
+    return rows.length > 0;
+  }
+
+  /** The student hides or shows their days-to-exam countdown (073), on every device. */
+  async setCountdownHidden(clientId: string, hidden: boolean): Promise<boolean> {
+    if (!UUID.test(clientId)) return false;
+    const rows = await this.sql`UPDATE clients SET hide_exam_countdown = ${hidden} WHERE id = ${clientId} RETURNING 1`;
     return rows.length > 0;
   }
 

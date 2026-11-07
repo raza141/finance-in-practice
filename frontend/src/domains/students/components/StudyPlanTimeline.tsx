@@ -27,7 +27,7 @@ export function StudyPlanTimeline({
 }: {
   items: StudyPlanItem[] | null;
   programmes: string[];
-  exam: { course: string; date: string; batchDate: string; picked: boolean } | null;
+  exam: { course: string; date: string; batchDate: string; picked: boolean; hideCountdown: boolean } | null;
   sessions?: StudentSession[];
   attempts?: AttemptSummary[];
   /** Question-bank topics: a plan topic that matches one gets a topic test. */
@@ -65,7 +65,7 @@ export function StudyPlanTimeline({
               Your study plan
             </h2>
             <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
-              {exam && <ExamCountdown days={StudyDays.days(today, exam.date)} />}
+              {exam && <ExamCountdown days={StudyDays.days(today, exam.date)} hidden={exam.hideCountdown} readOnly={readOnly} />}
               {counted > 0 && <p className="text-sm text-muted">{`${done} of ${counted} topics done`}</p>}
             </div>
           </div>

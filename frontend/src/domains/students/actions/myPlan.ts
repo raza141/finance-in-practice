@@ -28,6 +28,14 @@ export async function setStudyTopicDone(id: string, done: boolean): Promise<{ ok
   return { ok: await repo.setDoneByStudent(me.id, id, done) };
 }
 
+/** Hide or show the days-to-exam countdown. No page refresh: the countdown has already changed on screen. */
+export async function setExamCountdownHidden(hidden: boolean): Promise<{ ok: boolean }> {
+  const me = await StudentAuth.current();
+  const repo = StudyPlanRepository.fromEnv();
+  if (!me || !repo || typeof hidden !== "boolean") return { ok: false };
+  return { ok: await repo.setCountdownHidden(me.id, hidden) };
+}
+
 /** The student's own exam day for their next exam (071): inside their batch's window; their portal closes 5 days after. */
 export async function setMyExamDate(formData: FormData): Promise<void> {
   const me = await StudentAuth.current();

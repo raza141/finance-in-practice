@@ -1544,6 +1544,11 @@ const MIGRATIONS: Migration[] = [
         ADD CONSTRAINT study_plan_items_range_check CHECK (start_on IS NULL OR (due_on IS NOT NULL AND start_on < due_on))`,
     ],
   },
+  {
+    // A student who'd rather not see the days to exam hides the countdown on every device.
+    id: "073_hide_exam_countdown",
+    statements: [`ALTER TABLE clients ADD COLUMN hide_exam_countdown boolean NOT NULL DEFAULT false`],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
