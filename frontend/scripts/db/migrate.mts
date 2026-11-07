@@ -1534,6 +1534,16 @@ const MIGRATIONS: Migration[] = [
       $fn$`,
     ],
   },
+  {
+    // Plan items over a range (start_on..due_on, "Books 1–2 in November") and scheduled mocks (mock_id):
+    // the owner sets them in the diagnostic; the student's calendar shows a band, or a Start for the mock.
+    id: "072_study_plan_ranges",
+    statements: [
+      `ALTER TABLE study_plan_items ADD COLUMN start_on date,
+        ADD COLUMN mock_id uuid REFERENCES mock_exams (id) ON DELETE SET NULL,
+        ADD CONSTRAINT study_plan_items_range_check CHECK (start_on IS NULL OR (due_on IS NOT NULL AND start_on < due_on))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

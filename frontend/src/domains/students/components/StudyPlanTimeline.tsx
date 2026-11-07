@@ -21,6 +21,7 @@ export function StudyPlanTimeline({
   sessions = [],
   attempts = [],
   bankTopics = [],
+  openMocks = [],
   readOnly = false,
 }: {
   items: StudyPlanItem[] | null;
@@ -30,11 +31,13 @@ export function StudyPlanTimeline({
   attempts?: AttemptSummary[];
   /** Question-bank topics: a plan topic that matches one gets a topic test. */
   bankTopics?: string[];
+  /** Mocks open to the student: a scheduled one gets Start. */
+  openMocks?: string[];
   /** The owner viewing as the student: nothing changes. */
   readOnly?: boolean;
 }) {
   const today = StudyDays.today();
-  const { days, unscheduled } = StudyDays.build({ items: items ?? [], sessions, attempts, exam, bankTopics, today });
+  const { days, unscheduled } = StudyDays.build({ items: items ?? [], sessions, attempts, exam, bankTopics, openMocks, today });
   const materials = (items ?? []).filter((i) => i.materialUrl);
   const done = (items ?? []).filter((i) => i.status === "done").length;
   const counted = (items ?? []).filter((i) => i.status !== "skipped").length;
@@ -91,8 +94,8 @@ export function StudyPlanTimeline({
             <p className="text-sm text-muted">Couldn&rsquo;t load your study plan right now. Please refresh in a minute.</p>
           ) : (
             <StudyCalendar
-              // A fresh calendar after every save, so it shows what the server now holds.
-              key={(items ?? []).map((i) => `${i.id}${i.dueOn}${i.status}`).join()}
+              // A fresh calendar whenever what it shows changes (a saved exam day, topic, session or mock), not only on reload.
+              key={JSON.stringify([days, unscheduled])}
               days={days}
               unscheduled={unscheduled}
               today={today}

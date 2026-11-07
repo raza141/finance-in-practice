@@ -14,6 +14,16 @@ const SHOWN = 3;
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-quant";
 const fmt = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...options }).format(new Date(`${date}T00:00:00Z`));
 const longDay = (date: string) => fmt(date, { weekday: "long", day: "numeric", month: "long" });
+const shortDay = (date: string) => fmt(date, { day: "numeric", month: "short" });
+const monday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay() === 1;
+
+/** A range is one band: square inner ends that bleed into the next cell, the coloured bar only on its first day. */
+const SPAN: Record<StudyTopic["span"], string> = {
+  one: "",
+  start: "-mr-1.5 rounded-r-none",
+  mid: "-mx-1.5 rounded-none border-l-0",
+  end: "-ml-1.5 rounded-l-none border-l-0",
+};
 
 /** One colour per kind, Google-Calendar style: a solid bar on the left, a soft tint behind. */
 const CHIP: Record<StudyDayItem["kind"], string> = {
@@ -32,6 +42,7 @@ const LEGEND: [string, string][] = [
 function chipClass(item: StudyDayItem): string {
   const base = "border-0 border-l-[3px]";
   if (item.kind !== "topic") return `${base} ${CHIP[item.kind]}`;
+  if (item.mock && item.status === "planned" && !item.carried) return "border border-dashed border-violet-400/60 border-l-[3px] border-l-violet-400 bg-transparent text-violet-100 hover:bg-violet-400/10";
   if (item.carried) return "border border-dashed border-gold/70 border-l-[3px] border-l-gold bg-canvas text-ink hover:bg-surface-raised";
   if (item.status === "done") return `${base} border-l-slate-500 bg-ink/[0.03] text-muted line-through hover:bg-ink/[0.06]`;
   if (item.status === "skipped") return `${base} border-l-slate-600 bg-transparent text-muted/60 line-through`;
@@ -41,7 +52,7 @@ function chipClass(item: StudyDayItem): string {
 function label(item: StudyDayItem): string {
   switch (item.kind) {
     case "topic":
-      return item.status === "done" ? `✓ ${item.topic}` : item.topic;
+      return `${item.status === "done" ? "✓ " : ""}${item.mock ? "Mock · " : ""}${item.topic}`;
     case "session":
       return `${item.time} · Session`;
     case "mock":
@@ -82,7 +93,7 @@ export function StudyCalendar({
     setError("");
     if (!dialog.current?.open) dialog.current?.showModal();
   };
-  const movable = (item: StudyDayItem): item is StudyTopic => !readOnly && item.kind === "topic" && item.status !== "skipped";
+  const movable = (item: StudyDayItem): item is StudyTopic => !readOnly && item.kind === "topic" && item.status !== "skipped" && !item.startOn;
   const canDrop = (day: string) => day >= today && day <= last;
 
   /** Moves the topic on screen at once; puts it back if the server says no. */
@@ -108,7 +119,8 @@ export function StudyCalendar({
   const tick = (topic: StudyTopic, done: boolean) => {
     const before = days;
     const updated: StudyTopic = { ...topic, status: done ? "done" : "planned", carried: done ? false : topic.carried };
-    setDays((d) => ({ ...d, [topic.date]: (d[topic.date] ?? []).map((x) => (x.id === topic.id ? updated : x)) }));
+    // A range sits on many days: tick every copy.
+    setDays((d) => Object.fromEntries(Object.entries(d).map(([day, list]) => [day, list.map((x) => (x.kind === "topic" && x.id === topic.id ? { ...updated, date: x.date, span: x.span } : x))])));
     setOpen({ item: updated });
     startTransition(async () => {
       const { ok } = await setStudyTopicDone(topic.id, done).catch(() => ({ ok: false }));
@@ -119,8 +131,10 @@ export function StudyCalendar({
     });
   };
 
+  // Phones list day by day, so a range shows once: on its first day, or today once it's under way.
+  const once = (item: StudyDayItem, day: string) => item.kind !== "topic" || item.span === "one" || day === (item.startOn > today ? item.startOn : today);
   const agenda = Object.keys(days)
-    .filter((d) => d >= today && days[d].length > 0)
+    .filter((d) => d >= today && days[d].some((x) => once(x, d)))
     .sort();
 
   return (
@@ -209,9 +223,10 @@ export function StudyCalendar({
           <li key={day}>
             <p className={`text-xs ${day === today ? "font-semibold text-quant" : "text-muted"}`}>{day === today ? "Today" : longDay(day)}</p>
             <div className="mt-1.5 grid gap-1.5">
-              {days[day].map((item) => (
+              {days[day].filter((x) => once(x, day)).map((item) => (
                 <button key={`${item.kind}-${item.id}`} type="button" onClick={() => show({ item })} className={`rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${chipClass(item)} ${FOCUS}`}>
                   {label(item)}
+                  {item.kind === "topic" && item.startOn && ` · until ${shortDay(item.dueOn)}`}
                   {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
                 </button>
               ))}
@@ -258,6 +273,9 @@ export function StudyCalendar({
 }
 
 function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: boolean; onOpen: () => void }) {
+  const span = item.kind === "topic" ? item.span : "one";
+  // A band names itself on its first day and at the start of each week row; the days between stay plain.
+  const named = span === "one" || span === "start" || monday(item.date);
   return (
     <button
       type="button"
@@ -265,9 +283,10 @@ function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: bool
       onDragStart={(e) => e.dataTransfer.setData("text/plain", `${item.date}|${item.id}`)}
       onClick={onOpen}
       title={label(item)}
-      className={`block min-h-6 w-full truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
+      aria-label={named ? undefined : label(item)}
+      className={`block min-h-6 w-auto truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${SPAN[span]} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}
     >
-      {label(item)}
+      {named ? label(item) : "\u00a0"}
       {item.kind === "topic" && item.carried && <span className="sr-only"> (overdue)</span>}
     </button>
   );
@@ -331,9 +350,9 @@ function Details({
       return (
         <div className="grid gap-3">
           <div>
-            <h3 className="font-semibold">{item.topic}</h3>
+            <h3 className="font-semibold">{label(item)}</h3>
             <p className={`text-sm ${item.carried ? "text-gold" : "text-muted"}`}>
-              {item.dueOn ? (item.carried ? `Was due ${longDay(item.dueOn)}` : longDay(item.dueOn)) : "Not scheduled yet"}
+              {item.dueOn ? (item.carried ? `Was due ${longDay(item.dueOn)}` : item.startOn ? `${longDay(item.startOn)} – ${longDay(item.dueOn)}` : longDay(item.dueOn)) : "Not scheduled yet"}
             </p>
             {item.note && <p className="mt-2 text-sm text-ink/80">{item.note}</p>}
           </div>
@@ -343,7 +362,7 @@ function Details({
                 <input type="checkbox" checked={item.status === "done"} onChange={(e) => onTick(item, e.target.checked)} className="h-4 w-4 accent-[var(--color-quant)]" />
                 Done
               </label>
-              {item.status === "planned" && (
+              {item.status === "planned" && !item.startOn && (
                 <label className="flex items-center gap-2 text-sm text-muted">
                   Date
                   <input
@@ -362,12 +381,17 @@ function Details({
             </>
           )}
           <div className="flex flex-wrap gap-2">
+            {!readOnly && item.mock?.open && item.status === "planned" && (
+              <a href={`/student/mocks/start/${item.mock.id}`} className={BUTTON}>
+                Start mock
+              </a>
+            )}
             {item.materialUrl && (
               <a href={item.materialUrl} target="_blank" rel="noreferrer" className={BUTTON}>
                 Material
               </a>
             )}
-            {!readOnly && item.test && item.status === "planned" && (
+            {!readOnly && item.test && !item.mock && item.status === "planned" && (
               <form action={practisePlanTopic}>
                 <input type="hidden" name="topic" value={item.topic} />
                 <button type="submit" className={BUTTON}>

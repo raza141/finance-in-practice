@@ -17,6 +17,12 @@ export type StudyDayItem =
       carried: boolean;
       /** The bank topic a topic test draws from; null: none matches. */
       test: string | null;
+      /** First day of a range (072); "" for a one-day topic. */
+      startOn: string;
+      /** Where this day sits in a range: the calendar draws one band across the days. */
+      span: "one" | "start" | "mid" | "end";
+      /** A scheduled mock; open: the student can start it now (else the start page would 404). */
+      mock: { id: string; open: boolean } | null;
     }
   | { kind: "session"; id: string; date: string; time: string; course: string; place: string; meetingUrl: string | null; pending: boolean }
   | { kind: "mock"; id: string; date: string; title: string; percent: number }
@@ -41,12 +47,17 @@ export class StudyDays {
     attempts: readonly AttemptSummary[];
     exam: { course: string; date: string } | null;
     bankTopics: readonly string[];
+    /** Mocks open to this student: a scheduled one shows Start only if it's here. */
+    openMocks?: readonly string[];
     today: string;
   }): { days: Record<string, StudyDayItem[]>; unscheduled: StudyTopic[] } {
     const { today } = input;
     const all: StudyDayItem[] = [];
     const unscheduled: StudyTopic[] = [];
-    for (const i of input.items) {
+    const finished = new Set(input.attempts.filter((a) => a.status === "completed").map((a) => a.mockId));
+    for (const raw of input.items) {
+      // A scheduled mock ticks itself once it's finished; its score then shows on the day it was taken.
+      const i = raw.mockId && raw.status === "planned" && finished.has(raw.mockId) ? { ...raw, status: "done" as const } : raw;
       const carried = StudyDays.overdue(i, today);
       const topic: StudyTopic = {
         kind: "topic",
@@ -59,8 +70,15 @@ export class StudyDays {
         materialUrl: i.materialUrl,
         carried,
         test: StudyDays.match(i.topic, input.bankTopics),
+        startOn: i.startOn ?? "",
+        span: "one",
+        mock: i.mockId ? { id: i.mockId, open: (input.openMocks ?? []).includes(i.mockId) } : null,
       };
-      if (i.dueOn) all.push(topic);
+      if (i.dueOn && i.startOn && !carried) {
+        // ponytail: a copy per day of the range; fine for the month-or-two ranges a plan uses.
+        const length = Math.min(StudyDays.days(i.startOn, i.dueOn), 400);
+        for (let n = 0; n <= length; n++) all.push({ ...topic, date: StudyDays.addDays(i.startOn, n), span: n === 0 ? "start" : n === length ? "end" : "mid" });
+      } else if (i.dueOn) all.push(topic);
       else if (i.status === "planned") unscheduled.push(topic);
     }
     for (const s of input.sessions) {
@@ -75,7 +93,16 @@ export class StudyDays {
 
     const days: Record<string, StudyDayItem[]> = {};
     for (const item of all) (days[item.date] ??= []).push(item);
-    for (const list of Object.values(days)) list.sort((a, b) => ORDER[a.kind] - ORDER[b.kind] || Number(b.kind === "topic" && b.carried) - Number(a.kind === "topic" && a.carried));
+    // Within a day: overdue first, then one-day topics, then range bands (oldest start first, so bands line up).
+    const band = (x: StudyDayItem) => (x.kind === "topic" && x.startOn ? x.startOn : "");
+    for (const list of Object.values(days))
+      list.sort(
+        (a, b) =>
+          ORDER[a.kind] - ORDER[b.kind] ||
+          Number(b.kind === "topic" && b.carried) - Number(a.kind === "topic" && a.carried) ||
+          Number(band(a) !== "") - Number(band(b) !== "") ||
+          band(a).localeCompare(band(b)),
+      );
     return { days, unscheduled };
   }
 

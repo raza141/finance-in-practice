@@ -546,7 +546,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       )}
       </section>
 
-      <StudyPlanEditor clientId={client.id} items={plan} />
+      <StudyPlanEditor clientId={client.id} items={plan} mocks={grantableMocks.map((m) => ({ id: m.id, title: m.title }))} />
 
       <section id="mocks" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
         <h2 className="text-lg">Mock exams</h2>

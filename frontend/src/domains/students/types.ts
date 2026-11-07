@@ -35,8 +35,12 @@ export type StudyStatus = "planned" | "done" | "skipped";
 /** One row of a student's study plan (036_study_plan). */
 export interface StudyPlanItem {
   id: string;
-  /** YYYY-MM-DD; null when not scheduled yet. */
+  /** YYYY-MM-DD; null when not scheduled yet. With startOn, the last day of the range. */
   dueOn: string | null;
+  /** YYYY-MM-DD first day of a range ("Books 1–2 this month", 072); null: one day. */
+  startOn: string | null;
+  /** A mock this item schedules (072): the calendar starts it, and its finished attempt ticks it. */
+  mockId: string | null;
   topic: string;
   status: StudyStatus;
   note: string;

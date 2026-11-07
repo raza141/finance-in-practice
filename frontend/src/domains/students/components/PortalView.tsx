@@ -185,7 +185,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         sessions={sessions}
         past={past}
         addresses={addresses}
-        plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} readOnly={readOnly} />}
+        plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} openMocks={(mocks ?? []).map((m) => m.id)} readOnly={readOnly} />}
         mocks={hasMocks ? <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} /> : null}
         progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
         drill={attempts?.some((a) => a.status === "completed") ? <TopicDrill readOnly={readOnly} /> : null}

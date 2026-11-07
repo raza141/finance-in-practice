@@ -7,6 +7,8 @@ import type { StudyPlanInput, StudyPlanItem, StudyStatus } from "../types";
 interface ItemRow {
   id: string;
   due_on: string | null;
+  start_on: string | null;
+  mock_id: string | null;
   topic: string;
   status: StudyStatus;
   note: string;
@@ -29,11 +31,11 @@ export class StudyPlanRepository {
   async forClient(clientId: string): Promise<StudyPlanItem[]> {
     if (!UUID.test(clientId)) return [];
     const rows = (await this.sql`
-      SELECT id, due_on::text AS due_on, topic, status, note, material_url, student_changed_at::text AS student_changed_at FROM study_plan_items
+      SELECT id, due_on::text AS due_on, start_on::text AS start_on, mock_id, topic, status, note, material_url, student_changed_at::text AS student_changed_at FROM study_plan_items
       WHERE client_id = ${clientId}
       ORDER BY due_on NULLS LAST, created_at
     `) as ItemRow[];
-    return rows.map((r) => ({ id: r.id, dueOn: r.due_on, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url, studentChangedAt: r.student_changed_at }));
+    return rows.map((r) => ({ id: r.id, dueOn: r.due_on, startOn: r.start_on, mockId: r.mock_id, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url, studentChangedAt: r.student_changed_at }));
   }
 
   /**
@@ -60,12 +62,12 @@ export class StudyPlanRepository {
     return rows.length > 0;
   }
 
-  /** The student moves one of their own topics (070); skipped ones stay where the owner left them. */
+  /** The student moves one of their own topics (070); skipped ones and ranges (072) stay where the owner left them. */
   async moveByStudent(clientId: string, id: string, dueOn: string): Promise<boolean> {
     if (!UUID.test(clientId) || !UUID.test(id)) return false;
     const rows = await this.sql`
       UPDATE study_plan_items SET due_on = ${dueOn}, updated_at = now(), student_changed_at = now()
-      WHERE id = ${id} AND client_id = ${clientId} AND status <> 'skipped'
+      WHERE id = ${id} AND client_id = ${clientId} AND status <> 'skipped' AND start_on IS NULL
       RETURNING 1
     `;
     return rows.length > 0;
@@ -87,8 +89,8 @@ export class StudyPlanRepository {
     await this.sql.transaction(
       items.map(
         (i) => this.sql`
-          INSERT INTO study_plan_items (client_id, due_on, topic, status, note, material_url)
-          VALUES (${clientId}, ${i.dueOn}, ${i.topic}, ${i.status}, ${i.note}, ${i.materialUrl})
+          INSERT INTO study_plan_items (client_id, start_on, due_on, topic, status, note, material_url, mock_id)
+          VALUES (${clientId}, ${i.startOn}, ${i.dueOn}, ${i.topic}, ${i.status}, ${i.note}, ${i.materialUrl}, ${i.mockId})
         `,
       ),
     );
@@ -97,7 +99,7 @@ export class StudyPlanRepository {
   async update(clientId: string, id: string, input: StudyPlanInput): Promise<void> {
     if (!UUID.test(clientId) || !UUID.test(id)) return;
     await this.sql`
-      UPDATE study_plan_items SET due_on = ${input.dueOn}, topic = ${input.topic}, status = ${input.status},
+      UPDATE study_plan_items SET start_on = ${input.startOn}, due_on = ${input.dueOn}, mock_id = ${input.mockId}, topic = ${input.topic}, status = ${input.status},
         note = ${input.note}, material_url = ${input.materialUrl}, updated_at = now(), student_changed_at = NULL
       WHERE id = ${id} AND client_id = ${clientId}
     `;

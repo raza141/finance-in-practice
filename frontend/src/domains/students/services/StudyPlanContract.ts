@@ -7,6 +7,7 @@ export class StudyPlanContract {
   static readonly STATUSES: Record<StudyStatus, string> = { planned: "Planned", done: "Done", skipped: "Skipped" };
   static readonly LIMITS = { topic: [2, 160], note: 500, url: 500, lines: 60 } as const;
   private static readonly DATE = /^\d{4}-\d{2}-\d{2}$/;
+  private static readonly UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   /** One edited row from the admin form. */
   static parseItem(fields: Record<string, unknown>): StudyPlanResult<StudyPlanInput> {
@@ -15,12 +16,14 @@ export class StudyPlanContract {
     if (!(status in StudyPlanContract.STATUSES)) return { ok: false, error: "Choose a status." };
     const note = text("note");
     if (note.length > StudyPlanContract.LIMITS.note) return { ok: false, error: `Keep the note under ${StudyPlanContract.LIMITS.note} characters.` };
-    return StudyPlanContract.row(text("dueOn"), text("topic"), text("materialUrl"), status, note);
+    const mockId = text("mockId");
+    if (mockId && !StudyPlanContract.UUID.test(mockId)) return { ok: false, error: "Choose a mock from the list." };
+    return StudyPlanContract.row(text("startOn"), text("dueOn"), text("topic"), text("materialUrl"), status, note, mockId || null);
   }
 
   /**
    * The admin's "add topics" box: one topic per line, optionally starting with a
-   * date and ending with a link, e.g. "2026-11-03 Ethics https://drive.google.com/…".
+   * date (or a range, "2026-11-01..2026-11-30") and ending with a link, e.g. "2026-11-03 Ethics https://drive.google.com/…".
    */
   static parseLines(raw: string): StudyPlanResult<StudyPlanInput[]> {
     const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -28,8 +31,8 @@ export class StudyPlanContract {
     if (lines.length > StudyPlanContract.LIMITS.lines) return { ok: false, error: `Add at most ${StudyPlanContract.LIMITS.lines} topics at a time.` };
     const items: StudyPlanInput[] = [];
     for (const [index, line] of lines.entries()) {
-      const [, date = "", topic = "", url = ""] = /^(\d{4}-\d{2}-\d{2})?\s*(.*?)\s*(https?:\/\/\S+)?$/.exec(line) ?? [];
-      const parsed = StudyPlanContract.row(date, topic, url, "planned", "");
+      const [, first = "", end = "", topic = "", url = ""] = /^(?:(\d{4}-\d{2}-\d{2})(?:\s*\.\.\s*(\d{4}-\d{2}-\d{2}))?)?\s*(.*?)\s*(https?:\/\/\S+)?$/.exec(line) ?? [];
+      const parsed = end ? StudyPlanContract.row(first, end, topic, url, "planned", "", null) : StudyPlanContract.row("", first, topic, url, "planned", "", null);
       if (!parsed.ok) return { ok: false, error: `Line ${index + 1}: ${parsed.error}` };
       items.push(parsed.value);
     }
@@ -52,11 +55,13 @@ export class StudyPlanContract {
     }
   }
 
-  private static row(dueOn: string, topic: string, url: string, status: StudyStatus, note: string): StudyPlanResult<StudyPlanInput> {
+  /** startOn..dueOn is a range; startOn on its own or after dueOn is refused, and a one-day range is just dueOn. */
+  private static row(startOn: string, dueOn: string, topic: string, url: string, status: StudyStatus, note: string, mockId: string | null): StudyPlanResult<StudyPlanInput> {
     const [min, max] = StudyPlanContract.LIMITS.topic;
-    if (dueOn && !StudyPlanContract.isDate(dueOn)) return { ok: false, error: "Dates are YYYY-MM-DD." };
+    if ((dueOn && !StudyPlanContract.isDate(dueOn)) || (startOn && !StudyPlanContract.isDate(startOn))) return { ok: false, error: "Dates are YYYY-MM-DD." };
+    if (startOn && (!dueOn || startOn > dueOn)) return { ok: false, error: "A range needs an end date on or after its start." };
     if (topic.length < min || topic.length > max) return { ok: false, error: `Topics are ${min}–${max} characters.` };
     if (url && !StudyPlanContract.isLink(url)) return { ok: false, error: "Material links must start with https://." };
-    return { ok: true, value: { dueOn: dueOn || null, topic, status, note, materialUrl: url || null } };
+    return { ok: true, value: { startOn: startOn && startOn < dueOn ? startOn : null, dueOn: dueOn || null, topic, status, note, materialUrl: url || null, mockId } };
   }
 }

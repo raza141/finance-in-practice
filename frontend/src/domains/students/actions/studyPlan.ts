@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
+import { MockRepository } from "@/domains/mocks/server/MockRepository";
 
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
 import { StudyPlanContract } from "../services/StudyPlanContract";
@@ -25,6 +26,18 @@ export async function addStudyTopics(formData: FormData): Promise<void> {
   const parsed = StudyPlanContract.parseLines(String(formData.get("lines") ?? ""));
   if (!parsed.ok) refused(path, parsed.error);
   else await repo.add(clientId, parsed.value);
+  redirect(`${path}?notice=plan-saved#study-plan`);
+}
+
+/** A mock on a day of the plan: the student's calendar starts it from there. Named after the mock. */
+export async function addStudyMock(formData: FormData): Promise<void> {
+  const { repo, clientId, path } = await plan(formData);
+  const mockId = String(formData.get("mockId") ?? "");
+  const mock = /^[0-9a-f-]{36}$/i.test(mockId) ? await MockRepository.fromEnv()?.byId(mockId) : null;
+  if (!mock) refused(path, "Choose a mock from the list.");
+  const parsed = StudyPlanContract.parseItem({ dueOn: formData.get("dueOn"), topic: mock!.title, status: "planned", mockId });
+  if (!parsed.ok) refused(path, parsed.error);
+  else await repo.add(clientId, [parsed.value]);
   redirect(`${path}?notice=plan-saved#study-plan`);
 }
 

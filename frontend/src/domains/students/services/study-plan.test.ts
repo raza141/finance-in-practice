@@ -8,10 +8,16 @@ describe("StudyPlanContract", () => {
     expect(result).toEqual({
       ok: true,
       value: [
-        { dueOn: "2026-11-03", topic: "Ethics", status: "planned", note: "", materialUrl: "https://drive.google.com/file/d/abc" },
-        { dueOn: null, topic: "Quant methods", status: "planned", note: "", materialUrl: null },
+        { startOn: null, dueOn: "2026-11-03", topic: "Ethics", status: "planned", note: "", materialUrl: "https://drive.google.com/file/d/abc", mockId: null },
+        { startOn: null, dueOn: null, topic: "Quant methods", status: "planned", note: "", materialUrl: null, mockId: null },
       ],
     });
+  });
+
+  it("reads a date range, and refuses one that ends before it starts", () => {
+    expect(StudyPlanContract.parseLines("2026-11-01..2026-11-30 Books 1–2")).toMatchObject({ ok: true, value: [{ startOn: "2026-11-01", dueOn: "2026-11-30", topic: "Books 1–2" }] });
+    expect(StudyPlanContract.parseLines("2026-11-30..2026-11-01 Books 1–2").ok).toBe(false);
+    expect(StudyPlanContract.parseItem({ topic: "Books", status: "planned", startOn: "2026-11-01" }).ok).toBe(false);
   });
 
   it("refuses impossible dates and non-https links", () => {

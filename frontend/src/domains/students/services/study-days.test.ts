@@ -5,7 +5,7 @@ import type { AttemptSummary } from "@/domains/mocks/types";
 import type { StudentSession, StudyPlanItem } from "../types";
 import { StudyDays } from "./StudyDays";
 
-const item = (id: string, dueOn: string | null, status: StudyPlanItem["status"] = "planned"): StudyPlanItem => ({ id, dueOn, topic: id, status, note: "", materialUrl: null, studentChangedAt: null });
+const item = (id: string, dueOn: string | null, status: StudyPlanItem["status"] = "planned"): StudyPlanItem => ({ id, dueOn, startOn: null, mockId: null, topic: id, status, note: "", materialUrl: null, studentChangedAt: null });
 const session = (uid: string, start: string): StudentSession => ({ uid, start, end: start, minutes: 60, course: "CFA Level I", status: "accepted", meetingUrl: null, address: null, group: false });
 const attempt = (id: string, submittedAt: string, score: number): AttemptSummary => ({ id, mockId: "m", mockTitle: "QM mock", startedAt: new Date(submittedAt), submittedAt: new Date(submittedAt), score, total: 20, status: "completed", mistakes: false });
 
@@ -36,6 +36,32 @@ describe("StudyDays.build", () => {
   it("keeps undated planned topics apart, and matches topics to the bank", () => {
     expect(unscheduled.map((u) => u.id)).toEqual(["someday"]);
     expect(days["2026-11-12"]).toMatchObject([{ test: "Fixed Income" }]);
+  });
+});
+
+describe("StudyDays ranges and scheduled mocks", () => {
+  const { days } = StudyDays.build({
+    items: [
+      { ...item("books", "2026-11-12"), startOn: "2026-11-10" },
+      { ...item("mock1", "2026-11-20"), mockId: "m" },
+      { ...item("mock2", "2026-11-21"), mockId: "m2" },
+    ],
+    sessions: [],
+    attempts: [attempt("a1", "2026-11-05T10:00:00Z", 15)],
+    exam: null,
+    bankTopics: [],
+    openMocks: ["m2"],
+    today: "2026-11-07",
+  });
+
+  it("lays a range across its days as one band", () => {
+    expect(["2026-11-10", "2026-11-11", "2026-11-12"].map((d) => (days[d][0] as { span: string }).span)).toEqual(["start", "mid", "end"]);
+    expect(days["2026-11-13"]).toBeUndefined();
+  });
+
+  it("ticks a scheduled mock once it's finished, and offers Start only when it's open", () => {
+    expect(days["2026-11-20"]).toMatchObject([{ status: "done", mock: { id: "m", open: false } }]);
+    expect(days["2026-11-21"]).toMatchObject([{ status: "planned", mock: { id: "m2", open: true } }]);
   });
 });
 
