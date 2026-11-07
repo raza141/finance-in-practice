@@ -74,7 +74,7 @@ export function PackagePicker({
       course: c.title,
       slug: c.slug,
       label: c.title,
-      hint: PackageTable.groupOf(c) === "exam" ? "Exam preparation" : c.category,
+      hint: { exam: "Exam preparation", university: "Coursework & dissertations" }[PackageTable.groupOf(c) as string] ?? c.category,
       group: PackageTable.groupOf(c),
     })),
     ...SUBJECTS,

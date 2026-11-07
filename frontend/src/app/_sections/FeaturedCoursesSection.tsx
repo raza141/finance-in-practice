@@ -55,12 +55,19 @@ export async function FeaturedCoursesSection() {
           return (
             <li
               key={course.id}
-              className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 sm:p-8"
+              className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 lg:p-7"
             >
               <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full bg-quant/10 blur-3xl" />
-              <h3 className="relative text-3xl font-black sm:text-4xl">{course.title}</h3>
+              <h3 className="relative text-2xl font-black sm:text-3xl">{course.title}</h3>
+              {university && (
+                <p className="relative mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
+                  <span aria-hidden className="h-2 w-2 rounded-full bg-quant" />
+                  <span className="font-semibold text-quant">Any semester</span>
+                  Midterms, finals &amp; thesis deadlines
+                </p>
+              )}
               {next && (
-                <p className="relative mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
+                <p className="relative mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-quant/30 bg-quant/10 px-3 py-1 text-xs text-ink">
                   <span aria-hidden className="relative flex h-2 w-2">
                     <span className="absolute inset-0 animate-ping rounded-full bg-quant/60 motion-reduce:hidden" />
                     <span className="relative h-2 w-2 rounded-full bg-quant" />
@@ -71,10 +78,10 @@ export async function FeaturedCoursesSection() {
               )}
 
               {savers.length > 0 && (
-                <div className="relative mt-6 rounded-2xl border border-line bg-canvas/60 p-5">
+                <div className="relative mt-5 rounded-2xl border border-line bg-canvas/60 p-4">
                   {study && (
-                    <p className="mb-3 text-sm text-muted">
-                      <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study
+                    <p className="mb-2.5 text-sm text-muted">
+                      <span className="tabular-data text-xl font-bold text-ink">{study}</span> typical self-study
                     </p>
                   )}
                   <ul className="grid gap-2 text-sm text-ink/90">
@@ -90,14 +97,14 @@ export async function FeaturedCoursesSection() {
                 </div>
               )}
 
-              <div className="relative mt-auto pt-6">
+              <div className="relative mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pt-5">
                 {course.priceMinor ? (
                   <p className="text-sm text-muted">
                     <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour
-                    {university && <> · AED 2,000 / month (20 hours)</>}
+                    {university && <> · AED 2,000 / month</>}
                   </p>
                 ) : null}
-                <div className="btn-group mt-4">
+                <div className="btn-group w-full sm:w-auto">
                   <BookButton track={university ? "uni" : course.category === "FRM" ? "frm" : "cfa"} />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary">
                     Learn more →

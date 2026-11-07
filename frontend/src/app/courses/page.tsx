@@ -7,6 +7,7 @@ import { QuantLabMetrics } from "@/domains/education/components/QuantLabMetrics"
 import { ServiceCatalog } from "@/domains/education/services/ServiceCatalog";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
 import type { Course } from "@/domains/courses/types";
 
 // ISR like the course pages; admin saves revalidate it immediately.
@@ -53,7 +54,7 @@ export default async function CoursesPage() {
                     href={`/courses/${course.slug}`}
                     className="group flex h-full flex-col rounded-xl border border-line bg-surface p-6 transition-colors hover:border-quant/60"
                   >
-                    <p className="font-mono text-xs tracking-[0.16em] text-quant uppercase">{course.category}</p>
+                    <p className="font-mono text-xs tracking-[0.16em] text-quant uppercase">{course.category === PackageTable.UNIVERSITY_CATEGORY ? "University" : course.category}</p>
                     <h2 className="mt-3 text-2xl font-bold group-hover:text-quant">{course.title}</h2>
                     <p className="mt-3 flex-1 leading-relaxed text-muted">{course.summary}</p>
                     <p className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm">

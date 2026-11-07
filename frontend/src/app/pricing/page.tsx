@@ -40,31 +40,35 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
 
       {/* The picker shows prices only after a course is chosen; this list puts every price in the page itself. */}
       {packages.some((p) => !PackageTable.isCustom(p)) && (
-        <section aria-labelledby="price-list" className="mt-16 max-w-3xl">
-          <h2 id="price-list" className="text-2xl font-bold">
+        <section aria-labelledby="price-list" className="mt-16">
+          <h2 id="price-list" className="text-3xl font-bold">
             All prices
           </h2>
-          {(["exam", "university"] as const).map((audience) => {
-            const rows = packages.filter((p) => p.audience === audience && !PackageTable.isCustom(p));
-            if (rows.length === 0) return null;
-            return (
-              <table key={audience} className="mt-6 w-full overflow-hidden rounded-2xl border border-line bg-surface text-sm">
-                <caption className="pb-2 text-left font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{PackageTable.AUDIENCE[audience]}</caption>
-                <tbody className="divide-y divide-line">
-                  {rows.map((p) => (
-                    <tr key={p.id}>
-                      <th scope="row" className="p-4 text-left font-semibold">{p.name}</th>
-                      <td className="p-4 text-muted">{PackageTable.hours(p)}</td>
-                      <td className="tabular-data p-4 text-right font-semibold whitespace-nowrap text-ink">
-                        {PackageTable.price(p)} {PackageTable.per(p)}
-                        {PackageTable.perHour(p) && <span className="block text-xs font-normal text-muted">{PackageTable.perHour(p)}</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            );
-          })}
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            {(["exam", "university"] as const).map((audience) => {
+              const rows = packages.filter((p) => p.audience === audience && !PackageTable.isCustom(p));
+              if (rows.length === 0) return null;
+              return (
+                <div key={audience} className="overflow-hidden rounded-3xl border border-white/10 bg-canvas/70 backdrop-blur">
+                  <h3 className="border-b border-line px-6 py-4 font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{PackageTable.AUDIENCE[audience]}</h3>
+                  <ul className="divide-y divide-line">
+                    {rows.map((p) => (
+                      <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-0.5 px-6 py-4 sm:grid-cols-[minmax(0,1fr)_8rem_9rem]">
+                        <span className="font-semibold text-ink">{p.name}</span>
+                        <span className="col-start-1 row-start-2 text-sm text-muted sm:col-start-auto sm:row-start-auto">{PackageTable.hours(p)}</span>
+                        <span className="col-start-2 row-span-2 row-start-1 text-right sm:col-start-auto sm:row-span-1 sm:row-start-auto">
+                          <span className="tabular-data block font-semibold whitespace-nowrap text-gold">
+                            {PackageTable.price(p)} {PackageTable.per(p)}
+                          </span>
+                          {PackageTable.perHour(p) && <span className="tabular-data block text-xs whitespace-nowrap text-muted">{PackageTable.perHour(p)}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
     </div>
