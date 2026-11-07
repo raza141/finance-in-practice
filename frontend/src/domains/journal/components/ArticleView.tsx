@@ -87,7 +87,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
         );
       }
       case "text":
-        return <RichText key={block.id} text={block.text} cites={cites} className="mt-5 text-[1.05rem] text-ink/90" />;
+        return <RichText key={block.id} text={block.text} cites={cites} className="mt-5 text-[1.05rem] text-ink/90 xl:text-lg" />;
       case "takeaway":
         return (
           <aside key={block.id} aria-label="Executive takeaway" className="mt-8 rounded-xl border border-quant/40 bg-quant/5 p-6">
@@ -125,7 +125,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
           <aside
             key={block.id}
             aria-label="Margin note"
-            className="mt-5 rounded-lg border border-line bg-surface/60 p-4 text-sm leading-relaxed text-muted 2xl:float-right 2xl:clear-right 2xl:-mr-[18rem] 2xl:mt-1 2xl:w-60 2xl:border-0 2xl:border-l 2xl:bg-transparent 2xl:p-0 2xl:pl-4"
+            className="mt-5 rounded-lg border border-line bg-surface/60 p-4 text-sm leading-relaxed text-muted 2xl:float-right 2xl:clear-right 2xl:mt-1 2xl:ml-8 2xl:w-60 2xl:border-0 2xl:border-l 2xl:bg-transparent 2xl:p-0 2xl:pl-4"
           >
             <Inline text={block.text} cites={cites} />
           </aside>
@@ -261,7 +261,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
   }
 
   return (
-    <article className="page-container pt-10 pb-16 lg:pt-12">
+    <article data-plain-page className="page-container pt-10 pb-16 lg:pt-12">
       <header className="max-w-4xl">
         <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
           ← Blog
@@ -291,7 +291,7 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
       </header>
 
       {/* Reading column on the site's left edge (~70 characters a line); contents and booking ride in a sticky rail on wide screens. */}
-      <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,48rem)_18rem] lg:justify-between">
+      <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-16 2xl:grid-cols-[minmax(0,72rem)_24rem] 2xl:gap-20 2xl:justify-between">
         <div className="min-w-0">
           {doc.featuredImage?.url && (
             <figure>
@@ -384,9 +384,9 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
           </div>
 
           {/* Readers who aren't ready to book can still follow for the next article. */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-linkedin/40 bg-linkedin/10 p-5">
+          <div className="mt-6 space-y-4 rounded-xl border border-linkedin/40 bg-linkedin/10 p-5">
             <p className="text-sm text-ink/90">New articles and exam tips, on LinkedIn.</p>
-            <LinkedInFollow note="Get the next article in your feed" />
+            <LinkedInFollow note="Get the next article in your feed" className="w-full" />
           </div>
         </aside>
       </div>

@@ -68,7 +68,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
 
   return (
     <>
-      <section className="page-container pt-10 pb-8 lg:pt-12">
+      <section data-plain-page className="page-container pt-10 pb-8 lg:pt-12">
         <h1 className="max-w-3xl text-4xl leading-tight font-black sm:text-5xl">Notes from the trading desk of theory</h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
           Worked explanations of exam topics, risk models, markets and the Python behind them. Every chart carries its source and date.
@@ -112,7 +112,12 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                   </div>
                   {article.featuredImage && (
                     // eslint-disable-next-line @next/next/no-img-element -- author images from Blob, dimensions unknown
-                    <img src={article.featuredImage.url} alt="" loading="lazy" className="hidden aspect-[4/3] w-48 shrink-0 rounded-lg border border-line object-cover sm:block" />
+                    <img
+                      src={article.featuredImage.url}
+                      alt=""
+                      loading="lazy"
+                      className="hidden aspect-[4/3] w-48 shrink-0 rounded-lg border border-line object-cover sm:block"
+                    />
                   )}
                 </Link>
               </li>
