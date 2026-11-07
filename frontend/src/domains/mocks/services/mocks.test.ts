@@ -106,6 +106,12 @@ describe("bank tags", () => {
     expect(bad.ok).toBe(false);
     expect(!bad.ok && bad.errors[0]).toMatch(/Session.*Difficulty.*Type/);
   });
+  it("stores one short spelling per topic and rejects names off the list", () => {
+    expect(["fsa", "Financial Statement Analysis", " QUANT ", "Ethical and Professional Standards"].map(MockContract.topic)).toEqual(["FSA", "FSA", "Quant", "Ethics"]);
+    expect(MockContract.topic("Book 2: Quant")).toBeNull();
+    const sheet = MockContract.parseSheet(`${head}\nQuantitative Methods,Q?,A1,B1,C1,A,,,,\nMacro,Q?,A1,B1,C1,A,,,,`);
+    expect(!sheet.ok && sheet.errors).toEqual([expect.stringMatching(/^Row 3: Topic must be one of/)]);
+  });
   it("filters ignore case on text, drop unknown values, and leave blanks open", () => {
     const f = MockContract.parseFilter((k) => ({ source: " fip 2025 mock s1 - mock 1 ", session: "2025 S3", difficulty: "MEDIUM", kind: "x" })[k] ?? "");
     expect(f).toEqual({ chapter: "", source: "fip 2025 mock s1 - mock 1", session: "", difficulty: "medium", kind: "" });

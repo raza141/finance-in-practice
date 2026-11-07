@@ -100,7 +100,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
           {editing?.locked && !copying && (
             <p className="mb-4 text-sm text-muted">Students have started an assessment with this question, so only its chapter, use, level, explanation and why notes can change. Use Copy for a reworded version.</p>
           )}
-          <MockQuestionForm key={edit + copy} question={copying ?? editing ?? undefined} copying={!!copying} locked={!copying && !!editing?.locked} topics={topics} chapters={chapters} back={bank()} />
+          <MockQuestionForm key={edit + copy} question={copying ?? editing ?? undefined} copying={!!copying} locked={!copying && !!editing?.locked} topics={[...MockContract.TOPICS]} chapters={chapters} back={bank()} />
           {editing && !editing.locked && !copying && (
             <form action={deleteBankQuestion} className="mt-4">
               <input type="hidden" name="questionId" value={editing.id} />

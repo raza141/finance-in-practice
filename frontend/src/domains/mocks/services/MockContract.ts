@@ -64,6 +64,21 @@ export class MockContract {
   static readonly KINDS: Record<QuestionKind, string> = { fundamental: "Fundamental", formula: "Formula" };
   /** The exam sitting: "2025 S1". */
   static readonly SESSION = /^\d{4} S[12]$/;
+  /** The bank's topic names, one spelling each; an upload or edit with the full CFA name is stored as the short one. */
+  static readonly TOPICS = ["Ethics", "Quant", "Economics", "FSA", "Corporate Issuers", "Equity", "Fixed Income", "Derivatives", "Alternatives", "Portfolio Management"] as const;
+  private static readonly TOPIC_NAMES: Record<string, string> = {
+    "ethical and professional standards": "Ethics",
+    "quantitative methods": "Quant",
+    "financial statement analysis": "FSA",
+    "equity investments": "Equity",
+    "alternative investments": "Alternatives",
+  };
+
+  /** "fsa", "Financial Statement Analysis" → "FSA"; null for a name off the list. */
+  static topic(raw: string): string | null {
+    const key = raw.trim().toLowerCase();
+    return MockContract.TOPIC_NAMES[key] ?? MockContract.TOPICS.find((t) => t.toLowerCase() === key) ?? null;
+  }
   static readonly FILTER_KEYS = ["chapter", "source", "session", "difficulty", "kind"] as const;
   static readonly USAGES: Record<QuestionUsage, string> = {
     mock: "Mocks only",
@@ -255,6 +270,7 @@ export class MockContract {
     if (at("number") && (!Number.isInteger(number) || number < 1 || number > MockContract.MAX_QUESTIONS)) problems.push(`Number "${at("number")}" is not 1 to 500`);
     if (at("usage") && !MockContract.isUsage(at("usage").toLowerCase())) problems.push(`Usage must be mock, practice or both (got "${at("usage")}")`);
     if (at("level") && !MockContract.level(at("level"))) problems.push(`Level must be 1 or 2 (got "${at("level")}")`);
+    if (at("topic") && !MockContract.topic(at("topic"))) problems.push(`Topic must be one of ${MockContract.TOPICS.join(", ")} (got "${at("topic")}")`);
     if (at("session") && !MockContract.SESSION.test(at("session").toUpperCase())) problems.push(`Session must look like 2025 S1 (got "${at("session")}")`);
     if (at("difficulty") && !(at("difficulty").toLowerCase() in MockContract.DIFFICULTIES)) problems.push(`Difficulty must be easy, medium or hard (got "${at("difficulty")}")`);
     if (at("kind") && !(at("kind").toLowerCase() in MockContract.KINDS)) problems.push(`Type must be fundamental or formula (got "${at("kind")}")`);
@@ -290,7 +306,7 @@ export class MockContract {
   private static toInput(at: (c: Column) => string, usage: QuestionUsage = "mock", level: CfaLevel = 1): MockQuestionInput {
     return {
       number: Number(at("number")),
-      topic: at("topic"),
+      topic: MockContract.topic(at("topic")) ?? at("topic"),
       chapter: at("chapter"),
       usage: (at("usage").toLowerCase() as QuestionUsage) || usage,
       level: MockContract.level(at("level")) ?? level,
