@@ -25,17 +25,17 @@ export const STRESS_PREVIEW = [
   { label: "+200bp", shock: -0.1 },
 ] as const;
 
-/** Specialist tracks on /courses, after the exam course pages (which replace a combined CFA/FRM card). */
+/** Specialist tracks on /courses, after the course pages (CFA, FRM and University Finance each have one). */
 export class ServiceCatalog {
   private static readonly SERVICES: readonly BentoService[] = [
     {
-      id: "university",
-      kicker: "01 · Mentorship",
-      title: "University finance",
+      id: "personal-finance",
+      kicker: "01 · Private wealth",
+      title: "Personal finance & portfolio building",
       summary:
-        "1-on-1 support for corporate finance, investments and econometrics coursework, dissertations and interviews.",
-      tags: ["Coursework", "Dissertations"],
-      fee: siteConfig.fees.university,
+        "1-on-1 classes on budgeting, saving, investing and building your own portfolio, with the same models used in the exam courses.",
+      tags: ["Budgeting", "Investing", "Portfolios"],
+      fee: siteConfig.fees.personal,
       span: 4,
       visual: "none",
     },

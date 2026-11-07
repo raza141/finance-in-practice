@@ -15,7 +15,12 @@ import { WhyUsSection } from "./_sections/WhyUsSection";
 // admin saves revalidate "/" immediately, this hourly ISR is a fallback.
 export const revalidate = 3600;
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: "CFA® & FRM® Classes & Coaching in Abu Dhabi | Finance in Practice" },
+  description:
+    "Instructor-led 1-on-1 CFA® Level I & II, FRM® Part I and university finance classes in Abu Dhabi or live online across the UAE. CBT mocks, AED 150/hour. Free 30-min diagnostic.",
+  alternates: { canonical: "/" },
+};
 
 /** One goal: book a diagnostic session. Order: offer → method → portal → who teaches (+ Google reviews) → steps → booking,
  * then a free download for visitors not ready to book. */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { siteConfig } from "@/core/config/site";
 import { PackagePicker } from "@/domains/packages/components/PackagePicker";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
 import { safely } from "@/domains/students/components/PortalView";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 
@@ -36,6 +37,36 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
           />
         )}
       </div>
+
+      {/* The picker shows prices only after a course is chosen; this list puts every price in the page itself. */}
+      {packages.some((p) => !PackageTable.isCustom(p)) && (
+        <section aria-labelledby="price-list" className="mt-16 max-w-3xl">
+          <h2 id="price-list" className="text-2xl font-bold">
+            All prices
+          </h2>
+          {(["exam", "university"] as const).map((audience) => {
+            const rows = packages.filter((p) => p.audience === audience && !PackageTable.isCustom(p));
+            if (rows.length === 0) return null;
+            return (
+              <table key={audience} className="mt-6 w-full overflow-hidden rounded-2xl border border-line bg-surface text-sm">
+                <caption className="pb-2 text-left font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{PackageTable.AUDIENCE[audience]}</caption>
+                <tbody className="divide-y divide-line">
+                  {rows.map((p) => (
+                    <tr key={p.id}>
+                      <th scope="row" className="p-4 text-left font-semibold">{p.name}</th>
+                      <td className="p-4 text-muted">{PackageTable.hours(p)}</td>
+                      <td className="tabular-data p-4 text-right font-semibold whitespace-nowrap text-ink">
+                        {PackageTable.price(p)} {PackageTable.per(p)}
+                        {PackageTable.perHour(p) && <span className="block text-xs font-normal text-muted">{PackageTable.perHour(p)}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          })}
+        </section>
+      )}
     </div>
   );
 }

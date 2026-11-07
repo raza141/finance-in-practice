@@ -84,7 +84,8 @@ export const siteConfig = {
   /** Public fees, by the hour or by the month (flexible schedule, at home in Abu Dhabi or online). Exam course pages keep theirs in Admin → Courses. */
   fees: {
     exam: "AED 150 / hour · 12 hours AED 1,500 · 30 hours AED 3,000",
-    university: "AED 100 / hour · AED 2,000 / month (20 hours)",
+    university: "AED 100 / hour · AED 950 / 10 hours · AED 2,000 / month (20 hours)",
+    personal: "AED 100 / hour",
   },
 
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */

@@ -13,9 +13,9 @@ import type { Course } from "@/domains/courses/types";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "CFA® & FRM® Courses in Abu Dhabi & Online",
+  title: "Instructor-Led CFA® & FRM® Courses in Abu Dhabi & UAE",
   description:
-    "1-on-1 CFA® Level I, CFA® Level II and FRM® Part I tutoring in Abu Dhabi or online across the UAE, plus applied finance tracks. AED 150/hour, free diagnostic.",
+    "Instructor-led 1-on-1 CFA®, FRM®, university finance and personal finance classes in Abu Dhabi or online across the UAE. AED 100–150/hour. Free 30-min diagnostic.",
   alternates: { canonical: "/courses" },
 };
 
@@ -36,7 +36,7 @@ export default async function CoursesPage() {
     <>
       <header className="page-container pt-10 lg:pt-12">
         <h1 className="max-w-3xl text-4xl leading-tight font-bold sm:text-5xl">
-          CFA<sup className="text-[0.4em]">®</sup> &amp; FRM<sup className="text-[0.4em]">®</sup> courses, 1-on-1
+          CFA<sup className="text-[0.4em]">®</sup>, FRM<sup className="text-[0.4em]">®</sup> &amp; university finance courses, 1-on-1
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
           In person in Abu Dhabi or live online across the UAE. Every course starts with a free 30-minute diagnostic.
@@ -46,7 +46,7 @@ export default async function CoursesPage() {
       {courses.length > 0 && (
         <section id="course-pages" aria-label="Courses" className="scroll-mt-20">
           <div className="page-container pt-8 pb-12 lg:pb-16">
-            <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-6 md:grid-cols-2">
               {courses.map((course) => (
                 <li key={course.id}>
                   <Link

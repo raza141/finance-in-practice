@@ -8,6 +8,7 @@ import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import { ExamFacts } from "@/domains/courses/services/ExamFacts";
 import type { Course } from "@/domains/courses/types";
+import { PackageTable } from "@/domains/packages/services/PackageTable";
 
 /** How tutoring cuts each exam's study load. Topic shares mirror the Exam Map PDFs (scripts/resources/build-exam-maps.mjs). */
 const TIME_SAVERS: Partial<Record<NonNullable<Course["testimonialTicker"]>, readonly string[]>> = {
@@ -16,11 +17,20 @@ const TIME_SAVERS: Partial<Record<NonNullable<Course["testimonialTicker"]>, read
   FRM1: ["Start with the two topics worth 60% of the exam", "Quant learned once, used in both", "A diagnostic skips what you already know"],
 };
 
-/** Published exam courses, by title (CFA Level I, CFA Level II, FRM Part I); empty if the database is unreachable. */
+/** The university card's three lines, in place of an exam's time savers. */
+const UNIVERSITY_POINTS = [
+  "Corporate finance, valuation, investments and econometrics from first principles",
+  "Models built by you in Excel, Python, R, Stata or with Bloomberg data",
+  "A free diagnostic maps your syllabus, rubric or dissertation data plan",
+] as const;
+
+const TRACKED = new Set<string>(["CFA", "FRM", PackageTable.UNIVERSITY_CATEGORY]);
+
+/** Published exam and university courses, by title (CFA Level I, CFA Level II, FRM Part I, University Finance); empty if the database is unreachable. */
 async function examCourses(): Promise<Course[]> {
   try {
     const courses = (await CourseRepository.fromEnv()?.active()) ?? [];
-    return courses.filter((c) => c.category === "CFA" || c.category === "FRM").toSorted((a, b) => a.title.localeCompare(b.title));
+    return courses.filter((c) => TRACKED.has(c.category)).toSorted((a, b) => a.title.localeCompare(b.title));
   } catch (error) {
     console.error("home: could not load courses", error);
     return [];
@@ -32,15 +42,16 @@ export async function FeaturedCoursesSection() {
   const courses = await examCourses();
   return (
     <section aria-labelledby="featured-heading" className="page-container py-12 lg:py-16">
-      <SectionHeading id="featured-heading" title="Pick your exam. We'll get you through it." />
+      <SectionHeading id="featured-heading" title="Pick your exam or degree track. We'll get you through it." />
 
-      <ul className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-8 grid gap-6 md:grid-cols-2">
         {courses.map((course) => {
           const exam = ExamFacts.for(course.testimonialTicker);
           const study = exam?.facts.find((f) => f.label === "typical study")?.value;
           // Re-evaluated every ISR window (1h), so the countdown moves on by itself.
           const [next] = exam ? ExamFacts.nextWindows(exam, new Date(), 1) : [];
-          const savers = (course.testimonialTicker && TIME_SAVERS[course.testimonialTicker]) || [];
+          const university = course.category === PackageTable.UNIVERSITY_CATEGORY;
+          const savers = university ? UNIVERSITY_POINTS : (course.testimonialTicker && TIME_SAVERS[course.testimonialTicker]) || [];
           return (
             <li
               key={course.id}
@@ -59,12 +70,14 @@ export async function FeaturedCoursesSection() {
                 </p>
               )}
 
-              {study && (
+              {savers.length > 0 && (
                 <div className="relative mt-6 rounded-2xl border border-line bg-canvas/60 p-5">
-                  <p className="text-sm text-muted">
-                    <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study
-                  </p>
-                  <ul className="mt-3 grid gap-2 text-sm text-ink/90">
+                  {study && (
+                    <p className="mb-3 text-sm text-muted">
+                      <span className="tabular-data text-2xl font-bold text-ink">{study}</span> typical self-study
+                    </p>
+                  )}
+                  <ul className="grid gap-2 text-sm text-ink/90">
                     {savers.map((line) => (
                       <li key={line} className="flex gap-2.5">
                         <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-canvas">
@@ -81,10 +94,11 @@ export async function FeaturedCoursesSection() {
                 {course.priceMinor ? (
                   <p className="text-sm text-muted">
                     <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour
+                    {university && <> · AED 2,000 / month (20 hours)</>}
                   </p>
                 ) : null}
                 <div className="btn-group mt-4">
-                  <BookButton track={course.category === "FRM" ? "frm" : "cfa"} />
+                  <BookButton track={university ? "uni" : course.category === "FRM" ? "frm" : "cfa"} />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary">
                     Learn more →
                   </ButtonLink>
@@ -95,7 +109,7 @@ export async function FeaturedCoursesSection() {
         })}
       </ul>
       <p className="mt-6 text-muted">
-        Also 1-on-1: university finance, financial modeling, Python automation and more.{" "}
+        Also 1-on-1: personal finance, financial modeling, Python automation and more.{" "}
         <Link href="/courses" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
           See all tracks →
         </Link>

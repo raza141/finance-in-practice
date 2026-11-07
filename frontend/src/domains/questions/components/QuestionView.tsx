@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { BookButton } from "@/core/components/ui/BookButton";
+import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
 import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
 import type { Instructor } from "@/domains/team/types";
@@ -23,6 +25,27 @@ import { SubscribeForm } from "./SubscribeForm";
 /** The formula field is raw LaTeX; tolerate pasted $…$ or $$…$$ around it. */
 function formulaHtml(formula: string): string {
   return texToHtml(formula.trim().replace(/^\$\$?([\s\S]*?)\$\$?$/, "$1"), true);
+}
+
+/** The course page a question's level sells; Level III has none yet, so the catalogue. */
+const COURSE_PATH: Record<number, string> = { 1: "/courses/cfa-level-i", 2: "/courses/cfa-level-ii", 4: "/courses/frm-part-1" };
+
+/** The conversion card under the insight: the question's own exam, its lowest hourly rate, two buttons. */
+function CourseCallout({ level }: { level: number }) {
+  const exam = QuestionTaxonomy.levelLabel(level).replace(/^(CFA|FRM)/, "$1®");
+  return (
+    <section aria-labelledby="course-callout" className="mt-12 rounded-3xl border border-gold/40 bg-canvas/70 p-6 backdrop-blur sm:p-8">
+      <h2 id="course-callout" className="max-w-2xl text-2xl font-bold">
+        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE, from AED 100 / hour
+      </h2>
+      <div className="btn-group mt-6">
+        <BookButton track={QuestionTaxonomy.examOf(level)} />
+        <ButtonLink href={COURSE_PATH[level] ?? "/courses"} variant="secondary">
+          See the {exam} course →
+        </ButtonLink>
+      </div>
+    </section>
+  );
 }
 
 /** One cell of the spec strip under the title; linked cells open the Question Bank filtered to that value. */
@@ -254,6 +277,8 @@ export function QuestionView({
       )}
 
       {q.source && <p className="mt-8 text-sm text-muted">Covers: {q.source}</p>}
+
+      {!preview && <CourseCallout level={q.level} />}
 
       {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} title={q.title} exam={QuestionTaxonomy.examName(q.level)} />}
 

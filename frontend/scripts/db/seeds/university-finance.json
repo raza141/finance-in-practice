@@ -1,0 +1,159 @@
+{
+  "slug": "university-finance",
+  "title": "University Finance & Dissertations",
+  "category": "Uni Finance",
+  "eyebrow": "UNIVERSITY FINANCE · BSc · MSc · MBA",
+  "tagline": "Coursework you understand. Models you can defend.",
+  "summary": "One-to-one university finance coaching built around your lecture syllabus, problem sets, dissertation data and financial models you build and test yourself.",
+  "audience": "Designed for committed BSc, MSc and MBA students in Abu Dhabi, Dubai and at international universities who want to understand their coursework, build and explain their own models, and defend their research. Sessions are 1-on-1 teaching and mentorship, never ghostwriting or completing assignments on your behalf.",
+  "notFor": "",
+  "disclaimer": "",
+  "difference": "Models you build and defend, not black-box templates.\nEvery valuation, problem set and regression is worked from first principles, then built step by step in Excel, Python, R, Stata or with Bloomberg data, so you know what the output says, why the specification holds and how to defend each assumption in your exam, viva or interview.",
+  "ctaLabel": "Book a Free Diagnostic Session",
+  "bookingUrl": "#book",
+  "coachingLabel": "Question work",
+  "practiceLabel": "Live case",
+  "weightLabel": "",
+  "startDate": null,
+  "duration": "1-on-1 · Abu Dhabi in person or online",
+  "priceMinor": 10000,
+  "currency": "AED",
+  "isActive": true,
+  "method": [
+    {
+      "title": "Map & learn",
+      "description": "Each module starts from your syllabus, lecture slides and grading rubric. Missing foundations are taught before any formula or code."
+    },
+    {
+      "title": "Solve",
+      "description": "Problem sets, past midterms and finals, and case questions are worked live. You explain your steps, and each error in setup, signs, discounting or statistical logic is found."
+    },
+    {
+      "title": "Build & apply",
+      "description": "Each topic becomes a working file you keep: a DCF or three-statement workbook, a Bloomberg ratio analysis, or a reproducible Python, R or Stata regression script."
+    },
+    {
+      "title": "Defend & revise",
+      "description": "Before the exam or submission, we test your understanding with timed exam drills, viva questions or technical interview prompts."
+    }
+  ],
+  "modes": [
+    {
+      "title": "Coursework & exam prep",
+      "description": "Bring your lecture slides, tutorial sheets and past papers. Sessions cover the concepts, worked problem sets and timed exam practice."
+    },
+    {
+      "title": "Dissertation & research",
+      "description": "Support for undergraduate capstones and MSc or MBA theses, from the research question and Bloomberg or WRDS data cleaning to the econometrics and results tables. The writing stays yours."
+    }
+  ],
+  "modules": [
+    {
+      "title": "Corporate Finance & Capital Budgeting",
+      "priority": "high_priority",
+      "summary": "Evaluate investment projects, cost of capital and financing decisions from first principles.",
+      "coaching": "NPV, IRR, free cash flow, WACC and Modigliani–Miller problems are worked step by step. Working-capital timing, tax-shield and discount-rate errors are diagnosed.",
+      "practice": "Pull a listed company's debt and equity data from Bloomberg, compute its WACC and evaluate an expansion project.",
+      "deliverable": "Capital-budgeting and WACC spreadsheet with sensitivity tables."
+    },
+    {
+      "title": "Equity Valuation & Financial Modeling",
+      "priority": "high_priority",
+      "summary": "Value a listed company with cash-flow models and multiples, and defend the assumptions.",
+      "coaching": "Dividend discount, FCFF, FCFE, residual income and peer-multiple problems are reviewed. Terminal-value, growth-rate and discount-rate mismatches are corrected.",
+      "practice": "Write a valuation memo on a listed company and compare intrinsic value with the market price.",
+      "deliverable": "Three-stage DCF and comparable-company workbook with a football-field chart."
+    },
+    {
+      "title": "Financial Statement Analysis & Accounting",
+      "priority": "high_priority",
+      "summary": "Link the three statements to judge earnings quality and solvency.",
+      "coaching": "Three-statement links, the indirect cash-flow method, DuPont analysis and working-capital problems are solved. Sign and accrual errors are fixed.",
+      "practice": "Reconcile a listed company's annual reports across five years and write a performance review.",
+      "deliverable": "Multi-year ratio and common-size analysis."
+    },
+    {
+      "title": "Econometrics, Time Series & Panel Data",
+      "priority": "high_priority",
+      "summary": "Specify, run and interpret regressions that hold up in grading and thesis review.",
+      "coaching": "OLS, fixed and random effects, logit and probit, ARIMA and GARCH are tested in Python, R, Stata or EViews. Multicollinearity, heteroskedasticity, endogeneity and p-value errors are diagnosed.",
+      "practice": "Clean a panel dataset, run fixed-effects regressions with clustered standard errors and interpret the economic significance.",
+      "deliverable": "Commented script and regression tables with diagnostic tests."
+    },
+    {
+      "title": "Investments & Portfolio Theory",
+      "priority": "core",
+      "summary": "Build efficient portfolios and test asset-pricing models on historical returns.",
+      "coaching": "Mean-variance optimisation, Sharpe and Sortino ratios, CAPM, Fama–French factor models and performance attribution are worked through.",
+      "practice": "Download multi-asset returns, estimate the covariance matrix and plot the minimum-variance and tangency portfolios.",
+      "deliverable": "Efficient frontier and factor-regression file in Excel or Python."
+    },
+    {
+      "title": "Fixed Income & Debt Markets",
+      "priority": "core",
+      "summary": "Price bonds, bootstrap spot curves and measure interest-rate and credit risk.",
+      "coaching": "Bond pricing, spot and forward rates, Macaulay, modified and effective duration, convexity and credit spreads are solved and checked.",
+      "practice": "Price a corporate bond against the government curve and stress it for parallel and steepening shifts.",
+      "deliverable": "Yield-curve bootstrap and duration sheet."
+    },
+    {
+      "title": "Derivatives & Quantitative Risk",
+      "priority": "core",
+      "summary": "Price forwards, futures, swaps and options by no-arbitrage and measure tail risk.",
+      "coaching": "Binomial trees, Black–Scholes–Merton, the Greeks, delta hedging and parametric, historical and Monte Carlo VaR are worked by hand, then checked in code.",
+      "practice": "Build a delta-hedged option position and simulate daily P&L through a volatility shock.",
+      "deliverable": "Option-pricing and VaR calculator checked against Hull's textbook examples."
+    },
+    {
+      "title": "Dissertations, Capstones & Finance Interviews",
+      "priority": "high_priority",
+      "summary": "Take an empirical thesis or capstone from proposal to defence, and turn theory into interview answers.",
+      "coaching": "Research gap, hypotheses and methodology are tested by questioning. Investment banking and asset management technical questions are drilled live.",
+      "practice": "A mock viva or a 45-minute technical interview with line-by-line feedback.",
+      "deliverable": "Empirical chapter plan or interview case pack."
+    }
+  ],
+  "options": [
+    {
+      "title": "Pay by the hour",
+      "fee": "AED 100 / hour",
+      "description": "One live hour on the topic, problem set or script you choose, at your home in Abu Dhabi or online."
+    },
+    {
+      "title": "Exam & assignment sprint",
+      "fee": "AED 950 / 10 hours",
+      "description": "Ten hours before a midterm, final or case submission: AED 95 an hour."
+    },
+    {
+      "title": "Monthly mentorship",
+      "fee": "AED 2,000 / month",
+      "description": "20 hours a month for several modules or a dissertation, on a flexible schedule."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Which subjects and degree levels do you cover?",
+      "answer": "BSc, BBA, MSc Finance and MBA modules: corporate finance, investments, financial accounting, equity valuation, fixed income, derivatives and financial econometrics."
+    },
+    {
+      "question": "Do you help with dissertations, Bloomberg data and econometrics?",
+      "answer": "Yes. We work 1-on-1 through the research question, Bloomberg and WRDS data, panel and time-series regressions in Python, R, Stata or Excel, and reading the results. You write the dissertation; sessions teach you to do and defend each step."
+    },
+    {
+      "question": "What are the fees?",
+      "answer": "AED 100 an hour, AED 950 for a 10-hour exam or assignment sprint, or AED 2,000 a month for 20 hours. Every option starts with a free 30-minute diagnostic."
+    },
+    {
+      "question": "Are sessions in person or online?",
+      "answer": "Both. In person at your home in Abu Dhabi, including Khalifa City, or live online for students in Dubai, elsewhere in the UAE and abroad."
+    },
+    {
+      "question": "Will you do my assignment for me?",
+      "answer": "No. Sessions are teaching and mentorship. You leave able to solve, build and explain the work yourself."
+    }
+  ],
+  "brochureUrl": null,
+  "seoTitle": "University Finance Tutor & Dissertation Help in Abu Dhabi",
+  "seoDescription": "1-on-1 university finance tutoring in Abu Dhabi or online across the UAE: corporate finance, valuation, econometrics in Python, R or Stata, and dissertations. AED 100/hr.",
+  "testimonialTicker": null
+}
