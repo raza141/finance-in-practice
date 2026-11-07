@@ -369,12 +369,17 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   }
 }
 
-/* Spotlight (SpotlightCard): a soft cyan light under the cursor on cards you pick or buy. Pointer devices only. */
+/* Spotlight (SpotlightCard): a soft cyan light under the cursor on cards you pick or buy. Pointer devices only.
+ * Its own stacking context, so the light sits above the card's fill and under its content, whatever the content is. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
 .spotlight::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   border-radius: inherit;
   background: radial-gradient(420px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in oklab, var(--color-quant) 14%, transparent), transparent 65%);

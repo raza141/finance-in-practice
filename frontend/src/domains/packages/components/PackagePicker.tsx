@@ -3,6 +3,7 @@
 import { Check as CheckIcon } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 
+import { SpotlightCard } from "@/core/components/ui/SpotlightCard";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { RegistrationContract } from "@/domains/students/services/RegistrationContract";
 
@@ -175,7 +176,7 @@ export function PackagePicker({
                 const perHour = PackageTable.perHour(p);
                 const features = own.get(p.id) ?? [];
                 return (
-                  <li
+                  <SpotlightCard
                     key={p.id}
                     className={`row-span-4 grid grid-rows-subgrid gap-6 rounded-2xl border p-6 transition-colors sm:p-7 ${
                       selected ? "border-quant bg-quant/[0.06] ring-1 ring-quant" : p.featured ? "border-gold/50 bg-surface" : "border-line bg-surface"
@@ -210,7 +211,7 @@ export function PackagePicker({
                     </ul>
 
                     <div className="self-end">{button(p, `Choose ${p.name}`)}</div>
-                  </li>
+                  </SpotlightCard>
                 );
               })}
             </ul>
