@@ -1,5 +1,6 @@
 import { Receipt } from "lucide-react";
 
+import { CountUpText } from "@/core/components/ui/CountUpText";
 import { InvoiceMath } from "@/domains/invoices/services/InvoiceMath";
 import type { ClientDocument, Currency } from "@/domains/invoices/types";
 
@@ -104,7 +105,9 @@ export function AccountPanel({ account, offers = [], readOnly = false }: { accou
               const { text, tone } = balanceText(m);
               return (
                 <div key={m.currency} className="mt-2">
-                  <p className={`text-3xl font-semibold tabular-nums ${tone}`}>{text}</p>
+                  <p className={`text-3xl font-semibold tabular-nums ${tone}`}>
+                    <CountUpText text={text} />
+                  </p>
                   <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm tabular-nums">
                     <dt className="text-muted">Invoiced</dt>
                     <dd className="text-right text-ink">{InvoiceMath.money(m.chargedMinor, m.currency)}</dd>
@@ -135,7 +138,9 @@ export function AccountPanel({ account, offers = [], readOnly = false }: { accou
           </h2>
           {taken ? (
             <>
-              <p className="mt-2 text-3xl font-semibold text-ink tabular-nums">{hoursOf(taken.minutes)}</p>
+              <p className="mt-2 text-3xl font-semibold text-ink tabular-nums">
+                <CountUpText text={hoursOf(taken.minutes)} />
+              </p>
               <p className="text-sm text-muted">
                 over {taken.sessions} {taken.sessions === 1 ? "session" : "sessions"}
               </p>
@@ -205,7 +210,7 @@ function Prepaid({ account }: { account: StudentAccountView }) {
           return (
             <div key={p.unit} className="mt-2">
               <p className={`text-3xl font-semibold tabular-nums ${left < 0 ? "text-gold" : "text-ink"}`}>
-                {left < 0 ? `${-left} ${unit} over` : `${left} ${unit}`}
+                <CountUpText text={left < 0 ? `${-left} ${unit} over` : `${left} ${unit}`} />
               </p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-line/60" role="img" aria-label={`${p.used} of ${p.billed} used`}>
                 <div className="h-full rounded-full bg-quant" style={{ width: `${share * 100}%` }} />
@@ -234,7 +239,7 @@ function AllowanceCard({ allowance, readOnly }: { allowance: MonthAllowance; rea
         Your hours, {name}
       </h2>
       <p className={`mt-2 text-3xl font-semibold tabular-nums ${over ? "text-gold" : "text-ink"}`}>
-        {over ? `${hoursOf(-allowance.leftMinutes)} over` : `${hoursOf(allowance.leftMinutes)} left`}
+        <CountUpText text={over ? `${hoursOf(-allowance.leftMinutes)} over` : `${hoursOf(allowance.leftMinutes)} left`} />
       </p>
       <div
         className="mt-3 flex h-2 overflow-hidden rounded-full bg-line/60"
@@ -328,7 +333,9 @@ function NextMonth({ next, plan }: { next: StudentAccountView["next"]; plan: Stu
       <h2 id="next-heading" className={LABEL}>
         Planning {name}
       </h2>
-      <p className="mt-2 text-3xl font-semibold text-ink tabular-nums">{hoursOf(next.minutesBooked)} booked</p>
+      <p className="mt-2 text-3xl font-semibold text-ink tabular-nums">
+        <CountUpText text={`${hoursOf(next.minutesBooked)} booked`} />
+      </p>
       <p className="text-sm text-muted">
         {next.paceMinutes !== null ? `You usually study ${hoursOf(next.paceMinutes)} a month.` : "Book ahead to keep your week free."}
       </p>

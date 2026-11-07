@@ -133,7 +133,7 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 
 - 150–200ms for hover and press, 300ms for panels. Ease out on entry.
 - Glow and tilt stay on the website hero and cards; the scrambling course title stays.
-- Three light touches, all CSS (no animation library): a cyan spotlight under the cursor on cards you pick or buy (`SpotlightCard`), one gold light circling the hero's Book button only (`.star-border`), and scores that count up once on the mock results (`CountUp`). Nothing moves inside a mock exam.
+- Three light touches, all CSS (no animation library): a cyan spotlight under the cursor on cards you pick or buy (`SpotlightCard`), one gold light circling the hero's Book button only (`.star-border`), and figures that count up once: scores on the mock results (`CountUp`, CSS) and the headline figures on Hours & payments (`CountUpText`, when the tab opens). Nothing moves inside a mock exam.
 - Everything respects `prefers-reduced-motion`.
 
 ## 9. Accessibility (non-negotiable)
