@@ -60,7 +60,7 @@ Colour never carries meaning alone: overdue is dashed **and** gold, done is tick
 |---|---|---|
 | Headings | Merriweather italic, normal weight | Page and card titles ("Your study plan") |
 | Body and UI | Inter | Everything else, 16px base on phones |
-| Labels and data | JetBrains Mono, uppercase, wide tracking, 11px | Card labels ("NEXT SESSION"), figures, buttons in the portal |
+| Labels and data | JetBrains Mono, uppercase, wide tracking, 11px | Card labels ("NEXT SESSION"), figures, buttons in the portal; portal tab labels at 10px |
 
 Scale: 12 / 14 / 16 / 20 / 24 / 30. Numbers that change (timers, money, scores) use tabular figures.
 
@@ -104,10 +104,11 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 
 - **Bar**: one sticky bar, 64px. Logo left, main navigation centre on wide screens, account right ("Me" menu: name, account pages, sign out). No second bar under it.
 - **Phones and tablets (< 1024px)**: main navigation becomes a bottom tab bar, at most 5 items, icon over label, the active one gold. Content leaves room for it.
+- **Tab labels** (bar and bottom bar): one short word under a 22px icon (Home, Sessions, Plan, Mocks, Class), JetBrains Mono 10px uppercase with light tracking, so they sit quiet like Instagram's icons but a new student still knows what each one is.
 - **A tab with several pages** (Sessions: Book a session, My sessions; Mocks: Mock exams, Progress, Mistakes notebook, Topic drill) opens a small menu in the bar on wide screens. From tablets up (768px, md) the page also shows a pill switch at the top, every page visible at once.
 - **Phones (< 768px) never get a pill switch or any sideways-scrolling row of tabs.** The tab opens on its first page; under that page's content, a "More in …" list shows the tab's other pages as rows (Lucide icon, name, one-line hint, chevron), close to the thumb. Every other page starts with one "‹ Sessions" / "‹ Mocks" link back; tapping the tab in the bottom bar does the same. Pattern from Duolingo's Practice hub and Apple's guidance (no overflow tabs, no hidden pages).
 - **Nothing on a phone scrolls sideways.** Long labels wrap or get shorter ("Resume retake", not "Resume mistakes retake"); the portal's page column is clamped to the screen.
-- **Two-column pages**: the main working area left, the narrow side panel (live preview, latest posts) right, about 22–24rem (Study plan, Book a session, Classroom). On phones they stack. When the side panel is reference rather than work (Study plan's programmes and materials), it folds into a slim rail on wide screens (`SidePanel`): closed by default, one tap opens it, so tablets give the room to the main area.
+- **Two-column pages**: the main working area left, the narrow side panel (live preview, latest posts) right, about 22–24rem (Study plan, Book a session, Classroom). On phones they stack. When the side panel is reference rather than work (Study plan's programmes and materials, Classroom's latest posts), it folds into a slim rail from tablets up (768px, `SidePanel`): closed by default, one tap opens it, so iPads give the room to the main area.
 - **Rows, not tiles** (everywhere): lists of things (to-dos, mocks, contact ways, services) are rows in one panel split by hairlines; each row is icon, title, one detail, and opens its page. Figures get one headline number with the rest on a quiet line beside it, not equal stat boxes. Features alternate screen and text; steps sit on a timeline. Cards stay only for things you pick or buy (courses, packages, templates, questions). Portal Home: a greeting, one card for the next session, To do, At a glance.
 - **Badges**: a small gold count on a tab only when something needs the student (overdue topics, sessions awaiting confirmation).
 - **Every tab has a URL** (`?tab=…`), so refresh, Back and shared links land in the same place.

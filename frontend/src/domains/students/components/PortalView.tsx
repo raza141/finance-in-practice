@@ -1,3 +1,4 @@
+import { Megaphone } from "lucide-react";
 import { Suspense } from "react";
 
 import { siteConfig } from "@/core/config/site";
@@ -30,6 +31,7 @@ import { AccountPanel, AccountSummaryRow } from "./AccountPanel";
 import { BOOK_BUTTON } from "./buttons";
 import { ClassroomPanel } from "./ClassroomPanel";
 import { PortalOverview } from "./PortalOverview";
+import { SidePanel } from "./SidePanel";
 import { CardSkeleton } from "./PortalSkeleton";
 import { StudentPortal } from "./StudentPortal";
 import { StudyPlanTimeline } from "./StudyPlanTimeline";
@@ -214,24 +216,31 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         // No Classroom yet (e.g. a single session): no tab, nothing to explain.
         classroom={
           hasClassroom ? (
-            // Wide: classrooms then everything by topic on the left, latest posts on the right. Phones: classrooms, latest posts, topics.
-            <div className={`grid items-start gap-6 ${synced ? "lg:grid-cols-[1fr_24rem]" : ""}`}>
-              <ClassroomPanel classes={classes} own={own} email={student.email} readOnly={readOnly} />
-              {synced && (
-                <>
-                  <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-                    <Suspense fallback={loading("what's new in your class")}>
-                      <ClassFeedSidebar result={feed} />
-                    </Suspense>
-                  </div>
-                  <div className="grid gap-6 lg:col-start-1">
+            // Classrooms then everything by topic is the work; latest posts fold into a rail from tablets up (as Study plan).
+            synced ? (
+              <SidePanel
+                label="New in your class"
+                rail={
+                  <span aria-hidden className="grid justify-items-center border-t border-line pt-3">
+                    <Megaphone strokeWidth={1.75} className="size-5 text-quant" />
+                  </span>
+                }
+                main={
+                  <div className="grid min-w-0 gap-6">
+                    <ClassroomPanel classes={classes} own={own} email={student.email} readOnly={readOnly} />
                     <Suspense fallback={null}>
                       <ClassTopics result={feed} />
                     </Suspense>
                   </div>
-                </>
-              )}
-            </div>
+                }
+              >
+                <Suspense fallback={loading("what's new in your class")}>
+                  <ClassFeedSidebar result={feed} />
+                </Suspense>
+              </SidePanel>
+            ) : (
+              <ClassroomPanel classes={classes} own={own} email={student.email} readOnly={readOnly} />
+            )
           ) : null
         }
       />

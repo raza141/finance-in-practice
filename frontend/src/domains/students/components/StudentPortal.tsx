@@ -267,9 +267,9 @@ export function StudentPortal({
         { label: `My sessions${sessions?.length ? ` (${sessions.length})` : ""}`, tab: "sessions", icon: CalendarClock, hint: "Upcoming and past sessions" },
       ],
     },
-    { id: "plan", label: "Study plan" },
+    { id: "plan", label: "Plan" },
     ...(mocks || progress ? [{ id: "mocks" as Tab, label: "Mocks", subs: mockPages }] : []),
-    ...(classroom ? [{ id: "classroom" as Tab, label: "Classroom" }] : []),
+    ...(classroom ? [{ id: "classroom" as Tab, label: "Class" }] : []),
   ];
   // Booking is a page of Sessions, Progress a page of Mocks; Hours & payments sits in the bar's Me menu.
   const lit: Tab = tab === "book" ? "sessions" : tab === "progress" || tab === "drill" ? "mocks" : tab;

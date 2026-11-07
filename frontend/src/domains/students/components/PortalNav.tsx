@@ -27,7 +27,7 @@ function Glyph({ id, active, count }: { id: Tab; active: boolean; count: number 
   const Icon = ICONS[id] ?? House;
   return (
     <span className="relative">
-      <Icon aria-hidden strokeWidth={active ? 2 : 1.6} className="size-6" />
+      <Icon aria-hidden strokeWidth={active ? 2 : 1.6} className="size-[22px]" />
       {count > 0 && (
         <span className="absolute -top-1.5 -right-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[10px] leading-none font-bold text-canvas">
           {count}
@@ -37,9 +37,10 @@ function Glyph({ id, active, count }: { id: Tab; active: boolean; count: number 
   );
 }
 
-const ITEM = "relative flex flex-col items-center justify-center gap-1 text-xs transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
+// Labels in the brand's label face (JetBrains Mono, small caps-style), short and quiet under the icon, Instagram-style.
+const ITEM = "relative flex flex-col items-center justify-center gap-1 font-mono text-[10px] leading-none tracking-[0.12em] uppercase transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
 const tone = (active: boolean, phone: boolean) => (active ? `font-semibold ${phone ? "text-gold" : "text-ink after:bg-gold"}` : "text-muted hover:text-ink");
-const DESK = "h-16 min-w-20 px-3 after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full";
+const DESK = "h-16 min-w-18 px-2.5 after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full";
 const MENU_LINK = "block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-white/5";
 
 /** Wide screens: a tab with pages opens a small menu under it (click, Esc or a click outside closes it). */
