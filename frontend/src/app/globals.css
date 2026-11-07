@@ -40,7 +40,7 @@
 }
 
 /* The portal's light theme (docs/brand.md §3): the same jobs, darker gold and teal so they read on white.
- * Set on <html> by PortalTheme, only on /student pages; the website stays dark. */
+ * Set on <html> by PortalTheme, only on mock and topic-test pages (/student/mocks/…); everything else stays dark. */
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
 html[data-theme="light"] {

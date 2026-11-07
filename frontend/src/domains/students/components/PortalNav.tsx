@@ -5,7 +5,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
-import { ThemeToggle } from "@/core/components/layout/PortalTheme";
 import { LINKEDIN_GLYPH } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 
@@ -229,7 +228,6 @@ export function PortalBar({ me, readOnly, onAccount, onPackage, ...tabs }: Tabs 
           <Logo height={30} priority />
         </Link>
         <DesktopNav {...tabs} />
-        <ThemeToggle className="ml-auto -mr-4" />
         <button type="button" popoverTarget="me-menu" className="flex shrink-0 items-center gap-2 rounded-btn py-1 pr-1 pl-1.5 text-sm hover:bg-ink/5">
           <span aria-hidden className="grid size-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
             {initialsOf(me.name)}
