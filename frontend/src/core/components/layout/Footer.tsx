@@ -66,7 +66,7 @@ export function Footer() {
           <p className="max-w-5xl">{siteConfig.disclosures.trademarks}</p>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-6 text-xs text-muted">
+        <div data-hide-bookbar className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-6 text-xs text-muted">
           <p>
             © {year} {siteConfig.name}. All rights reserved.
           </p>
