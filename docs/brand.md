@@ -111,6 +111,7 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 - **Every tab has a URL** (`?tab=…`), so refresh, Back and shared links land in the same place.
 - **Width and rhythm**: `page-container` for everything, so the bar, cards and logo share one left edge. Spacing on a 4/8px scale; cards 24px padding (32px on desktop), 24px between cards.
 - **Cards**: `rounded-3xl`, `border-white/10`, `bg-canvas/70` with blur; menus and popovers `rounded-2xl`, `bg-surface`.
+- **Buttons are pressed, never selected**: no button (or link drawn as a button) lets its text be selected; a tap, double-tap or long press only presses it. Set once in `globals.css`; don't override it.
 - **Website navbar**: the link pill shows from 1280px (xl); tablets and phones get the menu button. The Student portal button shows in full from 640px (sm), iPads included, and is never cut off at the edge.
 - **Marketing pages** keep the website navbar and footer; the student portal, mock screens and admin never show them.
 

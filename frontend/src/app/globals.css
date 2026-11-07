@@ -253,6 +253,15 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
   :where(button, [role="button"], input:is([type="submit"], [type="button"], [type="reset"])) {
     corner-shape: squircle;
   }
+
+  /* A button is only ever pressed: a tap, double-tap or long press (iPad) never selects its text or zooms,
+     which left the next tap selecting instead of pressing (mock answers). Links drawn as buttons share rounded-btn. */
+  :where(button, [role="button"], summary, input:is([type="submit"], [type="button"], [type="reset"]), a.rounded-btn) {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
 }
 
 /* The site's grid lines on a dark band, e.g. the invoice header and footer. */
