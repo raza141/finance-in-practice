@@ -1,3 +1,5 @@
+import { QuestionTaxonomy } from "@/domains/questions/services/QuestionTaxonomy";
+
 import type { StudyPlanInput, StudyStatus } from "../types";
 
 export type StudyPlanResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -6,6 +8,22 @@ export type StudyPlanResult<T> = { ok: true; value: T } | { ok: false; error: st
 export class StudyPlanContract {
   static readonly STATUSES: Record<StudyStatus, string> = { planned: "Planned", done: "Done", skipped: "Skipped" };
   static readonly LIMITS = { topic: [2, 160], note: 500, url: 500, lines: 60 } as const;
+  /** The books a plan is built from: the curriculum's topic areas in order (CFA Levels I and II share them; FRM Part I has four). */
+  static readonly BOOKS: Record<string, readonly string[]> = {
+    "CFA Level I / II": QuestionTaxonomy.topicsFor(1).map((t, i) => `Book ${i + 1} · ${t.name}`),
+    "FRM Part I": QuestionTaxonomy.topicsFor(4).map((t, i) => `Book ${i + 1} · ${t.name}`),
+  };
+  /** What can sit on a book's range: [form field prefix, the item's name before the book]. */
+  static readonly BOOK_STEPS = [
+    ["half", "Half-book test"],
+    ["full", "Full-book test"],
+    ["mock", "Book mock"],
+  ] as const;
+
+  static isBook(name: string): boolean {
+    return Object.values(StudyPlanContract.BOOKS).some((list) => list.includes(name));
+  }
+
   private static readonly DATE = /^\d{4}-\d{2}-\d{2}$/;
   private static readonly UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -144,6 +144,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     console.error("admin: could not load access grants", error);
     return [[], []] as [never[], never[]];
   });
+  const exam = await (StudyPlanRepository.fromEnv()?.nextExam(client.id) ?? Promise.resolve(null)).catch(() => null);
   const query = await searchParams;
   const notice = NOTICES[String(query.notice)];
   const reason = typeof query.reason === "string" ? query.reason : null;
@@ -546,7 +547,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
       )}
       </section>
 
-      <StudyPlanEditor clientId={client.id} items={plan} mocks={grantableMocks.map((m) => ({ id: m.id, title: m.title }))} />
+      <StudyPlanEditor clientId={client.id} items={plan} mocks={grantableMocks.map((m) => ({ id: m.id, title: m.title }))} attempts={mockAttempts} exam={exam} />
 
       <section id="mocks" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
         <h2 className="text-lg">Mock exams</h2>

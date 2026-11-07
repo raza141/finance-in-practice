@@ -20,6 +20,13 @@ describe("StudyPlanContract", () => {
     expect(StudyPlanContract.parseItem({ topic: "Books", status: "planned", startOn: "2026-11-01" }).ok).toBe(false);
   });
 
+  it("lists the books in curriculum order and knows them", () => {
+    expect(StudyPlanContract.BOOKS["CFA Level I / II"][0]).toBe("Book 1 · Ethical and Professional Standards");
+    expect(StudyPlanContract.BOOKS["CFA Level I / II"]).toHaveLength(10);
+    expect(StudyPlanContract.isBook("Book 2 · Quantitative Methods")).toBe(true);
+    expect(StudyPlanContract.isBook("Book 99 · Astrology")).toBe(false);
+  });
+
   it("refuses impossible dates and non-https links", () => {
     expect(StudyPlanContract.parseLines("2026-02-31 Ethics")).toEqual({ ok: false, error: "Line 1: Dates are YYYY-MM-DD." });
     expect(StudyPlanContract.parseLines("Ethics http://example.com/x")).toEqual({ ok: false, error: "Line 1: Material links must start with https://." });

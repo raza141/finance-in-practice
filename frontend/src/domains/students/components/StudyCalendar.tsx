@@ -7,6 +7,7 @@ import { practisePlanTopic } from "@/domains/mocks/actions/mocks";
 import { moveStudyTopic, setStudyTopicDone } from "../actions/myPlan";
 import { StudyDays, type StudyDayItem, type StudyTopic } from "../services/StudyDays";
 import { BUTTON } from "./buttons";
+import { PlanBookForm } from "./PlanBookForm";
 import { TabButton } from "./StudentPortal";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -73,6 +74,7 @@ export function StudyCalendar({
   today,
   last,
   readOnly,
+  planner,
 }: {
   days: Record<string, StudyDayItem[]>;
   unscheduled: StudyTopic[];
@@ -80,6 +82,8 @@ export function StudyCalendar({
   /** The last day a topic can move to: exam day, or a year ahead. */
   last: string;
   readOnly: boolean;
+  /** Admin: click a day to plan a book from it. */
+  planner?: { clientId: string; mocks: { id: string; title: string }[] };
 }) {
   const [days, setDays] = useState(initialDays);
   const [month, setMonth] = useState(today.slice(0, 7));
@@ -165,6 +169,11 @@ export function StudyCalendar({
             </ul>
           </div>
           <div className="flex gap-1">
+            {planner && (
+              <button type="button" onClick={() => show({ day: today })} className={`h-8 rounded-md border border-quant/50 px-2.5 text-xs text-quant hover:bg-quant/10 ${FOCUS}`}>
+                Plan a book
+              </button>
+            )}
             <button type="button" aria-label="Previous month" onClick={() => setMonth((m) => StudyDays.shiftMonth(m, -1))} className={`h-8 w-8 rounded-md border border-line text-muted hover:text-ink ${FOCUS}`}>
               ‹
             </button>
@@ -190,6 +199,7 @@ export function StudyCalendar({
               return (
                 <div
                   key={day}
+                  onClick={planner ? () => show({ day }) : undefined}
                   onDragOver={(e) => canDrop(day) && !readOnly && e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -197,7 +207,7 @@ export function StudyCalendar({
                     const topic = days[from]?.find((x): x is StudyTopic => x.kind === "topic" && x.id === id);
                     if (topic) move(topic, day);
                   }}
-                  className={`grid min-h-28 content-start gap-1 p-1.5 ${day === today ? "bg-quant/[0.07] shadow-[inset_0_0_0_1px_rgb(34_211_238/0.45)]" : inMonth && day >= today ? "bg-canvas" : "bg-canvas/60"}`}
+                  className={`grid min-h-28 content-start gap-1 p-1.5 ${planner ? "cursor-pointer hover:outline hover:outline-1 hover:outline-quant/40" : ""} ${day === today ? "bg-quant/[0.07] shadow-[inset_0_0_0_1px_rgb(34_211_238/0.45)]" : inMonth && day >= today ? "bg-canvas" : "bg-canvas/60"}`}
                 >
                   <span className={`grid h-6 min-w-6 place-items-center justify-self-start rounded-full px-1 text-xs tabular-nums ${day === today ? "bg-quant font-semibold text-canvas shadow-[0_0_12px_rgb(34_211_238/0.6)]" : inMonth && day >= today ? "text-ink/80" : "text-muted/40"}`}>
                     {Number(day.slice(8))}
@@ -206,7 +216,7 @@ export function StudyCalendar({
                     <Chip key={`${item.kind}-${item.id}`} item={item} draggable={movable(item)} onOpen={() => show({ item })} />
                   ))}
                   {list.length > SHOWN && (
-                    <button type="button" onClick={() => show({ day })} className="text-left text-[11px] text-muted hover:text-ink">
+                    <button type="button" onClick={(e) => (e.stopPropagation(), show({ day }))} className="text-left text-[11px] text-muted hover:text-ink">
                       +{list.length - SHOWN} more
                     </button>
                   )}
@@ -239,7 +249,7 @@ export function StudyCalendar({
         ref={dialog}
         onClose={() => setOpen(null)}
         onClick={(e) => e.target === dialog.current && dialog.current?.close()}
-        className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-line bg-canvas p-0 text-ink backdrop:bg-black/60"
+        className={`m-auto ${planner ? "w-[min(40rem,calc(100vw-2rem))]" : "w-[min(26rem,calc(100vw-2rem))]"} rounded-2xl border border-line bg-canvas p-0 text-ink backdrop:bg-black/60`}
       >
         {open && (
           <div className="grid gap-4 p-5">
@@ -253,6 +263,7 @@ export function StudyCalendar({
                     </button>
                   ))}
                 </div>
+                {planner && <PlanBookForm key={open.day} clientId={planner.clientId} from={open.day} mocks={planner.mocks} />}
               </>
             ) : (
               <Details key={`${open.item.kind}-${open.item.id}`} item={open.item} today={today} last={last} readOnly={readOnly} onMove={move} onTick={tick} />
@@ -281,7 +292,7 @@ function Chip({ item, draggable, onOpen }: { item: StudyDayItem; draggable: bool
       type="button"
       draggable={draggable}
       onDragStart={(e) => e.dataTransfer.setData("text/plain", `${item.date}|${item.id}`)}
-      onClick={onOpen}
+      onClick={(e) => (e.stopPropagation(), onOpen())}
       title={label(item)}
       aria-label={named ? undefined : label(item)}
       className={`block min-h-6 w-auto truncate rounded-[5px] px-1.5 py-1 text-left text-[11px] leading-tight font-medium transition-colors ${chipClass(item)} ${SPAN[span]} ${draggable ? "cursor-grab" : ""} ${FOCUS}`}

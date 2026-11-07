@@ -2,13 +2,31 @@ import { FIELD } from "@/domains/admin/components/FormField";
 import { PendingButton } from "@/domains/admin/components/PendingButton";
 
 import { addStudyMock, addStudyTopics, removeStudyTopic, updateStudyTopic } from "../actions/studyPlan";
+import type { AttemptSummary } from "@/domains/mocks/types";
+
+import { StudyDays } from "../services/StudyDays";
 import { StudyPlanContract } from "../services/StudyPlanContract";
 import type { StudyPlanItem } from "../types";
+import { StudyCalendar } from "./StudyCalendar";
 
 const CHANGED = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 /** The admin side of a student's study plan: what they see under "Your study plan" on /student. */
-export function StudyPlanEditor({ clientId, items, mocks }: { clientId: string; items: StudyPlanItem[]; mocks: { id: string; title: string }[] }) {
+export function StudyPlanEditor({
+  clientId,
+  items,
+  mocks,
+  attempts,
+  exam,
+}: {
+  clientId: string;
+  items: StudyPlanItem[];
+  mocks: { id: string; title: string }[];
+  attempts: AttemptSummary[];
+  exam: { course: string; date: string } | null;
+}) {
+  const today = StudyDays.today();
+  const { days, unscheduled } = StudyDays.build({ items, sessions: [], attempts, exam, bankTopics: [], today });
   return (
     <section id="study-plan" className="mt-12 scroll-mt-16 rounded-lg border border-line p-5">
       <h2 className="text-lg">Study plan</h2>
@@ -16,6 +34,11 @@ export function StudyPlanEditor({ clientId, items, mocks }: { clientId: string; 
         The student sees this timeline after signing in at /student. For materials, link a Google Drive file shared with their email, and only
         your own notes: re-sharing paid prep books breaks their copyright.
       </p>
+
+      <div className="mt-4">
+        {/* What the student's calendar shows; click a day to plan a book from it. */}
+        <StudyCalendar key={JSON.stringify([days, unscheduled])} days={days} unscheduled={unscheduled} today={today} last={exam?.date ?? StudyDays.addDays(today, 366)} readOnly planner={{ clientId, mocks }} />
+      </div>
 
       {items.length === 0 ? (
         <p className="mt-4 text-sm text-muted">No topics yet.</p>
