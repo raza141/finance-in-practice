@@ -105,12 +105,13 @@ Keep the raised bevel, the glow and the tilt: they are part of the brand. No arr
 - **Bar**: one sticky bar, 64px. Logo left, main navigation centre on wide screens, account right ("Me" menu: name, account pages, sign out). No second bar under it.
 - **Phones and tablets (< 1024px)**: main navigation becomes a bottom tab bar, at most 5 items, icon over label, the active one gold. Content leaves room for it.
 - **A tab with several pages** (Sessions: Book a session, My sessions; Mocks: Mock exams, Progress, Mistakes notebook, Topic drill) opens a small menu in the bar on wide screens and shows a pill switch at the top of the page on every screen.
-- **Two-column pages**: the main working area left, the narrow side panel (live preview, latest posts) right, about 22–24rem (Study plan, Book a session, Classroom). On phones they stack.
+- **Two-column pages**: the main working area left, the narrow side panel (live preview, latest posts) right, about 22–24rem (Study plan, Book a session, Classroom). On phones they stack. When the side panel is reference rather than work (Study plan's programmes and materials), it folds into a slim rail on wide screens (`SidePanel`): closed by default, one tap opens it, so tablets give the room to the main area.
 - **Rows, not tiles** (everywhere): lists of things (to-dos, mocks, contact ways, services) are rows in one panel split by hairlines; each row is icon, title, one detail, and opens its page. Figures get one headline number with the rest on a quiet line beside it, not equal stat boxes. Features alternate screen and text; steps sit on a timeline. Cards stay only for things you pick or buy (courses, packages, templates, questions). Portal Home: a greeting, one card for the next session, To do, At a glance.
 - **Badges**: a small gold count on a tab only when something needs the student (overdue topics, sessions awaiting confirmation).
 - **Every tab has a URL** (`?tab=…`), so refresh, Back and shared links land in the same place.
 - **Width and rhythm**: `page-container` for everything, so the bar, cards and logo share one left edge. Spacing on a 4/8px scale; cards 24px padding (32px on desktop), 24px between cards.
 - **Cards**: `rounded-3xl`, `border-white/10`, `bg-canvas/70` with blur; menus and popovers `rounded-2xl`, `bg-surface`.
+- **Website navbar**: the link pill shows from 1280px (xl); tablets and phones get the menu button. The Student portal button shows in full from 640px (sm), iPads included, and is never cut off at the edge.
 - **Marketing pages** keep the website navbar and footer; the student portal, mock screens and admin never show them.
 
 ## 8. Motion

@@ -15,7 +15,7 @@ import { MobileNav } from "./MobileNav";
 
 /**
  * Fixed top bar: logo pinned to the top-left gutter, floating "pill" of links
- * centred on lg+, menu button on the right below lg. A 1fr/auto/1fr grid
+ * centred on xl+, menu button on the right below xl (tablets: most iPads in landscape are 1024–1194 wide). A 1fr/auto/1fr grid
  * centres the pill but never lets it overlap the logo when space is tight.
  *
  * The full-width header is click-through (`pointer-events-none`) so the empty
@@ -45,12 +45,12 @@ export function Navbar() {
       data-anim="nav"
       className="pointer-events-none fixed inset-x-0 top-6 z-50"
     >
-      {/* Backdrop so page text never scrolls under the logo: always below lg (no pill there), on lg+ once the page scrolls. */}
+      {/* Backdrop so page text never scrolls under the logo: always below xl (no pill there), on xl+ once the page scrolls. */}
       <div
         aria-hidden
-        className={`absolute inset-x-0 -top-6 bottom-[-12px] border-b border-white/5 bg-canvas/85 backdrop-blur-md transition-opacity duration-300 ${scrolled ? "" : "lg:opacity-0"}`}
+        className={`absolute inset-x-0 -top-6 bottom-[-12px] border-b border-white/5 bg-canvas/85 backdrop-blur-md transition-opacity duration-300 ${scrolled ? "" : "xl:opacity-0"}`}
       />
-      <div className="page-container relative grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="page-container relative grid h-[46px] grid-cols-[1fr_auto] items-center gap-4 xl:grid-cols-[1fr_auto_1fr]">
         <Link
           href="/"
           aria-label="Finance in Practice home"
@@ -61,7 +61,7 @@ export function Navbar() {
 
         <TiltSurface
           maxTilt={3}
-          className="pointer-events-auto hidden lg:block"
+          className="pointer-events-auto hidden xl:block"
         >
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-surface/80 px-3 py-2 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] backdrop-blur-md">
             <nav aria-label="Primary">
@@ -70,8 +70,8 @@ export function Navbar() {
                   // The current page keeps its underline lit, so it skips the hover animator (which would dim it on leave).
                   const active = isActive(item.href);
                   return (
-                    // Logo already links home, so "Home" only shows once there is room (xl+).
-                    <li key={item.href} className={`group relative ${item.href === "/" ? "hidden xl:block" : ""}`}>
+                    // Logo already links home, so "Home" only shows once there is room (2xl+).
+                    <li key={item.href} className={`group relative ${item.href === "/" ? "hidden 2xl:block" : ""}`}>
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
@@ -125,16 +125,16 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <BookButton className="ml-1 hidden h-8 px-4 text-[13px] lg:inline-flex" />
+            <BookButton className="ml-1 h-8 px-4 text-[13px]" />
           </div>
         </TiltSurface>
 
         <div className="pointer-events-auto flex items-center gap-3 justify-self-end">
-          {/* Portal entry for enrolled students: reads as a door, not another nav link. */}
+          {/* Portal entry for enrolled students: reads as a door, not another nav link. Shown from tablets up (iPads included); the pill waits for xl so it never pushes this off the edge. */}
           <Link
             href={siteConfig.studentBooking.href}
             aria-current={isActive(siteConfig.studentBooking.href) ? "page" : undefined}
-            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-surface/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 lg:inline-flex"
+            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-surface/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 sm:inline-flex"
           >
             <span className="grid h-9 w-9 place-items-center rounded-md [corner-shape:squircle] bg-surface-raised text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
               <LockKeyhole aria-hidden strokeWidth={1.75} className="size-4" />

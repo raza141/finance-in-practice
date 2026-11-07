@@ -43,7 +43,7 @@ export function StickyBookBar() {
   return (
     <div
       inert={!show}
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-canvas/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-transform duration-300 lg:hidden ${show ? "translate-y-0" : "translate-y-full"}`}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-canvas/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-transform duration-300 xl:hidden ${show ? "translate-y-0" : "translate-y-full"}`}
     >
       <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
         <div className="min-w-0">
