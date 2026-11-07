@@ -22,7 +22,7 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
       questions: [
         {
           number: 1,
-          topic: "FSA",
+          topic: "Financial Statement Analysis",
           chapter: "",
           usage: "mock",
           level: 1,
@@ -106,8 +106,13 @@ describe("bank tags", () => {
     expect(bad.ok).toBe(false);
     expect(!bad.ok && bad.errors[0]).toMatch(/Session.*Difficulty.*Type/);
   });
-  it("stores one short spelling per topic and rejects names off the list", () => {
-    expect(["fsa", "Financial Statement Analysis", " QUANT ", "Ethical and Professional Standards"].map(MockContract.topic)).toEqual(["FSA", "FSA", "Quant", "Ethics"]);
+  it("stores one spelling per topic and rejects names off the list", () => {
+    expect(["fsa", "Financial Statement Analysis", " QUANT ", "Ethical and Professional Standards"].map(MockContract.topic)).toEqual([
+      "Financial Statement Analysis",
+      "Financial Statement Analysis",
+      "Quantitative Methods",
+      "Ethics",
+    ]);
     expect(MockContract.topic("Book 2: Quant")).toBeNull();
     const sheet = MockContract.parseSheet(`${head}\nQuantitative Methods,Q?,A1,B1,C1,A,,,,\nMacro,Q?,A1,B1,C1,A,,,,`);
     expect(!sheet.ok && sheet.errors).toEqual([expect.stringMatching(/^Row 3: Topic must be one of/)]);

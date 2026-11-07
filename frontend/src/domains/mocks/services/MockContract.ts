@@ -64,17 +64,29 @@ export class MockContract {
   static readonly KINDS: Record<QuestionKind, string> = { fundamental: "Fundamental", formula: "Formula" };
   /** The exam sitting: "2025 S1". */
   static readonly SESSION = /^\d{4} S[12]$/;
-  /** The bank's topic names, one spelling each; an upload or edit with the full CFA name is stored as the short one. */
-  static readonly TOPICS = ["Ethics", "Quant", "Economics", "FSA", "Corporate Issuers", "Equity", "Fixed Income", "Derivatives", "Alternatives", "Portfolio Management"] as const;
+  /** The bank's topic names, one spelling each, as the live bank already uses them; a short form uploads as the full one. */
+  static readonly TOPICS = [
+    "Ethics",
+    "Quantitative Methods",
+    "Economics",
+    "Financial Statement Analysis",
+    "Corporate Issuers",
+    "Equity",
+    "Fixed Income",
+    "Derivatives",
+    "Alternative Investments",
+    "Portfolio Management",
+  ] as const;
   private static readonly TOPIC_NAMES: Record<string, string> = {
     "ethical and professional standards": "Ethics",
-    "quantitative methods": "Quant",
-    "financial statement analysis": "FSA",
+    quant: "Quantitative Methods",
+    fsa: "Financial Statement Analysis",
     "equity investments": "Equity",
-    "alternative investments": "Alternatives",
+    alternatives: "Alternative Investments",
+    pm: "Portfolio Management",
   };
 
-  /** "fsa", "Financial Statement Analysis" → "FSA"; null for a name off the list. */
+  /** "fsa", "Financial Statement Analysis" → "Financial Statement Analysis"; null for a name off the list. */
   static topic(raw: string): string | null {
     const key = raw.trim().toLowerCase();
     return MockContract.TOPIC_NAMES[key] ?? MockContract.TOPICS.find((t) => t.toLowerCase() === key) ?? null;
