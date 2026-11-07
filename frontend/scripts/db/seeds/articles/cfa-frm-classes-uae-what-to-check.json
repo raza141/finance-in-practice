@@ -1,0 +1,162 @@
+{
+  "subtitle": "",
+  "featuredImage": null,
+  "disclaimer": "",
+  "social": {
+    "hook": "",
+    "body": "",
+    "question": "",
+    "hashtags": [],
+    "imageUrl": "",
+    "carousel": [],
+    "status": "not-started"
+  },
+  "cta": {
+    "label": "Book free diagnostic",
+    "href": "/#book",
+    "text": "In a free 30-minute diagnostic we look at your practice results and your exam date, and tell you honestly how much help you need, if any."
+  },
+  "title": "Instructor-led CFA and FRM classes in the UAE: what to check before you pay",
+  "slug": "cfa-frm-classes-uae-what-to-check",
+  "excerpt": "Many online CFA and FRM courses are recorded videos. Eight checks that tell you whether a class in Abu Dhabi, Dubai or online is really taught live, and whether it fits your exam.",
+  "format": "Framework",
+  "category": "FRM & Risk Management",
+  "difficulty": "Foundation",
+  "audience": [
+    "CFA Level I",
+    "CFA Level II",
+    "FRM Part I"
+  ],
+  "tags": [
+    "FRM",
+    "CFA",
+    "UAE",
+    "Dubai",
+    "Abu Dhabi",
+    "Coaching"
+  ],
+  "seo": {
+    "canonical": "",
+    "ogTitle": "",
+    "ogDescription": "",
+    "ogImage": "",
+    "title": "CFA & FRM Classes in the UAE: What to Check Before You Pay",
+    "description": "Eight checks for choosing instructor-led CFA or FRM Part I classes in Abu Dhabi, Dubai or online: live teaching, mocks, error tracking and price."
+  },
+  "sources": [
+    {
+      "id": "cfa",
+      "title": "CFA Program: Level I and Level II exams",
+      "publisher": "CFA Institute",
+      "url": "https://www.cfainstitute.org/programs/cfa-program",
+      "accessedAt": "2026-11-07",
+      "citation": ""
+    },
+    {
+      "id": "garp",
+      "title": "FRM Exam Part I: format and topic weights",
+      "publisher": "GARP",
+      "url": "https://www.garp.org/frm",
+      "accessedAt": "2026-11-07",
+      "citation": ""
+    }
+  ],
+  "blocks": [
+    {
+      "id": "takeaway",
+      "type": "takeaway",
+      "role": "takeaway",
+      "points": [
+        "\"Instructor-led\" should mean a person teaches you live and answers your questions. A library of recorded videos is self-study.",
+        "Check eight things before paying: live teaching, a diagnostic, an hourly price, official questions, exam-format mocks, error tracking, schedule and the teacher's background.",
+        "FRM Part I and CFA Level I are both multiple-choice. Only CFA Level II uses item sets, so a class should drill the format of your exam."
+      ]
+    },
+    {
+      "id": "h-context",
+      "type": "heading",
+      "level": 2,
+      "text": "When to use this"
+    },
+    {
+      "id": "context",
+      "type": "text",
+      "role": "context",
+      "text": "You have decided you want a teacher for CFA or FRM rather than studying alone. You are in Abu Dhabi, Dubai, Sharjah or elsewhere in the UAE, and you are comparing classroom courses, online courses and private tutors. If you have not yet decided whether you need a teacher at all, start with [1-on-1 coaching or a classroom course?](/journal/cfa-classes-abu-dhabi-1-on-1-vs-classroom)"
+    },
+    {
+      "id": "h-concept",
+      "type": "heading",
+      "level": 2,
+      "text": "What you are preparing for"
+    },
+    {
+      "id": "concept",
+      "type": "text",
+      "role": "concept",
+      "text": "A class is only useful if it trains you for the exam you are actually sitting.\n\n- **CFA Level I:** 180 multiple-choice questions in 4 hours 30 minutes, across ten topics from Ethics to Portfolio Management[^cfa].\n- **CFA Level II:** 22 item sets in 4 hours 24 minutes. Each one is a short case followed by several questions[^cfa].\n- **FRM Part I:** 100 multiple-choice questions in 4 hours, across four books: Foundations of Risk Management (20%), Quantitative Analysis (20%), Financial Markets and Products (30%) and Valuation and Risk Models (30%)[^garp].\n\nCFA covers investment analysis broadly. FRM goes deep on risk measurement. Market, credit and operational risk as full subjects come in FRM Part II."
+    },
+    {
+      "id": "h-steps",
+      "type": "heading",
+      "level": 2,
+      "text": "The eight checks"
+    },
+    {
+      "id": "steps",
+      "type": "text",
+      "role": "steps",
+      "text": "1. **Is it taught live?** Ask how many hours are live with a teacher, and how many are recordings.\n2. **Is there a diagnostic before you pay?** A good teacher wants to see your practice results before planning anything.\n3. **Is the price per hour clear?** Divide any package price by its live hours. Compare that number, not the package name.\n4. **Do they use official questions?** Practice should include CFA Institute or GARP questions, not only the provider's own.\n5. **Are mocks in the real format?** Computer-based, timed and the same length as the exam.\n6. **Are your mistakes tracked?** Ask what happens after a wrong answer: is the cause recorded (concept, formula, calculator, timing) and does the next session use it?\n7. **Does the schedule fit your week?** Evening and weekend slots, and what happens if work moves a session.\n8. **Who exactly teaches you?** Ask for the teacher's name and background in the subject, and whether that same person teaches every session."
+    },
+    {
+      "id": "h-example",
+      "type": "heading",
+      "level": 2,
+      "text": "Worked example: FRM Part I from Dubai"
+    },
+    {
+      "id": "example",
+      "type": "text",
+      "role": "example",
+      "text": "Omar (not his real name) is a risk analyst in Dubai sitting FRM Part I in May 2027. GARP suggests around 240 hours of study, and he has about six months.\n\nHe runs the checks on two options. Option A is a recorded course with a monthly live Q&A: it fails checks 1, 6 and 8. Option B is [1-on-1 FRM Part I coaching](/courses/frm-part-1) online from Abu Dhabi: it passes all eight, at AED 150 an hour.\n\nFinancial Markets and Products and Valuation and Risk Models carry 60% of the marks between them, so he spends his live hours there and does Foundations by himself. Ten hours of coaching on the two heavy books costs AED 1,500. If he wants a teacher every week, monthly coaching is 30 hours for AED 3,000 ([all prices](/pricing))."
+    },
+    {
+      "id": "pitfalls",
+      "type": "callout",
+      "role": "pitfalls",
+      "tone": "warning",
+      "title": "Common mistakes",
+      "text": "- Calling a video library \"instructor-led\" because it has a forum.\n- Comparing package prices without dividing by live hours.\n- Practising item sets for FRM Part I or CFA Level I, which are both standalone multiple-choice.\n- Paying for a full term before a single trial session or diagnostic."
+    },
+    {
+      "id": "h-limits",
+      "type": "heading",
+      "level": 2,
+      "text": "Limitations"
+    },
+    {
+      "id": "limitations",
+      "type": "text",
+      "role": "limitations",
+      "text": "These checks tell you whether a class is set up well. They cannot tell you whether a teacher explains things in a way that works for you. Only a trial session shows that. Exam formats and topic weights change, so check the latest on the CFA Institute and GARP sites before you plan[^cfa][^garp]."
+    },
+    {
+      "id": "faq",
+      "type": "faq",
+      "items": [
+        {
+          "q": "Can I take CFA or FRM classes live online from Dubai or Sharjah?",
+          "a": "Yes. We are based in Abu Dhabi and teach CFA Level I, CFA Level II and FRM Part I 1-on-1, in person in Abu Dhabi or live online anywhere in the UAE."
+        },
+        {
+          "q": "How much does FRM Part I coaching cost?",
+          "a": "AED 150 an hour, or AED 3,000 a month for 30 hours (AED 100 an hour). GARP exam fees are separate."
+        },
+        {
+          "q": "Does FRM Part I use item sets like CFA Level II?",
+          "a": "No. FRM Part I is 100 standalone multiple-choice questions. Of the three exams covered here, only CFA Level II uses item sets."
+        }
+      ]
+    }
+  ]
+}
