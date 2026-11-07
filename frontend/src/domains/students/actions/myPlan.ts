@@ -1,7 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { StudentAuth } from "../server/StudentAuth";
 import { StudyPlanRepository } from "../server/StudyPlanRepository";
+import { Batches } from "../services/Batches";
 import { StudyDays } from "../services/StudyDays";
 
 /** The student's own study calendar (070). Always their own plan, from their session, never the form. */
@@ -23,4 +26,18 @@ export async function setStudyTopicDone(id: string, done: boolean): Promise<{ ok
   const repo = StudyPlanRepository.fromEnv();
   if (!me || !repo || typeof id !== "string" || typeof done !== "boolean") return { ok: false };
   return { ok: await repo.setDoneByStudent(me.id, id, done) };
+}
+
+/** The student's own exam day for their next exam (071): inside their batch's window; their portal closes 5 days after. */
+export async function setMyExamDate(formData: FormData): Promise<void> {
+  const me = await StudentAuth.current();
+  const repo = StudyPlanRepository.fromEnv();
+  const date = String(formData.get("date") ?? "");
+  if (!me || !repo || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return;
+  const exam = await repo.nextExam(me.id);
+  if (!exam) return;
+  const { min, max } = Batches.examPick(exam.batchDate, StudyDays.today());
+  if (date < min || date > max) return;
+  await repo.setExamDate(me.id, exam.course, date);
+  revalidatePath("/student");
 }

@@ -36,17 +36,28 @@ export class StudyPlanRepository {
     return rows.map((r) => ({ id: r.id, dueOn: r.due_on, topic: r.topic, status: r.status, note: r.note, materialUrl: r.material_url, studentChangedAt: r.student_changed_at }));
   }
 
-  /** The nearest upcoming exam among the student's batches with portal access left (yyyy-mm-dd); null: none (e.g. a private student). */
-  async nextExam(clientId: string): Promise<{ course: string; date: string } | null> {
+  /**
+   * The nearest upcoming exam among the student's batches with portal access left: their own day if they picked
+   * one (071), else the batch's. `batchDate` and `picked` let them choose their day inside the batch's window.
+   */
+  async nextExam(clientId: string): Promise<{ course: string; date: string; batchDate: string; picked: boolean } | null> {
     if (!UUID.test(clientId)) return null;
     const [row] = (await this.sql`
-      SELECT b.course, to_char(b.exam_date, 'YYYY-MM-DD') AS date
+      SELECT b.course, to_char(COALESCE(cb.exam_date, b.exam_date), 'YYYY-MM-DD') AS date,
+        to_char(b.exam_date, 'YYYY-MM-DD') AS "batchDate", cb.exam_date IS NOT NULL AS picked
       FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
-      WHERE cb.client_id = ${clientId} AND b.exam_date >= current_date AND batch_access_ends(b) >= current_date
-      ORDER BY b.exam_date
+      WHERE cb.client_id = ${clientId} AND COALESCE(cb.exam_date, b.exam_date) >= current_date AND batch_access_ends(cb, b) >= current_date
+      ORDER BY COALESCE(cb.exam_date, b.exam_date)
       LIMIT 1
-    `) as { course: string; date: string }[];
+    `) as { course: string; date: string; batchDate: string; picked: boolean }[];
     return row ?? null;
+  }
+
+  /** The student's own exam day for one of their batches (071); the action checks it's inside the batch's window. */
+  async setExamDate(clientId: string, course: string, date: string): Promise<boolean> {
+    if (!UUID.test(clientId)) return false;
+    const rows = await this.sql`UPDATE client_batches SET exam_date = ${date}::date WHERE client_id = ${clientId} AND course = ${course} RETURNING 1`;
+    return rows.length > 0;
   }
 
   /** The student moves one of their own topics (070); skipped ones stay where the owner left them. */

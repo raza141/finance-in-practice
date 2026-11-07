@@ -27,3 +27,12 @@ describe("Batches", () => {
     expect(Batches.windows(null)).toBeNull();
   });
 });
+
+describe("Batches.examPick", () => {
+  it("allows two weeks before to three weeks after the batch date", () => {
+    expect(Batches.examPick("2026-11-10", "2026-10-01")).toEqual({ min: "2026-10-27", max: "2026-12-01" });
+  });
+  it("never offers a day in the past", () => {
+    expect(Batches.examPick("2026-11-10", "2026-11-07").min).toBe("2026-11-07");
+  });
+});

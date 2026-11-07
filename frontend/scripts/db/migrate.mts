@@ -1514,6 +1514,26 @@ const MIGRATIONS: Migration[] = [
     id: "070_study_plan_student",
     statements: [`ALTER TABLE study_plan_items ADD COLUMN student_changed_at timestamptz`],
   },
+  {
+    // Each student picks their own exam day inside their batch's window (CFA sittings run over several days);
+    // their portal then closes 5 days after it. Not picked: the batch rule (069). The owner's batch date can
+    // only extend it. Clamped here too, so a student can't stretch access by picking a late day.
+    id: "071_student_exam_date",
+    statements: [
+      `ALTER TABLE client_batches ADD COLUMN exam_date date`,
+      `CREATE FUNCTION batch_access_ends(cb client_batches, b batches) RETURNS date LANGUAGE sql IMMUTABLE AS $fn$
+        SELECT CASE WHEN cb.exam_date IS NULL THEN batch_access_ends(b)
+          ELSE GREATEST(LEAST(GREATEST(cb.exam_date, b.exam_date - 14), b.exam_date + 21) + 5, b.access_ends) END
+      $fn$`,
+      `CREATE OR REPLACE FUNCTION client_live_courses(client uuid) RETURNS text[] LANGUAGE sql STABLE AS $fn$
+        SELECT COALESCE(array_agg(x), '{}') FROM clients c CROSS JOIN LATERAL unnest(c.courses) AS x
+        WHERE c.id = client AND NOT EXISTS (
+          SELECT 1 FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
+          WHERE cb.client_id = client AND cb.course = x AND batch_access_ends(cb, b) < current_date
+        )
+      $fn$`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

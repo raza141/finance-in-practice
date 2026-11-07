@@ -1,6 +1,8 @@
 import { ExamFacts, type ExamWindow } from "@/domains/courses/services/ExamFacts";
 import type { Ticker } from "@/domains/testimonials/types";
 
+import { StudyDays } from "./StudyDays";
+
 /** A batch the owner opened (043_batches): one Google class per course and sitting. */
 export interface OpenedBatch {
   label: string;
@@ -15,6 +17,17 @@ export interface OpenedBatch {
 export class Batches {
   static readonly NOT_SURE = "Not sure yet";
   static readonly OFFER = 3;
+  /** A student picks their own exam day this many days before or after their batch's date (071, same clamp in SQL). */
+  static readonly PICK_BEFORE = 14;
+  static readonly PICK_AFTER = 21;
+  /** Their portal closes this many days after the day they picked. */
+  static readonly CLOSES_AFTER = 5;
+
+  /** The days a student may pick as their exam day: inside the batch's window, never in the past. */
+  static examPick(batchDate: string, today: string): { min: string; max: string } {
+    const min = StudyDays.addDays(batchDate, -Batches.PICK_BEFORE);
+    return { min: min > today ? min : today, max: StudyDays.addDays(batchDate, Batches.PICK_AFTER) };
+  }
 
   /** The course's sittings, or null: not an exam course, so no batches (one course class or private classes). */
   static windows(ticker: Ticker | null): ExamWindow[] | null {

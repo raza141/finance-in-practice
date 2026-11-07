@@ -154,7 +154,7 @@ export class ClassroomRepository {
     return rows.length > 0;
   }
 
-  /** Puts a client in a batch. Moving to another batch resets their access, so the new class is asked for and approved afresh. */
+  /** Puts a client in a batch. Moving to another batch resets their access and their own exam day, so the new class is asked for and approved afresh. */
   async setBatch(clientId: string, course: string, label: string): Promise<{ moved: boolean }> {
     if (!UUID.test(clientId)) return { moved: false };
     const [prev] = (await this.sql`SELECT label FROM client_batches WHERE client_id = ${clientId} AND course = ${course}`) as { label: string }[];
@@ -163,7 +163,7 @@ export class ClassroomRepository {
     await this.sql.transaction([
       this.sql`
         INSERT INTO client_batches (client_id, course, label) VALUES (${clientId}, ${course}, ${label})
-        ON CONFLICT (client_id, course) DO UPDATE SET label = EXCLUDED.label
+        ON CONFLICT (client_id, course) DO UPDATE SET label = EXCLUDED.label, exam_date = NULL
       `,
       // Only a real move: placing a student for the first time keeps an approval given beforehand.
       ...(moved ? [this.sql`DELETE FROM classroom_access WHERE client_id = ${clientId} AND course = ${course}`] : []),

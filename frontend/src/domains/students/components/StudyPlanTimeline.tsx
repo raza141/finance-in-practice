@@ -2,8 +2,11 @@ import { GraduationCap, Paperclip } from "lucide-react";
 
 import type { AttemptSummary } from "@/domains/mocks/types";
 
+import { setMyExamDate } from "../actions/myPlan";
+import { Batches } from "../services/Batches";
 import { StudyDays } from "../services/StudyDays";
 import type { StudentSession, StudyPlanItem } from "../types";
+import { BUTTON } from "./buttons";
 import { SidePanel } from "./SidePanel";
 import { StudyCalendar } from "./StudyCalendar";
 
@@ -22,7 +25,7 @@ export function StudyPlanTimeline({
 }: {
   items: StudyPlanItem[] | null;
   programmes: string[];
-  exam: { course: string; date: string } | null;
+  exam: { course: string; date: string; batchDate: string; picked: boolean } | null;
   sessions?: StudentSession[];
   attempts?: AttemptSummary[];
   /** Question-bank topics: a plan topic that matches one gets a topic test. */
@@ -63,6 +66,30 @@ export function StudyPlanTimeline({
                 .join(" · ")}
             </p>
           </div>
+          {exam && (
+            // CFA sittings run over several days: each student sets their own, and their portal closes a few days after it.
+            <form action={setMyExamDate} className={`mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border p-4 text-sm ${exam.picked ? "border-line" : "border-gold/40"}`}>
+              <label htmlFor="exam-day" className={exam.picked ? "text-muted" : "font-semibold text-gold"}>
+                {exam.picked ? "Your exam day" : "Pick your exam day"}
+              </label>
+              <input
+                id="exam-day"
+                name="date"
+                type="date"
+                required
+                disabled={readOnly}
+                defaultValue={exam.date}
+                {...Batches.examPick(exam.batchDate, today)}
+                className="rounded-lg border border-line bg-surface-raised px-3 py-2 text-ink"
+              />
+              <button type="submit" disabled={readOnly} className={`${BUTTON} disabled:opacity-50`}>
+                Save
+              </button>
+              <p className="w-full text-xs text-muted">
+                {exam.course}. Your portal stays open until {Batches.CLOSES_AFTER} days after this day.
+              </p>
+            </form>
+          )}
           {items === null ? (
             <p className="text-sm text-muted">Couldn&rsquo;t load your study plan right now. Please refresh in a minute.</p>
           ) : (

@@ -29,9 +29,9 @@ export class StudentRepository {
     const [row] = (await this.sql`
       SELECT id, name, email,
         client_live_courses(id) AS courses,
-        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(b), 'YYYY-MM-DD')) ORDER BY cb.course)
+        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(cb, b), 'YYYY-MM-DD')) ORDER BY cb.course)
           FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
-          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(b) < current_date), '[]') AS ended
+          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(cb, b) < current_date), '[]') AS ended
       FROM clients
       WHERE lower(email) = ${email.trim().toLowerCase()} AND cardinality(courses) > 0
       ORDER BY updated_at DESC
@@ -125,9 +125,9 @@ export class StudentRepository {
     const [row] = (await this.sql`
       SELECT id, name, email,
         client_live_courses(id) AS courses,
-        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(b), 'YYYY-MM-DD')) ORDER BY cb.course)
+        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(cb, b), 'YYYY-MM-DD')) ORDER BY cb.course)
           FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
-          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(b) < current_date), '[]') AS ended
+          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(cb, b) < current_date), '[]') AS ended
       FROM clients WHERE id = ${id} AND cardinality(courses) > 0
     `) as StudentRow[];
     return row ?? null;
@@ -145,9 +145,9 @@ export class StudentRepository {
     const [row] = (await this.sql`
       SELECT clients.id, clients.name, clients.email,
         client_live_courses(clients.id) AS courses,
-        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(b), 'YYYY-MM-DD')) ORDER BY cb.course)
+        COALESCE((SELECT json_agg(json_build_object('course', cb.course, 'label', cb.label, 'ends', to_char(batch_access_ends(cb, b), 'YYYY-MM-DD')) ORDER BY cb.course)
           FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
-          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(b) < current_date), '[]') AS ended
+          WHERE cb.client_id = clients.id AND cb.course = ANY(clients.courses) AND batch_access_ends(cb, b) < current_date), '[]') AS ended
       FROM student_sessions s JOIN clients ON clients.id = s.client_id
       WHERE s.token_hash = ${tokenHash} AND s.expires_at > now() AND cardinality(clients.courses) > 0
     `) as StudentRow[];
