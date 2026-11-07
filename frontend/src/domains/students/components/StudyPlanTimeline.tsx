@@ -7,6 +7,7 @@ import { Batches } from "../services/Batches";
 import { StudyDays } from "../services/StudyDays";
 import type { StudentSession, StudyPlanItem } from "../types";
 import { BUTTON } from "./buttons";
+import { ExamCountdown } from "./ExamCountdown";
 import { SidePanel } from "./SidePanel";
 import { StudyCalendar } from "./StudyCalendar";
 
@@ -63,11 +64,10 @@ export function StudyPlanTimeline({
             <h2 id="plan-heading" className="text-2xl font-normal italic">
               Your study plan
             </h2>
-            <p className="text-sm text-muted">
-              {[exam && (StudyDays.days(today, exam.date) === 0 ? "Exam today" : `Exam in ${StudyDays.days(today, exam.date)} days`), counted > 0 && `${done} of ${counted} topics done`]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+              {exam && <ExamCountdown days={StudyDays.days(today, exam.date)} />}
+              {counted > 0 && <p className="text-sm text-muted">{`${done} of ${counted} topics done`}</p>}
+            </div>
           </div>
           {exam && (
             // CFA sittings run over several days: each student picks theirs, inside their batch's month.
