@@ -37,7 +37,7 @@ export function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="mt-auto border-t border-line bg-canvas/90">
-      <div className="page-container pt-14 pb-8">
+      <div className="page-container pt-14 pb-24 lg:pb-8">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,22rem)_auto] lg:justify-between">
           <div>
             <Logo height={40} />
