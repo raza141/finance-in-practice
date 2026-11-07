@@ -67,7 +67,7 @@ export function StudyPlanTimeline({
             </p>
           </div>
           {exam && (
-            // CFA sittings run over several days: each student sets their own, and their portal closes a few days after it.
+            // CFA sittings run over several days: each student picks theirs, inside their batch's month.
             <form action={setMyExamDate} className={`mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border p-4 text-sm ${exam.picked ? "border-line" : "border-gold/40"}`}>
               <label htmlFor="exam-day" className={exam.picked ? "text-muted" : "font-semibold text-gold"}>
                 {exam.picked ? "Your exam day" : "Pick your exam day"}
@@ -85,9 +85,6 @@ export function StudyPlanTimeline({
               <button type="submit" disabled={readOnly} className={`${BUTTON} disabled:opacity-50`}>
                 Save
               </button>
-              <p className="w-full text-xs text-muted">
-                {exam.course}. Your portal stays open until {Batches.CLOSES_AFTER} days after this day.
-              </p>
             </form>
           )}
           {items === null ? (

@@ -22,7 +22,7 @@ Screens that copy another product's look on purpose (the Google review card, the
 ## 1. Voice
 
 - Plain and short. Say what the thing is: "Book a session", not "Start your journey".
-- No taglines, eyebrows or helper text unless a student would be stuck without it.
+- No secondary lines, anywhere: no taglines, eyebrows, helper text or "this means…" notes under a field, heading or button. A field gets its label and nothing else (e.g. "Pick your exam day" + date + Save; never "Your portal stays open until…"). Rules the student doesn't act on stay out of the UI.
 - Numbers over adjectives: "Exam in 29 days · 1 of 5 topics done".
 - Exam brands are always written with ® on first use (CFA®, FRM®) and never as if we are them.
 
