@@ -40,18 +40,38 @@ export const siteConfig = {
     { label: "Contact", href: "/contact" },
   ] as readonly NavItem[],
 
-  footerNav: [
-    { label: "Home", href: "/" },
-    { label: "Courses", href: "/courses" },
-    { label: "Pricing", href: "/pricing" },
-    { label: "Methodology", href: "/#methodology" },
-    { label: "Instructor", href: "/about" },
-    { label: "Blog", href: "/journal" },
-    { label: "Resources", href: "/resources" },
-    { label: "Question Bank", href: "/cfa/questions" },
-    { label: "Contact", href: "/contact" },
-    { label: "Student login", href: "/student" },
-    { label: "Review us on Google", href: "https://g.page/r/CXVZIOQD9qJXEBM/review" },
+  /** Footer columns; Privacy and Terms sit in the bottom bar beside the copyright. */
+  footerGroups: [
+    {
+      title: "Study",
+      links: [
+        { label: "Courses", href: "/courses" },
+        { label: "Pricing", href: "/pricing" },
+        { label: "Question Bank", href: "/cfa/questions" },
+        { label: "Resources", href: "/resources" },
+        { label: "Blog", href: "/journal" },
+      ],
+    },
+    {
+      title: "About",
+      links: [
+        { label: "Instructor", href: "/about" },
+        { label: "Methodology", href: "/#methodology" },
+        {
+          label: "Review us on Google",
+          href: "https://g.page/r/CXVZIOQD9qJXEBM/review",
+        },
+      ],
+    },
+    {
+      title: "Contact",
+      links: [
+        { label: "Contact", href: "/contact" },
+        { label: "Student login", href: "/student" },
+      ],
+    },
+  ] as readonly { title: string; links: readonly NavItem[] }[],
+  legalNav: [
     { label: "Privacy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
   ] as readonly NavItem[],
@@ -91,7 +111,13 @@ export const siteConfig = {
   /** Enrolled students sign in at /student and book this hidden Cal.com event (raza141/session). */
   /** `lengths` must be durations the Cal.com "session" event offers (it may offer more, e.g. 240; only these are bookable here). */
   /** `maxUpcoming`: a student's own upcoming sessions (pending included) before booking more is refused. */
-  studentBooking: { eventSlug: "session", minutes: 60, lengths: [60, 120, 180], maxUpcoming: 4, href: "/student" },
+  studentBooking: {
+    eventSlug: "session",
+    minutes: 60,
+    lengths: [60, 120, 180],
+    maxUpcoming: 4,
+    href: "/student",
+  },
 
   /** Classroom feed in the portal: mocks below this percentage get a "book a review" prompt (the owner's target, not an official pass mark). */
   classroom: { targetPct: 70 },
@@ -102,9 +128,21 @@ export const siteConfig = {
    * (e.g. hours tutored) only once they are tracked.
    */
   metrics: [
-    { value: 132, label: "Automated engine tests", detail: "incl. Hull & BKM benchmarks" },
-    { value: 11, label: "Quant API endpoints", detail: "Pricing · risk · portfolio" },
-    { value: 3, label: "VaR methodologies", detail: "Parametric · historical · Monte Carlo" },
+    {
+      value: 132,
+      label: "Automated engine tests",
+      detail: "incl. Hull & BKM benchmarks",
+    },
+    {
+      value: 11,
+      label: "Quant API endpoints",
+      detail: "Pricing · risk · portfolio",
+    },
+    {
+      value: 3,
+      label: "VaR methodologies",
+      detail: "Parametric · historical · Monte Carlo",
+    },
     {
       // Measured 0.30-0.41s (2026-10-02) for 100 points, 50 assets, long-only.
       value: 0.5,
@@ -117,8 +155,7 @@ export const siteConfig = {
   ],
 
   disclosures: {
-    regulatory:
-      "For educational purposes only. Finance in Practice does not provide financial, investment or regulated advisory services.",
+    regulatory: "For educational purposes only. Finance in Practice does not provide financial, investment or regulated advisory services.",
     trademarks:
       "CFA® and Chartered Financial Analyst® are registered trademarks owned by CFA Institute. FRM® and Financial Risk Manager® are registered trademarks of the Global Association of Risk Professionals (GARP). CFA Institute and GARP do not endorse, promote or warrant the accuracy or quality of the services offered here.",
   },
