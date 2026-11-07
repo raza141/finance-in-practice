@@ -35,9 +35,10 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
   const params = await searchParams;
   const [topicKey, chapterKey, usage, status, edit, copy, levelKey] = (["topic", "chapter", "usage", "status", "edit", "copy", "level"] as const).map((k) => one(params[k]));
   const level = MockContract.level(levelKey);
+  const tags = { ...MockContract.parseFilter((k) => one(params[k])), chapter: "" };
   const search = one(params.q).trim();
   // Edit and Copy keep these, so saving lands back on the same search.
-  const filters = Object.entries({ level: levelKey, topic: topicKey, chapter: chapterKey, usage, status, q: search }).filter(([, v]) => v);
+  const filters = [...Object.entries({ level: levelKey, topic: topicKey, chapter: chapterKey, usage, status, q: search }), ...MockContract.filterEntries(tags)].filter(([, v]) => v);
   const bank = (extra: Record<string, string> = {}) => {
     const query = new URLSearchParams([...filters, ...Object.entries(extra)]).toString();
     return `/admin/mocks/bank${query && `?${query}`}`;
@@ -58,8 +59,13 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
       (!chapterKey || q.chapter.trim().toLowerCase() === chapterKey.toLowerCase()) &&
       (!usage || q.usage === usage) &&
       (!level || q.level === level) &&
+      MockContract.fits(q, tags) &&
       MockContract.matches(q, search),
   );
+  // The bank's own values, so the dropdowns only offer what's there.
+  const distinct = (k: "source" | "session") => [...new Set(pool.map((q) => q[k].trim()).filter(Boolean))].sort();
+  const sources = distinct("source");
+  const sessions = distinct("session");
   const groups = new Map<string, typeof shown>();
   for (const q of shown) {
     const key = q.topic.trim().toLowerCase();
@@ -148,6 +154,46 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
           </select>
         </label>
         <label className="grid gap-1 text-xs text-muted">
+          Source
+          <select name="source" defaultValue={tags.source} className={FILTER}>
+            <option value="">All</option>
+            {sources.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Session
+          <select name="session" defaultValue={tags.session} className={FILTER}>
+            <option value="">All</option>
+            {sessions.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Difficulty
+          <select name="difficulty" defaultValue={tags.difficulty} className={FILTER}>
+            <option value="">All</option>
+            {Object.entries(MockContract.DIFFICULTIES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Type
+          <select name="kind" defaultValue={tags.kind} className={FILTER}>
+            <option value="">All</option>
+            {Object.entries(MockContract.KINDS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
           Use
           <select name="usage" defaultValue={usage} className={FILTER}>
             <option value="">All</option>
@@ -194,6 +240,41 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
               Set chapter
             </button>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input name="set_source" maxLength={120} list="bank-sources" placeholder="Source" aria-label="Source for ticked questions" className={FILTER} />
+            <datalist id="bank-sources">
+              {sources.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
+            <input name="set_session" maxLength={7} list="bank-sessions" placeholder="2025 S1" aria-label="Session for ticked questions" className={`${FILTER} w-24`} />
+            <datalist id="bank-sessions">
+              {sessions.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
+            <select name="set_difficulty" defaultValue="" aria-label="Difficulty for ticked questions" className={FILTER}>
+              <option value="">Difficulty</option>
+              {Object.entries(MockContract.DIFFICULTIES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+              <option value="none">Clear</option>
+            </select>
+            <select name="set_kind" defaultValue="" aria-label="Type for ticked questions" className={FILTER}>
+              <option value="">Type</option>
+              {Object.entries(MockContract.KINDS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+              <option value="none">Clear</option>
+            </select>
+            <button type="submit" name="op" value="tags" className={BULK}>
+              Set tags
+            </button>
+          </div>
           {[...groups.values()].map((questions) => (
             <section key={questions[0].id} className="rounded-lg border border-line">
               <h2 className="border-b border-line px-4 py-3 font-medium">
@@ -229,6 +310,9 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                     <p className="pl-7 font-mono text-xs text-muted">
                       {q.level === 2 && "Level II · "}
                       {q.chapter && `${q.chapter} · `}
+                      {[q.source, q.session, q.difficulty && MockContract.DIFFICULTIES[q.difficulty], q.kind && MockContract.KINDS[q.kind]]
+                        .filter(Boolean)
+                        .map((t) => `${t} · `)}
                       {MockContract.USAGES[q.usage]}
                       {q.vignette && " · vignette"} · answer {q.correct}
                       {q.usedIn.length > 0 && ` · in ${q.usedIn.join(", ")}`}

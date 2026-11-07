@@ -32,6 +32,7 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
           correct: "B",
           explanation: "",
           why: ["", "", ""],
+          source: "", session: "", difficulty: "", kind: "",
         },
         {
           number: 2,
@@ -45,6 +46,7 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
           correct: "A",
           explanation: "Convexity adds back $\\tfrac12 C (\\Delta y)^2$.",
           why: ["", "", ""],
+          source: "", session: "", difficulty: "", kind: "",
         },
       ],
     });
@@ -95,6 +97,24 @@ Revenue rose 12%, ""adjusted"" EBIT 40.",Calculate FCFF.,$142.5m,$158.0m,$164.2m
   });
 });
 
+describe("bank tags", () => {
+  const head = "Topic,Question,Option_A,Option_B,Option_C,Correct_Option,Book,Session,Difficulty,Type";
+  it("reads Book, Session, Difficulty and Type, normalising case, and rejects bad values", () => {
+    const ok = MockContract.parseSheet(`${head}\nEthics,Which duty?,A1,B1,C1,A,FIP 2025 MOCK S1 - Mock 1,2025 s1,Hard,FORMULA`);
+    expect(ok.ok && ok.questions[0]).toMatchObject({ source: "FIP 2025 MOCK S1 - Mock 1", session: "2025 S1", difficulty: "hard", kind: "formula" });
+    const bad = MockContract.parseSheet(`${head}\nEthics,Which duty?,A1,B1,C1,A,X,S1 2025,tough,theory`);
+    expect(bad.ok).toBe(false);
+    expect(!bad.ok && bad.errors[0]).toMatch(/Session.*Difficulty.*Type/);
+  });
+  it("filters ignore case on text, drop unknown values, and leave blanks open", () => {
+    const f = MockContract.parseFilter((k) => ({ source: " fip 2025 mock s1 - mock 1 ", session: "2025 S3", difficulty: "MEDIUM", kind: "x" })[k] ?? "");
+    expect(f).toEqual({ chapter: "", source: "fip 2025 mock s1 - mock 1", session: "", difficulty: "medium", kind: "" });
+    const q = { chapter: "", source: "FIP 2025 MOCK S1 - Mock 1", session: "2025 S1", difficulty: "medium" as const, kind: "formula" as const };
+    expect(MockContract.fits(q, f)).toBe(true);
+    expect(MockContract.fits(q, { kind: "fundamental" })).toBe(false);
+  });
+});
+
 describe("MockContract.matches", () => {
   const q = { topic: "Ethics", chapter: "Standards", vignette: "Delta Corp", question: "Which duty applies?", options: ["Loyalty", "Prudence", "Care"] as [string, string, string], explanation: "Standard III" };
 
@@ -133,10 +153,10 @@ describe("MockContract.parsePool", () => {
     ];
     expect(MockContract.parsePool(form(entries))).toEqual({
       ok: true,
-      value: { quotas: [{ topic: "Fixed Income", count: 10 }, { topic: "FSA", count: 20 }], ids: [id], chapter: "Inventories", avoid: [] },
+      value: { quotas: [{ topic: "Fixed Income", count: 10 }, { topic: "FSA", count: 20 }], ids: [id], chapter: "Inventories", avoid: [], source: "", session: "", difficulty: "", kind: "" },
     });
-    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", ""], ["q", id]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [] } });
-    expect(MockContract.parsePool(form([["q", id], ["avoid", id], ["avoid", id], ["avoid", "x"]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [id] } });
+    expect(MockContract.parsePool(form([["topic", "FSA"], ["count", ""], ["q", id]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [], source: "", session: "", difficulty: "", kind: "" } });
+    expect(MockContract.parsePool(form([["q", id], ["avoid", id], ["avoid", id], ["avoid", "x"]]))).toEqual({ ok: true, value: { quotas: [], ids: [id], chapter: "", avoid: [id], source: "", session: "", difficulty: "", kind: "" } });
   });
 
   it("needs a number or a tick, whole numbers, and at most 500", () => {
@@ -203,7 +223,7 @@ describe("MockContract.parseQuestion", () => {
   it("checks one question as a sheet row is checked", () => {
     expect(MockContract.parseQuestion(form(good))).toEqual({
       ok: true,
-      value: { number: 4, topic: "Fixed Income", chapter: "", usage: "mock", level: 1, vignette: good.vignette, question: "Q?", options: ["x", "y", "z"], correct: "B", explanation: "", why: ["", "", ""] },
+      value: { number: 4, topic: "Fixed Income", chapter: "", usage: "mock", level: 1, vignette: good.vignette, question: "Q?", options: ["x", "y", "z"], correct: "B", explanation: "", why: ["", "", ""], source: "", session: "", difficulty: "", kind: "" },
     });
     expect(MockContract.parseQuestion(form({ ...good, c: "", correct: "D", vignette: "Chart: Spot\n| Year | Rate |\n| 1 | n/a |" }))).toEqual({
       ok: false,

@@ -1,10 +1,10 @@
 import { CsvText } from "@/domains/journal/services/ChartData";
 
 import { MockExhibits } from "./MockExhibits";
-import type { AccessGrantInput, AccessProduct, CfaLevel, MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter, PoolQuestion, QuestionUsage } from "../types";
+import type { AccessGrantInput, AccessProduct, CfaLevel, MockAccess, MockAudience, MockExamInput, MockQuestionInput, MockResponse, MockType, OptionLetter, PoolQuestion, QuestionDifficulty, QuestionKind, QuestionTags, QuestionUsage, BankFilter } from "../types";
 
 /** How many random questions to draw per topic, plus questions ticked by hand; `chapter` limits the draw to that chapter ("": all); nothing `avoid`'s clients have already met goes in. */
-export type PoolPick = { quotas: { topic: string; count: number }[]; ids: string[]; chapter: string; avoid: string[] };
+export type PoolPick = { quotas: { topic: string; count: number }[]; ids: string[]; avoid: string[] } & Partial<BankFilter>;
 
 export type SheetResult = { ok: true; questions: MockQuestionInput[] } | { ok: false; errors: string[] };
 
@@ -29,6 +29,12 @@ const COLUMNS = {
   whya: "whyA",
   whyb: "whyB",
   whyc: "whyC",
+  book: "source",
+  source: "source",
+  session: "session",
+  difficulty: "difficulty",
+  type: "kind",
+  kind: "kind",
 } as const;
 type Column = (typeof COLUMNS)[keyof typeof COLUMNS];
 const REQUIRED: Column[] = ["topic", "question", "a", "b", "c", "correct"];
@@ -50,9 +56,15 @@ export class MockContract {
   static readonly PRODUCTS: Record<AccessProduct, string> = {
     mocks: "All mocks",
     practice: "Topic practice",
+    builder: "Build own sets",
   };
   /** How a WhatsApp message names a product given to a student. */
-  static readonly PRODUCT_NAMES: Record<AccessProduct, string> = { mocks: "all mock exams", practice: "topic practice" };
+  static readonly PRODUCT_NAMES: Record<AccessProduct, string> = { mocks: "all mock exams", practice: "topic practice", builder: "building your own practice sets" };
+  static readonly DIFFICULTIES: Record<QuestionDifficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard" };
+  static readonly KINDS: Record<QuestionKind, string> = { fundamental: "Fundamental", formula: "Formula" };
+  /** The exam sitting: "2025 S1". */
+  static readonly SESSION = /^\d{4} S[12]$/;
+  static readonly FILTER_KEYS = ["chapter", "source", "session", "difficulty", "kind"] as const;
   static readonly USAGES: Record<QuestionUsage, string> = {
     mock: "Mocks only",
     practice: "Practice only",
@@ -77,6 +89,8 @@ export class MockContract {
   static readonly MAX_NOTES = 5000;
   /** Questions in a weakest-topic drill. */
   static readonly DRILL_SIZE = 10;
+  /** The most questions a student's own set may ask for. */
+  static readonly BUILD_MAX = 90;
   /** The CFA exam's pace: Level I is 135 minutes for 90 questions, Level II 132 minutes for 44 (11 item sets). */
   static readonly MINUTES_PER_QUESTION: Record<CfaLevel, number> = { 1: 1.5, 2: 3 };
 
@@ -110,6 +124,30 @@ export class MockContract {
   static matches(q: Pick<PoolQuestion, "topic" | "chapter" | "vignette" | "question" | "options" | "explanation">, search: string): boolean {
     const text = [q.topic, q.chapter, q.vignette, q.question, ...q.options, q.explanation].join(" ").toLowerCase();
     return search.toLowerCase().split(/\s+/).every((word) => text.includes(word));
+  }
+
+  /** The bank filter from a form or the URL; values outside the tags' lists are dropped. */
+  static parseFilter(get: (key: string) => string): BankFilter {
+    const v = (k: string) => get(k).trim();
+    const difficulty = v("difficulty").toLowerCase();
+    const kind = v("kind").toLowerCase();
+    return {
+      chapter: v("chapter").slice(0, 80),
+      source: v("source").slice(0, 120),
+      session: MockContract.SESSION.test(v("session").toUpperCase()) ? v("session").toUpperCase() : "",
+      difficulty: difficulty in MockContract.DIFFICULTIES ? (difficulty as QuestionDifficulty) : "",
+      kind: kind in MockContract.KINDS ? (kind as QuestionKind) : "",
+    };
+  }
+
+  /** Whether a bank question passes the filter: text fields ignore case and spaces at the ends, as the draw does. */
+  static fits(q: Pick<PoolQuestion, "chapter" | keyof QuestionTags>, f: Partial<BankFilter>): boolean {
+    return MockContract.FILTER_KEYS.every((k) => !f[k] || q[k].trim().toLowerCase() === f[k]!.trim().toLowerCase());
+  }
+
+  /** The filter's set fields, for a URL or hidden inputs. */
+  static filterEntries(f: Partial<BankFilter>): [string, string][] {
+    return MockContract.FILTER_KEYS.flatMap((k) => (f[k] ? [[k, f[k]!] as [string, string]] : []));
   }
 
   /** Topic and chapter sets are practice; the rest are mocks. */
@@ -201,13 +239,13 @@ export class MockContract {
       quotas.push({ topic, count });
     }
     const ids = [...new Set(form.getAll("q").map(String))].filter(MockContract.isUuid);
-    const chapter = String(form.get("chapter") ?? "").trim();
+    const filter = MockContract.parseFilter((k) => String(form.get(k) ?? ""));
     const avoid = [...new Set(form.getAll("avoid").map(String))].filter(MockContract.isUuid);
     if (!quotas.length && !ids.length) return { ok: false, error: "Give a topic a number of questions, or tick some." };
     if (quotas.reduce((n, q) => n + q.count, 0) > MockContract.MAX_QUESTIONS || ids.length > MockContract.MAX_QUESTIONS) {
       return { ok: false, error: `At most ${MockContract.MAX_QUESTIONS} questions per mock.` };
     }
-    return { ok: true, value: { quotas, ids, chapter, avoid } };
+    return { ok: true, value: { quotas, ids, avoid, ...filter } };
   }
 
   /** One question's problems (sheet row or the admin's question form), as "Question is empty". */
@@ -217,6 +255,10 @@ export class MockContract {
     if (at("number") && (!Number.isInteger(number) || number < 1 || number > MockContract.MAX_QUESTIONS)) problems.push(`Number "${at("number")}" is not 1 to 500`);
     if (at("usage") && !MockContract.isUsage(at("usage").toLowerCase())) problems.push(`Usage must be mock, practice or both (got "${at("usage")}")`);
     if (at("level") && !MockContract.level(at("level"))) problems.push(`Level must be 1 or 2 (got "${at("level")}")`);
+    if (at("session") && !MockContract.SESSION.test(at("session").toUpperCase())) problems.push(`Session must look like 2025 S1 (got "${at("session")}")`);
+    if (at("difficulty") && !(at("difficulty").toLowerCase() in MockContract.DIFFICULTIES)) problems.push(`Difficulty must be easy, medium or hard (got "${at("difficulty")}")`);
+    if (at("kind") && !(at("kind").toLowerCase() in MockContract.KINDS)) problems.push(`Type must be fundamental or formula (got "${at("kind")}")`);
+    if (at("source").length > 120) problems.push("Book is over 120 characters");
     if (!MockContract.isLetter(at("correct").toUpperCase())) problems.push(`Correct_Option must be A, B or C (got "${at("correct")}")`);
     const limits: [Column, string, number][] = [
       ["topic", "Topic", 80],
@@ -259,6 +301,10 @@ export class MockContract {
       correct: at("correct").toUpperCase() as OptionLetter,
       explanation: at("explanation"),
       why: [at("whyA"), at("whyB"), at("whyC")],
+      source: at("source"),
+      session: at("session").toUpperCase(),
+      difficulty: at("difficulty").toLowerCase() as QuestionTags["difficulty"],
+      kind: at("kind").toLowerCase() as QuestionTags["kind"],
     };
   }
 

@@ -1549,6 +1549,22 @@ const MIGRATIONS: Migration[] = [
     id: "073_hide_exam_countdown",
     statements: [`ALTER TABLE clients ADD COLUMN hide_exam_countdown boolean NOT NULL DEFAULT false`],
   },
+  {
+    // Bank tags, none of them part of content_key, so they stay editable once a question is sat: where it came
+    // from (source, e.g. "FIP 2025 MOCK S1 - Mock 1"), the exam sitting ("2025 S1"), difficulty, and kind
+    // (fundamental: theory; formula: a calculation). '' is untagged. A "builder" grant lets a student make
+    // their own sets from the bank with these filters; nobody has one until the owner grants it.
+    id: "074_bank_tags",
+    statements: [
+      `ALTER TABLE mock_questions
+        ADD COLUMN source     text NOT NULL DEFAULT '' CHECK (char_length(source) <= 120),
+        ADD COLUMN session    text NOT NULL DEFAULT '' CHECK (session ~ '^([0-9]{4} S[12])?$'),
+        ADD COLUMN difficulty text NOT NULL DEFAULT '' CHECK (difficulty IN ('', 'easy', 'medium', 'hard')),
+        ADD COLUMN kind       text NOT NULL DEFAULT '' CHECK (kind IN ('', 'fundamental', 'formula'))`,
+      `ALTER TABLE access_grants DROP CONSTRAINT access_grants_product_check`,
+      `ALTER TABLE access_grants ADD CONSTRAINT access_grants_product_check CHECK (product IN ('mocks', 'practice', 'builder'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

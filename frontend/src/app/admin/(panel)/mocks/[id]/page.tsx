@@ -12,7 +12,7 @@ import { QuestionPreview } from "@/domains/mocks/components/QuestionPreview";
 import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
 import { deleteMock, moveMockQuestion, removeMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
 import { bankTopics } from "@/domains/mocks/components/bankTopics";
-import { MockAccessForm, MockBankForm, MockExamForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
+import { bankFilterOptions, MockAccessForm, MockBankForm, MockExamForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -20,7 +20,8 @@ export const metadata: Metadata = { title: "Edit mock exam" };
 
 export default async function AdminMockPage({ params, searchParams }: PageProps<"/admin/mocks/[id]">) {
   await AdminAuth.require();
-  const [{ id }, { notice, add, chapter: chapterParam, student: studentParam }] = await Promise.all([params, searchParams]);
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const { notice, add, student: studentParam } = query;
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;
   if (!repo || !mock) notFound();
@@ -36,11 +37,10 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
     // ponytail: every available question's preview is rendered into the page; past a few thousand, load a topic's list on open.
     adding ? repo.pool(mock, avoid) : [],
   ]);
-  const chapter = typeof chapterParam === "string" ? chapterParam : "";
-  const chapters = [...new Set(offered.map((q) => q.chapter.trim()).filter(Boolean))].sort();
+  const filter = MockContract.parseFilter((k) => (typeof query[k] === "string" ? query[k] : ""));
   const noun = MockContract.isPractice(mock.mockType) ? "set" : "mock";
 
-  const groups = bankTopics(chapter ? offered.filter((q) => q.chapter.trim().toLowerCase() === chapter.toLowerCase()) : offered);
+  const groups = bankTopics(offered.filter((q) => MockContract.fits(q, filter)));
 
   return (
     <div className="max-w-5xl">
@@ -119,27 +119,9 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                 Close
               </Link>
             </div>
-            <SeenFilter students={students} student={student} everyone={grantOnly} chapter={chapter} />
-            {chapters.length > 0 && (
-              <form className="mb-4 flex flex-wrap items-end gap-2">
-                <input type="hidden" name="add" value="1" />
-                {student && <input type="hidden" name="student" value={student} />}
-                <label className="grid gap-1 text-sm text-muted">
-                  Chapter
-                  <select name="chapter" defaultValue={chapter} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink">
-                    <option value="">All chapters</option>
-                    {chapters.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="h-9 rounded-btn border border-line px-4 text-sm hover:border-quant/50">
-                  Show
-                </button>
-              </form>
-            )}
+            <SeenFilter students={students} student={student} everyone={grantOnly} add filter={filter} options={bankFilterOptions(offered)} />
             {groups.length > 0 ? (
-              <MockBankForm key={`${chapter}${student}`} mockId={mock.id} topics={groups} chapter={chapter} avoid={avoid} />
+              <MockBankForm key={`${MockContract.filterEntries(filter)}${student}`} mockId={mock.id} topics={groups} filter={filter} avoid={avoid} />
             ) : (
               <p className="text-sm text-muted">
                 No questions left to add. Only active questions marked for {noun === "set" ? "practice" : "mocks"}{avoid.length > 0 && " that the chosen students haven't seen"} appear here;{" "}

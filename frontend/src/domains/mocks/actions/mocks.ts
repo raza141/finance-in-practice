@@ -57,7 +57,7 @@ export async function drillWeakestTopic(): Promise<void> {
   const repo = MockSession.repo();
   for (const t of (await repo.weakTopics(clientId)).slice(0, 5)) {
     const exam = { title: `Drill: ${t.topic}`, mockType: "topic" as const, source: "Weakest topic", level: t.level, durationMinutes: MockContract.minutes(MockContract.DRILL_SIZE, "topic", t.level) };
-    const id = await repo.drill(clientId, exam, { quotas: [{ topic: t.topic, count: MockContract.DRILL_SIZE }], ids: [], chapter: "", avoid: [clientId] });
+    const id = await repo.drill(clientId, exam, { quotas: [{ topic: t.topic, count: MockContract.DRILL_SIZE }], ids: [], avoid: [clientId] });
     if (id) redirect(`/student/mocks/${await repo.start(clientId, id)}`);
   }
   redirect("/student/mocks/notebook?notice=no-drill");
@@ -73,7 +73,30 @@ export async function practisePlanTopic(form: FormData): Promise<void> {
   // Level II only for a Level II student whose bank has that topic at Level II.
   const level = me.courses.some((c) => /level ii\b/i.test(c)) && levels.some((l) => l.topic === topic && l.level === 2) ? 2 : 1;
   const exam = { title: `Topic test: ${topic}`, mockType: "topic" as const, source: "Study plan", level, durationMinutes: MockContract.minutes(MockContract.DRILL_SIZE, "topic", level) } as const;
-  const id = await repo.drill(me.id, exam, { quotas: [{ topic, count: MockContract.DRILL_SIZE }], ids: [], chapter: "", avoid: [me.id] });
+  const id = await repo.drill(me.id, exam, { quotas: [{ topic, count: MockContract.DRILL_SIZE }], ids: [], avoid: [me.id] });
+  redirect(id ? `/student/mocks/${await repo.start(me.id, id)}` : "/student/mocks/notebook?notice=no-drill");
+}
+
+/**
+ * A set the student builds from the bank: a topic (or all), how many, and the bank's filters. Only with a live
+ * "builder" grant; practice questions only (mock-only ones stay for mocks) and none they've met.
+ */
+export async function buildOwnSet(form: FormData): Promise<void> {
+  const me = await student();
+  const repo = MockSession.repo();
+  if (!(await repo.hasProduct(me.id, "builder"))) redirect("/student?tab=drill");
+  const levels = await repo.topicLevels();
+  // Level II only for a Level II student, as a study-plan topic test.
+  const level: 1 | 2 = me.courses.some((c) => /level ii\b/i.test(c)) && levels.some((l) => l.level === 2) ? 2 : 1;
+  const asked = String(form.get("topic") ?? "").trim().toLowerCase();
+  const topics = [...new Set(levels.filter((l) => l.level === level && (!asked || l.topic.toLowerCase() === asked)).map((l) => l.topic))];
+  const count = Math.min(MockContract.BUILD_MAX, Math.max(1, Math.floor(Number(form.get("count")) || MockContract.DRILL_SIZE)));
+  if (!topics.length) redirect("/student/mocks/notebook?notice=no-drill");
+  const filter = MockContract.parseFilter((k) => String(form.get(k) ?? ""));
+  // All topics: the count spread across them, the first ones taking any remainder.
+  const quotas = topics.map((topic, i) => ({ topic, count: Math.floor(count / topics.length) + (i < count % topics.length ? 1 : 0) })).filter((q) => q.count > 0);
+  const exam = { title: `My set: ${asked ? topics[0] : "all topics"}`, mockType: "topic" as const, source: "Own set", level, durationMinutes: MockContract.minutes(count, "topic", level) };
+  const id = await repo.drill(me.id, exam, { quotas, ids: [], avoid: [me.id], ...filter });
   redirect(id ? `/student/mocks/${await repo.start(me.id, id)}` : "/student/mocks/notebook?notice=no-drill");
 }
 
@@ -206,7 +229,16 @@ export async function updateBankQuestions(form: FormData): Promise<void> {
   const op = form.get("op");
   const repo = MockSession.repo();
   if (ids.length && (op === "retire" || op === "restore")) await repo.setRetired(ids, op === "retire");
-  else if (ids.length && op === "chapter") await repo.setChapter(ids, String(form.get("chapter") ?? "").trim().slice(0, 80));
+  else if (ids.length && op === "chapter") await repo.setTag(ids, "chapter", String(form.get("chapter") ?? "").trim().slice(0, 80));
+  else if (ids.length && op === "tags") {
+    // A tag box left blank changes nothing; "none" clears it.
+    const raw = (k: string) => String(form.get(`set_${k}`) ?? "");
+    const f = MockContract.parseFilter(raw);
+    for (const k of ["source", "session", "difficulty", "kind"] as const) {
+      if (raw(k) === "none") await repo.setTag(ids, k, "");
+      else if (f[k]) await repo.setTag(ids, k, f[k]);
+    }
+  }
   else if (ids.length && MockContract.isUsage(op)) await repo.setUsage(ids, op);
   refresh();
 }

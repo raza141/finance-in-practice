@@ -8,7 +8,7 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { addAccessGrant, addMockQuestions, designMock, saveBankQuestion, saveMock, setMockAccess, uploadBankQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockExhibits } from "../services/MockExhibits";
-import type { CfaLevel, MockAudience, MockExam, MockQuestion, MockStudent, MockType, QuestionUsage } from "../types";
+import type { BankFilter, CfaLevel, MockAudience, MockExam, MockQuestion, MockStudent, MockType, PoolQuestion, QuestionTags, QuestionUsage } from "../types";
 import { QuestionPreview } from "./QuestionPreview";
 
 const SAVE = "h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright";
@@ -239,37 +239,82 @@ function BankTopicList({ topics, pick }: { topics: BankTopic[]; pick: ReturnType
   );
 }
 
+const PICK_SELECT = "h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink";
+
+/** The bank's own tag values, so the pick's dropdowns only offer what's there. */
+export type BankFilterOptions = {
+  chapters: string[];
+  sources: string[];
+  sessions: string[];
+};
+
+export function bankFilterOptions(pool: Pick<PoolQuestion, "chapter" | "source" | "session">[]): BankFilterOptions {
+  const distinct = (k: "chapter" | "source" | "session") => [...new Set(pool.map((q) => q[k].trim()).filter(Boolean))].sort();
+  return {
+    chapters: distinct("chapter"),
+    sources: distinct("source"),
+    sessions: distinct("session"),
+  };
+}
+
+function PickSelect({ label, name, value, options }: { label: string; name: string; value: string; options: [string, string][] }) {
+  if (!options.length) return null;
+  return (
+    <label className="grid gap-1 text-sm text-muted">
+      {label}
+      <select name={name} defaultValue={value} className={PICK_SELECT}>
+        <option value="">All</option>
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /**
- * Whose past assessments to keep out of the pick; reloads the page so the counts and lists are the real ones.
- * `everyone`: the mock is grant-only, so by default everyone with access counts.
+ * Whose past assessments to keep out of the pick, and the bank's tags to draw from; reloads the page so the
+ * counts and lists are the real ones. `everyone`: the mock is grant-only, so by default everyone with access counts.
+ * `add`: the mock page's add panel, kept open.
  */
 export function SeenFilter({
   students,
   student,
   everyone = false,
-  chapter,
+  add = false,
   level,
+  filter,
+  options,
 }: {
   students: MockStudent[];
   student: string;
   everyone?: boolean;
-  chapter?: string;
+  add?: boolean;
   /** The Design page picks its level here too; a mock's own page has it fixed. */
   level?: CfaLevel;
+  filter: BankFilter;
+  options: BankFilterOptions;
 }) {
+  const own = (list: string[]) => list.map((v) => [v, v] as [string, string]);
   return (
     <form className="mb-4 flex flex-wrap items-end gap-2">
       {level && (
         <label className="grid gap-1 text-sm text-muted">
           Level
-          <LevelSelect value={level} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink" />
+          <LevelSelect value={level} className={PICK_SELECT} />
         </label>
       )}
-      {chapter !== undefined && <input type="hidden" name="add" value="1" />}
-      {chapter && <input type="hidden" name="chapter" value={chapter} />}
+      {add && <input type="hidden" name="add" value="1" />}
+      <PickSelect label="Chapter" name="chapter" value={filter.chapter} options={own(options.chapters)} />
+      <PickSelect label="Source" name="source" value={filter.source} options={own(options.sources)} />
+      <PickSelect label="Session" name="session" value={filter.session} options={own(options.sessions)} />
+      <PickSelect label="Difficulty" name="difficulty" value={filter.difficulty} options={Object.entries(MockContract.DIFFICULTIES)} />
+      <PickSelect label="Type" name="kind" value={filter.kind} options={Object.entries(MockContract.KINDS)} />
       <label className="grid gap-1 text-sm text-muted">
         Leave out questions already seen by
-        <select name="student" defaultValue={student} className="h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink">
+        <select name="student" defaultValue={student} className={PICK_SELECT}>
           <option value="">{everyone ? "Everyone with access" : "No one"}</option>
           {everyone && <option value="none">No one</option>}
           {students.map((s) => (
@@ -286,12 +331,17 @@ export function SeenFilter({
   );
 }
 
+/** The filter the page was drawn with, sent with the pick so the random draw keeps to it. */
+function FilterFields({ filter }: { filter: BankFilter }) {
+  return MockContract.filterEntries(filter).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
+}
+
 function AvoidFields({ avoid }: { avoid: string[] }) {
   return avoid.map((id) => <input key={id} type="hidden" name="avoid" value={id} />);
 }
 
 /** Adds to an existing assessment from the bank. */
-export function MockBankForm({ mockId, topics, chapter, avoid }: { mockId: string; topics: BankTopic[]; chapter: string; avoid: string[] }) {
+export function MockBankForm({ mockId, topics, filter, avoid }: { mockId: string; topics: BankTopic[]; filter: BankFilter; avoid: string[] }) {
   const [state, action, busy] = useActionState(addMockQuestions, null);
   const pick = useBankPick();
   const total = topics.reduce((n, t) => n + pick.picked(t), 0);
@@ -299,7 +349,7 @@ export function MockBankForm({ mockId, topics, chapter, avoid }: { mockId: strin
   return (
     <form onSubmit={keep(action)} className="grid gap-6">
       <input type="hidden" name="id" value={mockId} />
-      <input type="hidden" name="chapter" value={chapter} />
+      <FilterFields filter={filter} />
       <AvoidFields avoid={avoid} />
       <BankTopicList topics={topics} pick={pick} />
       <div className="flex flex-wrap items-center gap-4">
@@ -315,7 +365,7 @@ export function MockBankForm({ mockId, topics, chapter, avoid }: { mockId: strin
 type BookScope = "all" | "one" | "some";
 
 /** A whole draft in one go: which books, how many from each or which questions, and its details. The duration follows the CFA pace until it's typed. */
-export function MockDesignForm({ topics, avoid, level }: { topics: BankTopic[]; avoid: string[]; level: CfaLevel }) {
+export function MockDesignForm({ topics, avoid, level, filter }: { topics: BankTopic[]; avoid: string[]; level: CfaLevel; filter: BankFilter }) {
   const [state, action, busy] = useActionState(designMock, null);
   const pick = useBankPick();
   const [scope, setScope] = useState<BookScope>("all");
@@ -344,6 +394,7 @@ export function MockDesignForm({ topics, avoid, level }: { topics: BankTopic[]; 
   return (
     <form onSubmit={keep(action)} className="grid gap-6">
       <AvoidFields avoid={avoid} />
+      <FilterFields filter={filter} />
       <input type="hidden" name="level" value={level} />
       <fieldset className="grid gap-3 rounded-lg border border-line p-4">
         <legend className="px-1 text-sm font-medium">Books</legend>
@@ -464,7 +515,7 @@ export function MockQuestionForm({
   chapters,
   back,
 }: {
-  question?: MockQuestion & { chapter: string; usage: QuestionUsage; level: CfaLevel };
+  question?: MockQuestion & QuestionTags & { chapter: string; usage: QuestionUsage; level: CfaLevel };
   copying?: boolean;
   /** Students have started an assessment with it: only the chapter, use, level, explanation and why notes can change. */
   locked?: boolean;
@@ -537,6 +588,32 @@ export function MockQuestionForm({
           </Field>
           <Field label="Level">
             <LevelSelect value={question?.level ?? 1} />
+          </Field>
+          <Field label="Source">
+            <input name="source" maxLength={120} defaultValue={question?.source} placeholder="FIP 2025 MOCK S1 - Mock 1" className={FIELD} />
+          </Field>
+          <Field label="Session">
+            <input name="session" maxLength={7} pattern="\d{4} [Ss][12]" defaultValue={question?.session} placeholder="2025 S1" className={FIELD} />
+          </Field>
+          <Field label="Difficulty">
+            <select name="difficulty" defaultValue={question?.difficulty ?? ""} className={FIELD}>
+              <option value="">Not set</option>
+              {Object.entries(MockContract.DIFFICULTIES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Type">
+            <select name="kind" defaultValue={question?.kind ?? ""} className={FIELD}>
+              <option value="">Not set</option>
+              {Object.entries(MockContract.KINDS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
         {TEXT_FIELDS.map(([name, label, rows]) => (

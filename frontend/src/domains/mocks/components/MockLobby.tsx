@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { BUTTON, BOOK_BUTTON } from "@/domains/students/components/buttons";
 
-import { drillWeakestTopic, startMock } from "../actions/mocks";
+import { buildOwnSet, drillWeakestTopic, startMock } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 import type { AttemptSummary, MockExam } from "../types";
@@ -141,6 +141,55 @@ export function TopicDrill({ readOnly }: { readOnly: boolean }) {
         <button type="submit" disabled={readOnly} className={`${BOOK_BUTTON} disabled:opacity-50`}>
           Start a drill
         </button>
+      </form>
+    </section>
+  );
+}
+
+const PICK = "h-10 rounded-md border border-ink/15 bg-canvas/70 px-2 text-sm text-ink";
+
+function Pick({ label, name, options }: { label: string; name: string; options: [string, string][] }) {
+  if (!options.length) return null;
+  return (
+    <label className="grid gap-1 text-sm text-muted">
+      {label}
+      <select name={name} defaultValue="" className={PICK}>
+        <option value="">Any</option>
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Mocks → Topic drill, for a student with a "builder" grant: their own set from the bank's practice questions, by topic and tags. */
+export function BuildOwnSet({ options, readOnly }: { options: { topics: string[]; sources: string[]; sessions: string[] }; readOnly: boolean }) {
+  const own = (list: string[]) => list.map((v) => [v, v] as [string, string]);
+  return (
+    <section aria-labelledby="build-heading" className={`${CARD} mt-6`}>
+      <h2 id="build-heading" className="text-2xl font-normal italic">
+        Build a set
+      </h2>
+      <form action={buildOwnSet} className="mt-5 grid gap-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <Pick label="Topic" name="topic" options={own(options.topics)} />
+          <Pick label="Source" name="source" options={own(options.sources)} />
+          <Pick label="Session" name="session" options={own(options.sessions)} />
+          <Pick label="Difficulty" name="difficulty" options={Object.entries(MockContract.DIFFICULTIES)} />
+          <Pick label="Type" name="kind" options={Object.entries(MockContract.KINDS)} />
+          <label className="grid gap-1 text-sm text-muted">
+            Questions
+            <input name="count" type="number" min={1} max={MockContract.BUILD_MAX} defaultValue={MockContract.DRILL_SIZE} className={`${PICK} w-24`} />
+          </label>
+        </div>
+        <div>
+          <button type="submit" disabled={readOnly} className={`${BUTTON} disabled:opacity-50`}>
+            Start the set
+          </button>
+        </div>
       </form>
     </section>
   );

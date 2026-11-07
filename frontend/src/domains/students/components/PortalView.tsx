@@ -10,7 +10,7 @@ import { ClientRepository } from "@/domains/invoices/server/ClientRepository";
 import { InvoiceRepository } from "@/domains/invoices/server/InvoiceRepository";
 import { PackageCard } from "@/domains/packages/components/PackageCard";
 import { PackageRepository } from "@/domains/packages/server/PackageRepository";
-import { MockLobby, TopicDrill } from "@/domains/mocks/components/MockLobby";
+import { BuildOwnSet, MockLobby, TopicDrill } from "@/domains/mocks/components/MockLobby";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockProgress } from "@/domains/mocks/services/MockProgress";
 
@@ -49,7 +49,7 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks, exam, bank] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks, exam, bank, builder] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> => {
       const [booked, waiting] = await Promise.all([
@@ -77,6 +77,7 @@ async function portalData(student: Student) {
     safely("mock marks", async () => (await MockRepository.fromEnv()?.topicMarks(student.id)) ?? []),
     safely("next exam", async () => (await StudyPlanRepository.fromEnv()?.nextExam(student.id)) ?? null),
     safely("bank topics", async () => [...new Set(((await MockRepository.fromEnv()?.topicLevels()) ?? []).map((t) => t.topic))]),
+    safely("set builder", async () => (await MockRepository.fromEnv()?.builderOptions(student.id)) ?? null),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -112,6 +113,7 @@ async function portalData(student: Student) {
     pkg: pkg && { ...pkg, packages: packages ?? [] },
     mocks,
     attempts,
+    builder: builder ?? null,
     // Unknown (database hiccup): no card and no tab rather than an empty record.
     progress: marks && MockProgress.build(marks),
   };
@@ -119,7 +121,7 @@ async function portalData(student: Student) {
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, exam, bankTopics, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, exam, bankTopics, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress, builder } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -188,7 +190,14 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} openMocks={(mocks ?? []).map((m) => m.id)} readOnly={readOnly} />}
         mocks={hasMocks ? <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} /> : null}
         progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
-        drill={attempts?.some((a) => a.status === "completed") ? <TopicDrill readOnly={readOnly} /> : null}
+        drill={
+          attempts?.some((a) => a.status === "completed") || builder ? (
+            <>
+              {attempts?.some((a) => a.status === "completed") && <TopicDrill readOnly={readOnly} />}
+              {builder && <BuildOwnSet options={builder} readOnly={readOnly} />}
+            </>
+          ) : null
+        }
         account={<AccountPanel account={account} offers={offers} readOnly={readOnly} />}
         overview={
           <PortalOverview

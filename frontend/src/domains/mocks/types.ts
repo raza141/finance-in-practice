@@ -17,7 +17,24 @@ export interface MockAccess {
   endsAt: Date | null;
 }
 
-export type AccessProduct = "mocks" | "practice";
+/** "builder": the student may make their own sets from the bank. */
+export type AccessProduct = "mocks" | "practice" | "builder";
+/** fundamental: theory, no calculation; formula: a number has to be worked out. "" untagged. */
+export type QuestionKind = "fundamental" | "formula";
+export type QuestionDifficulty = "easy" | "medium" | "hard";
+
+/** A bank question's tags. "" is untagged. */
+export interface QuestionTags {
+  /** Where it came from, e.g. "FIP 2025 MOCK S1 - Mock 1". */
+  source: string;
+  /** The exam sitting, "2025 S1". */
+  session: string;
+  difficulty: QuestionDifficulty | "";
+  kind: QuestionKind | "";
+}
+
+/** Narrows a draw from the bank; "" in a field: any. */
+export type BankFilter = { chapter: string } & QuestionTags;
 export type GrantSource = "admin" | "package" | "purchase";
 
 /** What a grant gives: a whole product, or one mock. */
@@ -57,7 +74,7 @@ export interface MockExam extends MockExamInput {
 }
 
 /** One row of the uploaded sheet. Text fields use the journal's inline markup: $…$ and $$…$$ for maths. */
-export interface MockQuestionInput {
+export interface MockQuestionInput extends QuestionTags {
   number: number;
   topic: string;
   /** Free text like the topic; "" when the sheet has none. */
@@ -90,7 +107,7 @@ export interface MockQuestion extends ActiveQuestion {
 }
 
 /** A question in the bank. */
-export interface PoolQuestion extends MockQuestion {
+export interface PoolQuestion extends MockQuestion, QuestionTags {
   chapter: string;
   usage: QuestionUsage;
   level: CfaLevel;

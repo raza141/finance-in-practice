@@ -5,6 +5,7 @@ import { Database, type Sql } from "@/core/db/Database";
 import type {
   AccessGrant,
   AccessGrantInput,
+  AccessProduct,
   ActiveQuestion,
   AttemptStatus,
   AttemptSummary,
@@ -26,6 +27,7 @@ import type {
   MockType,
   OptionLetter,
   PoolQuestion,
+  QuestionTags,
   QuestionUsage,
   TopicMark,
 } from "../types";
@@ -61,7 +63,7 @@ interface ActiveRow {
 
 type QuestionRow = ActiveRow & { correct: OptionLetter; explanation: string; why_a: string; why_b: string; why_c: string };
 
-type BankRow = QuestionRow & { chapter: string; usage: QuestionUsage; level: CfaLevel; retired: boolean; locked: boolean; used_in: string[] };
+type BankRow = QuestionRow & QuestionTags & { chapter: string; usage: QuestionUsage; level: CfaLevel; retired: boolean; locked: boolean; used_in: string[] };
 
 interface AttemptRow {
   id: string;
@@ -203,6 +205,26 @@ export class MockRepository {
   async grantees(mockId: string): Promise<Set<string>> {
     const rows = (await this.sql`SELECT client_id FROM access_grants WHERE mock_id = ${mockId} AND (ends_at IS NULL OR ends_at > now())`) as { client_id: string }[];
     return new Set(rows.map((r) => r.client_id));
+  }
+
+  /** Whether the client holds a live grant of the whole product. */
+  async hasProduct(clientId: string, product: AccessProduct): Promise<boolean> {
+    const rows = await this.sql`
+      SELECT 1 FROM access_grants WHERE client_id = ${clientId} AND product = ${product} AND starts_at <= now() AND (ends_at IS NULL OR ends_at > now()) LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+
+  /** What a student with a "builder" grant can build a set from: practice topics and the tags in use; null without the grant. */
+  async builderOptions(clientId: string): Promise<{ topics: string[]; sources: string[]; sessions: string[] } | null> {
+    if (!(await this.hasProduct(clientId, "builder"))) return null;
+    const rows = (await this.sql`
+      SELECT array_agg(DISTINCT trim(topic) ORDER BY trim(topic)) AS topics,
+        array_remove(array_agg(DISTINCT trim(source) ORDER BY trim(source)), '') AS sources,
+        array_remove(array_agg(DISTINCT session ORDER BY session), '') AS sessions
+      FROM mock_questions WHERE NOT retired AND usage = ANY(${MockContract.usages("topic")}::text[])
+    `) as { topics: string[] | null; sources: string[] | null; sessions: string[] | null }[];
+    return { topics: rows[0]?.topics ?? [], sources: rows[0]?.sources ?? [], sessions: rows[0]?.sessions ?? [] };
   }
 
   /** Everything granted to one client, current first. */
@@ -356,7 +378,7 @@ export class MockRepository {
     const usages = mock ? MockContract.usages(mock.mockType) : [];
     const rows = (await this.sql`
       SELECT DISTINCT ON (q.content_key) q.id, COALESCE(q.number, 0) AS number, q.topic, q.chapter, q.usage, q.level, q.retired, q.vignette, q.question,
-        q.option_a, q.option_b, q.option_c, q.correct, q.explanation, q.why_a, q.why_b, q.why_c,
+        q.option_a, q.option_b, q.option_c, q.correct, q.explanation, q.why_a, q.why_b, q.why_c, q.source, q.session, q.difficulty, q.kind,
         EXISTS (
           SELECT 1 FROM mock_questions s JOIN mock_items i ON i.question_id = s.id JOIN mock_attempts a ON a.mock_id = i.mock_id WHERE s.content_key = q.content_key
         ) AS locked,
@@ -380,7 +402,7 @@ export class MockRepository {
   /** One bank question by the id of any of its copies: an assessment may hold a copy `pool` doesn't list. */
   async bankQuestion(id: string): Promise<PoolQuestion | null> {
     const [row] = (await this.sql`
-      SELECT q.id, COALESCE(q.number, 0) AS number, q.topic, q.chapter, q.usage, q.level, q.retired, q.vignette, q.question, q.option_a, q.option_b, q.option_c, q.correct, q.explanation, q.why_a, q.why_b, q.why_c,
+      SELECT q.id, COALESCE(q.number, 0) AS number, q.topic, q.chapter, q.usage, q.level, q.retired, q.vignette, q.question, q.option_a, q.option_b, q.option_c, q.correct, q.explanation, q.why_a, q.why_b, q.why_c, q.source, q.session, q.difficulty, q.kind,
         EXISTS (
           SELECT 1 FROM mock_questions s JOIN mock_items i ON i.question_id = s.id JOIN mock_attempts a ON a.mock_id = i.mock_id WHERE s.content_key = q.content_key
         ) AS locked,
@@ -410,18 +432,23 @@ export class MockRepository {
         why_a: q.why[0],
         why_b: q.why[1],
         why_c: q.why[2],
+        source: q.source,
+        session: q.session,
+        difficulty: q.difficulty,
+        kind: q.kind,
       })),
     );
     const inserted = await this.sql`
       WITH sheet AS (
         SELECT r.*, row_number() OVER () AS at, mock_question_key(r.topic, r.vignette, r.question, r.option_a, r.option_b, r.option_c, r.correct) AS key
         FROM jsonb_to_recordset(${rows}::jsonb) AS r(number smallint, topic text, chapter text, usage text, level smallint, vignette text, question text, option_a text,
-                                                     option_b text, option_c text, correct text, explanation text, why_a text, why_b text, why_c text)
+                                                     option_b text, option_c text, correct text, explanation text, why_a text, why_b text, why_c text,
+                                                     source text, session text, difficulty text, kind text)
       ), fresh AS (
         SELECT DISTINCT ON (key) * FROM sheet WHERE key NOT IN (SELECT content_key FROM mock_questions) ORDER BY key, at
       )
-      INSERT INTO mock_questions (number, topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c)
-      SELECT number, topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c FROM fresh
+      INSERT INTO mock_questions (number, topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c, source, session, difficulty, kind)
+      SELECT number, topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c, source, session, difficulty, kind FROM fresh
       RETURNING id
     `;
     return { added: inserted.length, skipped: questions.length - inserted.length };
@@ -444,14 +471,16 @@ export class MockRepository {
     if (taken) return "duplicate";
     if (!questionId) {
       await this.sql`
-        INSERT INTO mock_questions (topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c)
-        VALUES (${q.topic}, ${q.chapter}, ${q.usage}, ${q.level}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct}, ${q.explanation}, ${w1}, ${w2}, ${w3})
+        INSERT INTO mock_questions (topic, chapter, usage, level, vignette, question, option_a, option_b, option_c, correct, explanation, why_a, why_b, why_c, source, session, difficulty, kind)
+        VALUES (${q.topic}, ${q.chapter}, ${q.usage}, ${q.level}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct}, ${q.explanation}, ${w1}, ${w2}, ${w3},
+          ${q.source}, ${q.session}, ${q.difficulty}, ${q.kind})
       `;
       return "saved";
     }
     const rows = await this.sql`
       UPDATE mock_questions t SET topic = ${q.topic}, chapter = ${q.chapter}, usage = ${q.usage}, level = ${q.level}, vignette = ${q.vignette}, question = ${q.question},
-        option_a = ${o1}, option_b = ${o2}, option_c = ${o3}, correct = ${q.correct}, explanation = ${q.explanation}, why_a = ${w1}, why_b = ${w2}, why_c = ${w3}
+        option_a = ${o1}, option_b = ${o2}, option_c = ${o3}, correct = ${q.correct}, explanation = ${q.explanation}, why_a = ${w1}, why_b = ${w2}, why_c = ${w3},
+        source = ${q.source}, session = ${q.session}, difficulty = ${q.difficulty}, kind = ${q.kind}
       FROM mock_questions me
       WHERE me.id = ${questionId} AND t.content_key = me.content_key AND (
         mock_question_key(${q.topic}, ${q.vignette}, ${q.question}, ${o1}, ${o2}, ${o3}, ${q.correct}) = me.content_key
@@ -491,9 +520,15 @@ export class MockRepository {
     `;
   }
 
-  async setChapter(ids: string[], chapter: string): Promise<void> {
+  /** One tag on the ticked questions; tags aren't in content_key, so a sat question takes them too. Values are checked by the caller. */
+  async setTag(ids: string[], tag: "chapter" | keyof QuestionTags, value: string): Promise<void> {
     await this.sql`
-      UPDATE mock_questions SET chapter = ${chapter}
+      UPDATE mock_questions SET
+        chapter = CASE WHEN ${tag} = 'chapter' THEN ${value} ELSE chapter END,
+        source = CASE WHEN ${tag} = 'source' THEN ${value} ELSE source END,
+        session = CASE WHEN ${tag} = 'session' THEN ${value} ELSE session END,
+        difficulty = CASE WHEN ${tag} = 'difficulty' THEN ${value} ELSE difficulty END,
+        kind = CASE WHEN ${tag} = 'kind' THEN ${value} ELSE kind END
       WHERE content_key IN (SELECT content_key FROM mock_questions WHERE id = ANY(${ids}::uuid[]))
     `;
   }
@@ -508,6 +543,7 @@ export class MockRepository {
    */
   async addFromBank(mock: Pick<MockExam, "id" | "mockType" | "level">, pick: PoolPick): Promise<number> {
     const quotas = JSON.stringify(pick.quotas);
+    const { chapter = "", source = "", session = "", difficulty = "", kind = "" } = pick;
     const [row] = (await this.sql`
       WITH open AS (
         SELECT COALESCE((SELECT max(number) FROM mock_items WHERE mock_id = ${mock.id}), 0) AS last
@@ -516,7 +552,13 @@ export class MockRepository {
         SELECT DISTINCT ON (content_key) *
         FROM mock_questions
         WHERE NOT retired AND usage = ANY(${MockContract.usages(mock.mockType)}::text[]) AND level = ${mock.level}::smallint
-          AND (${pick.chapter} = '' OR lower(trim(chapter)) = lower(${pick.chapter}) OR id = ANY(${pick.ids}::uuid[]))
+          AND (id = ANY(${pick.ids}::uuid[]) OR (
+            (${chapter} = '' OR lower(trim(chapter)) = lower(${chapter}))
+            AND (${source} = '' OR lower(trim(source)) = lower(${source}))
+            AND (${session} = '' OR session = ${session})
+            AND (${difficulty} = '' OR difficulty = ${difficulty})
+            AND (${kind} = '' OR kind = ${kind})
+          ))
           AND content_key NOT IN (SELECT s.content_key FROM mock_items i JOIN mock_questions s ON s.id = i.question_id WHERE i.mock_id = ${mock.id})
           AND content_key NOT IN (SELECT s.content_key FROM mock_attempts a JOIN mock_items i ON i.mock_id = a.mock_id JOIN mock_questions s ON s.id = i.question_id WHERE a.client_id = ANY(${pick.avoid}::uuid[]))
         ORDER BY content_key, id = ANY(${pick.ids}::uuid[]) DESC, random()
@@ -951,7 +993,7 @@ export class MockRepository {
   }
 
   private static toBank(r: BankRow): PoolQuestion {
-    return { ...MockRepository.toActive(r), correct: r.correct, explanation: r.explanation, why: [r.why_a, r.why_b, r.why_c], chapter: r.chapter, usage: r.usage, level: r.level, retired: r.retired, locked: r.locked, usedIn: r.used_in };
+    return { ...MockRepository.toActive(r), correct: r.correct, explanation: r.explanation, why: [r.why_a, r.why_b, r.why_c], chapter: r.chapter, source: r.source, session: r.session, difficulty: r.difficulty, kind: r.kind, usage: r.usage, level: r.level, retired: r.retired, locked: r.locked, usedIn: r.used_in };
   }
 
   private static toActive(r: ActiveRow): ActiveQuestion {
