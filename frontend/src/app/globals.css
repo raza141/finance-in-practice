@@ -368,3 +368,77 @@ html:not([data-admin-sidebar-hidden]) .admin-sidebar-show {
     transition: none;
   }
 }
+
+/* Spotlight (SpotlightCard): a soft cyan light under the cursor on cards you pick or buy. Pointer devices only. */
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(420px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in oklab, var(--color-quant) 14%, transparent), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .spotlight:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Star border: one gold light that circles the hero's Book button. Pure CSS; a still rim when motion is reduced. */
+@property --star-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.star-border {
+  position: relative;
+  isolation: isolate;
+}
+.star-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 12px;
+  corner-shape: squircle;
+  padding: 2px;
+  background: conic-gradient(from var(--star-angle), transparent 0 72%, var(--color-gold) 88%, transparent 100%);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: star-spin 4s linear infinite;
+}
+@keyframes star-spin {
+  to {
+    --star-angle: 360deg;
+  }
+}
+
+/* Count up (CountUp): the number climbs from 0 once on paint. No JS, so no flash on hydration; browsers without @property show the final figure. */
+@property --count {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+.count-up {
+  --count: var(--count-to);
+  counter-reset: count var(--count);
+  animation: count-up 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.count-up::after {
+  content: counter(count) attr(data-suffix);
+}
+@keyframes count-up {
+  from {
+    --count: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-border::before,
+  .count-up {
+    animation: none;
+  }
+}

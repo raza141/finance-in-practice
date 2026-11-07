@@ -59,7 +59,7 @@ export function HeroSection() {
           </ul>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <span data-anim="hero-cta">
+            <span data-anim="hero-cta" className="star-border">
               <BookSplitButton />
             </span>
             <span data-anim="hero-cta">

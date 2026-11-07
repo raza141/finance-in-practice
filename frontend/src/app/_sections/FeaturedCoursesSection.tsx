@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { SectionHeading } from "@/core/components/ui/SectionHeading";
+import { SpotlightCard } from "@/core/components/ui/SpotlightCard";
 import { CourseRepository } from "@/domains/courses/server/CourseRepository";
 import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import { ExamFacts } from "@/domains/courses/services/ExamFacts";
@@ -53,7 +54,7 @@ export async function FeaturedCoursesSection() {
           const university = course.category === PackageTable.UNIVERSITY_CATEGORY;
           const savers = university ? UNIVERSITY_POINTS : (course.testimonialTicker && TIME_SAVERS[course.testimonialTicker]) || [];
           return (
-            <li
+            <SpotlightCard
               key={course.id}
               className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 lg:p-7"
             >
@@ -111,7 +112,7 @@ export async function FeaturedCoursesSection() {
                   </ButtonLink>
                 </div>
               </div>
-            </li>
+            </SpotlightCard>
           );
         })}
       </ul>

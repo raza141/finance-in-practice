@@ -4,6 +4,8 @@ import { Flag } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 
+import { CountUp } from "@/core/components/ui/CountUp";
+
 import { retakeMistakes, saveMockNote } from "../actions/mocks";
 import { MockGrader } from "../services/MockGrader";
 import type { Confidence, MockGrade, OptionLetter } from "../types";
@@ -142,12 +144,14 @@ export function MockResults({
           <div>
             <dt className="text-xs text-muted">Score</dt>
             <dd className="mt-1 font-mono text-2xl">
-              {grade.score}/{grade.total}
+              <CountUp value={grade.score} />/{grade.total}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-muted">Percentage</dt>
-            <dd className={`mt-1 font-mono text-2xl ${pct >= 70 ? "text-emerald-300" : "text-gold"}`}>{pct}%</dd>
+            <dd className={`mt-1 font-mono text-2xl ${pct >= 70 ? "text-emerald-300" : "text-gold"}`}>
+              <CountUp value={pct} suffix="%" />
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-muted">Time taken</dt>
