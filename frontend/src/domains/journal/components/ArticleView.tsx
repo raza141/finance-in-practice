@@ -41,6 +41,10 @@ export interface ArticleViewProps {
 }
 
 /** A research article, as readers see it. The admin preview renders the same component. */
+/** Reading column + rail; the header and body share it so their edges line up. */
+const COLUMNS =
+  "grid gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-16 2xl:grid-cols-[minmax(0,72rem)_24rem] 2xl:gap-20 2xl:justify-between";
+
 /** Keeps hyphenated words ("1-on-1") on one line so headings never break after a hyphen. */
 function keepHyphenated(text: string) {
   return text.split(/(\S*\w-\w\S*)/).map((part, i) =>
@@ -262,36 +266,39 @@ export async function ArticleView({ doc, authorName, datePublished, dateModified
 
   return (
     <article data-plain-page className="page-container pt-10 pb-16 lg:pt-12">
-      <header className="max-w-4xl">
-        <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
-          ← Blog
-        </Link>
-        <p className="mt-6 font-mono text-xs tracking-[0.16em] text-muted uppercase">
-          {[doc.category, doc.format, doc.difficulty].filter(Boolean).join(" · ")}
-        </p>
-        <h1 className="mt-3 text-4xl leading-tight font-black text-balance sm:text-5xl">{keepHyphenated(doc.title || "Untitled draft")}</h1>
-        {doc.subtitle && <p className="mt-4 text-xl leading-relaxed text-muted">{doc.subtitle}</p>}
-        <p className="mt-5 font-mono text-xs text-muted">
-          {authorName}
-          {datePublished && (
-            <>
-              {" · "}
-              <time dateTime={datePublished}>{JournalDates.long(datePublished)}</time>
-            </>
-          )}
-          {updated && (
-            <>
-              {" · Updated "}
-              <time dateTime={dateModified!}>{JournalDates.long(dateModified!)}</time>
-            </>
-          )}
-          {` · ${minutes} min read`}
-          {doc.audience.length > 0 && ` · For ${doc.audience.join(", ")}`}
-        </p>
+      {/* Same columns as the body, so the title spans exactly the reading column. */}
+      <header className={COLUMNS}>
+        <div>
+          <Link href="/journal" className="font-mono text-xs tracking-[0.16em] text-quant uppercase hover:text-ink">
+            ← Blog
+          </Link>
+          <p className="mt-6 font-mono text-xs tracking-[0.16em] text-muted uppercase">
+            {[doc.category, doc.format, doc.difficulty].filter(Boolean).join(" · ")}
+          </p>
+          <h1 className="mt-3 text-4xl leading-tight font-black text-balance sm:text-5xl">{keepHyphenated(doc.title || "Untitled draft")}</h1>
+          {doc.subtitle && <p className="mt-4 text-xl leading-relaxed text-muted">{doc.subtitle}</p>}
+          <p className="mt-5 font-mono text-xs text-muted">
+            {authorName}
+            {datePublished && (
+              <>
+                {" · "}
+                <time dateTime={datePublished}>{JournalDates.long(datePublished)}</time>
+              </>
+            )}
+            {updated && (
+              <>
+                {" · Updated "}
+                <time dateTime={dateModified!}>{JournalDates.long(dateModified!)}</time>
+              </>
+            )}
+            {` · ${minutes} min read`}
+            {doc.audience.length > 0 && ` · For ${doc.audience.join(", ")}`}
+          </p>
+        </div>
       </header>
 
       {/* Reading column on the site's left edge (~70 characters a line); contents and booking ride in a sticky rail on wide screens. */}
-      <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-16 2xl:grid-cols-[minmax(0,72rem)_24rem] 2xl:gap-20 2xl:justify-between">
+      <div className={`mt-8 ${COLUMNS}`}>
         <div className="min-w-0">
           {doc.featuredImage?.url && (
             <figure>
