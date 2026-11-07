@@ -33,7 +33,7 @@ export class ServiceCatalog {
       kicker: "01 · Private wealth",
       title: "Personal finance & portfolio building",
       summary:
-        "1-on-1 classes on budgeting, saving, investing and building your own portfolio, with the same models used in the exam courses.",
+        "1-on-1 classes on budgeting, saving, investing and building your own portfolio, at home in Abu Dhabi or online.",
       tags: ["Budgeting", "Investing", "Portfolios"],
       fee: siteConfig.fees.personal,
       span: 4,

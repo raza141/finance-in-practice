@@ -27,7 +27,7 @@ function formulaHtml(formula: string): string {
   return texToHtml(formula.trim().replace(/^\$\$?([\s\S]*?)\$\$?$/, "$1"), true);
 }
 
-/** The course page a question's level sells; Level III has none yet, so the catalogue. */
+/** The course page a question's level sells; Level III has none, so its questions get no callout. */
 const COURSE_PATH: Record<number, string> = { 1: "/courses/cfa-level-i", 2: "/courses/cfa-level-ii", 4: "/courses/frm-part-1" };
 
 /** The conversion card under the insight: the question's own exam, its lowest hourly rate, two buttons. */
@@ -40,7 +40,7 @@ function CourseCallout({ level }: { level: number }) {
       </h2>
       <div className="btn-group mt-6">
         <BookButton track={QuestionTaxonomy.examOf(level)} />
-        <ButtonLink href={COURSE_PATH[level] ?? "/courses"} variant="secondary">
+        <ButtonLink href={COURSE_PATH[level]} variant="secondary">
           See the {exam} course →
         </ButtonLink>
       </div>
@@ -278,7 +278,7 @@ export function QuestionView({
 
       {q.source && <p className="mt-8 text-sm text-muted">Covers: {q.source}</p>}
 
-      {!preview && <CourseCallout level={q.level} />}
+      {!preview && COURSE_PATH[q.level] && <CourseCallout level={q.level} />}
 
       {!preview && <ShareBar url={`${siteConfig.url}${QuestionTaxonomy.path(q)}`} title={q.title} exam={QuestionTaxonomy.examName(q.level)} />}
 
