@@ -87,8 +87,8 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   const tab = (active: boolean) =>
     `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
   return (
-    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-canvas/40 backdrop-blur-[2px] md:grid-cols-2">
-      <div className="relative flex flex-col justify-start gap-10 border-b border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
+    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-ink/10 bg-canvas/40 backdrop-blur-[2px] md:grid-cols-2">
+      <div className="relative flex flex-col justify-start gap-10 border-b border-ink/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
         <Logo height={44} />
         <div>
           <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Student portal</p>

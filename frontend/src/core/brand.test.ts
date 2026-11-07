@@ -42,6 +42,13 @@ describe("brand lock", () => {
     expect(bad).toEqual([]);
   });
 
+  it("writes tints as ink, not white, in the portal (they must work in the light theme)", () => {
+    const bad = sources
+      .filter((f) => /^(domains\/(students|mocks)|app\/student)\//.test(f.path))
+      .flatMap((f) => [...f.text.matchAll(/\b(?:bg|border)-white\/[\d[]/g)].map((m) => `${f.path}: ${m[0]}`));
+    expect(bad).toEqual([]);
+  });
+
   it("loads fonts once, in the root layout", () => {
     const loaders = sources.filter((f) => f.text.includes("next/font")).map((f) => f.path);
     expect(loaders).toEqual(["app/layout.tsx"]);
@@ -63,6 +70,10 @@ describe("brand lock", () => {
     const css = readFileSync(join(SRC, "app/globals.css"), "utf8");
     for (const [token, value] of Object.entries({ canvas: "#0b1120", surface: "#151e32", line: "#24304a", gold: "#d4af37", quant: "#22d3ee", ink: "#f8fafc", muted: "#aab6c8" })) {
       expect(css).toContain(`--color-${token}: ${value};`);
+    }
+    // The portal's light theme (§0): its own values, and nowhere but the portal.
+    for (const [token, value] of Object.entries({ canvas: "#f5f7fb", ink: "#0b1120", gold: "#8a6a00", quant: "#0e7490" })) {
+      expect(css).toMatch(new RegExp(`html\\[data-theme="light"\\] \\{[^}]*--color-${token}: ${value};`));
     }
     for (const font of ["--font-inter", "--font-merriweather", "--font-jetbrains-mono"]) expect(css).toContain(font);
   });

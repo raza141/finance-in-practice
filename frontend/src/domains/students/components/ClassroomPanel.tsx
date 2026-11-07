@@ -6,7 +6,7 @@ import { Batches } from "../services/Batches";
 import { CLASSROOM_BUTTON } from "./buttons";
 import type { PrivateClassroom, StudentClassroom } from "../types";
 
-const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
+const CARD = "rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
 
 /** Inline chalkboard mark (no image request). */
 function BoardIcon({ className = "" }: { className?: string }) {

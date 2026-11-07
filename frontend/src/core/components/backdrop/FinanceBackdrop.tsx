@@ -106,7 +106,7 @@ export function FinanceBackdrop({
       <canvas ref={canvas} className={`absolute inset-0 h-full w-full ${dim ? "opacity-55" : ""}`} />
       {/* Keep the content readable: a soft glow top left, fading into the page at the bottom. */}
       {glow && <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgb(34_211_238/0.1),transparent_55%)]" />}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(11_17_32/0.2),transparent_40%,rgb(11_17_32/0.7))]" />
+      <div className="absolute inset-0 bg-linear-to-b from-canvas/20 via-transparent via-40% to-canvas/70" />
     </div>
   );
 }

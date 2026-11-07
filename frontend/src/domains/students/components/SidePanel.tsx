@@ -18,7 +18,7 @@ export function SidePanel({ label, main, rail, children }: { label: string; main
           type="button"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
-          className={`hidden items-center gap-2 rounded-2xl border border-white/10 bg-canvas/70 p-3 text-sm text-muted backdrop-blur-md transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-quant md:flex ${open ? "" : "flex-col"}`}
+          className={`hidden items-center gap-2 rounded-2xl border border-ink/10 bg-canvas/70 p-3 text-sm text-muted backdrop-blur-md transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-quant md:flex ${open ? "" : "flex-col"}`}
         >
           <Icon aria-hidden strokeWidth={1.75} className="size-5 shrink-0" />
           <span className={open ? "" : "sr-only"}>{open ? "Hide" : "Show"} {label.toLowerCase()}</span>

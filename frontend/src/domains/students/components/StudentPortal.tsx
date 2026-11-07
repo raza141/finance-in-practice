@@ -21,7 +21,7 @@ const DAYS = 14;
 const FIELD =
   "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
 const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
-const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
+const CARD = "rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md";
 const chip = (active: boolean) =>
   `rounded-md border px-3 py-2 font-mono text-xs transition-colors ${active ? "border-quant bg-quant/15 text-quant" : "border-line text-ink/90 hover:border-quant/50"}`;
 
@@ -254,8 +254,8 @@ export function StudentPortal({
   const mockPages = [
     ...(mocks ? [{ label: "Mock exams", tab: "mocks" as Tab }] : []),
     ...(progress ? [{ label: "Progress", tab: "progress" as Tab, icon: TrendingUp, hint: "Your marks against your target" }] : []),
-    { label: "Mistakes notebook", href: "/student/mocks/notebook", icon: NotebookPen, hint: "Questions you missed or flagged, to practise again" },
     ...(drill ? [{ label: "Topic drill", tab: "drill" as Tab, icon: Target, hint: "New questions from your weakest topic" }] : []),
+    { label: "Mistakes notebook", href: "/student/mocks/notebook", icon: NotebookPen, hint: "Questions you missed or flagged, to practise again" },
   ];
   const TABS: NavItem[] = [
     { id: "home", label: "Home" },

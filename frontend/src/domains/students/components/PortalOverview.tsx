@@ -98,7 +98,7 @@ export function PortalOverview({
 
 /** The one big card: when, what, where, and the action that fits (Join, or Book when nothing is booked). */
 function NextSession({ next, more, failed }: { next: StudentSession | undefined; more: number; failed: boolean }) {
-  const card = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
+  const card = "rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
   if (!next) {
     return (
       <section aria-labelledby="next-heading" className={`${card} flex flex-wrap items-center justify-between gap-4`}>

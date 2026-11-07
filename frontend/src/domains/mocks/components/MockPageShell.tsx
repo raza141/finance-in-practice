@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/core/components/layout/Logo";
+import { ThemeToggle } from "@/core/components/layout/PortalTheme";
 import { BackToPortal } from "@/domains/students/components/BackToPortal";
 
 /** The frame of a mock's revision pages (results, notebook, notes): the logo, Back to portal, and the still grid. Prints as plain paper. */
@@ -15,7 +16,10 @@ export function MockPageShell({ children }: { children: ReactNode }) {
           <Link href="/" aria-label="Finance in Practice website">
             <Logo height={30} priority />
           </Link>
-          <BackToPortal />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <BackToPortal />
+          </div>
         </div>
       </header>
       <div className="page-container relative py-8 lg:py-10 print:py-0">{children}</div>

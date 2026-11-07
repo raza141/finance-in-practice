@@ -55,7 +55,7 @@ export function StudyPlanTimeline({
         </span>
       }
       main={
-        <section aria-labelledby="plan-heading" className="min-w-0 rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
+        <section aria-labelledby="plan-heading" className="min-w-0 rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
           <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
             <h2 id="plan-heading" className="text-2xl font-normal italic">
               Your study plan
@@ -103,7 +103,7 @@ export function StudyPlanTimeline({
         </section>
       }
     >
-      <section aria-labelledby="programmes-heading" className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md">
+      <section aria-labelledby="programmes-heading" className="rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md">
         <h2 id="programmes-heading" className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
           Your programmes
         </h2>
@@ -115,7 +115,7 @@ export function StudyPlanTimeline({
           ))}
         </ul>
       </section>
-      <section aria-labelledby="materials-heading" className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md">
+      <section aria-labelledby="materials-heading" className="rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md">
         <h2 id="materials-heading" className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
           Materials
         </h2>

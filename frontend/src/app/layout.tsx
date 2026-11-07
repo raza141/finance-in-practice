@@ -6,6 +6,7 @@ import { Footer } from "@/core/components/layout/Footer";
 import { SiteAnalytics } from "@/core/components/layout/SiteAnalytics";
 import { Navbar } from "@/core/components/layout/Navbar";
 import { SiteChrome } from "@/core/components/layout/SiteChrome";
+import { PortalThemeSync, THEME_PREPAINT } from "@/core/components/layout/PortalTheme";
 import { StickyBookBar } from "@/core/components/layout/StickyBookBar";
 import { WhatsAppButton } from "@/core/components/ui/WhatsAppButton";
 import { JsonLd } from "@/core/components/seo/JsonLd";
@@ -85,6 +86,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script id="animation-prepaint" strategy="beforeInteractive">
           {ANIMATION_PREPAINT}
         </Script>
+        <Script id="theme-prepaint" strategy="beforeInteractive">
+          {THEME_PREPAINT}
+        </Script>
+        <PortalThemeSync />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded focus:bg-surface focus:px-4 focus:py-2"

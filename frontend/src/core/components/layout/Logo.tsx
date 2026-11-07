@@ -11,7 +11,8 @@ interface LogoProps {
 
 /**
  * The FiP brand lockup (monogram, wordmark and tagline) from
- * public/brand/fip-logo.png. Light artwork: render on dark surfaces only.
+ * public/brand/fip-logo.png. Light artwork: render on dark surfaces only; in the portal's
+ * light theme it sits on a navy chip (never recoloured).
  */
 export function Logo({ height = 32, className = "", priority = false }: LogoProps) {
   const width = Math.round((height * logo.width) / logo.height);
@@ -22,7 +23,7 @@ export function Logo({ height = 32, className = "", priority = false }: LogoProp
       width={width}
       height={height}
       priority={priority}
-      className={className}
+      className={`light:box-content light:rounded-lg light:bg-navy light:px-2 light:py-1 ${className}`}
     />
   );
 }

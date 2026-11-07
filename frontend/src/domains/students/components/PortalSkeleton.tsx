@@ -19,7 +19,7 @@ export function PortalSkeleton() {
       <div className="page-container grid gap-6 pt-8 pb-28 lg:pt-10">
         <div className="grid gap-6 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="grid gap-3 rounded-3xl border border-white/10 bg-canvas/70 p-6">
+            <div key={i} className="grid gap-3 rounded-3xl border border-ink/10 bg-canvas/70 p-6">
               <Bone className="h-3 w-24" />
               <Bone className="h-6 w-3/4" />
               <Bone className="h-3 w-full" />
@@ -36,7 +36,7 @@ export function PortalSkeleton() {
 /** A card still loading inside the portal (the class feed): heading and lines in shimmer. */
 export function CardSkeleton({ label }: { label: string }) {
   return (
-    <div role="status" className="grid gap-3 rounded-3xl border border-white/10 bg-canvas/70 p-6">
+    <div role="status" className="grid gap-3 rounded-3xl border border-ink/10 bg-canvas/70 p-6">
       <span className="sr-only">Loading {label}…</span>
       <Bone className="h-3 w-28" />
       <Bone className="h-4 w-3/4" />

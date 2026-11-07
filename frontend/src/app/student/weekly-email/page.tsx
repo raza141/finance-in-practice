@@ -14,7 +14,7 @@ export default async function WeeklyEmailPage({ searchParams }: { searchParams: 
   const { t, done } = await searchParams;
   return (
     <div className="page-container grid min-h-[60vh] place-items-center py-16">
-      <div className="max-w-md rounded-3xl border border-white/10 bg-canvas/70 p-8 text-center">
+      <div className="max-w-md rounded-3xl border border-ink/10 bg-canvas/70 p-8 text-center">
         <h1 className="text-3xl font-normal italic">Weekly email</h1>
         {done ? (
           <p className="mt-4 text-muted">Done: you won&rsquo;t get the Sunday &ldquo;week in class&rdquo; email any more. Everything is still in your portal.</p>

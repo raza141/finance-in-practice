@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
+import { ThemeToggle } from "@/core/components/layout/PortalTheme";
 import { LINKEDIN_GLYPH } from "@/core/components/ui/LinkedInFollow";
 import { siteConfig } from "@/core/config/site";
 
@@ -41,7 +42,7 @@ function Glyph({ id, active, count }: { id: Tab; active: boolean; count: number 
 const ITEM = "relative flex flex-col items-center justify-center gap-1 font-mono text-[10px] leading-none tracking-[0.12em] uppercase transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
 const tone = (active: boolean, phone: boolean) => (active ? `font-semibold ${phone ? "text-gold" : "text-ink after:bg-gold"}` : "text-muted hover:text-ink");
 const DESK = "h-16 min-w-18 px-2.5 after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full";
-const MENU_LINK = "block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-white/5";
+const MENU_LINK = "block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-ink/5";
 
 /** Wide screens: a tab with pages opens a small menu under it (click, Esc or a click outside closes it). */
 function DesktopNav({ tabs, active, badges, onGo }: Tabs) {
@@ -155,7 +156,7 @@ export function SubRows({ item, active, onGo }: { item: NavItem; active: Tab; on
   if (!item.subs || active !== landing(item)) return null;
   const rest = item.subs.filter((s) => s.tab !== active);
   if (rest.length === 0) return null;
-  const ROW = "flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
+  const ROW = "flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-ink/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-quant";
   const body = (sub: SubItem) => {
     const Icon = sub.icon ?? ClipboardCheck;
     return (
@@ -212,7 +213,7 @@ const initialsOf = (name: string) =>
     .join("")
     .toUpperCase();
 
-const MENU_ITEM = "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5";
+const MENU_ITEM = "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-ink/5";
 
 /**
  * The portal's one bar, LinkedIn-style: logo left, the tabs (icon over label) in the middle on wide
@@ -228,7 +229,8 @@ export function PortalBar({ me, readOnly, onAccount, onPackage, ...tabs }: Tabs 
           <Logo height={30} priority />
         </Link>
         <DesktopNav {...tabs} />
-        <button type="button" popoverTarget="me-menu" className="flex shrink-0 items-center gap-2 rounded-btn py-1 pr-1 pl-1.5 text-sm hover:bg-white/5">
+        <ThemeToggle className="ml-auto -mr-4" />
+        <button type="button" popoverTarget="me-menu" className="flex shrink-0 items-center gap-2 rounded-btn py-1 pr-1 pl-1.5 text-sm hover:bg-ink/5">
           <span aria-hidden className="grid size-8 place-items-center rounded-full bg-quant/15 text-xs font-semibold text-quant">
             {initialsOf(me.name)}
           </span>

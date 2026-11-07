@@ -31,7 +31,7 @@ export default async function NotebookPage({ searchParams }: PageProps<"/student
   return (
     <MockPageShell>
       <div className="mx-auto grid max-w-3xl gap-6">
-        <section className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
+        <section className="rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
           <h1 className="text-3xl font-normal italic">Mistakes notebook</h1>
           <p className="mt-2 text-muted">
             Every question you&rsquo;ve got wrong, left blank or flagged, from all your mocks. A question leaves once you get it right {MockNotebook.RIGHT_TO_CLEAR} times in a row without a flag.

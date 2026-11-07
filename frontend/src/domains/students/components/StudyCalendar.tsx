@@ -33,7 +33,7 @@ function chipClass(item: StudyDayItem): string {
   const base = "border-0 border-l-[3px]";
   if (item.kind !== "topic") return `${base} ${CHIP[item.kind]}`;
   if (item.carried) return "border border-dashed border-gold/70 border-l-[3px] border-l-gold bg-canvas text-ink hover:bg-surface-raised";
-  if (item.status === "done") return `${base} border-l-slate-500 bg-white/[0.03] text-muted line-through hover:bg-white/[0.06]`;
+  if (item.status === "done") return `${base} border-l-slate-500 bg-ink/[0.03] text-muted line-through hover:bg-ink/[0.06]`;
   if (item.status === "skipped") return `${base} border-l-slate-600 bg-transparent text-muted/60 line-through`;
   return `${base} ${CHIP.topic}`;
 }

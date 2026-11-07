@@ -9,7 +9,7 @@ import { BOOK_BUTTON } from "./buttons";
 import { HomeRow } from "./HomeRow";
 import { TabButton } from "./StudentPortal";
 
-const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md";
+const CARD = "rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md";
 const LABEL = "text-sm text-muted";
 const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 const MONTH_LONG = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -85,7 +85,7 @@ export function AccountPanel({ account, offers = [], readOnly = false }: { accou
   return (
     <div className="grid gap-6">
       {/* One summary panel split by hairlines (balance, studied, this month), like a bank app's account header; not three loose boxes. */}
-      <div className="grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-line/70 lg:grid-cols-3 *:rounded-none *:border-0 *:bg-canvas sm:*:p-8">
+      <div className="grid gap-px overflow-hidden rounded-3xl border border-ink/10 bg-line/70 lg:grid-cols-3 *:rounded-none *:border-0 *:bg-canvas sm:*:p-8">
         <section className={CARD} aria-labelledby="balance-heading">
           <h2 id="balance-heading" className={LABEL}>
             Balance

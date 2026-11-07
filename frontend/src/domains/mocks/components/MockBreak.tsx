@@ -36,7 +36,7 @@ export function MockBreak({ attemptId, title, remainingMs, next }: { attemptId: 
 
   return (
     <div className="grid min-h-screen place-items-center p-6">
-      <section aria-labelledby="break-heading" className="w-full max-w-lg rounded-3xl border border-white/10 bg-canvas/70 p-8 text-center backdrop-blur-md">
+      <section aria-labelledby="break-heading" className="w-full max-w-lg rounded-3xl border border-ink/10 bg-canvas/70 p-8 text-center backdrop-blur-md">
         <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">{title}</p>
         <h1 id="break-heading" className="mt-2 text-2xl font-normal italic">
           Session {next - 1} done. Optional break.

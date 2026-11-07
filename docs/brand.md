@@ -17,7 +17,9 @@ The brand is enforced, not just written down. `frontend/src/core/brand.test.ts` 
 
 Screens that copy another product's look on purpose (the Google review card, the WhatsApp chat preview, the Google result preview) are listed in the test as exceptions.
 
-**Background**: every page is `canvas` navy with the faint finance grid (`FinanceBackdrop`, `bg-grid-lines`); cards float on it with blur. No photos, gradients or light sections behind content.
+**Background**: every page is dark by default: `canvas` navy with the faint finance grid (`FinanceBackdrop`, `bg-grid-lines`); cards float on it with blur. No photos, gradients or light sections behind content.
+
+**Light theme: the student portal only** (`/student` and its mocks). A sun/moon button in the portal bar, the mock bar and the mock revision pages switches it; the choice stays on the device, and with none the device's own setting decides (`core/components/layout/PortalTheme.tsx`). The website, landing page and admin are always dark. Light swaps the token values only (`html[data-theme="light"]` in `globals.css`), so every token keeps its job. Write tints as `ink/…` (`border-ink/10`, `hover:bg-ink/5`), never `white/…`, so they work in both. The logo is light artwork: in light theme it sits on a small `navy` chip, never recoloured.
 
 ## 1. Voice
 
@@ -51,6 +53,8 @@ Screens that copy another product's look on purpose (the Google review card, the
 | `code` | #22272e | Code blocks | Anything else |
 
 **One gold.** Gold is always #d4af37 at full strength: buttons, the selected page switch, badges, overdue topics. No second gold (no amber or yellow), and no faded gold for states: a disabled gold button turns neutral grey (`globals.css` does this for every gold button). `gold-bright` exists only as the hover state.
+
+**Light theme values** (portal only, same jobs): canvas #f5f7fb, surface #ffffff, surface-raised #eef2f7, line #d6dce6, ink #0b1120, muted #4b5567, gold #8a6a00 (hover #a07c00), quant teal #0e7490 (top #0891b2, chip text #155e75). Gold and cyan go darker so they read on white; it's still one gold per theme.
 
 Colour never carries meaning alone: overdue is dashed **and** gold, done is ticked **and** dimmed.
 

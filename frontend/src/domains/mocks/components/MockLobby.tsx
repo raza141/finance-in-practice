@@ -8,7 +8,7 @@ import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 import type { AttemptSummary, MockExam } from "../types";
 
-const CARD = "rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
+const CARD = "rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8";
 const DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", year: "numeric" });
 
 /** The portal's mock exams and practice sets: what's available to sit, and every past attempt to revise. null = couldn't load. */
@@ -28,7 +28,7 @@ export function MockLobby({ mocks, history, readOnly }: { mocks: MockExam[] | nu
       {items.map((m) => {
         const label = MockContract.isPractice(m.mockType) ? "Start set" : "Start mock";
         return (
-          <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4 transition-colors hover:bg-white/[0.03] sm:px-5">
+          <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4 transition-colors hover:bg-ink/[0.03] sm:px-5">
             <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-raised text-quant">
               <ClipboardCheck strokeWidth={1.75} className="size-5" />
             </span>

@@ -133,7 +133,7 @@ export function MockResults({
   const pct = MockGrader.percent(grade.score, grade.total);
   return (
     <div className="grid gap-6">
-      <section aria-labelledby="score-heading" className="rounded-3xl border border-white/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
+      <section aria-labelledby="score-heading" className="rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
         <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">Results</p>
         <h1 id="score-heading" className="mt-1 text-2xl font-normal italic">
           {title}
@@ -227,7 +227,7 @@ export function MockResults({
       </section>
 
       <section aria-label="Review questions" className="grid gap-4 lg:grid-cols-[13rem_1fr]">
-        <nav aria-label="Questions" className="self-start rounded-2xl border border-white/10 bg-canvas/90 p-3 lg:sticky lg:top-20">
+        <nav aria-label="Questions" className="self-start rounded-2xl border border-ink/10 bg-canvas/90 p-3 lg:sticky lg:top-20">
           <div role="group" aria-label="Show questions" className="grid grid-cols-2 gap-1">
             {filters.map(([id, label]) => (
               <button

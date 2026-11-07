@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { RAISED_GOLD, RAISED_PLAIN, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 import { BackToPortal } from "@/domains/students/components/BackToPortal";
+import { ThemeToggle } from "@/core/components/layout/PortalTheme";
 
 import { MockGrader } from "../services/MockGrader";
 import { playerCall } from "./playerCall";
@@ -457,6 +458,7 @@ export function MockPlayer({
             <Timer aria-hidden className="mr-1 inline size-4 align-[-3px]" />
             {MockGrader.clock(left)}
           </p>
+          <ThemeToggle />
           {paused && (
             <BackToPortal href={exitHref} label={preview ? "Exit" : "Back to portal"} />
           )}

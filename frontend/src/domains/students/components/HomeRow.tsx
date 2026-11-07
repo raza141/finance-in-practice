@@ -12,7 +12,7 @@ export function HomeRow({ tab, icon: Icon, title, detail, value, urgent = false 
     <li>
       <TabButton
         tab={tab}
-        className="group flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-quant"
+        className="group flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-quant"
       >
         <span
           aria-hidden
@@ -34,7 +34,7 @@ export function HomeRow({ tab, icon: Icon, title, detail, value, urgent = false 
 /** A Home panel: a title and its rows. */
 export function HomePanel({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <section aria-label={title} className={`rounded-3xl border border-white/10 bg-canvas/70 p-3 backdrop-blur-md sm:p-4 ${className}`}>
+    <section aria-label={title} className={`rounded-3xl border border-ink/10 bg-canvas/70 p-3 backdrop-blur-md sm:p-4 ${className}`}>
       <h2 className="px-3 pt-2 pb-1 text-lg font-normal italic">{title}</h2>
       <ul className="grid">{children}</ul>
     </section>
