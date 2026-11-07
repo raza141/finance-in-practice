@@ -53,7 +53,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                   <h3 className="border-b border-line px-6 py-4 font-mono text-[11px] tracking-[0.16em] text-quant uppercase">{PackageTable.AUDIENCE[audience]}</h3>
                   <ul className="divide-y divide-line">
                     {rows.map((p) => (
-                      <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-0.5 px-6 py-4 sm:grid-cols-[minmax(0,1fr)_8rem_9rem]">
+                      <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-0.5 px-6 py-4 sm:grid-cols-[minmax(0,1fr)_10rem_10.5rem]">
                         <span className="font-semibold text-ink">{p.name}</span>
                         <span className="col-start-1 row-start-2 text-sm text-muted sm:col-start-auto sm:row-start-auto">{PackageTable.hours(p)}</span>
                         <span className="col-start-2 row-span-2 row-start-1 text-right sm:col-start-auto sm:row-span-1 sm:row-start-auto">
