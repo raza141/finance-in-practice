@@ -19,21 +19,23 @@ import { MockContract } from "@/domains/mocks/services/MockContract";
 export const metadata: Metadata = { title: "Edit mock exam" };
 
 export default async function AdminMockPage({ params, searchParams }: PageProps<"/admin/mocks/[id]">) {
-  await AdminAuth.require();
+  const admin = await AdminAuth.require(AdminAuth.WITH_QA);
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const { notice, add, student: studentParam } = query;
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;
   if (!repo || !mock) notFound();
-  const student = typeof studentParam === "string" ? studentParam : "";
+  // QA never sees students: no lists, no grants, and a student in the URL is ignored.
+  const qa = admin.role === "qa";
+  const student = !qa && typeof studentParam === "string" ? studentParam : "";
   const adding = !!add && !mock.attempted;
   // A grant-only mock's readers are known, so what any of them has seen stays out by default.
   const grantOnly = mock.audience === "clients";
   const avoid = MockContract.isUuid(student) ? [student] : adding && grantOnly && student !== "none" ? await repo.openClients(mock.id) : [];
   const [questions, students, granted, offered] = await Promise.all([
     repo.questions(mock.id),
-    repo.students(),
-    repo.accessClients(mock.id),
+    qa ? [] : repo.students(),
+    qa ? [] : repo.accessClients(mock.id),
     // ponytail: every available question's preview is rendered into the page; past a few thousand, load a topic's list on open.
     adding ? repo.pool(mock, avoid) : [],
   ]);
@@ -90,6 +92,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
         </div>
       </section>
 
+      {!qa && (
       <section aria-labelledby="access" className="mt-6 rounded-lg border border-line p-5">
         <h2 id="access" className="text-lg">
           Who can take it
@@ -99,6 +102,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
           <MockAccessForm mock={mock} students={students} granted={granted} />
         </div>
       </section>
+      )}
 
       <section aria-labelledby="sheet" className="mt-6 rounded-lg border border-line p-5">
         <h2 id="sheet" className="text-lg">

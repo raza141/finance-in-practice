@@ -7,7 +7,7 @@ import { PageHeader } from "@/domains/admin/components/PageHeader";
 export const metadata: Metadata = { title: "Account" };
 
 export default async function AdminAccountPage() {
-  const admin = await AdminAuth.require();
+  const admin = await AdminAuth.require(AdminAuth.WITH_QA);
 
   return (
     <div className="max-w-4xl">

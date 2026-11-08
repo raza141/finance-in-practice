@@ -137,3 +137,11 @@ describe("GoogleOAuth", () => {
     await expect(client.exchange("bad", "v", NOW)).rejects.toThrow(/token exchange failed \(400\)/);
   });
 });
+
+describe("AdminNavigation for QA", () => {
+  it("offers QA only the mock pages and Account: nothing with client data", async () => {
+    const { AdminNavigation } = await import("../services/AdminNavigation");
+    const hrefs = new AdminNavigation().all("qa").map((m) => m.href);
+    expect(hrefs).toEqual(["/admin/mocks", "/admin/mocks/design", "/admin/mocks/practice", "/admin/mocks/bank", "/admin/account"]);
+  });
+});

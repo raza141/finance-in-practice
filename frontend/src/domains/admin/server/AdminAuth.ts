@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { SlidingWindowRateLimiter } from "@/domains/booking/server/SlidingWindowRateLimiter";
 
-import type { AdminUser } from "../types";
+import type { AdminRole, AdminUser } from "../types";
 import { AdminRepository } from "./AdminRepository";
 import { PasswordHasher } from "./PasswordHasher";
 import { SessionToken } from "./SessionToken";
@@ -32,18 +32,27 @@ export class AdminAuth {
     return repo ? repo.userBySession(SessionToken.hash(token)) : null;
   }
 
-  /** The signed-in admin; redirects to the login page otherwise. */
-  static async require(): Promise<AdminUser> {
+  /** Who `require()` admits by default. QA is deny-by-default: only pages and actions that pass `WITH_QA` let it in. */
+  static readonly STAFF: readonly AdminRole[] = ["owner", "editor"];
+  /** Mock design and the question bank: no client data, so QA (bug checking) may use them. */
+  static readonly WITH_QA: readonly AdminRole[] = ["owner", "editor", "qa"];
+
+  /** Where a role lands when a page refuses it (a page that role can open, so no redirect loop). */
+  static home(role: AdminRole): string {
+    return role === "qa" ? "/admin/mocks" : "/admin/journal";
+  }
+
+  /** The signed-in admin in one of `roles`; the login page when signed out, the role's home otherwise. */
+  static async require(roles: readonly AdminRole[] = AdminAuth.STAFF): Promise<AdminUser> {
     const admin = await AdminAuth.current();
     if (!admin) redirect("/admin/login");
+    if (!roles.includes(admin.role)) redirect(AdminAuth.home(admin.role));
     return admin;
   }
 
-  /** An owner: billing (documents, clients, payments, settings) is owner-only. Editors go to the Blog. */
+  /** An owner: billing (documents, clients, payments, settings) is owner-only. Others go to their home. */
   static async requireOwner(): Promise<AdminUser> {
-    const admin = await AdminAuth.require();
-    if (admin.role !== "owner") redirect("/admin/journal");
-    return admin;
+    return AdminAuth.require(["owner"]);
   }
 
   static async loginWithPassword(email: string, password: string): Promise<AuthResult> {
@@ -91,7 +100,7 @@ export class AdminAuth {
 
   /** Set or change the signed-in admin's password; signs out their other sessions. */
   static async changePassword(current: string, next: string): Promise<AuthResult> {
-    const admin = await AdminAuth.require();
+    const admin = await AdminAuth.require(AdminAuth.WITH_QA);
     const repo = AdminRepository.fromEnv();
     if (!repo) return { ok: false, message: "The database is not configured." };
 

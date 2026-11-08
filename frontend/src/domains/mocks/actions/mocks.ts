@@ -125,7 +125,7 @@ export async function saveMockNote(attemptId: string, questionId: string, notes:
 
 /** Create (no id) or update the assessment's details. A new one is an empty draft; its questions come from the bank. */
 export async function saveMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const id = String(form.get("id") ?? "");
   const parsed = MockContract.parseExam(form);
   if (!parsed.ok) return { ok: false, message: parsed.error };
@@ -139,7 +139,7 @@ export async function saveMock(_prev: MockActionState, form: FormData): Promise<
 
 /** A new draft, details and questions together, from the Design a mock page; opens it for the preview. */
 export async function designMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const exam = MockContract.parseExam(form);
   if (!exam.ok) return { ok: false, message: exam.error };
   const pick = MockContract.parsePool(form);
@@ -151,7 +151,7 @@ export async function designMock(_prev: MockActionState, form: FormData): Promis
 
 /** Adds to an assessment from the bank: ticked questions and random ones by topic. */
 export async function addMockQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const id = String(form.get("id"));
   const repo = MockSession.repo();
   const mock = MockContract.isUuid(id) ? await repo.byId(id) : null;
@@ -166,7 +166,7 @@ export async function addMockQuestions(_prev: MockActionState, form: FormData): 
 }
 
 export async function removeMockQuestion(form: FormData): Promise<void> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const id = String(form.get("id"));
   const questionId = String(form.get("questionId"));
   if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().removeItem(id, questionId);
@@ -175,7 +175,7 @@ export async function removeMockQuestion(form: FormData): Promise<void> {
 }
 
 export async function moveMockQuestion(form: FormData): Promise<void> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const id = String(form.get("id"));
   const questionId = String(form.get("questionId"));
   if (MockContract.isUuid(id) && MockContract.isUuid(questionId)) await MockSession.repo().moveItem(id, questionId, form.get("direction") === "up" ? "up" : "down");
@@ -186,7 +186,7 @@ export async function moveMockQuestion(form: FormData): Promise<void> {
 
 /** The question sheet: a .csv file, or rows pasted from Excel. Adds to the bank; nothing joins an assessment until it's picked. */
 export async function uploadBankQuestions(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const file = form.get("file");
   const text = file instanceof File && file.size > 0 ? await file.text() : String(form.get("paste") ?? "");
   if (!text.trim()) return { ok: false, message: "Choose a .csv file or paste the rows from Excel." };
@@ -201,7 +201,7 @@ export async function uploadBankQuestions(_prev: MockActionState, form: FormData
 
 /** Adds or edits one bank question (the way in for exhibit-heavy questions, or a typo). */
 export async function saveBankQuestion(_prev: MockActionState, form: FormData): Promise<MockActionState> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const questionId = String(form.get("questionId") ?? "");
   if (questionId && !MockContract.isUuid(questionId)) return { ok: false, message: "Unknown question." };
   const parsed = MockContract.parseQuestion(form);
@@ -224,7 +224,7 @@ export async function deleteBankQuestion(form: FormData): Promise<void> {
 
 /** The bank's bulk bar: retire, restore, or set the ticked questions' chapter or where they may be used. */
 export async function updateBankQuestions(form: FormData): Promise<void> {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const ids = form.getAll("q").map(String).filter(MockContract.isUuid);
   const op = form.get("op");
   const repo = MockSession.repo();

@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Practice sets" };
 
 /** Topic-wise and end-of-chapter sets: short graded sets with their own access, picked from the bank. */
 export default async function AdminPracticeSetsPage() {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const repo = MockRepository.fromEnv();
   if (!repo) {
     return (

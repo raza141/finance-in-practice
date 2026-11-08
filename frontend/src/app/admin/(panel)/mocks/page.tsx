@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Mock exams" };
 
 /** Timed mock exams for the student portal: each picks its questions from the bank. */
 export default async function AdminMocksPage() {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const repo = MockRepository.fromEnv();
   if (!repo) {
     return (

@@ -7,6 +7,7 @@
  *
  * New admins are editors (they submit research articles for review) unless
  * --role owner is given; owners publish directly and approve others' work.
+ * --role qa is for bug checking: mock design and the question bank only, no client data.
  * Without --role, an existing admin keeps their role.
  *
  * Without --password the admin signs in with Google (an account using the
@@ -52,8 +53,8 @@ const { values } = parseArgs({
 const email = values.email?.trim().toLowerCase() ?? "";
 const name = values.name?.trim() ?? "";
 const role = values.role ?? null;
-if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !name || (role !== null && role !== "owner" && role !== "editor")) {
-  console.error('Usage: npm run admin:add -- --email you@example.com --name "Your Name" [--password] [--role owner|editor]');
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || !name || (role !== null && role !== "owner" && role !== "editor" && role !== "qa")) {
+  console.error('Usage: npm run admin:add -- --email you@example.com --name "Your Name" [--password] [--role owner|editor|qa]');
   process.exit(1);
 }
 

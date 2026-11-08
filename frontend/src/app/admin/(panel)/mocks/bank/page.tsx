@@ -23,7 +23,7 @@ const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "
 
 /** Every question, however it arrived: upload, browse, edit and retire here. Mocks and practice sets pick from it on their own pages. */
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/mocks/bank">) {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const repo = MockRepository.fromEnv();
   if (!repo) {
     return (

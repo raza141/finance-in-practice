@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Design a mock" };
 
 /** One step from the bank to a draft: one, several or all books, a number from each and/or questions ticked by hand. */
 export default async function DesignMockPage({ searchParams }: PageProps<"/admin/mocks/design">) {
-  await AdminAuth.require();
+  const admin = await AdminAuth.require(AdminAuth.WITH_QA);
   const repo = MockRepository.fromEnv();
   if (!repo) {
     return (
@@ -26,9 +26,11 @@ export default async function DesignMockPage({ searchParams }: PageProps<"/admin
   const params = await searchParams;
   const { student, level: levelParam } = params;
   const filter = MockContract.parseFilter((k) => (typeof params[k] === "string" ? params[k] : ""));
-  const avoid = MockContract.isUuid(student) ? [student] : [];
+  // QA never sees students: no list to pick from, and a student in the URL is ignored.
+  const qa = admin.role === "qa";
+  const avoid = !qa && MockContract.isUuid(student) ? [student] : [];
   const level = MockContract.level(String(levelParam ?? "")) ?? 1;
-  const [pool, students] = await Promise.all([repo.pool(undefined, avoid, level), repo.students()]);
+  const [pool, students] = await Promise.all([repo.pool(undefined, avoid, level), qa ? [] : repo.students()]);
   const active = pool.filter((q) => !q.retired);
   const topics = bankTopics(active.filter((q) => MockContract.fits(q, filter)));
 

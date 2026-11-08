@@ -8,7 +8,7 @@ import { AdminInbox } from "@/domains/admin/server/AdminInbox";
 import { AdminNavigation } from "@/domains/admin/services/AdminNavigation";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
-  const admin = await AdminAuth.require();
+  const admin = await AdminAuth.require(AdminAuth.WITH_QA);
   const groups = new AdminNavigation().groups(admin.role);
   // Owner only: what needs attention (one small DB query + a 2-minute cached Cal.com count).
   const inbox = admin.role === "owner" ? await AdminInbox.counts() : null;

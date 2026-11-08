@@ -1565,6 +1565,14 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE access_grants ADD CONSTRAINT access_grants_product_check CHECK (product IN ('mocks', 'practice', 'builder'))`,
     ],
   },
+  {
+    // A QA (bug-checking) admin: mock design and the question bank only, never client data.
+    id: "075_admin_qa_role",
+    statements: [
+      `ALTER TABLE admin_users DROP CONSTRAINT admin_users_role_check`,
+      `ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_check CHECK (role IN ('owner', 'editor', 'qa'))`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

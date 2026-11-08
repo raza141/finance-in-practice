@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Try the mock" };
 
 /** The mock in the student's player before (or after) publishing: no attempt is made and nothing is saved, so the questions stay editable. */
 export default async function TryMockPage({ params }: PageProps<"/admin/mocks/[id]/try">) {
-  await AdminAuth.require();
+  await AdminAuth.require(AdminAuth.WITH_QA);
   const { id } = await params;
   const repo = MockRepository.fromEnv();
   const mock = MockContract.isUuid(id) ? await repo?.byId(id) : null;

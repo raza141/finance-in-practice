@@ -28,6 +28,8 @@ export interface AdminModule {
   comingSoon?: boolean;
   /** Billing: hidden from editors (the pages refuse them too). */
   ownerOnly?: boolean;
+  /** Open to QA (bug checking): mock design and the bank only, never client data. */
+  qa?: boolean;
 }
 
 export interface AdminGroup {
@@ -64,10 +66,10 @@ export class AdminNavigation {
       modules: [
         { href: "/admin/questions", label: "CFA questions", icon: "question" },
         { href: "/admin/mocks/activity", label: "Mock activity", icon: "chart", ownerOnly: true },
-        { href: "/admin/mocks", label: "Mock exams", icon: "clock" },
-        { href: "/admin/mocks/design", label: "Design a mock", icon: "clock" },
-        { href: "/admin/mocks/practice", label: "Practice sets", icon: "clock" },
-        { href: "/admin/mocks/bank", label: "Question bank", icon: "clock" },
+        { href: "/admin/mocks", label: "Mock exams", icon: "clock", qa: true },
+        { href: "/admin/mocks/design", label: "Design a mock", icon: "clock", qa: true },
+        { href: "/admin/mocks/practice", label: "Practice sets", icon: "clock", qa: true },
+        { href: "/admin/mocks/bank", label: "Question bank", icon: "clock", qa: true },
         { href: "/admin/classroom", label: "Classroom", icon: "school", ownerOnly: true },
         { href: "/admin/courses", label: "Courses", icon: "book" },
         { href: "/admin/instructors", label: "Instructors", icon: "user" },
@@ -86,14 +88,14 @@ export class AdminNavigation {
       modules: [
         { href: "/admin/whatsapp", label: "WhatsApp", icon: "chat", ownerOnly: true },
         { href: "/admin/settings", label: "Settings", icon: "gear", ownerOnly: true },
-        { href: "/admin/account", label: "Account", icon: "key" },
+        { href: "/admin/account", label: "Account", icon: "key", qa: true },
       ],
     },
   ];
 
   /** The groups this role can open (empty groups dropped). */
   groups(role: AdminRole): AdminGroup[] {
-    return AdminNavigation.GROUPS.map((g) => ({ ...g, modules: g.modules.filter((m) => role === "owner" || !m.ownerOnly) })).filter((g) => g.modules.length > 0);
+    return AdminNavigation.GROUPS.map((g) => ({ ...g, modules: g.modules.filter((m) => (role === "qa" ? m.qa : role === "owner" || !m.ownerOnly)) })).filter((g) => g.modules.length > 0);
   }
 
   /** The modules this role can open. */
