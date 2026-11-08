@@ -140,7 +140,7 @@ export async function saveMock(_prev: MockActionState, form: FormData): Promise<
 /** A new draft, details and questions together, from the Design a mock page; opens it for the preview. */
 export async function designMock(_prev: MockActionState, form: FormData): Promise<MockActionState> {
   await AdminAuth.require(AdminAuth.WITH_QA);
-  const exam = MockContract.parseExam(form);
+  const exam = MockContract.parseExam(form, "mockSource");
   if (!exam.ok) return { ok: false, message: exam.error };
   const pick = MockContract.parsePool(form);
   if (!pick.ok) return { ok: false, message: pick.error };

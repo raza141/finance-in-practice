@@ -176,6 +176,12 @@ describe("MockContract.parsePool", () => {
     expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "-1"]])).ok).toBe(false);
     expect(MockContract.parsePool(form([["topic", "FSA"], ["count", "300"], ["topic", "FI"], ["count", "201"]])).ok).toBe(false);
   });
+
+  it("Design form: the mock's own source (mockSource) is not the bank filter's source", () => {
+    const f = form([["title", "Econ drill"], ["mockType", "book"], ["mockSource", "Question bank"], ["durationMinutes", "30"], ["level", "1"], ["topic", "Economics"], ["count", "10"]]);
+    expect(MockContract.parsePool(f)).toMatchObject({ ok: true, value: { source: "" } });
+    expect(MockContract.parseExam(f, "mockSource")).toMatchObject({ ok: true, value: { source: "Question bank" } });
+  });
 });
 
 describe("MockContract.parseGrant", () => {

@@ -205,10 +205,11 @@ export class MockContract {
     return value === "A" || value === "B" || value === "C";
   }
 
-  static parseExam(form: FormData): { ok: true; value: MockExamInput } | { ok: false; error: string } {
+  /** `sourceKey`: the Design form names its field mockSource, as its bank filter already sends "source". */
+  static parseExam(form: FormData, sourceKey = "source"): { ok: true; value: MockExamInput } | { ok: false; error: string } {
     const title = String(form.get("title") ?? "").trim();
     const mockType = String(form.get("mockType") ?? "");
-    const source = String(form.get("source") ?? "").trim();
+    const source = String(form.get(sourceKey) ?? "").trim();
     const durationMinutes = Number(form.get("durationMinutes"));
     const level = Number(form.get("level") ?? 1);
     if (title.length < 3 || title.length > 120) return { ok: false, error: "The title needs 3 to 120 characters." };

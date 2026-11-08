@@ -465,7 +465,7 @@ export function MockDesignForm({ topics, avoid, level, filter }: { topics: BankT
           />
         </Field>
         <Field label="Book or source" className="sm:col-span-2">
-          <input name="source" maxLength={120} defaultValue="Question bank" className={FIELD} />
+          <input name="mockSource" maxLength={120} defaultValue="Question bank" className={FIELD} />
         </Field>
       </div>
       <div className="flex flex-wrap items-center gap-4">
