@@ -3,9 +3,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { PageHeader, SECONDARY_ACTION } from "@/domains/admin/components/PageHeader";
+import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { formatDubai } from "@/domains/invoices/components/AdminBits";
-import { markMockAttemptsSeen, setMockPublished } from "@/domains/mocks/actions/mocks";
+import { cancelMockAttempt, markMockAttemptsSeen, setMockPublished } from "@/domains/mocks/actions/mocks";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockActivity, type ActivityState } from "@/domains/mocks/services/MockActivity";
 import type { MockActivityRow, MockAssignment } from "@/domains/mocks/types";
@@ -159,6 +160,21 @@ function Attempts({ rows, now, empty }: { rows: MockActivityRow[]; now: Date; em
                 <Link href={`/admin/clients/${a.clientId}/mocks/${a.attemptId}`} className="text-xs text-quant hover:underline">
                   Review →
                 </Link>
+                {a.status === "in_progress" && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-red-300 hover:underline">Cancel</summary>
+                    <form action={cancelMockAttempt} className="mt-2 grid justify-items-end gap-2">
+                      <input type="hidden" name="attemptId" value={a.attemptId} />
+                      <label className="flex items-center gap-2 text-red-200">
+                        <input type="checkbox" required />
+                        Delete their answers
+                      </label>
+                      <PendingButton pendingLabel="Cancelling…" className="text-red-300 hover:underline">
+                        Cancel attempt
+                      </PendingButton>
+                    </form>
+                  </details>
+                )}
                 {isNew && (
                   <form action={markMockAttemptsSeen}>
                     <input type="hidden" name="attemptId" value={a.attemptId} />

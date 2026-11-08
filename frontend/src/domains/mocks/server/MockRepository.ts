@@ -338,6 +338,11 @@ export class MockRepository {
     `) as Pick<MockExam, "id" | "title">[];
   }
 
+  /** Deletes an open attempt and its answers, so the student can start it again. A submitted attempt is never touched. */
+  async cancelAttempt(id: string): Promise<void> {
+    await this.sql`DELETE FROM mock_attempts WHERE id = ${id} AND status = 'in_progress'`;
+  }
+
   /** Marks finished attempts seen: the ones given, or all when `ids` is null. */
   async markSeen(ids: string[] | null): Promise<void> {
     await this.sql`

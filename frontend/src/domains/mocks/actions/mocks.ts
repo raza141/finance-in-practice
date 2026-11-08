@@ -307,6 +307,15 @@ export async function deleteMock(form: FormData): Promise<void> {
   redirect("/admin/mocks");
 }
 
+/** Cancels a student's in-progress attempt: it and its answers are deleted. */
+export async function cancelMockAttempt(form: FormData): Promise<void> {
+  await AdminAuth.requireOwner();
+  const id = String(form.get("attemptId"));
+  if (MockContract.isUuid(id)) await MockSession.repo().cancelAttempt(id);
+  revalidatePath("/student");
+  refresh();
+}
+
 /** Clears finished attempts from the activity badge: one (`attemptId`) or all. */
 export async function markMockAttemptsSeen(form: FormData): Promise<void> {
   await AdminAuth.requireOwner();
