@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 
 import { RAISED_GOLD, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 import { ApiError } from "@/core/http/ApiError";
@@ -47,7 +47,20 @@ function CheckInbox({ to, lead }: { to: string; lead: string }) {
  * already chosen and go as hidden fields. Without it the form asks, starting from
  * the pick saved on /pricing (after the Google round trip, for one).
  */
-export function JoinForm({ courses, packages, email, picked }: { courses: PricingCourse[]; packages: Package[]; email?: string; picked?: CartPick }) {
+export function JoinForm({
+  courses,
+  packages,
+  email,
+  picked,
+  lead,
+}: {
+  courses: PricingCourse[];
+  packages: Package[];
+  email?: string;
+  picked?: CartPick;
+  /** Shown above the first step only (the Google button): gone once they go on with email, so step 2 has the room. */
+  lead?: ReactNode;
+}) {
   const router = useRouter();
   // What they picked on /pricing (read after hydration), until they change it here.
   const saved = Cart.parse(useSyncExternalStore(Cart.subscribe, Cart.snapshot, () => null));
@@ -56,6 +69,24 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
   const course = picked?.course ?? ownCourse ?? saved?.course ?? "";
   const packageId = picked?.packageId ?? ownPackage ?? saved?.packageId ?? "";
   const [state, setState] = useState<FormState>({ kind: "editing" });
+  // Two short steps (you, then the course) so the card never grows past the screen; on /pricing the course is already picked: one step.
+  const stepped = !picked;
+  const [step, setStep] = useState<1 | 2>(1);
+  const details = useRef<HTMLDivElement>(null);
+  const choice = useRef<HTMLDivElement>(null);
+  const go = (next: 1 | 2) => {
+    setStep(next);
+    // Focus the step's first field after it shows: keyboard and screen readers land on it, and it scrolls into view.
+    requestAnimationFrame(() => (next === 2 ? choice : details).current?.querySelector<HTMLElement>("input:not([type=hidden]), select")?.focus());
+  };
+  // Step 1 is checked with the browser's own messages before moving on, so the hidden fields are valid at submit.
+  const next = () => {
+    const fields = [...(details.current?.querySelectorAll<HTMLInputElement>("input") ?? [])];
+    if (fields.every((f) => f.reportValidity())) go(2);
+  };
+  const show1 = !stepped || step === 1;
+  const show2 = !stepped || step === 2;
+  const FADE = "motion-safe:animate-[q-fade_0.3s_ease-out]";
 
   const listed = courses.find((c) => c.title === course);
   const sittings = listed?.sittings ?? [];
@@ -63,6 +94,8 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Step 1's submit is Continue (Enter too) (the form skips native checks there: step 2's fields are still empty).
+    if (stepped && step === 1) return next();
     const fields = fieldsOf(event.currentTarget);
     setState({ kind: "sending" });
     try {
@@ -84,124 +117,144 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
   if (state.kind === "sent") return <CheckInbox to={state.to} lead="We sent a link to confirm your email to" />;
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <form onSubmit={submit} noValidate={stepped && step === 1} className="grid gap-4">
+      {show1 && lead}
+      {stepped && (
+        <div role="progressbar" aria-label="Registration step" aria-valuemin={1} aria-valuemax={2} aria-valuenow={step} className="grid grid-cols-2 gap-1.5">
+          <span className="h-1 rounded-full bg-quant" />
+          <span className={`h-1 rounded-full transition-colors duration-300 ${step === 2 ? "bg-quant" : "bg-ink/10"}`} />
+        </div>
+      )}
       <fieldset disabled={state.kind === "sending"} className="grid gap-4">
-        <label className="grid gap-1.5">
-          <span className={LABEL}>Full name</span>
-          <input name="name" required autoComplete="name" minLength={LIMITS.name[0]} maxLength={LIMITS.name[1]} className={FIELD} />
-        </label>
-        {email ? (
-          <div className="grid gap-1.5">
-            <span className={LABEL}>Google account</span>
-            <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
-              <Check aria-hidden className="size-4 text-quant" />
-              {email}
-            </p>
-          </div>
-        ) : (
+        <div ref={details} hidden={!show1} className={`grid gap-4 ${stepped ? FADE : ""}`}>
           <label className="grid gap-1.5">
-            <span className={LABEL}>Email</span>
-            <input name="email" type="email" required autoComplete="email" maxLength={LIMITS.email} className={FIELD} />
+            <span className={LABEL}>Full name</span>
+            <input name="name" required autoComplete="name" minLength={LIMITS.name[0]} maxLength={LIMITS.name[1]} className={FIELD} />
           </label>
-        )}
-        <label className="grid gap-1.5">
-          <span className={LABEL}>Mobile (WhatsApp)</span>
-          <input name="phone" type="tel" required autoComplete="tel" maxLength={LIMITS.phone[1]} placeholder="+971 50 123 4567" className={FIELD} />
-        </label>
-        {picked ? (
-          <>
-            <input type="hidden" name="course" value={picked.course} />
-            <input type="hidden" name="package" value={picked.packageId} />
-          </>
-        ) : (
-          <label className="grid gap-1.5">
-            <span className={LABEL}>Course</span>
-            <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={FIELD}>
-              <option value="" disabled>
-                Choose a course
-              </option>
-              <optgroup label="Exam courses">
-                {courses.map((c) => (
-                  <option key={c.title} value={c.title}>
-                    {c.title}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Consultancy">
-                {EXTRA.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Anything else">
-                <option value={OTHER}>School, university or other subject</option>
-              </optgroup>
-            </select>
-          </label>
-        )}
-        {sittings.length > 0 && (
-          <label className="grid gap-1.5">
-            <span className={LABEL}>Exam sitting (your batch)</span>
-            <select key={course} name="batch" required defaultValue="" className={FIELD}>
-              <option value="" disabled>
-                Which exam are you taking?
-              </option>
-              {sittings.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-              <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
-            </select>
-          </label>
-        )}
-        {course === OTHER && (
-          <label className="grid gap-1.5">
-            <span className={LABEL}>What would you like to study?</span>
-            <input name="topic" required minLength={LIMITS.topic[0]} maxLength={LIMITS.topic[1]} placeholder="e.g. AP Statistics, corporate finance" className={FIELD} />
-          </label>
-        )}
-        {!picked && course && offered.length > 0 && (
-          <fieldset className="grid gap-1.5">
-            <legend className={`${LABEL} mb-1.5`}>Package</legend>
-            <div className="grid gap-2">
-              {offered.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-md border border-line p-3 transition-colors has-[:checked]:border-quant/70 has-[:checked]:bg-quant/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-quant/60"
-                >
-                  <input
-                    type="radio"
-                    name="package"
-                    value={p.id}
-                    required
-                    checked={packageId === p.id}
-                    onChange={() => setPackageId(p.id)}
-                    className="h-4 w-4 shrink-0 accent-[var(--color-quant)]"
-                  />
-                  <span className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 text-sm">
-                    <span className="font-semibold text-ink">{p.name}</span>
-                    <span className="text-muted tabular-nums">{PackageTable.isCustom(p) ? PackageTable.price(p) : `${PackageTable.price(p)} ${PackageTable.per(p)}`.trim()}</span>
-                  </span>
-                </label>
-              ))}
+          {email ? (
+            <div className="grid gap-1.5">
+              <span className={LABEL}>Google account</span>
+              <p className="flex items-center gap-2 rounded-md border border-quant/30 bg-quant/5 px-3 py-2.5 text-sm text-ink">
+                <Check aria-hidden className="size-4 text-quant" />
+                {email}
+              </p>
             </div>
-            <a href="/pricing" className="text-xs text-quant underline-offset-2 hover:underline">
-              Compare packages
-            </a>
-          </fieldset>
-        )}
-        <label className="flex items-start gap-2.5 text-sm text-ink/90">
-          <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
-          <span className="text-pretty">
-            I agree to the{" "}
-            <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
-              terms and conditions
-            </a>
-            {offered.some((p) => p.id === packageId) ? " and want to book this package." : "."}
-          </span>
-        </label>
+          ) : (
+            <label className="grid gap-1.5">
+              <span className={LABEL}>Email</span>
+              <input name="email" type="email" required autoComplete="email" maxLength={LIMITS.email} className={FIELD} />
+            </label>
+          )}
+          <label className="grid gap-1.5">
+            <span className={LABEL}>Mobile (WhatsApp)</span>
+            <input name="phone" type="tel" required autoComplete="tel" maxLength={LIMITS.phone[1]} placeholder="+971 50 123 4567" className={FIELD} />
+          </label>
+        </div>
+        <div ref={choice} hidden={!show2} className={`grid gap-4 ${stepped ? FADE : ""}`}>
+          {picked ? (
+            <>
+              <input type="hidden" name="course" value={picked.course} />
+              <input type="hidden" name="package" value={picked.packageId} />
+            </>
+          ) : (
+            <label className="grid gap-1.5">
+              <span className={LABEL}>Course</span>
+              <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={FIELD}>
+                <option value="" disabled>
+                  Choose a course
+                </option>
+                <optgroup label="Exam courses">
+                  {courses.map((c) => (
+                    <option key={c.title} value={c.title}>
+                      {c.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Consultancy">
+                  {EXTRA.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Anything else">
+                  <option value={OTHER}>School, university or other subject</option>
+                </optgroup>
+              </select>
+            </label>
+          )}
+          {sittings.length > 0 && (
+            <label className={`grid gap-1.5 ${FADE}`}>
+              <span className={LABEL}>Exam sitting (your batch)</span>
+              <select key={course} name="batch" required defaultValue="" className={FIELD}>
+                <option value="" disabled>
+                  Which exam are you taking?
+                </option>
+                {sittings.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+                <option value={Batches.NOT_SURE}>{Batches.NOT_SURE}</option>
+              </select>
+            </label>
+          )}
+          {course === OTHER && (
+            <label className={`grid gap-1.5 ${FADE}`}>
+              <span className={LABEL}>What would you like to study?</span>
+              <input
+                name="topic"
+                required
+                minLength={LIMITS.topic[0]}
+                maxLength={LIMITS.topic[1]}
+                placeholder="e.g. AP Statistics, corporate finance"
+                className={FIELD}
+              />
+            </label>
+          )}
+          {!picked && course && offered.length > 0 && (
+            <fieldset className={`grid gap-1.5 ${FADE}`}>
+              <legend className={`${LABEL} mb-1.5`}>Package</legend>
+              <div className="grid gap-2">
+                {offered.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-md border border-line p-3 transition-colors has-[:checked]:border-quant/70 has-[:checked]:bg-quant/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-quant/60"
+                  >
+                    <input
+                      type="radio"
+                      name="package"
+                      value={p.id}
+                      required
+                      checked={packageId === p.id}
+                      onChange={() => setPackageId(p.id)}
+                      className="h-4 w-4 shrink-0 accent-[var(--color-quant)]"
+                    />
+                    <span className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                      <span className="font-semibold text-ink">{p.name}</span>
+                      <span className="text-muted tabular-nums">
+                        {PackageTable.isCustom(p) ? PackageTable.price(p) : `${PackageTable.price(p)} ${PackageTable.per(p)}`.trim()}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <a href="/pricing" className="text-xs text-quant underline-offset-2 hover:underline">
+                Compare packages
+              </a>
+            </fieldset>
+          )}
+          <label className="flex items-start gap-2.5 text-sm text-ink/90">
+            <input name="acceptTerms" type="checkbox" value="yes" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-quant)]" />
+            <span className="text-pretty">
+              I agree to the{" "}
+              <a href="/terms" target="_blank" rel="noreferrer" className="text-quant underline-offset-2 hover:underline">
+                terms and conditions
+              </a>
+              {offered.some((p) => p.id === packageId) ? " and want to book this package." : "."}
+            </span>
+          </label>
+        </div>
         {/* Honeypot: hidden from people, filled by bots. */}
         <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       </fieldset>
@@ -210,13 +263,27 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={state.kind === "sending"}
-        className={`${SUBMIT} ${RAISED_GOLD}`}
-      >
-        {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
-      </button>
+      {show1 && stepped ? (
+        <button type="submit" className={`${SUBMIT} ${RAISED_QUANT}`}>
+          Continue
+        </button>
+      ) : (
+        <div className="grid gap-2">
+          <button type="submit" disabled={state.kind === "sending"} className={`${SUBMIT} ${RAISED_GOLD}`}>
+            {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
+          </button>
+          {stepped && (
+            <button
+              type="button"
+              onClick={() => go(1)}
+              disabled={state.kind === "sending"}
+              className="h-10 text-sm text-muted transition-colors duration-200 hover:text-ink"
+            >
+              Back
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }

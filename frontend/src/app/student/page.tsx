@@ -20,8 +20,7 @@ export const metadata: Metadata = {
 };
 
 const ERRORS: Record<string, string> = {
-  not_enrolled:
-    "We couldn't find a student with that Google account. Please message us on WhatsApp.",
+  not_enrolled: "We couldn't find a student with that Google account. Please message us on WhatsApp.",
   google_cancelled: "Sign-in was cancelled.",
   google_state: "That sign-in link expired. Please try again.",
   google_failed: "Google sign-in didn't work. Please try again.",
@@ -29,7 +28,6 @@ const ERRORS: Record<string, string> = {
   link_expired: "That email link has expired. Please ask for a new one.",
   link_failed: "That email link didn't work. Please try again.",
 };
-
 
 export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
   const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
@@ -62,7 +60,6 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
     </div>
   );
 }
-
 
 /** Published courses only (the public form never lists drafts or internal programmes), with exam sittings, and the live packages. */
 async function publicOptions(): Promise<{ courses: PricingCourse[]; packages: Package[] }> {
@@ -100,21 +97,31 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
       )}
       {joining ? (
         <JoinForm courses={courses} packages={packages} email={joining} />
+      ) : register ? (
+        <JoinForm courses={courses} packages={packages} lead={<GoogleStart label="Register with Google" />} />
       ) : (
         <>
-          {/* A plain link: the route redirects to Google, so no client JS is needed. */}
-          <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg" className="w-full">
-            <GoogleGlyph size={18} />
-            {register ? "Register with Google" : "Continue with Google"}
-          </ButtonLink>
-          <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
-            <span aria-hidden className="h-px flex-1 bg-ink/10" />
-            or
-            <span aria-hidden className="h-px flex-1 bg-ink/10" />
-          </p>
-          {register ? <JoinForm courses={courses} packages={packages} /> : <EmailSignIn />}
+          <GoogleStart label="Continue with Google" />
+          <EmailSignIn />
         </>
       )}
     </div>
+  );
+}
+
+/** The Google button and the "or" line under it. A plain link: the route redirects to Google, so no client JS is needed. */
+function GoogleStart({ label }: { label: string }) {
+  return (
+    <>
+      <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg" className="w-full">
+        <GoogleGlyph size={18} />
+        {label}
+      </ButtonLink>
+      <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+        <span aria-hidden className="h-px flex-1 bg-ink/10" />
+        or
+        <span aria-hidden className="h-px flex-1 bg-ink/10" />
+      </p>
+    </>
   );
 }
