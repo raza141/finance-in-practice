@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/domains/admin/components/PageHeader";
 import { AdminAuth } from "@/domains/admin/server/AdminAuth";
 import { bankTopics } from "@/domains/mocks/components/bankTopics";
-import { bankFilterOptions, MockDesignForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
+import { MockDesignForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -41,7 +41,7 @@ export default async function DesignMockPage({ searchParams }: PageProps<"/admin
         description="Choose the books, give each a number of questions and tick any you want for certain. It builds a draft to try and publish."
       />
       <div className="mt-6">
-        <SeenFilter students={students} student={avoid[0] ?? ""} level={level} filter={filter} options={bankFilterOptions(active)} />
+        <SeenFilter students={students} student={avoid[0] ?? ""} level={level} filter={filter} options={MockContract.filterOptions(active)} />
         {level === 2 && (
           <p className="mb-4 text-sm text-muted">
             Level II draws whole item sets: a book&rsquo;s number is filled with complete vignettes, so it can go over by up to three questions. 11 sets (44 questions) a

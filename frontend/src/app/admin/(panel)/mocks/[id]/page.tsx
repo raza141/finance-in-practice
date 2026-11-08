@@ -12,7 +12,7 @@ import { QuestionPreview } from "@/domains/mocks/components/QuestionPreview";
 import { MockExhibits } from "@/domains/mocks/services/MockExhibits";
 import { deleteMock, moveMockQuestion, removeMockQuestion, setMockPublished } from "@/domains/mocks/actions/mocks";
 import { bankTopics } from "@/domains/mocks/components/bankTopics";
-import { bankFilterOptions, MockAccessForm, MockBankForm, MockExamForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
+import { MockAccessForm, MockBankForm, MockExamForm, SeenFilter } from "@/domains/mocks/components/MockAdminForms";
 import { MockRepository } from "@/domains/mocks/server/MockRepository";
 import { MockContract } from "@/domains/mocks/services/MockContract";
 
@@ -123,7 +123,7 @@ export default async function AdminMockPage({ params, searchParams }: PageProps<
                 Close
               </Link>
             </div>
-            <SeenFilter students={students} student={student} everyone={grantOnly} add filter={filter} options={bankFilterOptions(offered)} />
+            <SeenFilter students={students} student={student} everyone={grantOnly} add filter={filter} options={MockContract.filterOptions(offered)} />
             {groups.length > 0 ? (
               <MockBankForm key={`${MockContract.filterEntries(filter)}${student}`} mockId={mock.id} topics={groups} filter={filter} avoid={avoid} />
             ) : (

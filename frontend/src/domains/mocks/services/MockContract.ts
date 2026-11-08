@@ -172,6 +172,12 @@ export class MockContract {
     return MockContract.FILTER_KEYS.every((k) => !f[k] || q[k].trim().toLowerCase() === f[k]!.trim().toLowerCase());
   }
 
+  /** The filter dropdowns' choices. Here, not in the "use client" forms file, so server pages can call it. */
+  static filterOptions(pool: Pick<PoolQuestion, "chapter" | "source" | "session">[]): { chapters: string[]; sources: string[]; sessions: string[] } {
+    const distinct = (k: "chapter" | "source" | "session") => [...new Set(pool.map((q) => q[k].trim()).filter(Boolean))].sort();
+    return { chapters: distinct("chapter"), sources: distinct("source"), sessions: distinct("session") };
+  }
+
   /** The filter's set fields, for a URL or hidden inputs. */
   static filterEntries(f: Partial<BankFilter>): [string, string][] {
     return MockContract.FILTER_KEYS.flatMap((k) => (f[k] ? [[k, f[k]!] as [string, string]] : []));

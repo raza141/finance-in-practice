@@ -8,7 +8,7 @@ import { PendingButton } from "@/domains/admin/components/PendingButton";
 import { addAccessGrant, addMockQuestions, designMock, saveBankQuestion, saveMock, setMockAccess, uploadBankQuestions, type MockActionState } from "../actions/mocks";
 import { MockContract } from "../services/MockContract";
 import { MockExhibits } from "../services/MockExhibits";
-import type { BankFilter, CfaLevel, MockAudience, MockExam, MockQuestion, MockStudent, MockType, PoolQuestion, QuestionTags, QuestionUsage } from "../types";
+import type { BankFilter, CfaLevel, MockAudience, MockExam, MockQuestion, MockStudent, MockType, QuestionTags, QuestionUsage } from "../types";
 import { QuestionPreview } from "./QuestionPreview";
 
 const SAVE = "h-10 rounded-md bg-gold px-5 text-sm font-semibold text-canvas hover:bg-gold-bright";
@@ -242,20 +242,7 @@ function BankTopicList({ topics, pick }: { topics: BankTopic[]; pick: ReturnType
 const PICK_SELECT = "h-9 rounded-md border border-line bg-canvas/70 px-2 text-ink";
 
 /** The bank's own tag values, so the pick's dropdowns only offer what's there. */
-export type BankFilterOptions = {
-  chapters: string[];
-  sources: string[];
-  sessions: string[];
-};
-
-export function bankFilterOptions(pool: Pick<PoolQuestion, "chapter" | "source" | "session">[]): BankFilterOptions {
-  const distinct = (k: "chapter" | "source" | "session") => [...new Set(pool.map((q) => q[k].trim()).filter(Boolean))].sort();
-  return {
-    chapters: distinct("chapter"),
-    sources: distinct("source"),
-    sessions: distinct("session"),
-  };
-}
+export type BankFilterOptions = ReturnType<typeof MockContract.filterOptions>;
 
 function PickSelect({ label, name, value, options }: { label: string; name: string; value: string; options: [string, string][] }) {
   if (!options.length) return null;
