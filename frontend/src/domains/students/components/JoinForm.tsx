@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 
+import { RAISED_GOLD, RAISED_QUANT } from "@/core/components/ui/buttonStyles";
 import { ApiError } from "@/core/http/ApiError";
 import { Cart, type CartPick } from "@/domains/packages/services/Cart";
 import { PackageTable } from "@/domains/packages/services/PackageTable";
@@ -14,7 +15,8 @@ import { RegistrationContract } from "../services/RegistrationContract";
 import { StudentApiClient } from "../services/StudentApiClient";
 
 const FIELD =
-  "w-full rounded-md border border-line bg-canvas/80 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-quant/70 disabled:opacity-60";
+  "h-11 w-full rounded-btn border border-ink/10 bg-canvas/60 px-3.5 text-base text-ink outline-none transition-colors duration-200 placeholder:text-muted/50 focus:border-quant/70 focus-visible:ring-2 focus-visible:ring-quant/40 disabled:opacity-60 sm:text-sm";
+const SUBMIT = "inline-flex h-12 w-full items-center justify-center rounded-btn px-6 text-[15px] font-semibold disabled:opacity-50";
 const LABEL = "font-mono text-[11px] tracking-[0.22em] text-muted uppercase";
 const client = new StudentApiClient();
 const { OTHER, EXTRA, LIMITS } = RegistrationContract;
@@ -204,18 +206,17 @@ export function JoinForm({ courses, packages, email, picked }: { courses: Pricin
         <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       </fieldset>
       {state.kind === "editing" && state.error && (
-        <p role="alert" className="text-sm text-gold">
+        <p role="alert" className="text-sm text-red-300">
           {state.error}
         </p>
       )}
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="inline-flex h-11 items-center justify-center rounded-btn bg-gold px-6 text-sm font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-50"
+        className={`${SUBMIT} ${RAISED_GOLD}`}
       >
         {email ? (state.kind === "sending" ? "Opening your portal…" : "Join and open my portal") : state.kind === "sending" ? "Sending…" : "Register"}
       </button>
-      <p className="text-center text-xs leading-relaxed text-pretty text-muted">No payment now. We&rsquo;ll confirm your schedule on WhatsApp within 2 hours.</p>
     </form>
   );
 }
@@ -239,36 +240,20 @@ export function EmailSignIn() {
   if (state.kind === "sent") return <CheckInbox to={state.to} lead="If you're registered, a sign-in link is on its way to" />;
 
   return (
-    <form onSubmit={submit} className="grid gap-2">
-      <label htmlFor="signin-email" className={LABEL}>
-        No Google account? Sign in by email
+    <form onSubmit={submit} className="grid gap-4">
+      <label className="grid gap-1.5">
+        <span className={LABEL}>Email</span>
+        <input name="email" type="email" required autoComplete="email" maxLength={LIMITS.email} disabled={state.kind === "sending"} className={FIELD} />
       </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          id="signin-email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          maxLength={LIMITS.email}
-          placeholder="you@example.com"
-          disabled={state.kind === "sending"}
-          className={FIELD}
-        />
-        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
-        <button
-          type="submit"
-          disabled={state.kind === "sending"}
-          className="h-10 shrink-0 rounded-btn border border-quant/50 px-4 text-sm font-semibold text-quant transition-colors hover:bg-quant/10 disabled:opacity-50"
-        >
-          {state.kind === "sending" ? "Sending…" : "Email me a link"}
-        </button>
-      </div>
+      <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       {state.kind === "editing" && state.error && (
-        <p role="alert" className="text-sm text-gold">
+        <p role="alert" className="text-sm text-red-300">
           {state.error}
         </p>
       )}
+      <button type="submit" disabled={state.kind === "sending"} className={`${SUBMIT} ${RAISED_QUANT}`}>
+        {state.kind === "sending" ? "Sending…" : "Email me a sign-in link"}
+      </button>
     </form>
   );
 }

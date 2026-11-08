@@ -1,13 +1,11 @@
-import { Check } from "lucide-react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Logo } from "@/core/components/layout/Logo";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
-import { LinkedInFollow } from "@/core/components/ui/LinkedInFollow";
+import { GoogleGlyph } from "@/core/components/ui/GoogleGlyph";
 import { FinanceBackdrop } from "@/core/components/backdrop/FinanceBackdrop";
-import { siteConfig } from "@/core/config/site";
 import { EmailSignIn, JoinForm } from "@/domains/students/components/JoinForm";
 import { Portal, safely } from "@/domains/students/components/PortalView";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
@@ -32,11 +30,6 @@ const ERRORS: Record<string, string> = {
   link_failed: "That email link didn't work. Please try again.",
 };
 
-const PERKS = [
-  "Book, move or cancel sessions yourself",
-  "Timed mock exams with your progress by topic",
-  "See your progress against your target score",
-];
 
 export default async function StudentPage({ searchParams }: { searchParams: Promise<{ error?: string; view?: string }> }) {
   const [student, { error, view }] = await Promise.all([StudentAuth.current(), searchParams]);
@@ -54,11 +47,10 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
         <>
           <header className="nav-line sticky top-0 z-30 bg-canvas bg-grid-lines bg-fixed">
             <div aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-r from-quant/5 via-transparent to-gold/5" />
-            <div className="page-container relative flex h-16 items-center justify-between gap-4">
+            <div className="page-container relative flex h-16 items-center gap-4">
               <Link href="/" aria-label="Finance in Practice website">
                 <Logo height={30} priority />
               </Link>
-              <span className="font-mono text-[11px] tracking-[0.25em] text-quant uppercase">Student portal</span>
             </div>
           </header>
           {/* Signed out: the card sits in the middle of the screen (viewport minus the 4rem bar and the page padding). */}
@@ -85,29 +77,14 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
   const register = joining !== null || view === "register" || view === "join";
   const { courses, packages } = register ? await publicOptions() : { courses: [], packages: [] };
   const tab = (active: boolean) =>
-    `flex-1 rounded-md px-3 py-2 text-center text-sm transition-colors ${active ? "bg-quant/15 font-semibold text-quant" : "text-muted hover:text-ink"}`;
+    `flex-1 rounded-btn px-3 py-2 text-center text-sm font-semibold transition-colors duration-200 ${active ? "bg-gold text-canvas" : "text-muted hover:text-ink"}`;
+  const alert = (error && ERRORS[error]) || (expired ? "That sign-in expired. Please continue with Google again." : null);
   return (
-    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-ink/10 bg-canvas/40 backdrop-blur-[2px] md:grid-cols-2">
-      <div className="relative flex flex-col justify-start gap-10 border-b border-ink/10 bg-[radial-gradient(circle_at_20%_20%,rgb(34_211_238/0.18),transparent_60%)] p-8 sm:p-10 md:border-r md:border-b-0">
-        <Logo height={44} />
-        <div>
-          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Student portal</p>
-          <p className="mt-4 text-3xl leading-tight font-normal italic sm:text-4xl">Your sessions and study plan, in one place.</p>
-          <ul className="mt-6 grid gap-3 text-sm text-ink/90">
-            {PERKS.map((perk) => (
-              <li key={perk} className="flex gap-2.5">
-                <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-canvas">
-                  <Check strokeWidth={3} className="size-2.5" />
-                </span>
-                {perk}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <div className="grid content-start gap-5 p-8 sm:p-10">
-        <nav aria-label="Sign in or register" className="flex gap-1 rounded-lg border border-line p-1">
+    // Glass card over the moving finance backdrop: the blur is what makes it read as glass.
+    <div className="mx-auto grid w-full max-w-md gap-6 rounded-3xl border border-ink/10 bg-canvas/55 p-7 shadow-2xl shadow-canvas/60 backdrop-blur-xl sm:p-10">
+      <h1 className="text-center text-3xl font-normal tracking-tight italic">{joining ? "Almost there" : register ? "Create your account" : "Welcome back"}</h1>
+      {!joining && (
+        <nav aria-label="Sign in or register" className="flex gap-1 rounded-btn border border-ink/10 bg-canvas/40 p-1">
           <Link href="/student" aria-current={!register ? "page" : undefined} className={tab(!register)}>
             Sign in
           </Link>
@@ -115,61 +92,29 @@ async function SignIn({ error, view }: { error?: string; view?: string }) {
             Register
           </Link>
         </nav>
-        {error && ERRORS[error] && (
-          <p role="alert" className="text-sm text-gold">
-            {ERRORS[error]}
+      )}
+      {alert && (
+        <p role="alert" className="text-center text-sm text-red-300">
+          {alert}
+        </p>
+      )}
+      {joining ? (
+        <JoinForm courses={courses} packages={packages} email={joining} />
+      ) : (
+        <>
+          {/* A plain link: the route redirects to Google, so no client JS is needed. */}
+          <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg" className="w-full">
+            <GoogleGlyph size={18} />
+            {register ? "Register with Google" : "Continue with Google"}
+          </ButtonLink>
+          <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
+            <span aria-hidden className="h-px flex-1 bg-ink/10" />
+            or
+            <span aria-hidden className="h-px flex-1 bg-ink/10" />
           </p>
-        )}
-        {joining ? (
-          <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Almost there</h1>
-            <p className="text-muted">Google confirmed your email. Add your details and pick what you&rsquo;d like to study: your portal opens straight away.</p>
-            <JoinForm courses={courses} packages={packages} email={joining} />
-          </>
-        ) : register ? (
-          <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Register</h1>
-            {expired && <p className="text-sm text-gold">That sign-in expired. Please continue with Google again.</p>}
-            <p className="text-muted">With Google, your portal opens straight away. With email, we first send you a link to confirm it.</p>
-            {/* A plain link: the route redirects to Google, so no client JS is needed. */}
-            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
-              Register with Google
-            </ButtonLink>
-            <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.22em] text-muted uppercase">
-              <span aria-hidden className="h-px flex-1 bg-line" />
-              or with your email
-              <span aria-hidden className="h-px flex-1 bg-line" />
-            </p>
-            <JoinForm courses={courses} packages={packages} />
-            <p className="border-t border-line pt-5 text-sm text-muted">
-              Already registered?{" "}
-              <Link href="/student" className="text-quant hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-3xl font-normal tracking-tight italic">Sign in</h1>
-            <p className="text-muted">Already studying with us? Sign in with Google, or by email if you registered without Google.</p>
-            <ButtonLink href="/api/student/auth/google" prefetch={false} variant="secondary" size="lg">
-              Continue with Google
-            </ButtonLink>
-            <EmailSignIn />
-            <p className="border-t border-line pt-5 text-sm text-muted">
-              New here?{" "}
-              <Link href="/student?view=register" className="font-semibold text-gold hover:underline">
-                Register
-              </Link>{" "}
-              or{" "}
-              <Link href={siteConfig.bookingHref} className="text-quant hover:underline">
-                book the free diagnostic
-              </Link>
-            </p>
-          </>
-        )}
-        {!joining && <LinkedInFollow variant="pill" className="justify-self-start" />}
-      </div>
+          {register ? <JoinForm courses={courses} packages={packages} /> : <EmailSignIn />}
+        </>
+      )}
     </div>
   );
 }
