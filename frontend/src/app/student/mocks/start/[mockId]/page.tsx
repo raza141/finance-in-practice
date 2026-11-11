@@ -1,4 +1,4 @@
-import { Flag, Hash, type LucideIcon, NotebookPen, Pause, Strikethrough } from "lucide-react";
+import { ArrowLeftRight, Flag, Hash, NotebookPen, Pause, Strikethrough, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
@@ -18,6 +18,7 @@ const TOOLS: [LucideIcon, string, string][] = [
   [Flag, "Flag", "Mark a question to come back to before you submit."],
   [Strikethrough, "Strike through", "Eliminate an option you've ruled out."],
   [Hash, "Jump", "Click any question number to go straight to it."],
+  [ArrowLeftRight, "Arrow keys", "Press → for the next question and ← for the one before."],
 ];
 
 // The player's palette tiles, exactly as they look in the exam.
