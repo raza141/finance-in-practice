@@ -369,6 +369,20 @@ export function MockPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `change` only writes state; the clock restarts on these alone
   }, [currentId, paused, checked, preview]);
 
+  // ← / → move Back / Next, like the buttons; not while typing a note or holding a modifier (browser back/forward, word jumps).
+  useEffect(() => {
+    if (paused || taken !== null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.target as HTMLElement).closest("input, textarea, select, [contenteditable]")) return;
+      const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      setCurrent((c) => Math.min(questions.length - 1, Math.max(0, c + step)));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [paused, taken, questions.length]);
+
   const q = questions[current];
   // The item set this question belongs to.
   const set = q.caseId ? questions.filter((x) => x.caseId === q.caseId) : [];

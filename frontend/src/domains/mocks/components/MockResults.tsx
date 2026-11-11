@@ -1,8 +1,8 @@
 "use client";
 
-import { Flag } from "lucide-react";
+import { Flag, X } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { CountUp } from "@/core/components/ui/CountUp";
 
@@ -99,8 +99,16 @@ export function MockResults({
     slow: (q) => paceSeconds !== null && q.seconds > SLOW * paceSeconds,
     notes: (q) => !!notes[q.id]?.trim(),
   };
-  const shown = questions.filter(keep[filter]);
-  const count = (f: Filter) => questions.filter(keep[f]).length;
+  // A topic picked in the "By topic" table narrows every filter to that topic's questions.
+  const [topic, setTopic] = useState<string | null>(null);
+  const inTopic = topic ? questions.filter((q) => q.topic === topic) : questions;
+  const shown = inTopic.filter(keep[filter]);
+  const count = (f: Filter) => inTopic.filter(keep[f]).length;
+  const review = useRef<HTMLElement>(null);
+  const pickTopic = (t: string) => {
+    setTopic(t);
+    review.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
   // Guessed and Slow only where there's something to show: older attempts have neither.
   const filters = FILTERS.filter(([f]) => (f !== "guessed" && f !== "slow") || (f === "slow" ? timed && paceSeconds !== null : questions.some((q) => q.confidence)));
   const slowRight = paceSeconds === null ? 0 : questions.filter((q) => q.selected === q.correct && q.seconds > SLOW * paceSeconds).length;
@@ -131,6 +139,19 @@ export function MockResults({
     // Back to the top of the question when the last one's explanation left the page scrolled past it.
     if ((card.current?.getBoundingClientRect().top ?? 0) < 0) card.current?.scrollIntoView({ block: "start" });
   };
+
+  // ← / → move Previous / Next, like the buttons; not while typing a note or holding a modifier.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.target as HTMLElement).closest("input, textarea, select, [contenteditable]")) return;
+      const next = e.key === "ArrowRight" ? shown[at + 1] : e.key === "ArrowLeft" ? shown[at - 1] : undefined;
+      if (!next) return;
+      e.preventDefault();
+      go(next.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const pct = MockGrader.percent(grade.score, grade.total);
   return (
@@ -211,7 +232,11 @@ export function MockResults({
               const p = MockGrader.percent(t.correct, t.total);
               return (
                 <tr key={t.topic}>
-                  <td className="py-2">{t.topic}</td>
+                  <td className="py-2">
+                    <button type="button" onClick={() => pickTopic(t.topic)} aria-pressed={topic === t.topic} className={`text-left hover:text-quant hover:underline ${topic === t.topic ? "font-semibold text-quant" : ""}`}>
+                      {t.topic}
+                    </button>
+                  </td>
                   <td className="py-2 text-right font-mono">
                     {t.correct}/{t.total}
                   </td>
@@ -230,7 +255,7 @@ export function MockResults({
         </table>
       </section>
 
-      <section aria-label="Review questions" className="grid gap-4 lg:grid-cols-[13rem_1fr]">
+      <section ref={review} aria-label="Review questions" className="scroll-mt-20 grid gap-4 lg:grid-cols-[13rem_1fr]">
         <nav aria-label="Questions" className="self-start rounded-2xl border border-ink/10 bg-canvas/90 p-3 lg:sticky lg:top-20">
           <div role="group" aria-label="Show questions" className="grid grid-cols-2 gap-1">
             {filters.map(([id, label]) => (
@@ -245,6 +270,17 @@ export function MockResults({
               </button>
             ))}
           </div>
+          {topic && (
+            <button
+              type="button"
+              onClick={() => setTopic(null)}
+              aria-label={`Show all topics, not only ${topic}`}
+              className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg bg-quant/15 px-2 py-1.5 text-left text-xs font-semibold text-quant"
+            >
+              <span className="truncate">{topic}</span>
+              <X aria-hidden className="size-3.5 shrink-0" />
+            </button>
+          )}
           {/* Capped and scrolling, so a full mock's 180 numbers don't push the question off a phone's screen. */}
           <ol className="mt-3 grid max-h-40 grid-cols-8 gap-1.5 overflow-y-auto p-1 sm:grid-cols-12 lg:max-h-[calc(100vh-16rem)] lg:grid-cols-5">
             {shown.map((x) => {
