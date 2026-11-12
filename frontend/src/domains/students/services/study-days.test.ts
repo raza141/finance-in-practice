@@ -80,3 +80,14 @@ describe("StudyDays calendar helpers", () => {
     expect(StudyDays.match("Mock exam 2", bank)).toBeNull();
   });
 });
+
+describe("StudyDays.week", () => {
+  it("counts topics due in the next seven days and the overdue ones", () => {
+    const items = [item("late", "2026-11-06"), item("today", "2026-11-07"), item("sixth", "2026-11-13"), item("next-week", "2026-11-14"), item("done", "2026-11-08", "done"), item("someday", null)];
+    expect(StudyDays.week(items, "2026-11-07")).toEqual({ due: 2, behind: 1 });
+  });
+
+  it("is zero with no plan", () => {
+    expect(StudyDays.week([], "2026-11-07")).toEqual({ due: 0, behind: 0 });
+  });
+});

@@ -190,6 +190,15 @@ export class StructuredData {
     ]);
   }
 
+  /** A page's visible FAQ, word for word (Google ignores FAQ markup that isn't on the page). */
+  static faq(items: readonly { question: string; answer: string }[]): JsonLdNode {
+    return {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: items.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })),
+    };
+  }
+
   /** Home is always the first crumb. */
   static breadcrumbs(trail: readonly { name: string; path: string }[]): JsonLdNode {
     const items = [{ name: "Home", path: "" }, ...trail];

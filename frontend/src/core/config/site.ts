@@ -48,6 +48,7 @@ export const siteConfig = {
         { label: "Courses", href: "/courses" },
         { label: "Pricing", href: "/pricing" },
         { label: "Question Bank", href: "/cfa/questions" },
+        { label: "Free diagnostic test", href: "/cfa/diagnostic" },
         { label: "Resources", href: "/resources" },
         { label: "Blog", href: "/journal" },
       ],
@@ -57,6 +58,8 @@ export const siteConfig = {
       links: [
         { label: "Instructor", href: "/about" },
         { label: "Methodology", href: "/#methodology" },
+        { label: "Student results", href: "/results" },
+        { label: "Find us on Google", href: "https://g.page/r/CXVZIOQD9qJXEBM" },
         {
           label: "Review us on Google",
           href: "https://g.page/r/CXVZIOQD9qJXEBM/review",

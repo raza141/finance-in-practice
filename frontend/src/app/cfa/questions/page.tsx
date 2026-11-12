@@ -1,7 +1,9 @@
+import { ClipboardCheck } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/core/components/seo/JsonLd";
+import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { StructuredData } from "@/core/seo/StructuredData";
 import { QuestionBank } from "@/domains/questions/components/QuestionBank";
 import { SubscribeForm } from "@/domains/questions/components/SubscribeForm";
@@ -30,6 +32,10 @@ export default async function QuestionLibraryPage({ searchParams }: PageProps<"/
       <p className="mt-4 max-w-2xl text-lg text-muted">
         Original CFA and FRM exam-style questions. Pick an answer, then see the worked solution, why the other answers are wrong and the trap examiners set.
       </p>
+      <ButtonLink href="/cfa/diagnostic" variant="secondary" className="mt-6">
+        <ClipboardCheck aria-hidden className="size-4" />
+        Free 10-question Level I test
+      </ButtonLink>
 
       <QuestionBank
         questions={all}
@@ -42,12 +48,11 @@ export default async function QuestionLibraryPage({ searchParams }: PageProps<"/
         }}
       />
 
-      <section aria-labelledby="library-subscribe" className="mt-16 max-w-2xl rounded-xl border border-gold/40 bg-surface-raised p-6">
+      <section aria-labelledby="library-subscribe" className="mt-16 max-w-2xl rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur sm:p-8">
         <h2 id="library-subscribe" className="text-xl font-bold">
           Get tomorrow&rsquo;s question
         </h2>
-        <p className="mt-1 text-sm text-muted">One question a day by email, with the worked solution. Free, unsubscribe anytime.</p>
-        <div className="mt-4">
+        <div className="mt-5">
           <SubscribeForm />
         </div>
       </section>

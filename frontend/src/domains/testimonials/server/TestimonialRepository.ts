@@ -65,6 +65,19 @@ export class TestimonialRepository implements TestimonialStore {
     return rows.map(TestimonialRepository.toTestimonial);
   }
 
+  /** The results wall: approved testimonials that carry a result (a score change or an outcome line), newest first. */
+  async results(limit = 60): Promise<Testimonial[]> {
+    const rows = (await this.sql`
+      SELECT id, author, context, country, city, program, quote, outcome,
+             side, ticker, conviction, before_score, after_score, yield_percent
+      FROM testimonials
+      WHERE status = 'approved' AND (after_score IS NOT NULL OR nullif(trim(outcome), '') IS NOT NULL)
+      ORDER BY reviewed_at DESC NULLS LAST, submitted_at DESC
+      LIMIT ${limit}
+    `) as PublicRow[];
+    return rows.map(TestimonialRepository.toTestimonial);
+  }
+
   /** Approved testimonials for one ticker, e.g. on a course page. */
   async approvedFor(ticker: Ticker, limit = 6): Promise<Testimonial[]> {
     const rows = (await this.sql`

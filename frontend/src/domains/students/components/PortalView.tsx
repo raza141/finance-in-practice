@@ -204,6 +204,7 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
             name={student.name.split(" ")[0]}
             sessions={sessions}
             plan={plan}
+            exam={exam}
             accountRow={<AccountSummaryRow account={account} />}
             mockRow={progress && (progress.mocks.length > 0 || (mocks?.length ?? 0) > 0) ? <LatestMockRow progress={progress} /> : null}
             classTodo={

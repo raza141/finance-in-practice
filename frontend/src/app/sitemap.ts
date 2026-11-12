@@ -69,6 +69,7 @@ async function questionEntries(): Promise<MetadataRoute.Sitemap> {
     const topics = [...new Set(questions.map((q) => q.topic))];
     return [
       { url: `${siteConfig.url}/cfa/questions`, lastModified: questions[0].publishAt, changeFrequency: "daily", priority: 0.7 },
+      { url: `${siteConfig.url}/cfa/diagnostic`, changeFrequency: "weekly", priority: 0.7 },
       ...topics.map((topic) => ({
         url: `${siteConfig.url}/cfa/questions/${topic}`,
         lastModified: questions.find((q) => q.topic === topic)!.publishAt,

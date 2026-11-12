@@ -116,6 +116,18 @@ export class StudyDays {
     return item.status === "planned" && item.dueOn !== null && item.dueOn < today;
   }
 
+  /** This week's target for Home: planned topics due today through the next six days, and how many are already overdue. */
+  static week(items: readonly Pick<StudyPlanItem, "status" | "dueOn">[], today: string): { due: number; behind: number } {
+    const end = StudyDays.addDays(today, 6);
+    let due = 0;
+    let behind = 0;
+    for (const i of items) {
+      if (StudyDays.overdue(i, today)) behind++;
+      else if (i.status === "planned" && i.dueOn !== null && i.dueOn <= end) due++;
+    }
+    return { due, behind };
+  }
+
   /** `month` (yyyy-mm) as weeks of seven yyyy-mm-dd, Monday first, padded with the days around it. */
   static monthGrid(month: string): string[][] {
     const first = `${month}-01`;

@@ -92,6 +92,19 @@ export class QuestionRepository {
     return rows.map(QuestionRepository.toSummary);
   }
 
+  /** The free diagnostic: `n` live questions of one level, one per topic first (random), so the result maps the syllabus. */
+  async diagnosticSet(level: number, n = 10): Promise<Question[]> {
+    const rows = (await this.sql`
+      SELECT * FROM (
+        SELECT *, row_number() OVER (PARTITION BY topic ORDER BY random()) AS pick
+        FROM cfa_questions WHERE level = ${level} AND publish_at <= now()
+      ) t
+      ORDER BY pick, random()
+      LIMIT ${n}
+    `) as QuestionRow[];
+    return rows.map(QuestionRepository.toQuestion);
+  }
+
   /** Admin list: everything, scheduled and drafts first. */
   async all(): Promise<Question[]> {
     const rows = (await this.sql`

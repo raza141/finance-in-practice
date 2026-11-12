@@ -2,9 +2,11 @@ import "server-only";
 
 import type { ReactNode } from "react";
 
+import { siteConfig } from "@/core/config/site";
 import { Inline } from "@/domains/journal/components/RichText";
 
 import type { MockRepository } from "../server/MockRepository";
+import { ScoreShare } from "../server/ScoreShare";
 import { MockContract } from "../services/MockContract";
 import { MockGrader } from "../services/MockGrader";
 import type { ActiveQuestion, MockAttempt } from "../types";
@@ -19,6 +21,8 @@ export const renderQuestion = (q: ActiveQuestion) => ({
   question: <ExhibitText text={q.question} />,
   options: q.options.map((o, i) => <Inline key={i} text={o} />) as [ReactNode, ReactNode, ReactNode],
 });
+
+const UAE_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dubai" });
 
 /**
  * A closed attempt's score, topics and every question, in the order that attempt showed them. The student's page and the owner's both use it.
@@ -36,12 +40,19 @@ export async function AttemptResults({ repo, attempt, title, readOnly = false }:
   const questions = MockGrader.subset(all, attempt.questionIds);
   const mine = new Map(responses.map((r) => [r.questionId, r]));
   const seconds = ((attempt.submittedAt ?? attempt.endsAt).getTime() - attempt.startedAt.getTime()) / 1000;
+  const grade = MockGrader.grade(questions, responses);
+  // The student's own full mock only: a mistakes retake isn't a mock score, and the owner never shares for them.
+  const share = readOnly || attempt.questionIds ? null : ScoreShare.fromEnv();
+  const shareUrl = share
+    ? `${siteConfig.url}${ScoreShare.PATH}/${share.issue({ title, score: grade.score, total: grade.total, date: UAE_DAY.format(attempt.submittedAt ?? attempt.endsAt) })}`
+    : null;
   return (
     <MockResults
       attemptId={attempt.id}
       title={attempt.questionIds ? `${title}: mistakes retake` : title}
       readOnly={readOnly}
-      grade={MockGrader.grade(questions, responses)}
+      grade={grade}
+      shareUrl={shareUrl}
       seconds={seconds}
       classAverage={MockGrader.classAverage(others)}
       paceSeconds={mock ? Math.round(MockContract.pace(mock) * 60) : null}

@@ -4,10 +4,12 @@ import { LandingAnimator } from "@/core/animations/LandingAnimator";
 
 import { AboutTeaserSection } from "./_sections/AboutTeaserSection";
 import { BookingSection } from "./_sections/BookingSection";
+import { FaqSection } from "./_sections/FaqSection";
 import { FeaturedCoursesSection } from "./_sections/FeaturedCoursesSection";
 import { FreeResourceSection } from "./_sections/FreeResourceSection";
 import { HeroSection } from "./_sections/HeroSection";
 import { HowItWorksSection } from "./_sections/HowItWorksSection";
+import { ResultsSection } from "./_sections/ResultsSection";
 import { StudyPortalSection } from "./_sections/StudyPortalSection";
 import { WhyUsSection } from "./_sections/WhyUsSection";
 
@@ -22,8 +24,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-/** One goal: book a diagnostic session. Order: offer → method → portal → who teaches (+ Google reviews) → steps → booking,
- * then a free download for visitors not ready to book. */
+/** One goal: book a diagnostic session. Order: offer → method → portal → who teaches (+ Google reviews) → results (once any) → steps → booking,
+ * then questions answered and a free download for visitors not ready to book. */
 export default function HomePage() {
   return (
     <LandingAnimator>
@@ -32,8 +34,10 @@ export default function HomePage() {
       <WhyUsSection />
       <StudyPortalSection />
       <AboutTeaserSection />
+      <ResultsSection />
       <HowItWorksSection />
       <BookingSection />
+      <FaqSection />
       <FreeResourceSection />
     </LandingAnimator>
   );

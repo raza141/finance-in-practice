@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag, X } from "lucide-react";
+import { Flag, Share2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -68,6 +68,7 @@ export function MockResults({
   classAverage = null,
   retake = null,
   readOnly = false,
+  shareUrl = null,
 }: {
   attemptId: string;
   title: string;
@@ -82,6 +83,8 @@ export function MockResults({
   retake?: RetakeOptions | null;
   /** The owner reviewing a student's attempt: their notes show, nothing saves. */
   readOnly?: boolean;
+  /** Signed public link to this score (no name); null: nothing to share. */
+  shareUrl?: string | null;
 }) {
   // The owner opens a review to see what went wrong, so it starts on the incorrect ones.
   const [filter, setFilter] = useState<Filter>(readOnly ? "incorrect" : "all");
@@ -208,7 +211,18 @@ export function MockResults({
         )}
         {retake && <RetakePanel attemptId={attemptId} retake={retake} questions={questions} />}
         {!readOnly && (
-          <p className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <p className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            {shareUrl && (
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center gap-2 rounded-btn bg-linkedin px-3.5 font-semibold text-white transition-colors duration-150 hover:bg-linkedin-dark"
+              >
+                <Share2 aria-hidden className="size-4" />
+                Share on LinkedIn
+              </a>
+            )}
             <Link href={`/student/mocks/${attemptId}/notes`} className="text-quant hover:underline">
               My notes, on one page to print
             </Link>

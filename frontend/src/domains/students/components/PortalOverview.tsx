@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin, Video } from "lucide-react";
+import { CalendarClock, CalendarDays, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { StudyDays } from "../services/StudyDays";
@@ -35,6 +35,7 @@ export function PortalOverview({
   classNew,
   accountRow,
   mockRow,
+  exam = null,
 }: {
   name: string;
   sessions: StudentSession[] | null;
@@ -46,6 +47,8 @@ export function PortalOverview({
   accountRow: ReactNode;
   /** The latest mock mark; null when there are no mocks for them. */
   mockRow: ReactNode;
+  /** Their next exam; hideCountdown: they asked not to see the days (Study plan's Hide). */
+  exam?: { course: string; date: string; hideCountdown: boolean } | null;
 }) {
   const now = new Date();
   const today = StudyDays.today();
@@ -54,6 +57,9 @@ export function PortalOverview({
     .filter((p) => p.status === "planned")
     .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"))[0];
   const overdue = step ? StudyDays.overdue(step, today) : false;
+  const week = StudyDays.week(plan ?? [], today);
+  const examDays = exam ? StudyDays.days(today, exam.date) : null;
+  const weekLine = `This week: ${week.due} topic${week.due === 1 ? "" : "s"}${week.behind ? ` · ${week.behind} behind` : ""}`;
 
   return (
     <div className="grid gap-6">
@@ -85,6 +91,17 @@ export function PortalOverview({
         </div>
 
         <HomePanel title="At a glance" className="lg:sticky lg:top-24">
+          {(exam || (plan ?? []).length > 0) && (
+            <HomeRow
+              tab="plan"
+              icon={CalendarClock}
+              urgent={week.behind > 0}
+              title={
+                exam && !exam.hideCountdown && examDays !== null ? (examDays === 0 ? `${exam.course} exam today` : `Exam in ${examDays} day${examDays === 1 ? "" : "s"}`) : "Your week"
+              }
+              detail={weekLine}
+            />
+          )}
           {accountRow}
           {mockRow}
           {classNew}
