@@ -31,11 +31,11 @@ export async function AboutTeaserSection() {
             // One row of equal cells from sm up (text wraps inside a cell, never clipped); stacked on phones.
             <ul
               aria-label="Credentials"
-              className="mt-6 grid divide-y divide-gold/20 overflow-hidden rounded-2xl border border-gold/30 bg-gold/[0.06] sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0"
+              className="mt-6 grid divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface/60 sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0"
             >
               {founder.education.map((item) => (
                 <li key={item} className="flex items-center gap-2.5 px-4 py-3 text-sm leading-snug font-semibold text-ink">
-                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-raised text-gold">
+                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-raised text-quant">
                     <Check strokeWidth={3} className="size-3" />
                   </span>
                   {item}
@@ -45,8 +45,8 @@ export async function AboutTeaserSection() {
           )}
           <p className="mt-6 max-w-[65ch] text-lg leading-relaxed text-ink/90">{founder.bio}</p>
           {(founder.background || founder.highlights.length > 0) && (
-            <div className="mt-6 max-w-[65ch] border-l-2 border-gold/50 pl-5">
-              <h3 className="text-sm font-semibold text-gold">Background</h3>
+            <div className="mt-6 max-w-[65ch] border-l-2 border-line pl-5">
+              <h3 className="font-mono text-[11px] tracking-[0.22em] text-muted uppercase">Background</h3>
               {founder.background && <p className="mt-1.5 leading-relaxed text-ink/80">{founder.background}</p>}
               {founder.highlights.length > 0 && (
                 <ul aria-label="Specialisms" className="mt-4 flex flex-wrap gap-2">

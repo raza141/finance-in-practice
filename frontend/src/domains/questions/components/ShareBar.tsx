@@ -1,6 +1,9 @@
 "use client";
 
+import { Check, Link2, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
+
+import { RAISED_PLAIN } from "@/core/components/ui/buttonStyles";
 
 /**
  * "Challenge a friend": WhatsApp and LinkedIn with the question link ready to send,
@@ -29,18 +32,15 @@ export function ShareBar({ url, title, exam = "CFA" }: { url: string; title: str
     } catch {}
   };
 
-  const button = "inline-flex h-11 items-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors";
+  const button = "inline-flex h-11 items-center gap-2 rounded-btn px-4 text-sm font-semibold transition-colors duration-150";
   return (
     <section
       aria-labelledby="challenge-friend"
-      className="mt-10 rounded-2xl border border-gold/50 bg-gold/[0.07] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6"
+      className="mt-6 rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur sm:flex sm:items-center sm:justify-between sm:gap-6 sm:px-8"
     >
-      <div>
-        <h2 id="challenge-friend" className="font-sans text-lg font-semibold text-gold">
-          Challenge a friend
-        </h2>
-        <p className="mt-1 text-sm text-muted">Send this question to someone studying for the {exam} exam.</p>
-      </div>
+      <h2 id="challenge-friend" className="font-sans text-lg font-semibold text-ink">
+        Challenge a friend
+      </h2>
       <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
         <a
           href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
@@ -61,11 +61,13 @@ export function ShareBar({ url, title, exam = "CFA" }: { url: string; title: str
           LinkedIn
         </a>
         {native && (
-          <button type="button" onClick={share} className={`${button} bg-gold text-canvas hover:bg-gold-bright`}>
+          <button type="button" onClick={share} className={`${button} ${RAISED_PLAIN}`}>
+            <Share2 aria-hidden className="size-4" />
             Share
           </button>
         )}
-        <button type="button" onClick={copy} className={`${button} border border-line font-normal text-ink/90 hover:border-gold/60`}>
+        <button type="button" onClick={copy} className={`${button} ${RAISED_PLAIN}`}>
+          {copied ? <Check aria-hidden className="size-4" /> : <Link2 aria-hidden className="size-4" />}
           {copied ? "Link copied" : "Copy link"}
         </button>
         <span aria-live="polite" className="sr-only">

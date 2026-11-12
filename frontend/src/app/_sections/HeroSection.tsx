@@ -44,12 +44,12 @@ export function HeroSection() {
             data-anim="hero-subtitle"
             className="mt-6 max-w-xl text-lg leading-relaxed text-ink/85 sm:text-xl"
           >
-            <strong className="font-semibold text-gold">1-on-1 exam prep</strong> that starts with a free diagnostic.
+            <strong className="font-semibold text-ink">1-on-1 exam prep</strong> that starts with a free diagnostic.
           </p>
 
           <ul data-anim="hero-subtitle" className="mt-5 flex flex-wrap gap-2 text-sm font-medium">
-            <li className="flex items-center gap-2 rounded-full border border-gold/40 bg-surface-raised px-3.5 py-1.5 text-ink">
-              <span aria-hidden className="h-2 w-2 rounded-full bg-gold" />
+            <li className="flex items-center gap-2 rounded-full border border-line bg-surface-raised px-3.5 py-1.5 text-ink">
+              <span aria-hidden className="h-2 w-2 rounded-full bg-ink/70" />
               At your home · Abu Dhabi
             </li>
             <li className="flex items-center gap-2 rounded-full border border-quant/40 bg-quant/10 px-3.5 py-1.5 text-ink">
@@ -73,9 +73,6 @@ export function HeroSection() {
               </ButtonLink>
             </span>
           </div>
-          <p data-anim="hero-cta" className="mt-3 font-mono text-xs tracking-wide text-muted">
-            Free · 30 min · no card needed
-          </p>
         </div>
 
         {/* Phones: the surface sits faded behind the headline instead of a square block below the CTA. */}

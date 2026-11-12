@@ -88,9 +88,7 @@ export async function FeaturedCoursesSection() {
                   <ul className="grid gap-2 text-sm text-ink/90">
                     {savers.map((line) => (
                       <li key={line} className="flex gap-2.5">
-                        <span aria-hidden className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold text-canvas">
-                          <Check strokeWidth={3} className="size-2.5" />
-                        </span>
+                        <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-quant" />
                         {line}
                       </li>
                     ))}
@@ -101,14 +99,14 @@ export async function FeaturedCoursesSection() {
               <div className="relative mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pt-5">
                 {course.priceMinor ? (
                   <p className="text-sm text-muted">
-                    <span className="text-xl font-bold text-ink">{CourseFormat.price(course)}</span> / hour
+                    <span className="text-xl font-bold text-ink tabular-nums">{CourseFormat.price(course)}</span> / hour
                     {university && <> · AED 2,000 / month</>}
                   </p>
                 ) : null}
                 <div className="btn-group w-full sm:w-auto">
                   <BookButton track={university ? "uni" : course.category === "FRM" ? "frm" : "cfa"} />
                   <ButtonLink href={`/courses/${course.slug}`} variant="secondary">
-                    Learn more →
+                    Learn more
                   </ButtonLink>
                 </div>
               </div>

@@ -155,8 +155,7 @@ export function StudyPortalSection() {
             <article key={card.tag} className="grid items-center gap-8 md:grid-cols-2 lg:gap-16">
               <div className={`overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_30px_80px_-40px_rgb(0_0_0/0.9)] *:border-b-0 ${i % 2 ? "md:order-2" : ""}`}>{card.shot}</div>
               <div>
-                <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">{card.tag}</p>
-                <h3 className="mt-2 text-2xl font-normal italic sm:text-3xl">{card.title}</h3>
+                <h3 className="font-serif text-2xl font-normal italic sm:text-3xl">{card.title}</h3>
                 <ul className="mt-5 grid gap-3 text-muted">
                   {card.points.map((p) => (
                     <li key={p} className="flex gap-3">

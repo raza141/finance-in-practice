@@ -3,7 +3,7 @@ import type { FreeResource } from "../services/ResourceCatalog";
 import { LeadForm } from "./LeadForm";
 
 /** Lead magnet: a cover preview you can almost hold, three lines of value, and the email form. */
-export function FreeResourceBlock({ resource, source, eyebrow = "Free download" }: { resource: FreeResource; source: string; eyebrow?: string }) {
+export function FreeResourceBlock({ resource, source }: { resource: FreeResource; source: string }) {
   const { cover } = resource;
   return (
     <div data-hide-bookbar className="grid items-center gap-10 rounded-3xl border border-line bg-surface p-7 sm:p-10 lg:grid-cols-[18rem_minmax(0,38rem)] lg:justify-center lg:gap-14">
@@ -33,16 +33,11 @@ export function FreeResourceBlock({ resource, source, eyebrow = "Free download" 
       </div>
 
       <div>
-        <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">
-          {eyebrow} · {resource.format}
-        </p>
-        <h3 className="mt-3 text-2xl font-bold sm:text-3xl">{resource.title}</h3>
+        <h3 className="text-2xl font-bold sm:text-3xl">{resource.title}</h3>
         <ul className="mt-5 grid gap-2 text-ink/90">
           {resource.points.map((line) => (
             <li key={line} className="flex items-center gap-3">
-              <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold text-canvas">
-                <Check strokeWidth={3} className="size-3" />
-              </span>
+              <Check aria-hidden className="size-5 shrink-0 text-quant" />
               {line}
             </li>
           ))}

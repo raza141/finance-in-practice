@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, GraduationCap } from "lucide-react";
 import "katex/dist/katex.min.css";
 
 import Image from "next/image";
@@ -38,16 +38,22 @@ async function CourseCallout({ level }: { level: number }) {
   const course = await CourseRepository.fromEnv()
     ?.activeBySlug(COURSE_PATH[level].replace("/courses/", ""))
     .catch(() => null);
-  const rate = course?.priceMinor ? `, ${CourseFormat.hourly(course)}` : "";
+  const rate = course?.priceMinor ? CourseFormat.hourly(course) : null;
   return (
-    <section aria-labelledby="course-callout" className="mt-12 rounded-3xl border border-gold/40 bg-canvas/70 p-6 backdrop-blur sm:p-8">
-      <h2 id="course-callout" className="max-w-2xl text-2xl font-bold">
-        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE{rate}
+    <section aria-labelledby="course-callout" className="mt-12 rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur sm:p-8">
+      <h2 id="course-callout" className="max-w-2xl text-2xl leading-snug font-bold text-balance">
+        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE
+        {rate && (
+          <>
+            , <span className="whitespace-nowrap text-gold tabular-nums">{rate}</span>
+          </>
+        )}
       </h2>
       <div className="btn-group mt-6">
         <BookButton track={QuestionTaxonomy.examOf(level)} />
         <ButtonLink href={COURSE_PATH[level]} variant="secondary">
-          See the {exam} course →
+          <GraduationCap aria-hidden className="size-4" />
+          See the {exam} course
         </ButtonLink>
       </div>
     </section>
@@ -301,12 +307,11 @@ export function QuestionView({
         </nav>
       )}
 
-      <section aria-labelledby="qotd-subscribe" className="mt-12 rounded-xl border border-gold/40 bg-surface-raised p-6">
+      <section aria-labelledby="qotd-subscribe" className="mt-12 rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur sm:p-8">
         <h2 id="qotd-subscribe" className="text-xl font-bold">
           Get tomorrow&rsquo;s question
         </h2>
-        <p className="mt-1 text-sm text-muted">One exam-style question a day with a full worked solution. Free, unsubscribe anytime.</p>
-        <div className="mt-4">
+        <div className="mt-5">
           <SubscribeForm />
         </div>
       </section>

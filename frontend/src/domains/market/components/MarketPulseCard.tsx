@@ -36,10 +36,7 @@ function generatedAt(iso: string): string {
 export function MarketPulseCard({ pulse, now = new Date() }: { pulse: MarketPulse | null; now?: Date }) {
   return (
     <figure className="rounded-xl border border-line bg-surface p-5 font-mono text-xs sm:p-6">
-      <p className="tracking-[0.2em] text-quant uppercase">Market Pulse · Daily Close</p>
-      <figcaption className="mt-2 font-sans text-sm leading-relaxed text-muted">
-        Today&rsquo;s numbers, and the exam topic each one teaches. Sessions start from boards like this.
-      </figcaption>
+      <figcaption className="tracking-[0.2em] text-quant uppercase">Market Pulse · Daily Close</figcaption>
 
       {pulse ? <PulseBody pulse={pulse} now={now} /> : (
         <p className="mt-6 rounded-lg border border-dashed border-line px-4 py-8 text-center tracking-[0.2em] text-muted uppercase">

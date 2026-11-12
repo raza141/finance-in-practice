@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 
+import { RAISED_PLAIN } from "@/core/components/ui/buttonStyles";
+
 type State = { kind: "idle" } | { kind: "sending" } | { kind: "error"; message: string } | { kind: "done" };
 
 /** "Get tomorrow's CFA question": saves the email as a lead; the daily email goes out once the owner switches it on. */
@@ -48,12 +50,12 @@ export function SubscribeForm() {
           autoComplete="email"
           inputMode="email"
           placeholder="you@email.com"
-          className="h-12 min-w-0 flex-1 rounded-md border border-line bg-canvas px-4 text-ink placeholder:text-muted/70 focus:border-quant"
+          className="h-12 min-w-0 flex-1 rounded-btn border border-line bg-canvas px-4 text-ink placeholder:text-muted/70 focus:border-quant"
         />
         <button
           type="submit"
           disabled={state.kind === "sending"}
-          className="h-12 shrink-0 rounded-btn bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright disabled:opacity-60"
+          className={`h-12 shrink-0 rounded-btn px-6 text-[15px] font-semibold disabled:opacity-60 ${RAISED_PLAIN}`}
         >
           {state.kind === "sending" ? "Sending…" : "Send me the questions"}
         </button>
@@ -68,7 +70,7 @@ export function SubscribeForm() {
         .
       </p>
       {state.kind === "error" && (
-        <p role="alert" className="text-sm text-gold">
+        <p role="alert" className="text-sm text-red-300">
           {state.message}
         </p>
       )}
