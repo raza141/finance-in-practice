@@ -13,7 +13,7 @@ const COUNT = 10;
 
 export const metadata: Metadata = {
   title: "Free CFA® Level I Diagnostic Test: 10 Questions, Score by Topic",
-  description: "Ten exam-style CFA® Level I questions, one from each topic. See your score by topic in about 15 minutes, free, no sign-up.",
+  description: "Ten exam-style CFA® Level I questions across the syllabus. See your score by topic in about 15 minutes, free, no sign-up.",
   alternates: { canonical: "/cfa/diagnostic" },
 };
 

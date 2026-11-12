@@ -36,7 +36,7 @@ export const HOME_FAQ: readonly { question: string; answer: string; link?: { hre
   },
   {
     question: "Can I test myself before booking?",
-    answer: "Yes. Take the free 10-question CFA® Level I diagnostic test: one question from each topic, scored by topic, with no sign-up.",
+    answer: "Yes. Take the free 10-question CFA® Level I diagnostic test: exam-style questions across the Level I topics, scored by topic, with no sign-up.",
     link: { href: "/cfa/diagnostic", label: "Take the free test" },
   },
 ];
