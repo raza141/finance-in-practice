@@ -28,9 +28,6 @@ export default async function DiagnosticPage() {
       <h1 className="text-3xl leading-tight font-black sm:text-4xl">
         Free CFA<sup className="text-[0.45em]">®</sup> Level I diagnostic
       </h1>
-      <p className="mt-3 font-mono text-xs tracking-wide text-muted">
-        {questions.length} questions · about {Math.round(questions.length * 1.5)} min · score by topic
-      </p>
       <div className="mt-8">
         <DiagnosticQuiz
           level={LEVEL}

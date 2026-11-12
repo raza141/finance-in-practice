@@ -97,7 +97,8 @@ export function PortalOverview({
               icon={CalendarClock}
               urgent={week.behind > 0}
               title={
-                exam && !exam.hideCountdown && examDays !== null ? (examDays === 0 ? `${exam.course} exam today` : `Exam in ${examDays} day${examDays === 1 ? "" : "s"}`) : "Your week"
+                // The database filters by its own (UTC) date: just after midnight in the UAE yesterday's exam can still arrive, so never a negative count.
+                exam && !exam.hideCountdown && examDays !== null && examDays >= 0 ? (examDays === 0 ? `${exam.course} exam today` : `Exam in ${examDays} day${examDays === 1 ? "" : "s"}`) : "Your week"
               }
               detail={weekLine}
             />
