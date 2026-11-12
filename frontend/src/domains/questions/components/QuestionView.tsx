@@ -30,13 +30,13 @@ function formulaHtml(formula: string): string {
 /** The course page a question's level sells; Level III has none, so its questions get no callout. */
 const COURSE_PATH: Record<number, string> = { 1: "/courses/cfa-level-i", 2: "/courses/cfa-level-ii", 4: "/courses/frm-part-1" };
 
-/** The conversion card under the insight: the question's own exam, its lowest hourly rate, two buttons. */
+/** The conversion card under the insight: the question's own exam, its hourly rate, two buttons. */
 function CourseCallout({ level }: { level: number }) {
   const exam = QuestionTaxonomy.levelLabel(level).replace(/^(CFA|FRM)/, "$1®");
   return (
     <section aria-labelledby="course-callout" className="mt-12 rounded-3xl border border-gold/40 bg-canvas/70 p-6 backdrop-blur sm:p-8">
       <h2 id="course-callout" className="max-w-2xl text-2xl font-bold">
-        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE, from AED 100 / hour
+        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE, AED 150 / hour
       </h2>
       <div className="btn-group mt-6">
         <BookButton track={QuestionTaxonomy.examOf(level)} />
