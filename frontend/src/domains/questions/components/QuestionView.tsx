@@ -9,6 +9,8 @@ import { BookButton } from "@/core/components/ui/BookButton";
 import { ButtonLink } from "@/core/components/ui/ButtonLink";
 import { siteConfig } from "@/core/config/site";
 import { CourseAnimator } from "@/domains/courses/animations/CourseAnimator";
+import { CourseRepository } from "@/domains/courses/server/CourseRepository";
+import { CourseFormat } from "@/domains/courses/services/CourseFormat";
 import type { Instructor } from "@/domains/team/types";
 import { Inline, RichText, texToHtml } from "@/domains/journal/components/RichText";
 import { ExhibitText } from "@/domains/mocks/components/ExhibitText";
@@ -30,13 +32,17 @@ function formulaHtml(formula: string): string {
 /** The course page a question's level sells; Level III has none, so its questions get no callout. */
 const COURSE_PATH: Record<number, string> = { 1: "/courses/cfa-level-i", 2: "/courses/cfa-level-ii", 4: "/courses/frm-part-1" };
 
-/** The conversion card under the insight: the question's own exam, its hourly rate, two buttons. */
-function CourseCallout({ level }: { level: number }) {
+/** The conversion card under the insight: the question's own exam, its course's hourly rate (Admin → Courses), two buttons. */
+async function CourseCallout({ level }: { level: number }) {
   const exam = QuestionTaxonomy.levelLabel(level).replace(/^(CFA|FRM)/, "$1®");
+  const course = await CourseRepository.fromEnv()
+    ?.activeBySlug(COURSE_PATH[level].replace("/courses/", ""))
+    .catch(() => null);
+  const rate = course?.priceMinor ? `, ${CourseFormat.hourly(course)}` : "";
   return (
     <section aria-labelledby="course-callout" className="mt-12 rounded-3xl border border-gold/40 bg-canvas/70 p-6 backdrop-blur sm:p-8">
       <h2 id="course-callout" className="max-w-2xl text-2xl font-bold">
-        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE, AED 150 / hour
+        1-on-1 {exam} coaching in Abu Dhabi or online across the UAE{rate}
       </h2>
       <div className="btn-group mt-6">
         <BookButton track={QuestionTaxonomy.examOf(level)} />
