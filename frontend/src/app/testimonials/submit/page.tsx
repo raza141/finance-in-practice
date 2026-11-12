@@ -18,17 +18,12 @@ export default function SubmitTestimonialPage() {
 
       <div className="page-container relative pt-28 pb-12 lg:pt-32 lg:pb-16">
         <div className="max-w-3xl">
-          <p className="font-mono text-xs tracking-[0.3em] text-quant uppercase">Learner feedback desk</p>
           <h1
             id="submit-heading"
-            className="mt-6 text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
+            className="text-5xl leading-[1.05] font-normal tracking-tight italic sm:text-6xl"
           >
             Share your experience
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Studied or worked with us? Tell future students what it was like. We review every testimonial
-            before it appears on the site.
-          </p>
         </div>
 
         <div className="mt-12 max-w-6xl">

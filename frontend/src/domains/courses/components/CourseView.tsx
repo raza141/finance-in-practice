@@ -183,8 +183,8 @@ export function CourseView({
                         </div>
                         {body && <p className="mt-5 flex-1 leading-relaxed text-muted">{body}</p>}
                         {bestFor && (
-                          <div className="mt-6 rounded-xl border border-gold/30 bg-surface-raised px-4 py-3">
-                            <p className="font-mono text-[11px] tracking-[0.16em] text-gold uppercase">Best for</p>
+                          <div className="mt-6 rounded-xl border border-line bg-surface-raised px-4 py-3">
+                            <p className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Best for</p>
                             <p className="mt-1 text-sm leading-relaxed text-ink">{bestFor}</p>
                           </div>
                         )}
@@ -254,8 +254,8 @@ export function CourseView({
                           )}
                         </div>
                         {module.practice && (
-                          <div className="rounded-xl border border-gold/30 bg-surface-raised px-4 py-3">
-                            <p className="font-bold text-gold">{course.practiceLabel}</p>
+                          <div className="rounded-xl border border-line bg-surface-raised px-4 py-3">
+                            <p className="font-bold text-quant">{course.practiceLabel}</p>
                             <p className="mt-1 leading-relaxed">{module.practice}</p>
                           </div>
                         )}
@@ -310,10 +310,10 @@ export function CourseView({
               {course.options.map((option, index) => (
                 <li
                   key={index}
-                  className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_12px_40px_-12px_rgba(212,175,55,0.25)]"
+                  className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-quant/40 hover:shadow-[0_12px_40px_-12px_rgb(34_211_238/0.2)]"
                 >
                   {/* Same build as the method stages minus the number: options are alternatives, not steps. */}
-                  <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-gold to-quant opacity-50 transition-opacity group-hover:opacity-100" />
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-quant opacity-40 transition-opacity group-hover:opacity-100" />
                   <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-surface-raised text-gold ring-1 ring-gold/30">
                     {OPTION_ICONS[index % OPTION_ICONS.length]}
                   </span>

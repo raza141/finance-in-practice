@@ -9,8 +9,7 @@ export interface LegalSection {
 export function LegalPage({ title, updated, intro, sections }: { title: string; updated: string; intro: ReactNode; sections: LegalSection[] }) {
   return (
     <article className="page-container max-w-3xl pt-10 pb-16 lg:pt-12">
-      <p className="font-mono text-xs tracking-[0.2em] text-quant uppercase">Legal</p>
-      <h1 className="mt-3 text-4xl font-bold sm:text-5xl">{title}</h1>
+      <h1 className="text-4xl font-bold sm:text-5xl">{title}</h1>
       <p className="mt-3 font-mono text-xs text-muted">Last updated {updated}</p>
       <div className="mt-6 text-lg leading-relaxed text-ink/85">{intro}</div>
 

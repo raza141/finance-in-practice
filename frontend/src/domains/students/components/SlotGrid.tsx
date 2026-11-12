@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { SlotWire } from "@/domains/booking/services/BookingContract";
@@ -140,10 +141,10 @@ export function SlotGrid({
         {pages > 1 && (
           <span className="flex gap-1">
             <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Earlier days" className="rounded border border-line px-2 py-1 hover:border-quant/50 disabled:opacity-30">
-              ←
+              <ChevronLeft aria-hidden className="size-4" />
             </button>
             <button type="button" disabled={page >= pages - 1} onClick={() => setPage(page + 1)} aria-label="Later days" className="rounded border border-line px-2 py-1 hover:border-quant/50 disabled:opacity-30">
-              →
+              <ChevronRight aria-hidden className="size-4" />
             </button>
           </span>
         )}

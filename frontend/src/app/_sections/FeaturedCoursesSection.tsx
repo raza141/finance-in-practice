@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { BookButton } from "@/core/components/ui/BookButton";
@@ -56,7 +56,7 @@ export async function FeaturedCoursesSection() {
           return (
             <SpotlightCard
               key={course.id}
-              className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-gold/50 lg:p-7"
+              className="group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 transition-colors hover:border-quant/40 lg:p-7"
             >
               <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full bg-quant/10 blur-3xl" />
               <h3 className="relative text-2xl font-black sm:text-3xl">{course.title}</h3>
@@ -117,7 +117,8 @@ export async function FeaturedCoursesSection() {
       <p className="mt-6 text-muted">
         Also 1-on-1: personal finance, financial modeling, Python automation and more.{" "}
         <Link href="/courses" className="font-semibold text-ink underline decoration-quant/50 underline-offset-4 hover:text-quant">
-          See all tracks →
+          See all tracks
+          <ChevronRight aria-hidden className="ml-0.5 inline size-4 align-[-3px]" />
         </Link>
       </p>
     </section>

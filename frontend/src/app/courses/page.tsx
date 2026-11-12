@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -59,7 +60,10 @@ export default async function CoursesPage() {
                     <p className="mt-3 flex-1 leading-relaxed text-muted">{course.summary}</p>
                     <p className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm">
                       <span className="font-semibold text-ink">{CourseFormat.hourly(course)}</span>
-                      <span className="font-mono text-xs text-quant">View course →</span>
+                      <span className="inline-flex items-center gap-1 font-mono text-xs text-quant">
+                        View course
+                        <ChevronRight aria-hidden className="size-3.5" />
+                      </span>
                     </p>
                   </Link>
                 </li>

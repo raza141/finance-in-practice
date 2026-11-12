@@ -1,5 +1,7 @@
 "use client";
 
+import { RAISED_QUANT } from "@/core/components/ui/buttonStyles";
+
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -319,8 +321,8 @@ function Row({ q, result }: { q: QuestionSummary; result?: Result }) {
 function TodayCard({ q, result }: { q: QuestionSummary; result?: Result }) {
   const topic = QuestionTaxonomy.topic(q.topic)?.name ?? q.topic;
   return (
-    <section aria-labelledby="today-title" className="relative mt-10 overflow-hidden rounded-2xl border border-gold/40 bg-surface-raised p-6 sm:p-8">
-      <p className="text-sm font-semibold text-gold">Today&rsquo;s question</p>
+    <section aria-labelledby="today-title" className="relative mt-10 overflow-hidden rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur sm:p-8">
+      <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">Today&rsquo;s question</p>
       <h2 id="today-title" className="mt-2 max-w-3xl font-serif text-2xl leading-snug font-bold sm:text-3xl">
         {q.title}
       </h2>
@@ -333,7 +335,7 @@ function TodayCard({ q, result }: { q: QuestionSummary; result?: Result }) {
       </p>
       <Link
         href="/cfa/question-of-the-day"
-        className="mt-6 inline-flex h-12 items-center rounded-btn bg-gold px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-gold-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className={`mt-6 inline-flex h-12 items-center rounded-btn px-6 text-[15px] font-semibold ${RAISED_QUANT}`}
       >
         {result ? "See your answer" : "Solve today's question"}
       </Link>

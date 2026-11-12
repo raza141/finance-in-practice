@@ -160,8 +160,7 @@ export function MockResults({
   return (
     <div className="grid gap-6">
       <section aria-labelledby="score-heading" className="rounded-3xl border border-ink/10 bg-canvas/70 p-6 backdrop-blur-md sm:p-8">
-        <p className="font-mono text-[11px] tracking-[0.22em] text-quant uppercase">Results</p>
-        <h1 id="score-heading" className="mt-1 text-2xl font-normal italic">
+        <h1 id="score-heading" className="text-2xl font-normal italic">
           {title}
         </h1>
         <dl className={`mt-5 grid gap-px overflow-hidden rounded-xl border border-line bg-line [&>div]:bg-surface [&>div]:p-4 ${classAverage ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>

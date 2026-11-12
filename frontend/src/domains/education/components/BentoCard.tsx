@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { siteConfig } from "@/core/config/site";
@@ -106,9 +107,7 @@ export function BentoCard({ service }: { service: BentoService }) {
           className="inline-flex items-center gap-1.5 border-t border-white/5 pt-4 text-sm font-semibold text-ink transition-colors hover:text-quant"
         >
           {service.waitlist ? "Register interest" : "Discuss in a free diagnostic"}
-          <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-            →
-          </span>
+          <ChevronRight aria-hidden className="size-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
     </article>

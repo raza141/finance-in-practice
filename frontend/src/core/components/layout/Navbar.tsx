@@ -134,9 +134,9 @@ export function Navbar() {
           <Link
             href={siteConfig.studentBooking.href}
             aria-current={isActive(siteConfig.studentBooking.href) ? "page" : undefined}
-            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-gold/30 bg-surface/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-gold/70 aria-[current=page]:border-gold/70 sm:inline-flex"
+            className="group hidden h-11 items-center gap-2.5 rounded-btn border border-line bg-surface/80 py-1 pr-4 pl-1 shadow-lg backdrop-blur-md transition-colors hover:border-quant/50 aria-[current=page]:border-quant/60 sm:inline-flex"
           >
-            <span className="grid h-9 w-9 place-items-center rounded-md [corner-shape:squircle] bg-surface-raised text-gold transition-colors group-hover:bg-gold group-hover:text-canvas">
+            <span className="grid h-9 w-9 place-items-center rounded-md [corner-shape:squircle] bg-surface-raised text-quant transition-colors group-hover:bg-quant group-hover:text-canvas">
               <LockKeyhole aria-hidden strokeWidth={1.75} className="size-4" />
             </span>
             <span className="flex flex-col leading-tight">
