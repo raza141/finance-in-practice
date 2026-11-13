@@ -274,10 +274,6 @@ export function QuantBookingWidget({ provider, bookingClient, onSelection }: Qua
           <span className="text-muted">
             <span className="text-ink">FIP/BOOK</span> ▸ DIAGNOSTIC SESSION
           </span>
-          <span className="flex items-center gap-2 text-quant">
-            <span aria-hidden className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-gold" />
-            {feedProvider.isSimulated ? "SIMULATED FEED" : "LIVE FEED"}
-          </span>
         </div>
 
         {/* stage rail */}
