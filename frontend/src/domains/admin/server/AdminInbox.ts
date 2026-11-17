@@ -48,6 +48,7 @@ export class AdminInbox {
                 SELECT id FROM clients WHERE seen_at IS NULL
                 UNION SELECT client_id FROM classroom_access WHERE status = 'requested'
                 UNION SELECT id FROM clients WHERE requested_package_id IS NOT NULL
+                UNION SELECT client_id FROM course_requests WHERE status = 'pending'
               ) waiting) AS clients,
               (SELECT count(*)::int FROM hour_requests WHERE status = 'pending') AS hour_requests,
               (SELECT count(*)::int FROM session_requests WHERE status = 'pending' AND ends_at > now()) AS session_requests,

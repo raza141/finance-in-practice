@@ -30,11 +30,11 @@ const { OTHER, LIMITS } = StudentBookingContract;
 
 type Days = { status: "loading" } | { status: "ready"; days: { date: string; slots: SlotWire[] }[] } | { status: "error"; message: string };
 type Notice = { tone: "ok" | "warn"; text: string } | null;
-export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "drill" | "classroom" | "account" | "package";
+export type Tab = "home" | "book" | "sessions" | "plan" | "mocks" | "progress" | "drill" | "classroom" | "account" | "package" | "courses";
 
 /** Old ids still in sent WhatsApp links and bookmarks. */
 const ALIASES: Record<string, Tab> = { overview: "home" };
-const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "drill", "classroom", "account", "package"];
+const TAB_IDS: readonly Tab[] = ["home", "book", "sessions", "plan", "mocks", "progress", "drill", "classroom", "account", "package", "courses"];
 
 /** Lets server-rendered panels (home, mocks, calendar) switch tabs; `notes` pre-fills the booking form. */
 const PortalTabs = createContext<(tab: Tab, notes?: string) => void>(() => {});
@@ -74,6 +74,7 @@ export function StudentPortal({
   badges = {},
   me,
   notices,
+  addCourse = null,
   pkg = null,
   readOnly = false,
 }: {
@@ -100,6 +101,8 @@ export function StudentPortal({
   drill?: ReactNode | null;
   /** Who's signed in, for the bar's "Me" menu. */
   me: { name: string; email: string };
+  /** Me → Add a course: other courses as requests. Null hides the item. */
+  addCourse?: ReactNode | null;
   /** Their package and changing it; in the Me menu. Null hides the item. */
   pkg?: ReactNode | null;
   /** Banners above every tab: terms to accept, access ended, the package. */
@@ -128,7 +131,7 @@ export function StudentPortal({
   // The tab lives in the URL (?tab=plan): refresh, Back and WhatsApp links land on it. Only tab ids, never a record.
   const asked = useSearchParams().get("tab") ?? "";
   const named = ALIASES[asked] ?? (TAB_IDS as readonly string[]).find((t) => t === asked);
-  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) || (named === "progress" && !progress) || (named === "package" && !pkg) ? "home" : (named as Tab);
+  const tab: Tab = !named || (named === "classroom" && !classroom) || (named === "mocks" && !mocks) || (named === "progress" && !progress) || (named === "package" && !pkg) || (named === "courses" && !addCourse) ? "home" : (named as Tab);
   const seen = useRef(false);
   const [notice, setNotice] = useState<Notice>(null);
   // Bumped after each change so the grid re-reads free times.
@@ -276,7 +279,7 @@ export function StudentPortal({
   const section = TABS.find((t) => t.id === lit);
   return (
     <PortalTabs value={go}>
-    <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} onPackage={pkg ? () => go("package") : null} />
+    <PortalBar tabs={TABS} active={lit} badges={badges} onGo={go} me={me} readOnly={readOnly} onAccount={() => go("account")} onPackage={pkg ? () => go("package") : null} onAddCourse={addCourse ? () => go("courses") : null} />
     {/* Phones and tablets: room at the bottom for the tab bar. */}
     <main className="page-container relative grid grid-cols-[minmax(0,1fr)] gap-6 pt-8 pb-28 lg:pt-10 lg:pb-16">
       {notices}
@@ -289,6 +292,7 @@ export function StudentPortal({
       {tab === "drill" && drill}
       {tab === "account" && account}
       {tab === "package" && pkg}
+      {tab === "courses" && addCourse}
       {tab === "classroom" && classroom}
 
       {tab === "sessions" && (

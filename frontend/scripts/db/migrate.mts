@@ -1573,6 +1573,55 @@ const MIGRATIONS: Migration[] = [
       `ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_check CHECK (role IN ('owner', 'editor', 'qa'))`,
     ],
   },
+  {
+    // Moving on from a sitting, same account: the student reports their result per sitting (a retake overwrites
+    // client_batches, so results live apart), then asks for the next level, a retake or another course. A request
+    // opens nothing until the owner approves it. Approving a retake pauses the next level (paused_at): it drops out
+    // of client_live_courses like an ended batch, history kept, until it's approved again.
+    id: "076_course_moves",
+    statements: [
+      `CREATE TABLE exam_results (
+        client_id   uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course      text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        label       text NOT NULL CHECK (char_length(label) BETWEEN 1 AND 40),
+        passed      boolean NOT NULL,
+        reported_on date NOT NULL DEFAULT current_date,
+        PRIMARY KEY (client_id, course, label)
+      )`,
+      `CREATE TABLE course_requests (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id  uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course     text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        label      text NOT NULL DEFAULT '' CHECK (char_length(label) <= 40),
+        retake     boolean NOT NULL DEFAULT false,
+        status     text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined')),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        decided_at timestamptz
+      )`,
+      `CREATE UNIQUE INDEX course_requests_pending_key ON course_requests (client_id, course) WHERE status = 'pending'`,
+      `ALTER TABLE client_batches ADD COLUMN paused_at timestamptz`,
+      `CREATE OR REPLACE FUNCTION client_live_courses(client uuid) RETURNS text[] LANGUAGE sql STABLE AS $fn$
+        SELECT COALESCE(array_agg(x), '{}') FROM clients c CROSS JOIN LATERAL unnest(c.courses) AS x
+        WHERE c.id = client
+          AND NOT EXISTS (SELECT 1 FROM client_batches cb WHERE cb.client_id = client AND cb.course = x AND cb.paused_at IS NOT NULL)
+          AND NOT EXISTS (
+            SELECT 1 FROM client_batches cb JOIN batches b ON b.course = cb.course AND b.label = cb.label
+            WHERE cb.client_id = client AND cb.course = x AND batch_access_ends(cb, b) < current_date
+          )
+      $fn$`,
+      // One copy of the "ended" list the portal reads (was repeated in three queries): ended batches and paused courses.
+      `CREATE FUNCTION client_ended_batches(client uuid) RETURNS json LANGUAGE sql STABLE AS $fn$
+        SELECT COALESCE(json_agg(json_build_object(
+            'course', cb.course, 'label', cb.label, 'paused', cb.paused_at IS NOT NULL,
+            'ends', to_char(CASE WHEN b.id IS NULL THEN cb.paused_at::date ELSE LEAST(batch_access_ends(cb, b), COALESCE(cb.paused_at::date, 'infinity')) END, 'YYYY-MM-DD'),
+            'examDate', to_char(b.exam_date, 'YYYY-MM-DD')
+          ) ORDER BY cb.course), '[]')
+        FROM clients c JOIN client_batches cb ON cb.client_id = c.id AND cb.course = ANY(c.courses)
+        LEFT JOIN batches b ON b.course = cb.course AND b.label = cb.label
+        WHERE c.id = client AND (cb.paused_at IS NOT NULL OR (b.id IS NOT NULL AND batch_access_ends(cb, b) < current_date))
+      $fn$`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file

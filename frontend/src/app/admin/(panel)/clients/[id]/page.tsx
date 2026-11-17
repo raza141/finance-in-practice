@@ -39,6 +39,9 @@ import { previewWeeklyEmail, saveClassroomEmail } from "@/domains/classroom/acti
 import { addPrivateClassroom, decideClassroom, removePrivateClassroom, setClientBatch } from "@/domains/students/actions/classroom";
 import { ClassroomRepository } from "@/domains/students/server/ClassroomRepository";
 import { Batches } from "@/domains/students/services/Batches";
+import { approveCourseRequest, declineCourseRequest } from "@/domains/students/actions/courseMoves";
+import { CourseMoveRepository } from "@/domains/students/server/CourseMoveRepository";
+import { NextSteps } from "@/domains/students/services/NextSteps";
 import { StudyPlanRepository } from "@/domains/students/server/StudyPlanRepository";
 import { endAccessGrant } from "@/domains/mocks/actions/mocks";
 import { AccessGrantForm } from "@/domains/mocks/components/MockAdminForms";
@@ -58,6 +61,9 @@ const NOTICES: Record<string, { text: string; tone: "ok" | "warn" }> = {
   "plan-saved": { text: "Study plan saved.", tone: "ok" },
   "package-applied": { text: "Package applied from today: their previous package agreement ended and the new one is under Agreements.", tone: "ok" },
   "package-dismissed": { text: "Request closed.", tone: "ok" },
+  "course-approved": { text: "Course opened. Their Classroom for it is a separate request, as usual.", tone: "ok" },
+  "course-declined": { text: "Course request declined.", tone: "ok" },
+  "course-refused": { text: "That request was already handled.", tone: "warn" },
   "package-refused": { text: "Package not changed.", tone: "warn" },
   "own-sent": { text: "WhatsApp message queued: it goes out within a minute.", tone: "ok" },
   nobody: { text: "WhatsApp message not sent: write a message first, or reload the page and try again.", tone: "warn" },
@@ -183,6 +189,12 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
     (packageRepo?.ofClient(client.id) ?? Promise.resolve(null)).catch(() => null),
     (packageRepo?.active() ?? Promise.resolve([])).catch(() => []),
   ]);
+  // Never takes the client page down (e.g. before 076_course_moves is applied).
+  const moveRepo = CourseMoveRepository.fromEnv();
+  const [courseRequests, examResults] = await Promise.all([
+    (moveRepo?.pending(client.id) ?? Promise.resolve([])).catch(() => []),
+    (moveRepo?.results(client.id) ?? Promise.resolve([])).catch(() => []),
+  ]);
   const { business } = await SettingsRepository.load();
   return (
     <div className="max-w-5xl">
@@ -279,6 +291,76 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/a
             )}
           </div>
         </section>
+      )}
+
+      {courseRequests.map((r) => (
+        <section key={r.id} aria-label="Course request" className="mt-5 grid gap-3 rounded-xl border border-gold/40 bg-surface-raised p-4 text-sm">
+          <p className="text-ink">
+            <strong>
+              {r.retake ? "Retake" : "Course"} request: {r.course}
+              {r.label && ` · ${r.label}`}
+            </strong>
+            <span className="text-muted"> (asked {r.createdAt})</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <form action={approveCourseRequest} className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="requestId" value={r.id} />
+              <input type="hidden" name="clientId" value={client.id} />
+              <input type="hidden" name="course" value={r.course} />
+              <input type="hidden" name="retake" value={r.retake ? "1" : "0"} />
+              {/* Exam courses only: a course without sittings (e.g. Financial Modeling) is billed apart and keeps her package. */}
+              {r.label && (
+                <>
+                  <select name="packageId" defaultValue="" aria-label="Package" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink">
+                    <option value="">Keep current package</option>
+                    {(Object.keys(PackageTable.AUDIENCE) as (keyof typeof PackageTable.AUDIENCE)[]).map((audience) => (
+                      <optgroup key={audience} label={PackageTable.AUDIENCE[audience]}>
+                        {packages
+                          .filter((p) => p.audience === audience)
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <input name="startsOn" type="date" defaultValue={today} max={today} aria-label="Package starts on" className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink" />
+                  <input
+                    name="price"
+                    inputMode="decimal"
+                    placeholder={r.retake ? `Package −${NextSteps.RETAKE_DISCOUNT}%` : "Package price"}
+                    aria-label="Agreed price"
+                    className="h-9 w-36 rounded-md border border-line bg-canvas px-2 text-sm text-ink"
+                  />
+                </>
+              )}
+              <PendingButton pendingLabel="Opening…" className={PRIMARY_ACTION}>
+                Approve
+              </PendingButton>
+            </form>
+            <form action={declineCourseRequest}>
+              <input type="hidden" name="requestId" value={r.id} />
+              <PendingButton pendingLabel="Closing…" className={SECONDARY_ACTION}>
+                Decline
+              </PendingButton>
+            </form>
+          </div>
+        </section>
+      ))}
+      {examResults.length > 0 && (
+        <p className="mt-5 text-sm text-muted">
+          Results:{" "}
+          {examResults.map((r, i) => (
+            <span key={`${r.course}-${r.label}`}>
+              {i > 0 && " · "}
+              <span className="text-ink">
+                {r.course} {r.label}
+              </span>{" "}
+              <span className={r.passed ? "text-emerald-300" : "text-red-300"}>{r.passed ? "passed" : "didn’t pass"}</span> ({r.reportedOn})
+            </span>
+          ))}
+        </p>
       )}
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">

@@ -218,7 +218,14 @@ const MENU_ITEM = "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-le
  * The portal's one bar, LinkedIn-style: logo left, the tabs (icon over label) in the middle on wide
  * screens, and a "Me" menu right with the account things. Under an admin's view-as strip it sits lower.
  */
-export function PortalBar({ me, readOnly, onAccount, onPackage, ...tabs }: Tabs & { me: { name: string; email: string }; readOnly: boolean; onAccount: () => void; onPackage: (() => void) | null }) {
+export function PortalBar({
+  me,
+  readOnly,
+  onAccount,
+  onPackage,
+  onAddCourse,
+  ...tabs
+}: Tabs & { me: { name: string; email: string }; readOnly: boolean; onAccount: () => void; onPackage: (() => void) | null; onAddCourse: (() => void) | null }) {
   return (
     <header className={`nav-line sticky z-30 bg-canvas bg-grid-lines bg-fixed ${readOnly ? "top-16" : "top-0"}`}>
       {/* A faint cyan-to-gold wash over the grid, so the bar reads as a bar. */}
@@ -255,6 +262,12 @@ export function PortalBar({ me, readOnly, onAccount, onPackage, ...tabs }: Tabs 
               <button type="button" popoverTarget="me-menu" popoverTargetAction="hide" onClick={onPackage} className={MENU_ITEM}>
                 <Package aria-hidden className="size-4 text-muted" />
                 My package
+              </button>
+            )}
+            {onAddCourse && (
+              <button type="button" popoverTarget="me-menu" popoverTargetAction="hide" onClick={onAddCourse} className={MENU_ITEM}>
+                <GraduationCap aria-hidden className="size-4 text-muted" />
+                Add a course
               </button>
             )}
             <a href={siteConfig.contact.linkedinUrl} target="_blank" rel="noreferrer" className={MENU_ITEM}>

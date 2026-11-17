@@ -7,8 +7,8 @@ export interface Student {
   email: string;
   /** Course titles from the client's plan whose batch access hasn't ended (069); the booking form's course list. */
   courses: string[];
-  /** Batches whose portal access has ended (yyyy-mm-dd): those courses are left out of `courses`. */
-  ended: { course: string; label: string; ends: string }[];
+  /** Batches whose portal access has ended (yyyy-mm-dd), or paused by a retake (076): left out of `courses`. */
+  ended: { course: string; label: string; ends: string; paused: boolean; examDate: string | null }[];
 }
 
 export type SessionMode = "online" | "in_person";

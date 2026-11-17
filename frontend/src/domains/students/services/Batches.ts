@@ -40,6 +40,23 @@ export class Batches {
     return Batches.sorted([...running, ...next]).slice(0, Batches.OFFER);
   }
 
+  /**
+   * A retake's sittings: as `offer`, but none sooner than six months after the failed one
+   * (CFA Institute: no consecutive windows, none under six months apart).
+   */
+  static retake(windows: readonly ExamWindow[], opened: readonly OpenedBatch[], failed: string, now: Date): string[] {
+    // By month, not day: windows start on different days, so a Feb fail must still reach the Aug window.
+    const [y, m] = failed.split("-").map(Number);
+    const month = m - 1 + 6;
+    const earliest = `${y + Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}-01`;
+    const today = now.toISOString().slice(0, 10);
+    const running = opened.filter((b) => b.examDate >= today && b.examDate >= earliest).map((b) => ({ label: b.label, date: b.examDate }));
+    const next = ExamFacts.nextWindows({ facts: [], windows: [...windows] }, now, windows.length)
+      .filter((w) => w.starts >= earliest)
+      .map((w) => ({ label: w.label, date: w.starts }));
+    return Batches.sorted([...running, ...next]).slice(0, Batches.OFFER);
+  }
+
   /** What the owner may assign: every opened batch (past ones too, for the record) and every sitting still ahead. */
   static assignable(windows: readonly ExamWindow[], opened: readonly OpenedBatch[], now: Date): string[] {
     const today = now.toISOString().slice(0, 10);
