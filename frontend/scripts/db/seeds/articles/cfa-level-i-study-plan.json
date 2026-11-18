@@ -136,7 +136,7 @@
       "role": "pitfalls",
       "tone": "warning",
       "title": "Common mistakes",
-      "text": "- **Studying Ethics first.** It is the heaviest topic, and by exam day the details are gone. Study it late and review it twice.\n- **Reading without questions.** Reading feels productive, but marks come from questions. Aim for at least a third of your hours on practice.\n- **Mixing up the T-bill yields.** Discount rate, holding-period yield, money market yield and bond-equivalent yield are four different numbers for the same bill. Know which one the question gives you.\n- **Annualising with the wrong time unit.** Daily volatility scales by √252, not by 252.\n- **Skipping mock exams.** Four full timed mocks in the last two weeks build exam stamina. Doing more chapters does not."
+      "text": "- **Studying Ethics first.** The Standards fade fast, so study them late and review them twice.\n- **Reading without questions.** Reading feels productive, but marks come from questions. Aim for at least a third of your hours on practice.\n- **Mixing up the T-bill yields.** Discount rate, holding-period yield, money market yield and bond-equivalent yield are four different numbers for the same bill. Know which one the question gives you.\n- **Annualising with the wrong time unit.** Daily volatility scales by √252, not by 252.\n- **Skipping mock exams.** Four full timed mocks in the last two weeks build exam stamina. Doing more chapters does not."
     },
     { "id": "h-limitations", "type": "heading", "level": 2, "role": "limitations", "text": "Limitations" },
     {
