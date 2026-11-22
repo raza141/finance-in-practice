@@ -2,6 +2,10 @@ import { Megaphone } from "lucide-react";
 import { Suspense } from "react";
 
 import { siteConfig } from "@/core/config/site";
+import { StudyHomeRows } from "@/domains/accountability/components/StudyHomeRows";
+import { StudyPanel } from "@/domains/accountability/components/StudyPanel";
+import { AccountabilityRepository } from "@/domains/accountability/server/AccountabilityRepository";
+import { StudyProgress } from "@/domains/accountability/services/StudyProgress";
 import { CalComClient, type CalBookingDetail } from "@/domains/booking/server/CalComClient";
 import { ClassFeedSidebar, ClassTopics, ClassNewRow, ClassTodoRows, LatestMockRow, ProgressPanel, type FeedResult } from "@/domains/classroom/components/ClassroomViews";
 import { ClassroomSync } from "@/domains/classroom/server/ClassroomSync";
@@ -49,10 +53,20 @@ export async function safely<T>(label: string, load: () => Promise<T>): Promise<
   }
 }
 
+/** The accountability loop (077); null: no open CFA Level I or II course. */
+async function studyData(student: Student) {
+  const repo = AccountabilityRepository.fromEnv();
+  if (!repo || student.courses.length === 0) return null;
+  const options = await repo.options(student.id);
+  if (options.length === 0) return null;
+  const [[facts], log] = await Promise.all([repo.facts(student.id), repo.recentLog(student.id)]);
+  return { options, log, progress: facts?.goal.live ? StudyProgress.of(facts) : null };
+}
+
 async function portalData(student: Student) {
   const classrooms = ClassroomRepository.fromEnv();
   const invoices = InvoiceRepository.fromEnv();
-  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks, exam, bank, builder, moves] = await Promise.all([
+  const [courses, booked, plan, classes, own, entries, documents, client, agreements, log, requests, termsAccepted, offers, pkg, packages, mocks, attempts, marks, exam, bank, builder, moves, study] = await Promise.all([
     safely("courses", async () => (await StudentRepository.fromEnv()?.bookableCourses(student)) ?? student.courses),
     safely("sessions", async (): Promise<CalBookingDetail[]> => {
       const [booked, waiting] = await Promise.all([
@@ -82,6 +96,7 @@ async function portalData(student: Student) {
     safely("bank topics", async () => [...new Set(((await MockRepository.fromEnv()?.topicLevels()) ?? []).map((t) => t.topic))]),
     safely("set builder", async () => (await MockRepository.fromEnv()?.builderOptions(student.id)) ?? null),
     safely("next steps", async () => (await CourseMoveRepository.fromEnv()?.input(student)) ?? null),
+    safely("accountability", () => studyData(student)),
   ]);
   // The owner's corrections (real length, didn't happen) apply everywhere: past sessions and the account.
   const bookings = booked && StudentSessions.applyLog(booked, log ?? []);
@@ -118,6 +133,8 @@ async function portalData(student: Student) {
     mocks,
     attempts,
     builder: builder ?? null,
+    // Unknown (database hiccup), or no CFA course with a bank: no loop.
+    study: study ?? null,
     // Unknown (database hiccup): no next-step card and no "Add a course" page.
     moves,
     // Unknown (database hiccup): no card and no tab rather than an empty record.
@@ -127,7 +144,7 @@ async function portalData(student: Student) {
 
 /** The signed-in student's portal; `readOnly`: an admin viewing it as them (nothing can be booked, changed or marked seen). */
 export async function Portal({ student, readOnly = false }: { student: Student; readOnly?: boolean }) {
-  const { courses, sessions, past, addresses, plan, exam, bankTopics, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress, builder, moves } = await portalData(student);
+  const { courses, sessions, past, addresses, plan, exam, bankTopics, classes, own, account, termsAccepted, offers, pkg, mocks, attempts, progress, builder, moves, study } = await portalData(student);
   const hasClassroom = classes.length + own.length > 0;
   // Only approved course classes and the student's own: the same ones they can open.
   const links = [...classes.flatMap((c) => (c.url ? [{ title: c.title, url: c.url }] : [])), ...own.map((c) => ({ title: c.title, url: c.url }))];
@@ -184,7 +201,22 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
         sessions={sessions}
         past={past}
         addresses={addresses}
-        plan={<StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} openMocks={(mocks ?? []).map((m) => m.id)} readOnly={readOnly} />}
+        plan={
+          <div className="grid min-w-0 grid-cols-1 gap-6">
+            {study && (
+              <StudyPanel
+                progress={study.progress}
+                options={study.options}
+                log={study.log}
+                today={today}
+                showCountdown={exam === null}
+                canPractise={hasMocks}
+                readOnly={readOnly}
+              />
+            )}
+            <StudyPlanTimeline items={plan} programmes={student.courses} exam={exam} sessions={[...past, ...(sessions ?? [])]} attempts={attempts ?? []} bankTopics={bankTopics} openMocks={(mocks ?? []).map((m) => m.id)} readOnly={readOnly} />
+          </div>
+        }
         mocks={hasMocks ? <MockLobby mocks={mocks} history={attempts} readOnly={readOnly} /> : null}
         progress={progress && progress.mocks.length > 0 ? <ProgressPanel progress={progress} /> : null}
         drill={
@@ -210,7 +242,9 @@ export async function Portal({ student, readOnly = false }: { student: Student; 
             name={student.name.split(" ")[0]}
             sessions={sessions}
             plan={plan}
-            exam={exam}
+            // No batch: count down to the exam date in their study goal.
+            exam={exam ?? (study?.progress?.goal.examOn ? { course: study.progress.goal.course, date: study.progress.goal.examOn, hideCountdown: study.progress.goal.hideCountdown } : null)}
+            studyRows={study && <StudyHomeRows progress={study.progress} />}
             accountRow={<AccountSummaryRow account={account} />}
             mockRow={progress && (progress.mocks.length > 0 || (mocks?.length ?? 0) > 0) ? <LatestMockRow progress={progress} /> : null}
             classTodo={

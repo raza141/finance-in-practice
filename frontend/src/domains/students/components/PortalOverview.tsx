@@ -35,6 +35,7 @@ export function PortalOverview({
   classNew,
   accountRow,
   mockRow,
+  studyRows = null,
   exam = null,
 }: {
   name: string;
@@ -47,6 +48,8 @@ export function PortalOverview({
   accountRow: ReactNode;
   /** The latest mock mark; null when there are no mocks for them. */
   mockRow: ReactNode;
+  /** The accountability loop's rows: score, today's hours, streak. */
+  studyRows?: ReactNode;
   /** Their next exam; hideCountdown: they asked not to see the days (Study plan's Hide). */
   exam?: { course: string; date: string; hideCountdown: boolean } | null;
 }) {
@@ -91,6 +94,7 @@ export function PortalOverview({
         </div>
 
         <HomePanel title="At a glance" className="lg:sticky lg:top-24">
+          {studyRows}
           {(exam || (plan ?? []).length > 0) && (
             <HomeRow
               tab="plan"
