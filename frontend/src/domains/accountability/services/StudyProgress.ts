@@ -12,6 +12,8 @@ export interface StudentProgress {
   /** Null before the first study day is over, with no exam date, or after the exam. */
   onTrack: OnTrackState | null;
   streak: StreakState;
+  /** Days with any study, oldest first. */
+  activeDays: string[];
   lastActive: string | null;
   /** Plain share right over 14 days. */
   accuracy: number | null;
@@ -27,7 +29,8 @@ export class StudyProgress {
     const schedule = new StudySchedule(facts.schedule);
     const today = schedule.today(now);
     const plan = StudyPlan.state({ goal, schedule, minutes: facts.goalMinutes, today });
-    const active = [...facts.days.filter((d) => d.questions > 0 || d.minutes > 0), ...facts.goalMinutes.filter((d) => d.minutes > 0)].map((d) => d.date);
+    const studied = [...facts.days.filter((d) => d.questions > 0 || d.minutes > 0), ...facts.goalMinutes.filter((d) => d.minutes > 0)];
+    const activeDays = [...new Set(studied.map((d) => d.date))].sort();
     return {
       goal,
       schedule,
@@ -38,7 +41,8 @@ export class StudyProgress {
           ? OnTrack.score({ hoursDone: plan.hoursDone, targetHours: goal.targetHours, elapsed: plan.elapsed, total: plan.total, chapters: facts.chapters, marks: facts.marks })
           : null,
       streak: StreakEngine.state({ days: facts.days, schedule, today, trackedFrom: goal.createdOn }),
-      lastActive: active.reduce<string | null>((last, date) => (last && last > date ? last : date), null),
+      activeDays,
+      lastActive: activeDays.at(-1) ?? null,
       accuracy: OnTrack.plainAccuracy(facts.marks),
       chapters: facts.chapters,
       weakest: facts.weakest,
