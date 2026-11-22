@@ -65,7 +65,8 @@ export function PortalOverview({
   const weekLine = `This week: ${week.due} topic${week.due === 1 ? "" : "s"}${week.behind ? ` · ${week.behind} behind` : ""}`;
 
   return (
-    <div className="grid gap-6">
+    // minmax(0,1fr) all the way down: a truncated row must never widen the column on a phone.
+    <div className="grid grid-cols-1 gap-6">
       <header>
         <p className="font-mono text-xs tracking-[0.18em] text-muted uppercase">{TODAY.format(now)}</p>
         <h1 className="mt-1 text-3xl font-normal italic sm:text-4xl">
@@ -73,8 +74,8 @@ export function PortalOverview({
         </h1>
       </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
-        <div className="grid gap-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="grid min-w-0 grid-cols-1 gap-6">
           <NextSession next={next} more={later.length} failed={sessions === null} />
 
           <HomePanel title="To do">

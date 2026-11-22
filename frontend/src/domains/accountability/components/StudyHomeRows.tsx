@@ -36,10 +36,10 @@ export function StudyHomeRows({ progress }: { progress: StudentProgress | null }
         tab="plan"
         icon={Flame}
         urgent={earnBack !== null}
-        title={earnBack ? `Earn Back your ${streak.current}-day streak` : `${streak.current}-day streak`}
+        title={earnBack ? `Earn Back ${streak.current}-day streak` : `${streak.current}-day streak`}
         detail={
           earnBack
-            ? `${earnBack.questionsLeft} questions or ${earnBack.minutesLeft} min by ${F.day(earnBack.until)}`
+            ? `${earnBack.questionsLeft} questions or ${earnBack.minutesLeft} min by ${F.weekday(earnBack.until)}`
             : streak.perfect
               ? "Perfect streak"
               : milestone

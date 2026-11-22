@@ -26,6 +26,11 @@ export class StudyFormat {
     return `${n} ${word}${n === 1 ? "" : "s"}`;
   }
 
+  /** "Mon": for a date at most two days off, where the row is narrow. */
+  static weekday(date: string): string {
+    return StudyFormat.day(date).slice(0, 3);
+  }
+
   static day(date: string): string {
     return StudyFormat.DAY.format(new Date(`${date}T00:00:00Z`));
   }

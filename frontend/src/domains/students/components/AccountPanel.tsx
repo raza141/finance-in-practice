@@ -49,7 +49,7 @@ export function AccountSummaryRow({ account }: { account: StudentAccountView | n
     ? "Hours unavailable just now"
     : account.allowance
       ? `${hoursOf(Math.max(0, account.allowance.leftMinutes))} left ${account.allowance.package ? "in your package" : `until ${SHORT.format(dayDate(account.allowance.periodEnd))}`}`
-      : `${hoursOf(now.minutesTaken)} studied in ${MONTH.format(monthDate(now.month))}`;
+      : `${hoursOf(now.minutesTaken)} tutored in ${MONTH.format(monthDate(now.month))}`;
   const owed = account.money.filter((m) => m.balanceMinor > 0);
   const money = account.money.length === 0 ? "No invoices yet" : account.money.map((m) => balanceText(m).text).join(" · ");
   return (

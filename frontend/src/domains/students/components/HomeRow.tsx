@@ -36,7 +36,7 @@ export function HomePanel({ title, children, className = "" }: { title: string; 
   return (
     <section aria-label={title} className={`rounded-3xl border border-ink/10 bg-canvas/70 p-3 backdrop-blur-md sm:p-4 ${className}`}>
       <h2 className="px-3 pt-2 pb-1 text-lg font-normal italic">{title}</h2>
-      <ul className="grid">{children}</ul>
+      <ul className="grid grid-cols-1">{children}</ul>
     </section>
   );
 }
