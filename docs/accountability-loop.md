@@ -1,9 +1,18 @@
 # Accountability loop: Phase 1 proposal
 
-Status: **proposed 2026-11-22, not approved, not applied.** `077_accountability` is deliberately not in
-`frontend/scripts/db/migrate.mts` until it is approved (a production build stops on any unapplied migration).
+Status: **D1–D7 approved and Phase 1 built on `feature/accountability-loop`, 2026-11-22.** `077_accountability`
+is applied to the preview database only. Production: run `npm run db:migrate -- --print 077_accountability`'s SQL
+first, then merge (the production build stops until it has run).
 
-## Decisions needed
+As built, beyond the rules below:
+- Levels I and II only: Level III has no course or bank yet, FRM no plan.
+- The score shows "New" until the first planned day is over, and nothing after exam day.
+- Right and wrong count from finished attempts only, so an open exam's score can't give answers away.
+- A change of study days starts the next day.
+- The tutor page is owner only. Sent check-ins aren't recorded (no 078), so a reload could send twice.
+- Not built: reminders (D5), tutored-vs-solo (everyone is tutored today), Phase 2.
+
+## Decisions (approved)
 
 | # | Decision | Brief | Proposed |
 |---|---|---|---|

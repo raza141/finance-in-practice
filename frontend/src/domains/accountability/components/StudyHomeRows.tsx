@@ -38,9 +38,10 @@ export function StudyHomeRows({ progress }: { progress: StudentProgress | null }
         urgent={earnBack !== null}
         title={earnBack ? `Earn Back ${streak.current}-day streak` : `${streak.current}-day streak`}
         detail={
-          earnBack
-            ? `${earnBack.questionsLeft} questions or ${earnBack.minutesLeft} min by ${F.weekday(earnBack.until)}`
-            : streak.perfect
+          earnBack ? (
+            // Wraps rather than truncates: the deadline is the point.
+            <span className="block whitespace-normal">{`${earnBack.questionsLeft} questions or ${earnBack.minutesLeft} min by ${F.weekday(earnBack.until)}`}</span>
+          ) : streak.perfect
               ? "Perfect streak"
               : milestone
                 ? `Next milestone: ${milestone} days`
