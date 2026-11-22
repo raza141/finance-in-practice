@@ -1622,6 +1622,55 @@ const MIGRATIONS: Migration[] = [
       $fn$`,
     ],
   },
+  {
+    // Accountability loop F1–F4. Additive only: three new tables, no existing table, trigger or function touched.
+    // Questions, minutes, streaks, freezes and Earn Back are derived, never stored: mock_response_history (068)
+    // already dates each answer. study_log is the student's own study time; session_log stays billing's.
+    id: "077_accountability",
+    statements: [
+      `CREATE TABLE study_goals (
+        client_id     uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course        text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        level         smallint NOT NULL CHECK (level IN (1, 2, 3)),
+        exam_on       date,
+        started_on    date NOT NULL,
+        target_hours  smallint NOT NULL DEFAULT 300 CHECK (target_hours BETWEEN 20 AND 2000),
+        hours_per_day numeric(3,1) NOT NULL CHECK (hours_per_day BETWEEN 0.5 AND 16),
+        prior_minutes integer NOT NULL DEFAULT 0 CHECK (prior_minutes BETWEEN 0 AND 120000),
+        created_at    timestamptz NOT NULL DEFAULT now(),
+        updated_at    timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (client_id, course),
+        CHECK (exam_on > started_on)
+      )`,
+      `CREATE TABLE study_schedules (
+        client_id      uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        effective_from timestamptz NOT NULL DEFAULT now(),
+        time_zone      text NOT NULL CHECK (char_length(time_zone) BETWEEN 1 AND 64),
+        study_days     smallint[] NOT NULL CHECK (cardinality(study_days) BETWEEN 1 AND 7 AND study_days <@ '{1,2,3,4,5,6,7}'::smallint[]),
+        PRIMARY KEY (client_id, effective_from)
+      )`,
+      `CREATE TABLE study_log (
+        id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id  uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+        course     text NOT NULL CHECK (char_length(course) BETWEEN 1 AND 200),
+        local_date date NOT NULL,
+        minutes    smallint NOT NULL CHECK (minutes BETWEEN 1 AND 480),
+        kind       text NOT NULL CHECK (kind IN ('reading', 'video', 'other')),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX study_log_client_day_idx ON study_log (client_id, local_date)`,
+      `CREATE FUNCTION study_log_day_cap() RETURNS trigger LANGUAGE plpgsql AS $fn$
+      BEGIN
+        PERFORM pg_advisory_xact_lock(hashtextextended(NEW.client_id::text || NEW.local_date::text, 0));
+        IF NEW.minutes + COALESCE((SELECT sum(minutes) FROM study_log WHERE client_id = NEW.client_id AND local_date = NEW.local_date AND id <> NEW.id), 0) > 480 THEN
+          RAISE EXCEPTION 'study_log: over 8 hours in a day' USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+      END
+      $fn$`,
+      `CREATE TRIGGER study_log_day_cap BEFORE INSERT OR UPDATE ON study_log FOR EACH ROW EXECUTE FUNCTION study_log_day_cap()`,
+    ],
+  },
 ];
 
 // Explicit fields, not constructor parameter properties: Node runs this file
