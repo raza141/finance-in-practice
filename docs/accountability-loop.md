@@ -13,7 +13,7 @@ Status: **proposed 2026-11-22, not approved, not applied.** `077_accountability`
 | D4 | Tutor | `tutor` role + `tutor_link` | owner-only page in v1; role and links when there is a second tutor (auth change) |
 | D5 | Reminders | daily email at the student's chosen time | after Phase 1: needs a scheduler finer than daily and a decision on `docs/on-hold.md` |
 | D6 | Band colours | green / amber / red | emerald / gold / slate, always with the words (brand guide: no amber, red is for errors) |
-| D7 | Preview | preview before production | preview on its own database, seeded with made-up students |
+| D7 | Preview | preview before production | an empty second database with made-up students (steps below), never a branch copy of production |
 
 ## What the brief asks for and what exists
 
@@ -39,6 +39,21 @@ Status: **proposed 2026-11-22, not approved, not applied.** `077_accountability`
 - A manual entry is for today or yesterday, 8 hours a day at most. Only one made on the day itself can qualify a streak day.
 - Deleting an attempt or a mock with its attempts removes that activity, so it can shorten a streak.
 
+The daily query (tested for midnight in three zones, repeats, idle time and attempts older than 068):
+
+```sql
+WITH first AS (
+  SELECT a.id AS attempt_id, r.question_id, r.seconds, COALESCE(h.at, a.submitted_at) AS at
+  FROM mock_attempts a JOIN mock_responses r ON r.attempt_id = a.id
+  LEFT JOIN LATERAL (
+    SELECT min(changed_at) AS at FROM mock_response_history WHERE attempt_id = a.id AND question_id = r.question_id
+  ) h ON true
+  WHERE a.client_id = :'client' AND (h.at IS NOT NULL OR (r.selected IS NOT NULL AND a.submitted_at IS NOT NULL))
+)
+SELECT (f.at AT TIME ZONE :'tz')::date AS day, count(DISTINCT q.content_key) AS questions, sum(LEAST(f.seconds, 600)) / 60 AS minutes
+FROM first f JOIN mock_questions q ON q.id = f.question_id GROUP BY 1 ORDER BY 1;
+```
+
 **Streak**
 - The bar: 20 questions or 45 minutes. Today, unfinished, never breaks it.
 - A missed planned day takes a freeze. Two per local calendar month, no rollover.
@@ -51,7 +66,8 @@ Status: **proposed 2026-11-22, not approved, not applied.** `077_accountability`
 - Elapsed planned days exclude today. With none elapsed, or no expected readings, that ratio is 1.
 - No answers in 14 days: accuracy is unknown, the factor is its 0.5 floor and the band can't be green.
 - Accuracy is weighted by difficulty (easy 0.8, medium or untagged 1, hard 1.2) over questions answered, so easy
-  questions alone score at most 80%.
+  questions alone score at most 80%, capped at 100%. This figure drives both the factor and the 55% gate in D3.
+  The tutor's accuracy column shows plain accuracy.
 - No study days left: required hours a day shows no figure, never a division by zero.
 
 **Risk and check-in**
@@ -128,6 +144,18 @@ DELETE FROM schema_migrations WHERE id = '077_accountability';
 ```
 
 `078_study_checkins` (sent check-ins, one per student per week) comes with F5, after D4.
+
+A saved time zone is checked against `pg_timezone_names` as well as `Intl`: one Postgres doesn't know would make
+`AT TIME ZONE` throw.
+
+## Preview setup (D7, before the branch is pushed)
+
+1. Create an empty database in Neon (a database, not a branch: a branch copies its parent's data).
+2. Set its URL as `DATABASE_URL` for Preview, branch `feature/accountability-loop` only. Confirm Vercel lets that
+   override the integration's variable before pushing.
+3. Run `npm run db:migrate` against it, then seed made-up students, one on a test Google account.
+4. Register the branch alias's `/api/student/auth/google/callback` (and the admin one) in Google Cloud. Review on
+   that alias, not a per-deploy URL. Email sign-in doesn't work there (no Resend key in Preview).
 
 ## Build order once approved
 
